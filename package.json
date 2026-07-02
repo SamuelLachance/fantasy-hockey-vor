@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm run generate && next build",
+    "build:pages": "next build",
     "start": "next start",
     "lint": "eslint",
     "generate": "tsx scripts/generate-projections.ts"

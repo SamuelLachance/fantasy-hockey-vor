@@ -1,5 +1,9 @@
 # Fantasy Hockey VOR
 
+**Live site:** https://samuellachance.github.io/fantasy-hockey-vor/
+
+**Repository:** https://github.com/SamuelLachance/fantasy-hockey-vor
+
 AI-weighted **Value Over Replacement** rankings for your head-to-head categories fantasy hockey league.
 
 Built for leagues with daily lineups of **2C · 2LW · 2RW · 4D · 2G** and these categories:
@@ -49,14 +53,18 @@ Default league: 12 teams → replacement at C/LW/RW #24, D #48, G #24.
 
 ## Deploy
 
-Works on [Vercel](https://vercel.com), Netlify, or any Node host:
+The site auto-deploys to **GitHub Pages** on every push to `master`.
+
+Live URL: https://samuellachance.github.io/fantasy-hockey-vor/
+
+To deploy manually, push to GitHub — the Actions workflow builds and publishes the static site.
+
+For other hosts (Vercel, Netlify):
 
 ```bash
 npm run build
 npm start
 ```
-
-`npm run build` automatically regenerates projections before building.
 
 ## Data Source
 
