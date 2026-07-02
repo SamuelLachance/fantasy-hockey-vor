@@ -8,7 +8,12 @@ export default function HomePage() {
 
   return (
     <main className="min-h-screen pb-16">
-      <Header season={data.season} playerCount={data.players.length} />
+      <Header
+        season={data.season}
+        playerCount={data.players.length}
+        projectionEngine={data.projectionEngine}
+        aiModel={data.aiModel}
+      />
 
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
         <TopPlayers players={data.players} />
@@ -17,7 +22,7 @@ export default function HomePage() {
 
       <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
         Projections generated {new Date(data.generatedAt).toLocaleDateString()}{" "}
-        · {data.season} season · Data via NHL API
+        · {data.season} · {data.projectionEngine ?? "contextual"} · NHL API
       </footer>
     </main>
   );

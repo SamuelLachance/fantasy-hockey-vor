@@ -55,6 +55,10 @@ export interface PlayerProjection {
   vor: number;
   rank: number;
   positionRank: number;
+  projectionMethod?: "ai" | "contextual";
+  confidence?: number;
+  reasoning?: string;
+  profileSummary?: string;
 }
 
 export interface LeagueSettings {
@@ -74,5 +78,7 @@ export interface ProjectionsDataset {
   season: string;
   league: LeagueSettings;
   replacementLevels: Partial<Record<Position, number>>;
+  projectionEngine: string;
+  aiModel?: string;
   players: PlayerProjection[];
 }

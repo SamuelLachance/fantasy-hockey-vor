@@ -102,8 +102,9 @@ export function TopPlayers({ players }: TopPlayersProps) {
             <Trophy className="mb-2 h-5 w-5 text-cyan-400" />
             <h3 className="font-medium text-white">AI Projections</h3>
             <p className="mt-1 text-sm text-slate-400">
-              Weighted blend of the last 3 seasons with age curves projects
-              every player&apos;s {players[0] ? "upcoming" : ""} season stats.
+              Each player dossier includes bio, draft rank, team strength, team
+              changes, injury history, contract stage, and advanced stats. OpenAI
+              analyzes the full context to predict next-season category totals.
             </p>
           </div>
         </div>

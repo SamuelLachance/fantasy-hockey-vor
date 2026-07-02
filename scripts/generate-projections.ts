@@ -1,29 +1,14 @@
-import { writeFileSync, mkdirSync } from "fs";
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { loadAiCache } from "../src/lib/ai-projections";
+import {
+  projectGoalieFromProfile,
+  projectSkaterFromProfile,
+} from "../src/lib/contextual-projections";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
-import {
-  BASE_SEASON_IDS,
-  computeFaceoffWins,
-  fetchGoalieSummaries,
-  fetchSkaterFaceoffs,
-  fetchSkaterRealtime,
-  fetchSkaterSummaries,
-  fetchTeamRoster,
-  mapNhlPosition,
-  NHL_TEAMS,
-  PROJECTION_SEASON,
-  type RawGoalieSummary,
-  type RawSkaterSummary,
-  type RosterPlayer,
-} from "../src/lib/nhl-api";
-import {
-  projectGoalie,
-  projectSkater,
-  rookieGoalieProjection,
-  rookieSkaterProjection,
-  type SeasonGoalieRates,
-  type SeasonSkaterRates,
-} from "../src/lib/projections";
+import { PROJECTION_SEASON } from "../src/lib/nhl-api";
+import { collectAllProfiles } from "../src/lib/player-profile";
+import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
 import type {
   GoalieProjection,
@@ -32,254 +17,160 @@ import type {
   SkaterProjection,
 } from "../src/lib/types";
 
-function finite(n: number | undefined | null, fallback = 0): number {
-  const value = Number(n);
-  return Number.isFinite(value) ? value : fallback;
-}
+const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
+const MAX_PROFILE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-interface PlayerRecord {
-  id: number;
-  name: string;
-  team: string;
-  position: Position;
-  positions: Position[];
-  isGoalie: boolean;
-  birthDate?: string;
-  skaterSeasons: SeasonSkaterRates[];
-  goalieSeasons: SeasonGoalieRates[];
-}
-
-async function loadSeasonData(seasonId: number) {
-  const [skaters, realtime, faceoffs, goalies] = await Promise.all([
-    fetchSkaterSummaries(seasonId),
-    fetchSkaterRealtime(seasonId),
-    fetchSkaterFaceoffs(seasonId),
-    fetchGoalieSummaries(seasonId),
-  ]);
-
-  const realtimeMap = new Map(realtime.map((r) => [r.playerId, r]));
-  const faceoffMap = new Map(faceoffs.map((f) => [f.playerId, f]));
-
-  return { skaters, realtimeMap, faceoffMap, goalies };
-}
-
-function mergeSkaterSeason(
-  summary: RawSkaterSummary,
-  realtimeMap: Map<number, { blockedShots: number; hits: number }>,
-  faceoffMap: Map<
-    number,
-    { totalFaceoffs: number; faceoffWinPct: number | null }
-  >,
-): SeasonSkaterRates {
-  const rt = realtimeMap.get(summary.playerId);
-  const fo = faceoffMap.get(summary.playerId);
-  return {
-    goals: finite(summary.goals),
-    assists: finite(summary.assists),
-    shots: finite(summary.shots),
-    blocks: finite(rt?.blockedShots),
-    hits: finite(rt?.hits),
-    powerplayPoints: finite(summary.ppPoints),
-    penaltyMinutes: finite(summary.penaltyMinutes),
-    faceoffWins: computeFaceoffWins(
-      fo?.totalFaceoffs ?? 0,
-      fo?.faceoffWinPct ?? summary.faceoffWinPct,
-    ),
-    gamesPlayed: finite(summary.gamesPlayed),
-  };
-}
-
-function upsertPlayer(
-  map: Map<number, PlayerRecord>,
-  id: number,
-  patch: Partial<PlayerRecord> & { name: string; position: Position },
-) {
-  const existing = map.get(id);
-  if (existing) {
-    map.set(id, {
-      ...existing,
-      ...patch,
-      positions: Array.from(
-        new Set([...(existing.positions ?? []), ...(patch.positions ?? [])]),
-      ),
-    });
-    return;
+async function loadProfiles(): Promise<PlayerProfile[]> {
+  if (existsSync(PROFILES_PATH)) {
+    const data = JSON.parse(readFileSync(PROFILES_PATH, "utf8")) as {
+      collectedAt: string;
+      profiles: PlayerProfile[];
+    };
+    const age = Date.now() - new Date(data.collectedAt).getTime();
+    if (age < MAX_PROFILE_AGE_MS && data.profiles.length > 0) {
+      console.log(`Using cached profiles (${data.profiles.length} players)`);
+      return data.profiles;
+    }
   }
 
-  map.set(id, {
-    id,
-    name: patch.name,
-    team: patch.team ?? "FA",
-    position: patch.position,
-    positions: patch.positions ?? [patch.position],
-    isGoalie: patch.isGoalie ?? patch.position === "G",
-    birthDate: patch.birthDate,
-    skaterSeasons: [],
-    goalieSeasons: [],
+  console.log("Building fresh player dossiers (this takes several minutes)...");
+  const profiles = await collectAllProfiles((d, t) => {
+    if (d % 100 === 0) console.log(`  collecting ${d}/${t}`);
   });
+
+  mkdirSync(join(process.cwd(), "src", "data"), { recursive: true });
+  writeFileSync(
+    PROFILES_PATH,
+    JSON.stringify(
+      { collectedAt: new Date().toISOString(), count: profiles.length, profiles },
+      null,
+      2,
+    ),
+  );
+  return profiles;
 }
 
-function rosterName(player: RosterPlayer): string {
-  return `${player.firstName.default} ${player.lastName.default}`;
-}
-
-async function buildPlayerMap(): Promise<Map<number, PlayerRecord>> {
-  const players = new Map<number, PlayerRecord>();
-
-  for (const seasonId of BASE_SEASON_IDS) {
-    console.log(`Fetching season ${seasonId}...`);
-    const { skaters, realtimeMap, faceoffMap, goalies } =
-      await loadSeasonData(seasonId);
-
-    for (const skater of skaters) {
-      const position = mapNhlPosition(skater.positionCode);
-      if (position === "G") continue;
-
-      upsertPlayer(players, skater.playerId, {
-        name: skater.skaterFullName,
-        team: skater.teamAbbrevs.split(",")[0],
-        position,
-        positions: [position],
-        isGoalie: false,
-      });
-
-      const record = players.get(skater.playerId)!;
-      record.skaterSeasons.push(
-        mergeSkaterSeason(skater, realtimeMap, faceoffMap),
-      );
-      if (skater.teamAbbrevs) {
-        record.team = skater.teamAbbrevs.split(",")[0];
-      }
-    }
-
-    for (const goalie of goalies) {
-      upsertPlayer(players, goalie.playerId, {
-        name: goalie.goalieFullName,
-        team: goalie.teamAbbrevs.split(",")[0],
-        position: "G",
-        positions: ["G"],
-        isGoalie: true,
-      });
-
-      const record = players.get(goalie.playerId)!;
-      record.goalieSeasons.push({
-        wins: goalie.wins,
-        shutouts: goalie.shutouts,
-        saves: goalie.saves,
-        savePct: goalie.savePct,
-        gamesPlayed: goalie.gamesPlayed,
-      });
-      if (goalie.teamAbbrevs) {
-        record.team = goalie.teamAbbrevs.split(",")[0];
-      }
-    }
-  }
-
-  console.log("Fetching team rosters for additional players...");
-  for (const team of NHL_TEAMS) {
-    await new Promise((r) => setTimeout(r, 350));
-    try {
-      const roster = await fetchTeamRoster(team);
-      for (const player of roster) {
-        const position = mapNhlPosition(player.positionCode);
-        upsertPlayer(players, player.id, {
-          name: rosterName(player),
-          team,
-          position,
-          positions: [position],
-          isGoalie: position === "G",
-          birthDate: player.birthDate,
-        });
-      }
-    } catch (err) {
-      console.warn(`Roster fetch failed for ${team}:`, err);
-    }
-  }
-
-  return players;
-}
-
-function buildProjections(
-  players: Map<number, PlayerRecord>,
+function buildFromProfile(
+  profile: PlayerProfile,
+  aiCache: ReturnType<typeof loadAiCache>,
 ): Omit<
   PlayerProjection,
   "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
->[] {
-  const output: Omit<
-    PlayerProjection,
-    "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
-  >[] = [];
+> {
+  const aiSkater = aiCache?.skaters[profile.id];
+  const aiGoalie = aiCache?.goalies[profile.id];
 
-  for (const player of players.values()) {
-    if (player.isGoalie) {
-      const hasHistory = player.goalieSeasons.some((s) => s.gamesPlayed > 0);
-      const { projection, gamesPlayed } = hasHistory
-        ? projectGoalie(player.goalieSeasons, player.birthDate)
-        : {
-            projection: rookieGoalieProjection(),
-            gamesPlayed: 45,
-          };
-
-      output.push({
-        id: player.id,
-        name: player.name,
-        team: player.team,
-        position: "G",
-        positions: ["G"],
-        isGoalie: true,
-        gamesPlayed,
-        projection,
-      });
-      continue;
-    }
-
-    const hasHistory = player.skaterSeasons.some((s) => s.gamesPlayed > 5);
-    const { projection, gamesPlayed } = hasHistory
-      ? projectSkater(
-          player.skaterSeasons,
-          player.position,
-          player.birthDate,
-        )
-      : {
-          projection: rookieSkaterProjection(player.position),
-          gamesPlayed: 55,
-        };
-
-    output.push({
-      id: player.id,
-      name: player.name,
-      team: player.team,
-      position: player.position,
-      positions: player.positions,
-      isGoalie: false,
-      gamesPlayed,
+  if (profile.isGoalie && aiGoalie) {
+    const projection: GoalieProjection = {
+      wins: aiGoalie.wins,
+      shutouts: aiGoalie.shutouts,
+      saves: aiGoalie.saves,
+      savePct: aiGoalie.savePct,
+    };
+    return {
+      id: profile.id,
+      name: profile.name,
+      team: profile.team,
+      position: "G",
+      positions: ["G"],
+      isGoalie: true,
+      gamesPlayed: aiGoalie.gamesPlayed,
       projection,
-    });
+      projectionMethod: "ai",
+      confidence: aiGoalie.confidence,
+      reasoning: aiGoalie.reasoning,
+      profileSummary: profile.contextNarrative,
+    };
   }
 
-  return output;
+  if (!profile.isGoalie && aiSkater) {
+    const projection: SkaterProjection = {
+      goals: aiSkater.goals,
+      assists: aiSkater.assists,
+      shots: aiSkater.shots,
+      blocks: aiSkater.blocks,
+      hits: aiSkater.hits,
+      powerplayPoints: aiSkater.powerplayPoints,
+      penaltyMinutes: aiSkater.penaltyMinutes,
+      faceoffWins: aiSkater.faceoffWins,
+    };
+    return {
+      id: profile.id,
+      name: profile.name,
+      team: profile.team,
+      position: profile.position,
+      positions: profile.positions,
+      isGoalie: false,
+      gamesPlayed: aiSkater.gamesPlayed,
+      projection,
+      projectionMethod: "ai",
+      confidence: aiSkater.confidence,
+      reasoning: aiSkater.reasoning,
+      profileSummary: profile.contextNarrative,
+    };
+  }
+
+  const contextual = profile.isGoalie
+    ? projectGoalieFromProfile(profile)
+    : projectSkaterFromProfile(profile);
+
+  return {
+    id: profile.id,
+    name: profile.name,
+    team: profile.team,
+    position: profile.position,
+    positions: profile.positions,
+    isGoalie: profile.isGoalie,
+    gamesPlayed: contextual.gamesPlayed,
+    projection: contextual.projection,
+    projectionMethod: "contextual",
+    confidence: 0.55,
+    reasoning: contextual.reasoning,
+    profileSummary: profile.contextNarrative,
+  };
 }
 
 async function main() {
-  console.log(`Generating AI-weighted projections for ${PROJECTION_SEASON}...`);
-  const playerMap = await buildPlayerMap();
-  console.log(`Found ${playerMap.size} NHL players`);
+  console.log(`Generating ${PROJECTION_SEASON} projections from full player dossiers...`);
 
-  const rawProjections = buildProjections(playerMap);
-  const ranked = applyVor(rawProjections, DEFAULT_LEAGUE);
+  const profiles = await loadProfiles();
+  const aiCache = loadAiCache();
+  const aiCount =
+    Object.keys(aiCache?.skaters ?? {}).length +
+    Object.keys(aiCache?.goalies ?? {}).length;
+
+  if (aiCount > 0) {
+    console.log(`Using AI projections for ${aiCount} cached players`);
+  } else {
+    console.log(
+      "No AI cache found — using contextual engine. Run npm run ai-project with OPENAI_API_KEY for full AI projections.",
+    );
+  }
+
+  const raw = profiles.map((p) => buildFromProfile(p, aiCache));
+  const ranked = applyVor(raw, DEFAULT_LEAGUE);
+
+  const aiPlayers = ranked.filter((p) => p.projectionMethod === "ai").length;
+  const engine =
+    aiPlayers > ranked.length * 0.5
+      ? "openai-dossier"
+      : aiPlayers > 0
+        ? "hybrid-ai-contextual"
+        : "contextual-dossier";
 
   const dataset = {
     generatedAt: new Date().toISOString(),
     season: PROJECTION_SEASON,
     league: DEFAULT_LEAGUE,
+    projectionEngine: engine,
+    aiModel: aiCache?.model,
     replacementLevels: Object.fromEntries(
-      ["C", "LW", "RW", "D", "G"].map((pos) => {
-        const pool = ranked.filter((p) => p.positions.includes(pos as Position));
+      (["C", "LW", "RW", "D", "G"] as Position[]).map((pos) => {
+        const pool = ranked.filter((p) => p.positions.includes(pos));
         const replacement = pool.find(
           (p) =>
             p.positionRank ===
-            DEFAULT_LEAGUE.teams *
-              DEFAULT_LEAGUE.roster[pos as keyof typeof DEFAULT_LEAGUE.roster],
+            DEFAULT_LEAGUE.teams * DEFAULT_LEAGUE.roster[pos],
         );
         return [pos, replacement?.fantasyValue ?? 0];
       }),
@@ -287,29 +178,30 @@ async function main() {
     players: ranked,
   };
 
-  const outDir = join(process.cwd(), "src", "data");
-  mkdirSync(outDir, { recursive: true });
-  const outPath = join(outDir, "players.json");
+  const outPath = join(process.cwd(), "src", "data", "players.json");
   writeFileSync(
     outPath,
     JSON.stringify(
       dataset,
-      (_key, value) =>
-        typeof value === "number" && !Number.isFinite(value) ? 0 : value,
+      (_k, v) => (typeof v === "number" && !Number.isFinite(v) ? 0 : v),
       2,
     ),
   );
-  console.log(`Wrote ${ranked.length} player projections to ${outPath}`);
+
+  console.log(`Wrote ${ranked.length} projections (${aiPlayers} AI, engine: ${engine})`);
   console.log(
     "Top 5 VOR:",
     ranked
       .slice(0, 5)
-      .map((p) => `${p.rank}. ${p.name} (${p.position}) VOR ${p.vor.toFixed(2)}`)
+      .map(
+        (p) =>
+          `${p.rank}. ${p.name} (${p.position}) VOR ${p.vor.toFixed(2)} [${p.projectionMethod}]`,
+      )
       .join("\n"),
   );
 }
 
-main().catch((err) => {
-  console.error(err);
+main().catch((e) => {
+  console.error(e);
   process.exit(1);
 });

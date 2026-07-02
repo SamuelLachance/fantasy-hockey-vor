@@ -5,9 +5,16 @@ import { Search, Snowflake } from "lucide-react";
 interface HeaderProps {
   season: string;
   playerCount: number;
+  projectionEngine?: string;
+  aiModel?: string;
 }
 
-export function Header({ season, playerCount }: HeaderProps) {
+export function Header({
+  season,
+  playerCount,
+  projectionEngine,
+  aiModel,
+}: HeaderProps) {
   return (
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.15),_transparent_55%)]" />
@@ -25,9 +32,16 @@ export function Header({ season, playerCount }: HeaderProps) {
               Fantasy Hockey Rankings
             </h1>
             <p className="mt-3 max-w-2xl text-lg text-slate-400">
-              AI-weighted {season} projections for every NHL player, ranked by
-              VOR for your head-to-head categories league.
+              AI-powered {season} projections built from full player dossiers —
+              bio, draft pedigree, team context, injuries, advanced stats — ranked
+              by VOR for your head-to-head categories league.
             </p>
+            {projectionEngine && (
+              <p className="mt-2 text-sm text-cyan-400/80">
+                Engine: {projectionEngine.replace(/-/g, " ")}
+                {aiModel ? ` · ${aiModel}` : ""}
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center">

@@ -204,6 +204,34 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     {isExpanded && (
                       <tr className="bg-slate-950/40">
                         <td colSpan={6 + cats.length} className="px-6 py-4">
+                          <div className="mb-4 flex flex-wrap items-center gap-2">
+                            <span
+                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                (player.projectionMethod ?? "contextual") === "ai"
+                                  ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30"
+                                  : "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
+                              }`}
+                            >
+                              {player.projectionMethod === "ai"
+                                ? "AI projection"
+                                : "Contextual model"}
+                            </span>
+                            {player.confidence != null && (
+                              <span className="text-xs text-slate-400">
+                                Confidence: {(player.confidence * 100).toFixed(0)}%
+                              </span>
+                            )}
+                          </div>
+                          {player.reasoning && (
+                            <p className="mb-3 text-sm leading-relaxed text-slate-300">
+                              {player.reasoning}
+                            </p>
+                          )}
+                          {player.profileSummary && (
+                            <p className="mb-4 rounded-xl border border-white/5 bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
+                              {player.profileSummary}
+                            </p>
+                          )}
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                             {cats.map((cat) => {
                               const z = player.categoryZScores[cat] ?? 0;
