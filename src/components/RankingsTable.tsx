@@ -15,7 +15,7 @@ import {
   skaterCategoriesForFilter,
   vorColor,
 } from "@/lib/format";
-import { PositionBadge } from "./PositionBadge";
+import { PositionBadges } from "./PositionBadge";
 
 type SortKey = "rank" | "vor" | "name" | "team" | "gamesPlayed";
 
@@ -24,6 +24,13 @@ interface RankingsTableProps {
 }
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
+
+function vorForFilter(player: PlayerProjection, filter: Position | "ALL"): number {
+  if (filter !== "ALL") {
+    return player.vorByPosition?.[filter] ?? player.vor;
+  }
+  return player.vor;
+}
 
 export function RankingsTable({ players }: RankingsTableProps) {
   const [query, setQuery] = useState("");
@@ -49,6 +56,11 @@ export function RankingsTable({ players }: RankingsTableProps) {
     }
 
     return [...list].sort((a, b) => {
+      if (sortKey === "vor" && position !== "ALL") {
+        const av = vorForFilter(a, position);
+        const bv = vorForFilter(b, position);
+        return sortDir === "asc" ? av - bv : bv - av;
+      }
       const av = a[sortKey];
       const bv = b[sortKey];
       if (typeof av === "string" && typeof bv === "string") {
@@ -184,16 +196,19 @@ export function RankingsTable({ players }: RankingsTableProps) {
                         {player.name}
                       </td>
                       <td className="px-4 py-3">
-                        <PositionBadge position={player.position} />
+                        <PositionBadges
+                          positions={player.positions}
+                          vorPosition={player.vorPosition ?? player.position}
+                        />
                       </td>
                       <td className="px-4 py-3 font-mono text-slate-300">
                         {player.team}
                       </td>
                       <td
-                        className={`px-4 py-3 font-mono font-semibold ${vorColor(player.vor)}`}
+                        className={`px-4 py-3 font-mono font-semibold ${vorColor(vorForFilter(player, position))}`}
                       >
-                        {player.vor >= 0 ? "+" : ""}
-                        {player.vor.toFixed(2)}
+                        {vorForFilter(player, position) >= 0 ? "+" : ""}
+                        {vorForFilter(player, position).toFixed(2)}
                       </td>
                       <td className="px-4 py-3 font-mono text-slate-400">
                         {player.gamesPlayed}

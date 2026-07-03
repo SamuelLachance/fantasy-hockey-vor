@@ -56,8 +56,16 @@ export interface PlayerProjection {
   id: number;
   name: string;
   team: string;
+  /** Best Yahoo roster slot for VOR (max across eligible positions). */
   position: Position;
+  /** Yahoo Fantasy eligible roster positions (C/LW/RW/D/G). */
   positions: Position[];
+  /** Position used for VOR calculation (same as position after applyVor). */
+  vorPosition?: Position;
+  /** VOR at each Yahoo-eligible roster position. */
+  vorByPosition?: Partial<Record<Position, number>>;
+  /** Whether positions came from Yahoo or NHL fallback. */
+  positionSource?: "yahoo" | "nhl";
   isGoalie: boolean;
   gamesPlayed: number;
   projection: SkaterProjection | GoalieProjection;
@@ -90,6 +98,8 @@ export interface ProjectionsDataset {
   league: LeagueSettings;
   replacementLevels: Partial<Record<Position, number>>;
   projectionEngine: string;
+  positionSource?: "yahoo-fantasy" | "nhl-fallback";
+  yahooPositionsFetchedAt?: string;
   aiModel?: string;
   players: PlayerProjection[];
 }

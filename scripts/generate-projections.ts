@@ -17,6 +17,11 @@ import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile"
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
 import { findProjectionIssues, clampGoalieProjection, clampSkaterProjection } from "../src/lib/projection-sanity";
+import {
+  applyYahooPositionsToPlayer,
+  loadYahooPositions,
+  yahooPositionsSummary,
+} from "../src/lib/yahoo-positions";
 import type {
   PlayerProjection,
   Position,
@@ -186,7 +191,13 @@ async function main() {
   }
 
   const raw = profiles.map((p) => buildFromProfile(p, aiCache, mlModels));
-  const ranked = applyVor(raw, DEFAULT_LEAGUE);
+  const yahooPositions = loadYahooPositions();
+  console.log(yahooPositionsSummary(yahooPositions));
+
+  const withYahooPositions = raw.map((player) =>
+    applyYahooPositionsToPlayer(player, yahooPositions),
+  );
+  const ranked = applyVor(withYahooPositions, DEFAULT_LEAGUE);
 
   const issues = findProjectionIssues(ranked);
   if (issues.length > 0) {
@@ -219,6 +230,8 @@ async function main() {
     league: DEFAULT_LEAGUE,
     projectionEngine: engine,
     aiModel: aiCache?.model,
+    positionSource: yahooPositions ? "yahoo-fantasy" : "nhl-fallback",
+    yahooPositionsFetchedAt: yahooPositions?.fetchedAt,
     replacementLevels: Object.fromEntries(
       (["C", "LW", "RW", "D", "G"] as Position[]).map((pos) => {
         const pool = ranked.filter((p) => p.positions.includes(pos));
@@ -252,7 +265,7 @@ async function main() {
       .slice(0, 5)
       .map(
         (p) =>
-          `${p.rank}. ${p.name} (${p.position}) VOR ${p.vor.toFixed(2)} [${p.projectionMethod}]`,
+          `${p.rank}. ${p.name} (${p.positions.join("/")} VOR@${p.position}) ${p.vor.toFixed(2)} [${p.projectionMethod}]`,
       )
       .join("\n"),
   );

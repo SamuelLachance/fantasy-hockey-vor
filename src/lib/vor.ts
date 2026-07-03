@@ -114,6 +114,26 @@ export function computeReplacementLevels(
   return levels;
 }
 
+function bestVorPosition(
+  fantasyValue: number,
+  positions: Position[],
+  replacementLevels: Partial<Record<Position, number>>,
+): { vor: number; position: Position } {
+  let bestVor = -Infinity;
+  let bestPosition = positions[0] ?? "C";
+
+  for (const position of positions) {
+    const replacement = replacementLevels[position] ?? 0;
+    const vor = fantasyValue - replacement;
+    if (vor > bestVor) {
+      bestVor = vor;
+      bestPosition = position;
+    }
+  }
+
+  return { vor: Number.isFinite(bestVor) ? bestVor : 0, position: bestPosition };
+}
+
 export function applyVor(
   players: Omit<
     PlayerProjection,
@@ -138,8 +158,20 @@ export function applyVor(
   );
 
   const withVor = withValues.map((player) => {
-    const replacement = replacementLevels[player.position] ?? 0;
-    return { ...player, vor: player.fantasyValue - replacement };
+    const eligible = player.positions.length > 0 ? player.positions : [player.position];
+    const vorByPosition = Object.fromEntries(
+      eligible.map((pos) => [
+        pos,
+        player.fantasyValue - (replacementLevels[pos] ?? 0),
+      ]),
+    ) as Partial<Record<Position, number>>;
+
+    const { vor, position } = bestVorPosition(
+      player.fantasyValue,
+      eligible,
+      replacementLevels,
+    );
+    return { ...player, vor, position, vorPosition: position, vorByPosition };
   });
 
   const sorted = [...withVor].sort((a, b) => b.vor - a.vor);

@@ -19,6 +19,7 @@ node_modules/
 .DS_Store
 *.pem
 .env*.local
+.yahoo-oauth.json
 
 # debug
 npm-debug.log*

@@ -1,17 +1,27 @@
 import type { ProjectionsDataset } from "@/lib/types";
 import { Trophy, Target, Shield, Zap } from "lucide-react";
-import { PositionBadge } from "./PositionBadge";
+import { PositionBadge, PositionBadges } from "./PositionBadge";
 import { vorColor } from "@/lib/format";
 
 interface TopPlayersProps {
   players: ProjectionsDataset["players"];
 }
 
+function vorAtPosition(
+  player: ProjectionsDataset["players"][number],
+  position: ProjectionsDataset["players"][number]["position"],
+): number {
+  return player.vorByPosition?.[position] ?? player.vor;
+}
+
 export function TopPlayers({ players }: TopPlayersProps) {
   const topOverall = players.slice(0, 5);
   const topByPosition = (["C", "LW", "RW", "D", "G"] as const).map((pos) => ({
     position: pos,
-    players: players.filter((p) => p.position === pos).slice(0, 3),
+    players: players
+      .filter((p) => p.positions.includes(pos))
+      .sort((a, b) => vorAtPosition(b, pos) - vorAtPosition(a, pos))
+      .slice(0, 3),
   }));
 
   return (
@@ -35,7 +45,10 @@ export function TopPlayers({ players }: TopPlayersProps) {
                   <div className="font-medium text-white">{player.name}</div>
                   <div className="text-xs text-slate-400">{player.team}</div>
                 </div>
-                <PositionBadge position={player.position} />
+                <PositionBadges
+                  positions={player.positions}
+                  vorPosition={player.vorPosition ?? player.position}
+                />
               </div>
               <span className={`font-mono font-bold ${vorColor(player.vor)}`}>
                 {player.vor >= 0 ? "+" : ""}
@@ -65,8 +78,8 @@ export function TopPlayers({ players }: TopPlayersProps) {
                     className="flex justify-between text-sm text-slate-300"
                   >
                     <span className="truncate pr-2">{p.name}</span>
-                    <span className={`font-mono ${vorColor(p.vor)}`}>
-                      {p.vor.toFixed(1)}
+                    <span className={`font-mono ${vorColor(vorAtPosition(p, position))}`}>
+                      {vorAtPosition(p, position).toFixed(1)}
                     </span>
                   </li>
                 ))}
@@ -100,11 +113,11 @@ export function TopPlayers({ players }: TopPlayersProps) {
           </div>
           <div className="rounded-xl border border-white/5 bg-white/5 p-4">
             <Trophy className="mb-2 h-5 w-5 text-cyan-400" />
-            <h3 className="font-medium text-white">AI Projections</h3>
+            <h3 className="font-medium text-white">Yahoo Positions</h3>
             <p className="mt-1 text-sm text-slate-400">
-              Each player dossier includes bio, draft rank, team strength, team
-              changes, injury history, contract stage, and advanced stats. OpenAI
-              analyzes the full context to predict next-season category totals.
+              VOR uses Yahoo Fantasy eligibility. Multi-position players get
+              VOR at their best eligible slot; position filters show VOR at that
+              position.
             </p>
           </div>
         </div>
