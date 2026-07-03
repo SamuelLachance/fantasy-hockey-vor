@@ -7,7 +7,7 @@ import {
 } from "../src/lib/contextual-projections";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { PROJECTION_SEASON } from "../src/lib/nhl-api";
-import { collectAllProfiles } from "../src/lib/player-profile";
+import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
 import type {
@@ -133,7 +133,7 @@ function buildFromProfile(
 async function main() {
   console.log(`Generating ${PROJECTION_SEASON} projections from full player dossiers...`);
 
-  const profiles = await loadProfiles();
+  const profiles = (await loadProfiles()).map(normalizeProfile);
   const aiCache = loadAiCache();
   const aiCount =
     Object.keys(aiCache?.skaters ?? {}).length +

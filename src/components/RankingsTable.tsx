@@ -2,7 +2,13 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
-import type { PlayerProjection, Position } from "@/lib/types";
+import {
+  GOALIE_CATEGORIES,
+  SKATER_CATEGORIES,
+  type Category,
+  type PlayerProjection,
+  type Position,
+} from "@/lib/types";
 import {
   CATEGORY_LABELS,
   formatStat,
@@ -76,8 +82,12 @@ export function RankingsTable({ players }: RankingsTableProps) {
     );
   }
 
-  const samplePlayer = filtered[0];
-  const categories = samplePlayer ? playerCategories(samplePlayer) : [];
+  const categories: readonly Category[] =
+    position === "ALL"
+      ? []
+      : position === "G"
+        ? GOALIE_CATEGORIES
+        : SKATER_CATEGORIES;
 
   return (
     <div className="space-y-4">

@@ -69,6 +69,84 @@ function careerStage(age: number, draft: DraftInfo | null): ContractEstimate {
   return { yearsSinceDraft, careerStage: stage, contractYearNote };
 }
 
+function sumRecord(
+  a: Record<string, number>,
+  b: Record<string, number>,
+): Record<string, number> {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  const out: Record<string, number> = {};
+  for (const k of keys) {
+    out[k] = finite(a[k]) + finite(b[k]);
+  }
+  return out;
+}
+
+/** Merge two rows for the same player/season (e.g. mid-season trade). */
+function mergeSeasonHistory(
+  existing: SeasonHistory,
+  incoming: SeasonHistory,
+): SeasonHistory {
+  const teams = new Set(
+    `${existing.team},${incoming.team}`
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+  );
+  return {
+    season: existing.season,
+    seasonId: existing.seasonId,
+    team: [...teams].join(","),
+    gamesPlayed: existing.gamesPlayed + incoming.gamesPlayed,
+    isGoalie: existing.isGoalie,
+    stats: sumRecord(existing.stats, incoming.stats),
+    // Realtime/advanced feeds are full-season totals — never sum duplicates.
+    advanced: existing.advanced,
+  };
+}
+
+function upsertSeason(seasons: SeasonHistory[], season: SeasonHistory): void {
+  const idx = seasons.findIndex((s) => s.seasonId === season.seasonId);
+  if (idx >= 0) {
+    seasons[idx] = mergeSeasonHistory(seasons[idx], season);
+  } else {
+    seasons.push(season);
+  }
+}
+
+/** Collapse duplicate per-team season rows left over from older collects. */
+export function consolidateSeasonHistory(
+  seasons: SeasonHistory[],
+): SeasonHistory[] {
+  const byId = new Map<number, SeasonHistory>();
+  for (const s of seasons) {
+    const existing = byId.get(s.seasonId);
+    if (existing) {
+      byId.set(s.seasonId, mergeSeasonHistory(existing, s));
+    } else {
+      byId.set(s.seasonId, { ...s });
+    }
+  }
+  return [...byId.values()].sort((a, b) => a.seasonId - b.seasonId);
+}
+
+export function normalizeProfile(profile: PlayerProfile): PlayerProfile {
+  const teamHistory = consolidateSeasonHistory(profile.teamHistory);
+  const injury = buildInjuryProfile(teamHistory, profile.isGoalie);
+  const partial = {
+    ...profile,
+    teamHistory,
+    injury,
+    advancedSeasonLatest:
+      teamHistory.length > 0
+        ? teamHistory[teamHistory.length - 1].advanced
+        : {},
+  };
+  return {
+    ...partial,
+    contextNarrative: buildContextNarrative(partial),
+  };
+}
+
 function buildInjuryProfile(
   seasons: SeasonHistory[],
   isGoalie: boolean,
@@ -267,7 +345,7 @@ export async function collectAllProfiles(
 
       const existing = baseRecords.get(s.playerId);
       if (existing) {
-        existing.seasons.push(season);
+        upsertSeason(existing.seasons, season);
         existing.team = season.team;
         existing.name = s.skaterFullName;
       } else {
@@ -302,7 +380,7 @@ export async function collectAllProfiles(
       };
       const existing = baseRecords.get(g.playerId);
       if (existing) {
-        existing.seasons.push(season);
+        upsertSeason(existing.seasons, season);
         existing.team = season.team;
         existing.name = g.goalieFullName;
       } else {
@@ -383,7 +461,7 @@ export async function collectAllProfiles(
       playoffClinch: teamCtx.clinchIndicator !== "",
     };
 
-    const seasons = [...base.seasons].sort((a, b) => a.seasonId - b.seasonId);
+    const seasons = consolidateSeasonHistory(base.seasons);
     const injury = buildInjuryProfile(seasons, base.isGoalie);
     const contract = careerStage(bio.age, draft);
 

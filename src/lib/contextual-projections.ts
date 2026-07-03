@@ -1,5 +1,8 @@
-import type { PlayerProfile } from "./profile-types";
+import type { PlayerProfile, SeasonHistory } from "./profile-types";
 import type { GoalieProjection, Position, SkaterProjection } from "./types";
+
+const MIN_SEASON_GP = 10;
+const SEASON_WEIGHTS = [0.15, 0.3, 0.55];
 
 function finite(n: unknown, fallback = 0): number {
   const v = Number(n);
@@ -14,6 +17,43 @@ function trendMultiplier(current: number, prior: number): number {
   if (prior <= 0) return 1;
   const change = (current - prior) / prior;
   return Math.max(0.85, Math.min(1.15, 1 + change * 0.35));
+}
+
+function weightedPerGameRate(
+  seasons: SeasonHistory[],
+  totalFn: (season: SeasonHistory) => number,
+): number {
+  const eligible = seasons.filter((s) => s.gamesPlayed >= MIN_SEASON_GP);
+  if (eligible.length === 0) {
+    const fallback = seasons[seasons.length - 1];
+    if (!fallback || fallback.gamesPlayed <= 0) return 0;
+    return perGame(totalFn(fallback), fallback.gamesPlayed);
+  }
+
+  const recent = eligible.slice(-3);
+  const weights = SEASON_WEIGHTS.slice(-recent.length);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  return recent.reduce((sum, season, i) => {
+    const rate = perGame(totalFn(season), season.gamesPlayed);
+    return sum + rate * (weights[i] / totalWeight);
+  }, 0);
+}
+
+function weightedSavePct(seasons: SeasonHistory[]): number {
+  const eligible = seasons.filter(
+    (s) => s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP,
+  );
+  if (eligible.length === 0) return 0.905;
+
+  const recent = eligible.slice(-3);
+  const weights = SEASON_WEIGHTS.slice(-recent.length);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const pct = recent.reduce(
+    (sum, season, i) =>
+      sum + finite(season.stats.savePct, 0.905) * (weights[i] / totalWeight),
+    0,
+  );
+  return Math.max(0.88, Math.min(0.94, pct));
 }
 
 function teamOffenseMultiplier(profile: PlayerProfile): number {
@@ -76,21 +116,21 @@ export function projectSkaterFromProfile(
   const draftMult = draftPedigreeMultiplier(profile);
   const trendMult = last && prev ? trendMultiplier(last.stats.points ?? 0, prev.stats.points ?? 0) : 1;
 
-  const lastGp = last?.gamesPlayed ?? gamesPlayed;
   const rates = {
-    goals: perGame(last?.stats.goals ?? 0, lastGp),
-    assists: perGame(last?.stats.assists ?? 0, lastGp),
-    shots: perGame(last?.stats.shots ?? 0, lastGp),
-    blocks: perGame(last?.advanced.blocks ?? 0, lastGp),
-    hits: perGame(last?.advanced.hits ?? 0, lastGp),
-    powerplayPoints: perGame(last?.stats.ppPoints ?? 0, lastGp),
-    penaltyMinutes: perGame(last?.stats.pim ?? 0, lastGp),
-    faceoffWins: perGame(last?.advanced.faceoffWins ?? 0, lastGp),
+    goals: weightedPerGameRate(seasons, (s) => finite(s.stats.goals)),
+    assists: weightedPerGameRate(seasons, (s) => finite(s.stats.assists)),
+    shots: weightedPerGameRate(seasons, (s) => finite(s.stats.shots)),
+    blocks: weightedPerGameRate(seasons, (s) => finite(s.advanced.blocks)),
+    hits: weightedPerGameRate(seasons, (s) => finite(s.advanced.hits)),
+    powerplayPoints: weightedPerGameRate(seasons, (s) => finite(s.stats.ppPoints)),
+    penaltyMinutes: weightedPerGameRate(seasons, (s) => finite(s.stats.pim)),
+    faceoffWins: weightedPerGameRate(seasons, (s) => finite(s.advanced.faceoffWins)),
   };
 
+  const usageSeason = seasons.filter((s) => s.gamesPlayed >= MIN_SEASON_GP).slice(-1)[0] ?? last;
   const usageBoost =
-    finite(last?.advanced.satFor60) > 0
-      ? Math.min(1.12, 1 + finite(last?.advanced.satFor60) / 100)
+    finite(usageSeason?.advanced.satFor60) > 0
+      ? Math.min(1.12, 1 + finite(usageSeason?.advanced.satFor60) / 100)
       : 1;
 
   const mult = teamMult * ageMult * draftMult * trendMult * usageBoost;
@@ -123,18 +163,16 @@ export function projectGoalieFromProfile(
   profile: PlayerProfile,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
   const seasons = profile.teamHistory.filter((s) => s.isGoalie);
-  const last = seasons[seasons.length - 1];
   const gamesPlayed = projectedGames(profile);
-  const lastGp = last?.gamesPlayed ?? gamesPlayed;
 
   const teamWinPct = profile.teamContext.pointsPct;
   const ageMult = ageCurve("G", profile.bio.age);
   const durability = profile.injury.durabilityScore;
 
-  const winRate = perGame(last?.stats.wins ?? 0, lastGp);
-  const shutoutRate = perGame(last?.stats.shutouts ?? 0, lastGp);
-  const saveRate = perGame(last?.stats.saves ?? 0, lastGp);
-  const savePct = finite(last?.stats.savePct, 0.905);
+  const winRate = weightedPerGameRate(seasons, (s) => finite(s.stats.wins));
+  const shutoutRate = weightedPerGameRate(seasons, (s) => finite(s.stats.shutouts));
+  const saveRate = weightedPerGameRate(seasons, (s) => finite(s.stats.saves));
+  const savePct = weightedSavePct(seasons);
 
   const teamBoost = 0.85 + teamWinPct * 0.3;
 
