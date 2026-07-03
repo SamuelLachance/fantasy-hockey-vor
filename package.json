@@ -12,8 +12,11 @@
     "ai-project": "tsx scripts/ai-project.ts",
     "ml:dataset": "tsx scripts/build-ml-dataset.ts",
     "ml:context": "tsx scripts/build-ml-context.ts",
+    "ml:re-enrich": "tsx scripts/re-enrich-dataset.ts",
     "ml:train": "tsx scripts/train-ml.ts",
     "refresh-contracts": "tsx scripts/refresh-contracts.ts",
+    "draft:registry": "tsx scripts/build-draft-registry.ts",
+    "refresh:draft": "tsx scripts/refresh-draft-data.ts",
     "yahoo:auth": "tsx scripts/fetch-yahoo-positions.ts auth",
     "yahoo:fetch": "tsx scripts/fetch-yahoo-positions.ts fetch",
     "generate": "tsx scripts/generate-projections.ts"

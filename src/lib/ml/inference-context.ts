@@ -1,10 +1,7 @@
 import { PROJECTION_SEASON_ID } from "../nhl-api";
 import type { PlayerProfile } from "../profile-types";
-import {
-  ageAtSeasonStart,
-  draftOverallLog,
-  yearsSinceDraft,
-} from "./player-context";
+import { lookupDraftByName } from "../draft-registry";
+import { ageAtSeasonStart, loadDraftRegistrySync } from "./player-context";
 import type { MlContextCaches } from "./context-types";
 import { contractSeasonKey, teamSeasonKey } from "./context-types";
 import { enrichPlayerSeasonRow } from "./enrich-rows";
@@ -58,7 +55,18 @@ export function buildProjectionTargetRow(
   ];
 
   const birthDate = profile.bio.birthDate;
-  const draft = profile.draft;
+  const registry = loadDraftRegistrySync();
+  const draftFromRegistry =
+    !profile.draft?.overallPick && registry
+      ? lookupDraftByName(registry, profile.name)
+      : null;
+  const draftOverall =
+    profile.draft?.overallPick ??
+    (draftFromRegistry ? draftFromRegistry.overallPick : 0);
+  const draftRound =
+    profile.draft?.round ?? (draftFromRegistry ? draftFromRegistry.round : 0);
+  const draftYear =
+    profile.draft?.year ?? (draftFromRegistry ? draftFromRegistry.year : 0);
 
   const row: PlayerSeasonRow = {
     playerId: profile.id,
@@ -85,11 +93,9 @@ export function buildProjectionTargetRow(
     heightInches: profile.bio.heightInches,
     weightPounds: profile.bio.weightPounds,
     shootsLeft: profile.bio.shootsCatches === "L" ? 1 : 0,
-    draftYear: draft?.year ?? 0,
-    draftRound: draft?.round ?? 0,
-    draftOverallPick: draft?.overallPick ?? 999,
-    draftOverallLog: draftOverallLog(draft?.overallPick ?? 999),
-    yearsSinceDraft: yearsSinceDraft(seasonId, draft?.year ?? 0),
+    draftYear,
+    draftRound,
+    draftOverallPick: draftOverall,
     capHitUsd:
       contract?.capHitUsd ?? profile.contract.capHitUsd ?? 0,
     contractYearsRemaining:

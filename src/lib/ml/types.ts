@@ -50,8 +50,6 @@ export interface PlayerSeasonRow {
   draftYear?: number;
   draftRound?: number;
   draftOverallPick?: number;
-  draftOverallLog?: number;
-  yearsSinceDraft?: number;
   capHitUsd?: number;
   contractYearsRemaining?: number;
   teamPointPctg?: number;

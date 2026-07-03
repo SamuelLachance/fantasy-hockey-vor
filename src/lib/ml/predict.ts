@@ -116,7 +116,7 @@ export function projectSkaterWithMl(
   return {
     projection,
     gamesPlayed,
-    reasoning: `ML time-series (${models.featureLags}-season lags + player/team context) anchored to career rates; ${gamesPlayed} GP based on durability`,
+    reasoning: `ML time-series (${models.featureLags}-season lags + player/team context) anchored to career rates; ${gamesPlayed} GP full-season baseline (skaters)`,
   };
 }
 

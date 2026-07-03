@@ -19,6 +19,11 @@ import {
 } from "./nhl-api";
 import { ageFromBirthDate, parseBirthDate, seasonStartDate } from "./age";
 import { fetchContractByNhlId } from "./contracts";
+import {
+  draftRecordToInfo,
+  lookupDraftByName,
+} from "./draft-registry";
+import { loadDraftRegistrySync, resolveDraftForBio } from "./ml/player-context";
 import type {
   ContractInfo,
   DraftInfo,
@@ -217,7 +222,7 @@ function buildInjuryProfile(
   };
 }
 
-function buildContextNarrative(profile: Omit<PlayerProfile, "contextNarrative" | "collectedAt">): string {
+export function buildContextNarrative(profile: Omit<PlayerProfile, "contextNarrative" | "collectedAt">): string {
   const lines: string[] = [
     `${profile.name} (${profile.position}, ${profile.team})`,
     `Age ${profile.bio.age}, ${profile.bio.heightInches}" / ${profile.bio.weightPounds}lb, shoots ${profile.bio.shootsCatches}`,
@@ -480,15 +485,19 @@ export async function collectAllProfiles(
       sweaterNumber: landing?.sweaterNumber ?? null,
     };
 
-    const draft: DraftInfo | null = landing?.draftDetails
-      ? {
-          year: landing.draftDetails.year,
-          round: landing.draftDetails.round,
-          pickInRound: landing.draftDetails.pickInRound,
-          overallPick: landing.draftDetails.overallPick,
-          team: landing.draftDetails.teamAbbrev,
-        }
-      : null;
+    const landingName = landing
+      ? `${landing.firstName.default} ${landing.lastName.default}`
+      : base.name;
+
+    const registry = loadDraftRegistrySync();
+    const draft: DraftInfo | null = landing
+      ? resolveDraftForBio(id, landingName, landing, registry)
+      : registry
+        ? (() => {
+            const record = lookupDraftByName(registry, base.name);
+            return record ? draftRecordToInfo(record) : null;
+          })()
+        : null;
 
     const teamContext: TeamContext = {
       teamAbbrev: teamCtx.teamAbbrev,

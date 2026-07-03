@@ -2,38 +2,26 @@ import type { PlayerProfile } from "./profile-types";
 
 const FULL_SEASON = 82;
 
-/** Projected GP from durability — not a blanket 82 for everyone. */
+/** Skaters use full-season GP — injuries are not predictable. Goalies use durability history. */
 export function projectedGamesFromProfile(profile: PlayerProfile): number {
+  if (!profile.isGoalie) {
+    return FULL_SEASON;
+  }
+
   const { injury } = profile;
   const historyGp = profile.teamHistory
     .filter((s) => s.gamesPlayed > 0)
     .map((s) => s.gamesPlayed);
 
-  if (profile.isGoalie) {
-    const avg = injury.avgGamesPlayedLast3 || injury.gamesPlayedLastSeason;
-    if (avg > 0) {
-      return Math.round(Math.min(58, Math.max(20, avg)));
-    }
-    return 35;
-  }
-
-  if (injury.avgGamesPlayedLast3 > 0) {
-    const durability = injury.durabilityScore;
-    const base = injury.avgGamesPlayedLast3;
-    const adjusted = base * (0.75 + durability * 0.25);
-    return Math.round(Math.min(FULL_SEASON, Math.max(25, adjusted)));
-  }
-
-  if (injury.gamesPlayedLastSeason > 0) {
-    return Math.round(
-      Math.min(FULL_SEASON, Math.max(25, injury.gamesPlayedLastSeason)),
-    );
+  const avg = injury.avgGamesPlayedLast3 || injury.gamesPlayedLastSeason;
+  if (avg > 0) {
+    return Math.round(Math.min(58, Math.max(20, avg)));
   }
 
   if (historyGp.length > 0) {
-    const avg = historyGp.reduce((a, b) => a + b, 0) / historyGp.length;
-    return Math.round(Math.min(FULL_SEASON, Math.max(25, avg)));
+    const historyAvg = historyGp.reduce((a, b) => a + b, 0) / historyGp.length;
+    return Math.round(Math.min(58, Math.max(20, historyAvg)));
   }
 
-  return 55;
+  return 35;
 }

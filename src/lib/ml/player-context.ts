@@ -1,5 +1,15 @@
 import { ageFromBirthDate, parseBirthDate, seasonStartDate } from "../age";
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { fetchJson, seasonIdToLabel, type PlayerLanding } from "../nhl-api";
+import type { DraftInfo } from "../profile-types";
+import {
+  draftOverallPickFeature,
+  draftRecordToInfo,
+  draftRoundFeature,
+  lookupDraftByName,
+  type DraftRegistry,
+} from "../draft-registry";
 import type { PlayerBioContext, PlayerContractSeason } from "./context-types";
 
 const BIO_CONCURRENCY = 8;
@@ -42,11 +52,45 @@ export async function fetchPlayerLanding(playerId: number): Promise<PlayerLandin
   }
 }
 
+const REGISTRY_PATH = join(process.cwd(), "src", "data", "draft-registry.json");
+
+export function loadDraftRegistrySync(): DraftRegistry | null {
+  if (!existsSync(REGISTRY_PATH)) return null;
+  try {
+    return JSON.parse(readFileSync(REGISTRY_PATH, "utf8")) as DraftRegistry;
+  } catch {
+    return null;
+  }
+}
+
+export function resolveDraftForBio(
+  playerId: number,
+  name: string,
+  landing: PlayerLanding | null,
+  registry: DraftRegistry | null,
+): DraftInfo | null {
+  if (landing?.draftDetails) {
+    const d = landing.draftDetails;
+    return {
+      year: d.year,
+      round: d.round,
+      pickInRound: d.pickInRound,
+      overallPick: d.overallPick,
+      team: d.teamAbbrev,
+    };
+  }
+  if (!registry) return null;
+  const record = lookupDraftByName(registry, name);
+  return record ? draftRecordToInfo(record) : null;
+}
+
 export function landingToBioContext(
   playerId: number,
+  name: string,
   landing: PlayerLanding,
+  registry: DraftRegistry | null,
 ): PlayerBioContext {
-  const draft = landing.draftDetails;
+  const draft = resolveDraftForBio(playerId, name, landing, registry);
   return {
     playerId,
     birthDate: parseBirthDate(landing.birthDate) ?? landing.birthDate ?? null,
@@ -54,30 +98,31 @@ export function landingToBioContext(
     weightPounds: landing.weightInPounds ?? 190,
     shootsLeft: landing.shootsCatches?.toUpperCase().startsWith("L") ? 1 : 0,
     draftYear: draft?.year ?? 0,
-    draftRound: draft?.round ?? 0,
-    draftOverallPick: draft?.overallPick ?? 999,
+    draftRound: draftRoundFeature(draft),
+    draftOverallPick: draftOverallPickFeature(draft),
   };
 }
 
 export async function buildPlayerBioContexts(
-  playerIds: number[],
+  players: Array<{ playerId: number; name: string }>,
   onProgress?: (done: number, total: number) => void,
 ): Promise<Map<number, PlayerBioContext>> {
+  const registry = loadDraftRegistrySync();
   const map = new Map<number, PlayerBioContext>();
   let done = 0;
 
-  for (let i = 0; i < playerIds.length; i += BIO_CONCURRENCY) {
-    const batch = playerIds.slice(i, i + BIO_CONCURRENCY);
+  for (let i = 0; i < players.length; i += BIO_CONCURRENCY) {
+    const batch = players.slice(i, i + BIO_CONCURRENCY);
     await Promise.all(
-      batch.map(async (id) => {
-        const landing = await fetchPlayerLanding(id);
+      batch.map(async ({ playerId, name }) => {
+        const landing = await fetchPlayerLanding(playerId);
         if (landing) {
-          map.set(id, landingToBioContext(id, landing));
+          map.set(playerId, landingToBioContext(playerId, name, landing, registry));
         }
       }),
     );
     done += batch.length;
-    onProgress?.(done, playerIds.length);
+    onProgress?.(done, players.length);
     await new Promise((r) => setTimeout(r, 150));
   }
 
@@ -185,7 +230,8 @@ export function yearsSinceDraft(seasonId: number, draftYear: number): number {
   return Math.max(0, seasonStartYear - draftYear);
 }
 
+/** @deprecated use draftOverallPickFeature — kept for migration only */
 export function draftOverallLog(overallPick: number): number {
-  if (!overallPick || overallPick >= 999) return Math.log(999);
-  return Math.log(overallPick);
+  if (!overallPick || overallPick >= 999) return 0;
+  return overallPick / 224;
 }

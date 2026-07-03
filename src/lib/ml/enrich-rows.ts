@@ -6,9 +6,9 @@ import {
   ageAtSeasonStart,
   buildContractSeasonMap,
   buildPlayerBioContexts,
-  draftOverallLog,
-  yearsSinceDraft,
+  loadDraftRegistrySync,
 } from "./player-context";
+import { lookupDraftByName } from "../draft-registry";
 import type { PlayerSeasonRow } from "./types";
 import { buildTeamSeasonContexts } from "./team-season-context";
 import { contractSeasonKey, teamSeasonKey } from "./context-types";
@@ -41,9 +41,12 @@ export async function buildContextCaches(
   const teamContexts = await buildTeamSeasonContexts(HISTORICAL_SEASON_IDS, onProgress);
 
   onProgress?.(`Fetching player bio for ${playerIds.length} players...`);
-  const bioMap = await buildPlayerBioContexts(playerIds, (d, t) => {
-    if (d % 100 === 0) onProgress?.(`  player bio ${d}/${t}`);
-  });
+  const bioMap = await buildPlayerBioContexts(
+    uniquePlayers.map((p) => ({ playerId: p.playerId, name: p.name })),
+    (d, t) => {
+      if (d % 100 === 0) onProgress?.(`  player bio ${d}/${t}`);
+    },
+  );
 
   onProgress?.(`Fetching CapWages contract history for ${uniquePlayers.length} players...`);
   const contractMap = await buildContractSeasonMap(
@@ -103,6 +106,18 @@ export function enrichPlayerSeasonRow(
   const primaryTeam = row.team.split(",")[0].trim().toUpperCase();
   const teamCtx = caches.teamBySeasonTeam[teamSeasonKey(row.seasonId, primaryTeam)];
   const bio = caches.playerBio[row.playerId];
+  const registry = loadDraftRegistrySync();
+  const draftFromRegistry =
+    !bio?.draftOverallPick && registry
+      ? lookupDraftByName(registry, row.name)
+      : null;
+  const draftOverall =
+    bio?.draftOverallPick ??
+    (draftFromRegistry ? draftFromRegistry.overallPick : 0);
+  const draftRound =
+    bio?.draftRound ??
+    (draftFromRegistry ? draftFromRegistry.round : 0);
+
   const seasonLabel = seasonIdToLabel(row.seasonId);
   const contract =
     caches.contractByPlayerSeason[contractSeasonKey(row.playerId, seasonLabel)];
@@ -113,11 +128,9 @@ export function enrichPlayerSeasonRow(
     heightInches: bio?.heightInches ?? 72,
     weightPounds: bio?.weightPounds ?? 190,
     shootsLeft: bio?.shootsLeft ?? 0,
-    draftYear: bio?.draftYear ?? 0,
-    draftRound: bio?.draftRound ?? 0,
-    draftOverallPick: bio?.draftOverallPick ?? 999,
-    draftOverallLog: bio ? draftOverallLog(bio.draftOverallPick) : draftOverallLog(999),
-    yearsSinceDraft: bio ? yearsSinceDraft(row.seasonId, bio.draftYear) : 0,
+    draftYear: bio?.draftYear ?? draftFromRegistry?.year ?? 0,
+    draftRound,
+    draftOverallPick: draftOverall,
     capHitUsd: contract?.capHitUsd ?? 0,
     contractYearsRemaining: contract?.yearsRemaining ?? 0,
     teamPointPctg: teamCtx?.pointPctg ?? 0.5,
