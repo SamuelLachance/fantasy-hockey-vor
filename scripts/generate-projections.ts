@@ -10,6 +10,7 @@ import { PROJECTION_SEASON } from "../src/lib/nhl-api";
 import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
+import { findProjectionIssues, clampGoalieProjection, clampSkaterProjection } from "../src/lib/projection-sanity";
 import type {
   GoalieProjection,
   PlayerProjection,
@@ -61,12 +62,15 @@ function buildFromProfile(
   const aiGoalie = aiCache?.goalies[profile.id];
 
   if (profile.isGoalie && aiGoalie) {
-    const projection: GoalieProjection = {
-      wins: aiGoalie.wins,
-      shutouts: aiGoalie.shutouts,
-      saves: aiGoalie.saves,
-      savePct: aiGoalie.savePct,
-    };
+    const projection = clampGoalieProjection(
+      {
+        wins: aiGoalie.wins,
+        shutouts: aiGoalie.shutouts,
+        saves: aiGoalie.saves,
+        savePct: aiGoalie.savePct,
+      },
+      aiGoalie.gamesPlayed,
+    );
     return {
       id: profile.id,
       name: profile.name,
@@ -84,16 +88,20 @@ function buildFromProfile(
   }
 
   if (!profile.isGoalie && aiSkater) {
-    const projection: SkaterProjection = {
-      goals: aiSkater.goals,
-      assists: aiSkater.assists,
-      shots: aiSkater.shots,
-      blocks: aiSkater.blocks,
-      hits: aiSkater.hits,
-      powerplayPoints: aiSkater.powerplayPoints,
-      penaltyMinutes: aiSkater.penaltyMinutes,
-      faceoffWins: aiSkater.faceoffWins,
-    };
+    const projection = clampSkaterProjection(
+      {
+        goals: aiSkater.goals,
+        assists: aiSkater.assists,
+        shots: aiSkater.shots,
+        blocks: aiSkater.blocks,
+        hits: aiSkater.hits,
+        powerplayPoints: aiSkater.powerplayPoints,
+        penaltyMinutes: aiSkater.penaltyMinutes,
+        faceoffWins: aiSkater.faceoffWins,
+      },
+      aiSkater.gamesPlayed,
+      profile.position,
+    );
     return {
       id: profile.id,
       name: profile.name,
@@ -149,6 +157,18 @@ async function main() {
 
   const raw = profiles.map((p) => buildFromProfile(p, aiCache));
   const ranked = applyVor(raw, DEFAULT_LEAGUE);
+
+  const issues = findProjectionIssues(ranked);
+  if (issues.length > 0) {
+    console.warn(`Projection sanity check found ${issues.length} issue(s):`);
+    for (const issue of issues.slice(0, 10)) {
+      console.warn(`  - ${issue.name} (${issue.position}): ${issue.reason}`);
+    }
+    if (issues.length > 10) {
+      console.warn(`  ... and ${issues.length - 10} more`);
+    }
+    throw new Error("Projection sanity check failed");
+  }
 
   const aiPlayers = ranked.filter((p) => p.projectionMethod === "ai").length;
   const engine =

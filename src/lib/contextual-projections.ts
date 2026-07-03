@@ -1,5 +1,9 @@
 import type { PlayerProfile, SeasonHistory } from "./profile-types";
-import { rookieGoalieProjection } from "./projections";
+import {
+  clampGoalieProjection,
+  clampSkaterProjection,
+} from "./projection-sanity";
+import { rookieGoalieProjection, rookieSkaterProjection } from "./projections";
 import type { GoalieProjection, Position, SkaterProjection } from "./types";
 
 const MIN_SEASON_GP = 10;
@@ -66,6 +70,31 @@ function weightedSavePct(seasons: SeasonHistory[]): number {
   return Math.max(0.875, Math.min(0.93, pct));
 }
 
+const MAX_GOALIE_WIN_RATE = 0.62;
+
+function careerSkaterRates(profile: PlayerProfile) {
+  const career = profile.careerTotals;
+  const gp = finite(career.gamesPlayed);
+  if (gp < MIN_SEASON_GP) return null;
+
+  const last = profile.teamHistory
+    .filter((s) => !s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP)
+    .slice(-1)[0];
+
+  return {
+    goals: perGame(finite(career.goals), gp),
+    assists: perGame(finite(career.assists), gp),
+    shots: perGame(finite(career.shots), gp),
+    blocks: last ? perGame(finite(last.advanced.blocks), last.gamesPlayed) : 0,
+    hits: last ? perGame(finite(last.advanced.hits), last.gamesPlayed) : 0,
+    powerplayPoints: perGame(finite(career.powerPlayPoints), gp),
+    penaltyMinutes: perGame(finite(career.pim), gp),
+    faceoffWins: last
+      ? perGame(finite(last.advanced.faceoffWins), last.gamesPlayed)
+      : 0,
+  };
+}
+
 function careerGoalieRates(profile: PlayerProfile) {
   const career = profile.careerTotals;
   const gp = finite(career.gamesPlayed);
@@ -80,24 +109,42 @@ function careerGoalieRates(profile: PlayerProfile) {
   };
 }
 
-function clampGoalieProjection(
-  projection: GoalieProjection,
+function applySkaterRates(
+  rates: {
+    goals: number;
+    assists: number;
+    shots: number;
+    blocks: number;
+    hits: number;
+    powerplayPoints: number;
+    penaltyMinutes: number;
+    faceoffWins: number;
+  },
+  profile: PlayerProfile,
   gamesPlayed: number,
-): GoalieProjection {
-  const gp = Math.max(1, gamesPlayed);
-  const wins = Math.min(Math.max(0, Math.round(projection.wins)), gp);
-  const shutouts = Math.min(Math.max(0, Math.round(projection.shutouts)), wins);
-  const saves = Math.min(
-    Math.max(shutouts * 15, Math.round(projection.saves)),
-    gp * 40,
+  mult: number,
+  teamMult: number,
+): SkaterProjection {
+  return clampSkaterProjection(
+    {
+      goals: Math.round(rates.goals * gamesPlayed * mult),
+      assists: Math.round(rates.assists * gamesPlayed * mult),
+      shots: Math.round(rates.shots * gamesPlayed * mult * 1.02),
+      blocks: Math.round(
+        rates.blocks * gamesPlayed * (profile.position === "D" ? 1.05 : 1),
+      ),
+      hits: Math.round(rates.hits * gamesPlayed),
+      powerplayPoints: Math.round(rates.powerplayPoints * gamesPlayed * teamMult),
+      penaltyMinutes: Math.round(rates.penaltyMinutes * gamesPlayed),
+      faceoffWins: Math.round(
+        rates.faceoffWins *
+          gamesPlayed *
+          (profile.position === "C" ? 1.05 : 0.3),
+      ),
+    },
+    gamesPlayed,
+    profile.position,
   );
-
-  return {
-    wins,
-    shutouts,
-    saves,
-    savePct: Math.max(0.875, Math.min(0.93, projection.savePct)),
-  };
 }
 
 function teamOffenseMultiplier(profile: PlayerProfile): number {
@@ -160,7 +207,11 @@ export function projectSkaterFromProfile(
   const draftMult = draftPedigreeMultiplier(profile);
   const trendMult = last && prev ? trendMultiplier(last.stats.points ?? 0, prev.stats.points ?? 0) : 1;
 
-  const rates = {
+  const eligibleGp = seasons
+    .filter((s) => s.gamesPlayed >= MIN_SEASON_GP)
+    .reduce((sum, s) => sum + s.gamesPlayed, 0);
+
+  let rates = {
     goals: weightedPerGameRate(seasons, (s) => finite(s.stats.goals)),
     assists: weightedPerGameRate(seasons, (s) => finite(s.stats.assists)),
     shots: weightedPerGameRate(seasons, (s) => finite(s.stats.shots)),
@@ -170,6 +221,29 @@ export function projectSkaterFromProfile(
     penaltyMinutes: weightedPerGameRate(seasons, (s) => finite(s.stats.pim)),
     faceoffWins: weightedPerGameRate(seasons, (s) => finite(s.advanced.faceoffWins)),
   };
+  let source = "recent seasons";
+
+  if (eligibleGp < MIN_SEASON_GP) {
+    const career = careerSkaterRates(profile);
+    if (career) {
+      rates = career;
+      source = "career totals";
+    } else {
+      const baseline = rookieSkaterProjection(profile.position);
+      const baselineGp = 72;
+      rates = {
+        goals: baseline.goals / baselineGp,
+        assists: baseline.assists / baselineGp,
+        shots: baseline.shots / baselineGp,
+        blocks: baseline.blocks / baselineGp,
+        hits: baseline.hits / baselineGp,
+        powerplayPoints: baseline.powerplayPoints / baselineGp,
+        penaltyMinutes: baseline.penaltyMinutes / baselineGp,
+        faceoffWins: baseline.faceoffWins / baselineGp,
+      };
+      source = "position baseline";
+    }
+  }
 
   const usageSeason = seasons.filter((s) => s.gamesPlayed >= MIN_SEASON_GP).slice(-1)[0] ?? last;
   const usageBoost =
@@ -179,20 +253,16 @@ export function projectSkaterFromProfile(
 
   const mult = teamMult * ageMult * draftMult * trendMult * usageBoost;
 
-  const projection: SkaterProjection = {
-    goals: Math.round(rates.goals * gamesPlayed * mult),
-    assists: Math.round(rates.assists * gamesPlayed * mult),
-    shots: Math.round(rates.shots * gamesPlayed * mult * 1.02),
-    blocks: Math.round(rates.blocks * gamesPlayed * (profile.position === "D" ? 1.05 : 1)),
-    hits: Math.round(rates.hits * gamesPlayed),
-    powerplayPoints: Math.round(rates.powerplayPoints * gamesPlayed * teamMult),
-    penaltyMinutes: Math.round(rates.penaltyMinutes * gamesPlayed),
-    faceoffWins: Math.round(
-      rates.faceoffWins * gamesPlayed * (profile.position === "C" ? 1.05 : 0.3),
-    ),
-  };
+  const projection = applySkaterRates(
+    rates,
+    profile,
+    gamesPlayed,
+    mult,
+    teamMult,
+  );
 
   const reasoning = [
+    `Rates from ${source}`,
     `Team offense mult ${teamMult.toFixed(2)} (#${profile.teamContext.leagueRank} ${profile.teamContext.teamAbbrev})`,
     `Age ${profile.bio.age} curve ${ageMult.toFixed(2)}`,
     profile.draft ? `Draft #${profile.draft.overallPick} pedigree ${draftMult.toFixed(2)}` : "Undrafted",
@@ -246,6 +316,7 @@ export function projectGoalieFromProfile(
   if (winRate <= 0) winRate = LEAGUE_GOALIE_RATES.winRate * teamBoost;
   if (shutoutRate <= 0) shutoutRate = LEAGUE_GOALIE_RATES.shutoutRate;
   if (saveRate <= 0) saveRate = LEAGUE_GOALIE_RATES.savesPerGame;
+  winRate = Math.min(winRate, MAX_GOALIE_WIN_RATE);
 
   const projection = clampGoalieProjection(
     {
