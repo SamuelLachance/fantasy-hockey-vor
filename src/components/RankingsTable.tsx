@@ -215,14 +215,18 @@ export function RankingsTable({ players }: RankingsTableProps) {
                           <div className="mb-4 flex flex-wrap items-center gap-2">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                (player.projectionMethod ?? "contextual") === "ai"
+                                player.projectionMethod === "ai"
                                   ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30"
-                                  : "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
+                                  : player.projectionMethod === "ml"
+                                    ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30"
+                                    : "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
                               }`}
                             >
                               {player.projectionMethod === "ai"
                                 ? "AI projection"
-                                : "Contextual model"}
+                                : player.projectionMethod === "ml"
+                                  ? "ML time-series"
+                                  : "Contextual model"}
                             </span>
                             {player.confidence != null && (
                               <span className="text-xs text-slate-400">

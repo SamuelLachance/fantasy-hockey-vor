@@ -10,6 +10,8 @@
     "lint": "eslint",
     "collect": "tsx scripts/collect-profiles.ts",
     "ai-project": "tsx scripts/ai-project.ts",
+    "ml:dataset": "tsx scripts/build-ml-dataset.ts",
+    "ml:train": "tsx scripts/train-ml.ts",
     "generate": "tsx scripts/generate-projections.ts"
   },
   "dependencies": {

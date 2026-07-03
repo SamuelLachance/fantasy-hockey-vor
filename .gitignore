@@ -29,3 +29,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ML training cache (models.json is committed for deploy)
+src/data/ml/dataset.json

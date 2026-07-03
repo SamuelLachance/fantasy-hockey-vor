@@ -7,7 +7,19 @@ export const NHL_TEAMS = [
 
 export const PROJECTION_SEASON = "2026-27";
 export const PROJECTION_SEASON_ID = 20262027;
+
+/** Seasons used for live dossier collection (recent context). */
 export const BASE_SEASON_IDS = [20232024, 20242025, 20252026] as const;
+
+/** All seasons with complete skater + goalie advanced feeds on the NHL API. */
+export const HISTORICAL_SEASON_IDS = [
+  20102011, 20112012, 20122013, 20132014, 20142015, 20152016,
+  20162017, 20172018, 20182019, 20192020, 20202021, 20212022,
+  20222023, 20232024, 20242025, 20252026,
+] as const;
+
+export const ML_FEATURE_LAGS = 3;
+export const ML_MIN_SEASON_GP = 10;
 
 const STATS_BASE = "https://api.nhle.com/stats/rest/en";
 

@@ -2,6 +2,12 @@ import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { loadAiCache } from "../src/lib/ai-projections";
 import {
+  getMlModels,
+  projectGoalieWithMl,
+  projectSkaterWithMl,
+} from "../src/lib/ml/predict";
+import type { MlModelBundle } from "../src/lib/ml/types";
+import {
   projectGoalieFromProfile,
   projectSkaterFromProfile,
 } from "../src/lib/contextual-projections";
@@ -12,10 +18,8 @@ import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
 import { findProjectionIssues, clampGoalieProjection, clampSkaterProjection } from "../src/lib/projection-sanity";
 import type {
-  GoalieProjection,
   PlayerProjection,
   Position,
-  SkaterProjection,
 } from "../src/lib/types";
 
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
@@ -54,6 +58,7 @@ async function loadProfiles(): Promise<PlayerProfile[]> {
 function buildFromProfile(
   profile: PlayerProfile,
   aiCache: ReturnType<typeof loadAiCache>,
+  mlModels: MlModelBundle | null,
 ): Omit<
   PlayerProjection,
   "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
@@ -118,6 +123,26 @@ function buildFromProfile(
     };
   }
 
+  if (mlModels) {
+    const ml = profile.isGoalie
+      ? projectGoalieWithMl(profile, mlModels)
+      : projectSkaterWithMl(profile, mlModels);
+    return {
+      id: profile.id,
+      name: profile.name,
+      team: profile.team,
+      position: profile.position,
+      positions: profile.positions,
+      isGoalie: profile.isGoalie,
+      gamesPlayed: ml.gamesPlayed,
+      projection: ml.projection,
+      projectionMethod: "ml",
+      confidence: 0.75,
+      reasoning: ml.reasoning,
+      profileSummary: profile.contextNarrative,
+    };
+  }
+
   const contextual = profile.isGoalie
     ? projectGoalieFromProfile(profile)
     : projectSkaterFromProfile(profile);
@@ -143,19 +168,24 @@ async function main() {
 
   const profiles = (await loadProfiles()).map(normalizeProfile);
   const aiCache = loadAiCache();
+  const mlModels = getMlModels();
   const aiCount =
     Object.keys(aiCache?.skaters ?? {}).length +
     Object.keys(aiCache?.goalies ?? {}).length;
 
   if (aiCount > 0) {
     console.log(`Using AI projections for ${aiCount} cached players`);
+  } else if (mlModels) {
+    console.log(
+      `Using trained ML time-series models (${mlModels.skaterModels.length} skater + ${mlModels.goalieModels.length} goalie targets, trained ${mlModels.trainedAt})`,
+    );
   } else {
     console.log(
-      "No AI cache found — using contextual engine. Run npm run ai-project with OPENAI_API_KEY for full AI projections.",
+      "No ML models — run npm run ml:dataset && npm run ml:train. Falling back to contextual engine.",
     );
   }
 
-  const raw = profiles.map((p) => buildFromProfile(p, aiCache));
+  const raw = profiles.map((p) => buildFromProfile(p, aiCache, mlModels));
   const ranked = applyVor(raw, DEFAULT_LEAGUE);
 
   const issues = findProjectionIssues(ranked);
@@ -171,12 +201,17 @@ async function main() {
   }
 
   const aiPlayers = ranked.filter((p) => p.projectionMethod === "ai").length;
+  const mlPlayers = ranked.filter((p) => p.projectionMethod === "ml").length;
   const engine =
     aiPlayers > ranked.length * 0.5
       ? "openai-dossier"
-      : aiPlayers > 0
-        ? "hybrid-ai-contextual"
-        : "contextual-dossier";
+      : mlPlayers > ranked.length * 0.5
+        ? "ml-timeseries"
+        : aiPlayers > 0
+          ? "hybrid-ai-contextual"
+          : mlPlayers > 0
+            ? "hybrid-ml-contextual"
+            : "contextual-dossier";
 
   const dataset = {
     generatedAt: new Date().toISOString(),
@@ -208,7 +243,9 @@ async function main() {
     ),
   );
 
-  console.log(`Wrote ${ranked.length} projections (${aiPlayers} AI, engine: ${engine})`);
+  console.log(
+    `Wrote ${ranked.length} projections (${mlPlayers} ML, ${aiPlayers} AI, engine: ${engine})`,
+  );
   console.log(
     "Top 5 VOR:",
     ranked

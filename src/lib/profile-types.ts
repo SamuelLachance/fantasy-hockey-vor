@@ -113,4 +113,4 @@ export interface AiProjectionCache {
   goalies: Record<number, AiGoalieProjection>;
 }
 
-export type ProjectionMethod = "ai" | "contextual";
+export type ProjectionMethod = "ml" | "ai" | "contextual";
