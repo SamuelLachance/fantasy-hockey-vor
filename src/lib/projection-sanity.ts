@@ -51,7 +51,7 @@ const SKATER_RATE_LIMITS: Record<Exclude<Position, "G">, SkaterRateLimits> = {
     hits: 4.5,
     powerplayPoints: 0.95,
     penaltyMinutes: 4.5,
-    faceoffWins: 0.5,
+    faceoffWins: 0,
   },
 };
 
@@ -104,11 +104,10 @@ export function clampSkaterProjection(
     limits.penaltyMinutes,
     gp,
   );
-  const faceoffWins = clampTotal(
-    projection.faceoffWins,
-    limits.faceoffWins,
-    gp,
-  );
+  const faceoffWins =
+    position === "D"
+      ? 0
+      : clampTotal(projection.faceoffWins, limits.faceoffWins, gp);
 
   const minShots = Math.max(goals, Math.round((goals + assists) * 0.65));
   shots = Math.max(shots, minShots);

@@ -1,5 +1,6 @@
 import {
   SKATER_CATEGORIES,
+  DEFENSE_SKATER_CATEGORIES,
   GOALIE_CATEGORIES,
   type Category,
   type PlayerProjection,
@@ -59,7 +60,17 @@ export function formatStat(
 export function playerCategories(
   player: PlayerProjection,
 ): readonly Category[] {
-  return player.isGoalie ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
+  if (player.isGoalie) return GOALIE_CATEGORIES;
+  if (player.position === "D") return DEFENSE_SKATER_CATEGORIES;
+  return SKATER_CATEGORIES;
+}
+
+export function skaterCategoriesForFilter(
+  position: Position | "ALL",
+): readonly Category[] {
+  if (position === "G") return GOALIE_CATEGORIES;
+  if (position === "D") return DEFENSE_SKATER_CATEGORIES;
+  return SKATER_CATEGORIES;
 }
 
 export function vorColor(vor: number): string {

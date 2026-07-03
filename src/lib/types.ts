@@ -12,6 +12,17 @@ export const SKATER_CATEGORIES = [
   "faceoffWins",
 ] as const;
 
+/** Skater categories shown for defensemen (no faceoffs). */
+export const DEFENSE_SKATER_CATEGORIES = [
+  "goals",
+  "assists",
+  "shots",
+  "blocks",
+  "hits",
+  "powerplayPoints",
+  "penaltyMinutes",
+] as const;
+
 export const GOALIE_CATEGORIES = [
   "wins",
   "shutouts",

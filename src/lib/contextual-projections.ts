@@ -142,7 +142,7 @@ function applySkaterRates(
       faceoffWins: Math.round(
         rates.faceoffWins *
           gamesPlayed *
-          (profile.position === "C" ? 1.05 : 0.3),
+          (profile.position === "C" ? 1.05 : profile.position === "D" ? 0 : 0.3),
       ),
     },
     gamesPlayed,

@@ -4,7 +4,6 @@ import { Fragment, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
-  SKATER_CATEGORIES,
   type Category,
   type PlayerProjection,
   type Position,
@@ -13,6 +12,7 @@ import {
   CATEGORY_LABELS,
   formatStat,
   playerCategories,
+  skaterCategoriesForFilter,
   vorColor,
 } from "@/lib/format";
 import { PositionBadge } from "./PositionBadge";
@@ -83,7 +83,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
   }
 
   const tableCategories: readonly Category[] =
-    position === "G" ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
+    position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
 
   return (
     <div className="space-y-4">
