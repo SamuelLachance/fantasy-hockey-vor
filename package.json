@@ -17,6 +17,7 @@
     "refresh-contracts": "tsx scripts/refresh-contracts.ts",
     "draft:registry": "tsx scripts/build-draft-registry.ts",
     "refresh:draft": "tsx scripts/refresh-draft-data.ts",
+    "moneypuck:goalies": "tsx scripts/build-moneypuck-goalies.ts",
     "yahoo:auth": "tsx scripts/fetch-yahoo-positions.ts auth",
     "yahoo:fetch": "tsx scripts/fetch-yahoo-positions.ts fetch",
     "generate": "tsx scripts/generate-projections.ts"

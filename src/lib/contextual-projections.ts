@@ -2,8 +2,9 @@ import type { PlayerProfile, SeasonHistory } from "./profile-types";
 import {
   estimateShrunkGoalieSkill,
   estimateShrunkGoalieSkillFromCareer,
+  goalieSkillWinMultiplier,
   LEAGUE_SV_PCT,
-  saveSkillWinMultiplier,
+  projectGoalieSaveStats,
 } from "./goalie-skill";
 import {
   anchorSkaterProjectionToHistory,
@@ -276,7 +277,7 @@ export function projectGoalieFromProfile(
     .filter((s) => s.gamesPlayed >= MIN_SEASON_GP)
     .reduce((sum, s) => sum + s.gamesPlayed, 0);
 
-  let skill = estimateShrunkGoalieSkill(seasons, teamGaPerGame);
+  let skill = estimateShrunkGoalieSkill(profile.id, seasons, teamGaPerGame);
 
   if (eligibleGp < MIN_SEASON_GP) {
     const careerSkill = estimateShrunkGoalieSkillFromCareer(profile, teamGaPerGame);
@@ -286,9 +287,13 @@ export function projectGoalieFromProfile(
       skill = {
         savePct: LEAGUE_SV_PCT,
         gsaa: 0,
-        gsaxProxy: 0,
+        gsax: 0,
+        gsaxSource: "league",
+        gsaxPer60: 0,
+        gsaxPerGame: 0,
         gsaaPer60: 0,
         shotsPerGame: LEAGUE_GOALIE_RATES.savesPerGame,
+        xGaPerGame: 2.85,
         totalWeightedShots: 0,
         winRate: LEAGUE_GOALIE_RATES.winRate,
         shutoutRate: LEAGUE_GOALIE_RATES.shutoutRate,
@@ -297,20 +302,17 @@ export function projectGoalieFromProfile(
     }
   }
 
-  const skillWinMult = saveSkillWinMultiplier(skill.savePct);
+  const skillWinMult = goalieSkillWinMultiplier(skill);
   let winRate = skill.winRate > 0 ? skill.winRate : LEAGUE_GOALIE_RATES.winRate;
   let shutoutRate =
     skill.shutoutRate > 0 ? skill.shutoutRate : LEAGUE_GOALIE_RATES.shutoutRate;
-  const shotsPerGame =
-    skill.shotsPerGame > 0 ? skill.shotsPerGame : LEAGUE_GOALIE_RATES.savesPerGame;
-  const savePct = Math.max(0.875, Math.min(0.93, skill.savePct));
 
   winRate = Math.min(
     MAX_GOALIE_WIN_RATE,
     winRate * ageMult * teamBoost * skillWinMult,
   );
 
-  const projectedSaves = Math.round(savePct * shotsPerGame * gamesPlayed);
+  const { saves: projectedSaves, savePct } = projectGoalieSaveStats(skill, gamesPlayed);
 
   const projection = clampGoalieProjection(
     {
@@ -324,8 +326,10 @@ export function projectGoalieFromProfile(
 
   const reasoning = [
     skill.source,
-    `EB save% ${savePct.toFixed(3)} (GSAx proxy ${skill.gsaxProxy >= 0 ? "+" : ""}${skill.gsaxProxy.toFixed(1)} on weighted sample)`,
-    `${shotsPerGame.toFixed(1)} SA/GP × ${gamesPlayed} GP`,
+    skill.gsaxSource === "moneypuck"
+      ? `GSAx ${skill.gsax >= 0 ? "+" : ""}${skill.gsax.toFixed(1)} (${skill.gsaxPerGame.toFixed(2)}/GP), save% ${savePct.toFixed(3)}`
+      : `EB save% ${savePct.toFixed(3)} (proxy GSAx ${skill.gsax >= 0 ? "+" : ""}${skill.gsax.toFixed(1)})`,
+    `${skill.shotsPerGame.toFixed(1)} SOG/GP × ${gamesPlayed} GP`,
     `Team GA/G ${teamGaPerGame.toFixed(2)} win mult ${skillWinMult.toFixed(2)}`,
     `Age ${profile.bio.age}`,
   ].join("; ");

@@ -1,4 +1,13 @@
 import type { PlayerProfile, SeasonHistory } from "./profile-types";
+import {
+  empiricalBayesGsax,
+  empiricalBayesGsaxPer60,
+  expectedSavePctOnShots,
+  loadMoneyPuckRegistrySync,
+  lookupMoneyPuckGoalieSeason,
+  type MoneyPuckGoalieRegistry,
+  type MoneyPuckGoalieSeason,
+} from "./moneypuck-goalies";
 
 /** League-average even-strength save percentage baseline. */
 export const LEAGUE_SV_PCT = 0.905;
@@ -20,12 +29,18 @@ export interface GoalieSeasonShots {
   shutouts: number;
 }
 
+export type GsaxSource = "moneypuck" | "proxy" | "league";
+
 export interface ShrunkGoalieSkill {
   savePct: number;
   gsaa: number;
-  gsaxProxy: number;
+  gsax: number;
+  gsaxSource: GsaxSource;
+  gsaxPer60: number;
+  gsaxPerGame: number;
   gsaaPer60: number;
   shotsPerGame: number;
+  xGaPerGame: number;
   totalWeightedShots: number;
   winRate: number;
   shutoutRate: number;
@@ -66,7 +81,7 @@ export function deriveGoalsAgainst(
   return Math.max(0, shotsAgainst - saves);
 }
 
-/** Beta-binomial / conjugate shrinkage of save% toward league (or team-adjusted) mean. */
+/** Beta-binomial / conjugate shrinkage of save% toward a prior mean. */
 export function empiricalBayesSavePct(
   saves: number,
   shotsAgainst: number,
@@ -86,10 +101,6 @@ export function gsaa(
   return saves - leagueSvPct * shotsAgainst;
 }
 
-/**
- * Team-adjusted expected goal rate per shot (proxy for shot environment / xG baseline).
- * Weaker team defense → higher expected goals per shot faced.
- */
 export function teamAdjustedGoalRatePerShot(
   teamGoalsAgainstPerGame: number,
   leagueGoalsAgainstPerGame = LEAGUE_GA_PER_GAME,
@@ -115,10 +126,7 @@ export function teamAdjustedExpectedSv(
   );
 }
 
-/**
- * GSAx proxy: goals saved above team-environment-adjusted expectation.
- * GSAx = xGA − GA = saves − (1 − p_goal_team) × SA
- */
+/** Fallback GSAx when MoneyPuck data is unavailable. */
 export function gsaxProxy(
   saves: number,
   shotsAgainst: number,
@@ -162,29 +170,67 @@ function weightedRate(
   );
 }
 
-export function estimateShrunkGoalieSkill(
-  seasons: SeasonHistory[],
-  teamGoalsAgainstPerGame: number,
+function estimateFromMoneyPuck(
+  mpRows: MoneyPuckGoalieSeason[],
+  weights: number[],
+  nhlSeasons: GoalieSeasonShots[],
 ): ShrunkGoalieSkill {
-  const eligible = seasons.filter((s) => s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP);
-  const recent = eligible.slice(-3);
-  const weights = SEASON_WEIGHTS.slice(-recent.length);
+  let wGsax = 0;
+  let wXga = 0;
+  let wToi = 0;
+  let wGp = 0;
+  let wOngoal = 0;
+  let wSaves = 0;
 
-  if (recent.length === 0) {
-    return {
-      savePct: LEAGUE_SV_PCT,
-      gsaa: 0,
-      gsaxProxy: 0,
-      gsaaPer60: 0,
-      shotsPerGame: 28,
-      totalWeightedShots: 0,
-      winRate: 0.45,
-      shutoutRate: 0.04,
-      source: "league prior",
-    };
+  for (let i = 0; i < mpRows.length; i++) {
+    const w = weights[i];
+    const mp = mpRows[i];
+    wGsax += mp.gsax * w;
+    wXga += mp.xGoalsAgainst * w;
+    wToi += mp.icetimeSeconds * w;
+    wGp += mp.gamesPlayed * w;
+    wOngoal += mp.shotsOnGoalAgainst * w;
+    wSaves += (mp.shotsOnGoalAgainst - mp.goalsAgainst) * w;
   }
 
-  const shotSeasons = recent.map(seasonToShots);
+  const shrunkGsax = empiricalBayesGsax(wGsax, wXga);
+  const gsaxPer60 = empiricalBayesGsaxPer60(wGsax, wToi);
+  const gsaxPerGame = wGp > 0 ? shrunkGsax / wGp : 0;
+  const xGaPerGame = wGp > 0 ? wXga / wGp : 2.85;
+  const shotsPerGame = wGp > 0 ? wOngoal / wGp : 28;
+  const xSavePrior = expectedSavePctOnShots(wXga, wOngoal);
+  const shrunkSv = empiricalBayesSavePct(wSaves, wOngoal, xSavePrior, EB_PRIOR_SHOTS);
+
+  const winRate = weightedRate(nhlSeasons, weights, (s) =>
+    s.gamesPlayed > 0 ? s.wins / s.gamesPlayed : 0,
+  );
+  const shutoutRate = weightedRate(nhlSeasons, weights, (s) =>
+    s.gamesPlayed > 0 ? s.shutouts / s.gamesPlayed : 0,
+  );
+
+  return {
+    savePct: shrunkSv,
+    gsaa: gsaa(wSaves, wOngoal),
+    gsax: shrunkGsax,
+    gsaxSource: "moneypuck",
+    gsaxPer60,
+    gsaxPerGame,
+    gsaaPer60: wOngoal > 0 ? (gsaa(wSaves, wOngoal) / wOngoal) * 60 : 0,
+    shotsPerGame,
+    xGaPerGame,
+    totalWeightedShots: wOngoal,
+    winRate,
+    shutoutRate,
+    source: `MoneyPuck xG (${mpRows.length}-season EWMA + EB)`,
+  };
+}
+
+function estimateFromProxy(
+  shotSeasons: GoalieSeasonShots[],
+  weights: number[],
+  teamGoalsAgainstPerGame: number,
+  seasonCount: number,
+): ShrunkGoalieSkill {
   let weightedSaves = 0;
   let weightedSa = 0;
   let weightedGp = 0;
@@ -206,27 +252,82 @@ export function estimateShrunkGoalieSkill(
   const gsaaTotal = gsaa(weightedSaves, weightedSa);
   const gsaxTotal = gsaxProxy(weightedSaves, weightedSa, teamGoalsAgainstPerGame);
   const shotsPerGame = weightedGp > 0 ? weightedSa / weightedGp : 28;
-  const gsaaRatePer60Shots =
-    weightedSa > 0 ? (gsaaTotal / weightedSa) * 60 : 0;
-
-  const winRate = weightedRate(shotSeasons, weights, (s) =>
-    s.gamesPlayed > 0 ? s.wins / s.gamesPlayed : 0,
-  );
-  const shutoutRate = weightedRate(shotSeasons, weights, (s) =>
-    s.gamesPlayed > 0 ? s.shutouts / s.gamesPlayed : 0,
-  );
+  const proxyXga =
+    weightedSa * teamAdjustedGoalRatePerShot(teamGoalsAgainstPerGame);
+  const shrunkGsax = empiricalBayesGsax(gsaxTotal, proxyXga);
+  const gsaxPerGame = weightedGp > 0 ? shrunkGsax / weightedGp : 0;
+  const xGaPerGame =
+    weightedGp > 0
+      ? (weightedSa * teamAdjustedGoalRatePerShot(teamGoalsAgainstPerGame)) / weightedGp
+      : 2.85;
 
   return {
     savePct: shrunkSv,
     gsaa: gsaaTotal,
-    gsaxProxy: gsaxTotal,
-    gsaaPer60: gsaaRatePer60Shots,
+    gsax: shrunkGsax,
+    gsaxSource: "proxy",
+    gsaxPer60: 0,
+    gsaxPerGame,
+    gsaaPer60: weightedSa > 0 ? (gsaaTotal / weightedSa) * 60 : 0,
     shotsPerGame,
+    xGaPerGame,
     totalWeightedShots: weightedSa,
-    winRate,
-    shutoutRate,
-    source: `${recent.length}-season EWMA + EB (prior ${EB_PRIOR_SHOTS} SA)`,
+    winRate: weightedRate(shotSeasons, weights, (s) =>
+      s.gamesPlayed > 0 ? s.wins / s.gamesPlayed : 0,
+    ),
+    shutoutRate: weightedRate(shotSeasons, weights, (s) =>
+      s.gamesPlayed > 0 ? s.shutouts / s.gamesPlayed : 0,
+    ),
+    source: `${seasonCount}-season EWMA + EB proxy (prior ${EB_PRIOR_SHOTS} SA)`,
   };
+}
+
+export function estimateShrunkGoalieSkill(
+  playerId: number,
+  seasons: SeasonHistory[],
+  teamGoalsAgainstPerGame: number,
+  mpRegistry: MoneyPuckGoalieRegistry | null = loadMoneyPuckRegistrySync(),
+): ShrunkGoalieSkill {
+  const eligible = seasons.filter((s) => s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP);
+  const recent = eligible.slice(-3);
+  const weights = SEASON_WEIGHTS.slice(-recent.length);
+
+  if (recent.length === 0) {
+    return {
+      savePct: LEAGUE_SV_PCT,
+      gsaa: 0,
+      gsax: 0,
+      gsaxSource: "league",
+      gsaxPer60: 0,
+      gsaxPerGame: 0,
+      gsaaPer60: 0,
+      shotsPerGame: 28,
+      xGaPerGame: 2.85,
+      totalWeightedShots: 0,
+      winRate: 0.45,
+      shutoutRate: 0.04,
+      source: "league prior",
+    };
+  }
+
+  const shotSeasons = recent.map(seasonToShots);
+  const mpRows: MoneyPuckGoalieSeason[] = [];
+  for (const s of recent) {
+    const mp = lookupMoneyPuckGoalieSeason(mpRegistry, playerId, s.seasonId);
+    if (mp && mp.gamesPlayed >= MIN_SEASON_GP) mpRows.push(mp);
+  }
+
+  if (mpRows.length > 0) {
+    const mpWeights = weights.slice(-mpRows.length);
+    return estimateFromMoneyPuck(mpRows, mpWeights, shotSeasons.slice(-mpRows.length));
+  }
+
+  return estimateFromProxy(
+    shotSeasons,
+    weights,
+    teamGoalsAgainstPerGame,
+    recent.length,
+  );
 }
 
 export function careerGoalieShots(profile: PlayerProfile): GoalieSeasonShots | null {
@@ -258,7 +359,27 @@ export function careerGoalieShots(profile: PlayerProfile): GoalieSeasonShots | n
 export function estimateShrunkGoalieSkillFromCareer(
   profile: PlayerProfile,
   teamGoalsAgainstPerGame: number,
+  mpRegistry: MoneyPuckGoalieRegistry | null = loadMoneyPuckRegistrySync(),
 ): ShrunkGoalieSkill | null {
+  const goalieSeasons = profile.teamHistory.filter(
+    (s) => s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP,
+  );
+  const mpRows: MoneyPuckGoalieSeason[] = [];
+  for (const s of goalieSeasons) {
+    const mp = lookupMoneyPuckGoalieSeason(mpRegistry, profile.id, s.seasonId);
+    if (mp) mpRows.push(mp);
+  }
+
+  if (mpRows.length >= 2) {
+    const weights = mpRows.map((_, i) => (i + 1) / mpRows.length);
+    const nhlRows = goalieSeasons
+      .filter((s) =>
+        mpRows.some((mp) => mp.seasonId === s.seasonId),
+      )
+      .map(seasonToShots);
+    return estimateFromMoneyPuck(mpRows, weights, nhlRows);
+  }
+
   const career = careerGoalieShots(profile);
   if (!career) return null;
 
@@ -273,21 +394,69 @@ export function estimateShrunkGoalieSkillFromCareer(
   return {
     savePct: shrunkSv,
     gsaa: gsaa(career.saves, career.shotsAgainst),
-    gsaxProxy: gsaxProxy(career.saves, career.shotsAgainst, teamGoalsAgainstPerGame),
+    gsax: gsaxProxy(career.saves, career.shotsAgainst, teamGoalsAgainstPerGame),
+    gsaxSource: "proxy",
+    gsaxPer60: 0,
+    gsaxPerGame: 0,
     gsaaPer60:
       career.shotsAgainst > 0
         ? (gsaa(career.saves, career.shotsAgainst) / career.shotsAgainst) * 60
         : 0,
     shotsPerGame: career.shotsAgainst / career.gamesPlayed,
+    xGaPerGame: 2.85,
     totalWeightedShots: career.shotsAgainst,
     winRate: career.wins / career.gamesPlayed,
     shutoutRate: career.shutouts / career.gamesPlayed,
-    source: `career EB (prior ${EB_PRIOR_SHOTS} SA)`,
+    source: `career EB proxy (prior ${EB_PRIOR_SHOTS} SA)`,
   };
+}
+
+/** GSAx skill → modest win-rate multiplier. */
+export function gsaxWinMultiplier(gsaxPer60: number): number {
+  return Math.max(0.88, Math.min(1.12, 1 + gsaxPer60 / 10 * 0.04));
 }
 
 /** Translate save skill above/below average into a modest win-rate multiplier. */
 export function saveSkillWinMultiplier(shrunkSv: number, leagueSv = LEAGUE_SV_PCT): number {
   const delta = shrunkSv - leagueSv;
-  return Math.max(0.88, Math.min(1.12, 1 + delta / 0.015 * 0.06));
+  return Math.max(0.88, Math.min(1.12, 1 + (delta / 0.015) * 0.06));
+}
+
+/** Combined win multiplier preferring MoneyPuck GSAx/60 when available. */
+export function goalieSkillWinMultiplier(skill: ShrunkGoalieSkill): number {
+  if (skill.gsaxSource === "moneypuck" && skill.gsaxPer60 !== 0) {
+    return gsaxWinMultiplier(skill.gsaxPer60);
+  }
+  return saveSkillWinMultiplier(skill.savePct);
+}
+
+/**
+ * Project saves and save% from shrunk skill and projected workload.
+ * Uses MoneyPuck xGA − shrunk GSAx when available.
+ */
+export function projectGoalieSaveStats(
+  skill: ShrunkGoalieSkill,
+  projectedGp: number,
+): { saves: number; savePct: number } {
+  const shotsPerGame =
+    skill.shotsPerGame > 0 ? skill.shotsPerGame : 28;
+  const projectedShots = shotsPerGame * projectedGp;
+
+  if (skill.gsaxSource === "moneypuck" && skill.xGaPerGame > 0) {
+    const projectedXga = skill.xGaPerGame * projectedGp;
+    const projectedGsax = skill.gsaxPerGame * projectedGp;
+    const projectedGa = Math.max(0, projectedXga - projectedGsax);
+    const saves = Math.round(Math.max(0, projectedShots - projectedGa));
+    const savePct =
+      projectedShots > 0
+        ? Math.max(0.875, Math.min(0.93, saves / projectedShots))
+        : skill.savePct;
+    return { saves, savePct };
+  }
+
+  const savePct = Math.max(0.875, Math.min(0.93, skill.savePct));
+  return {
+    saves: Math.round(savePct * projectedShots),
+    savePct,
+  };
 }

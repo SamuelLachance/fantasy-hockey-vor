@@ -127,7 +127,7 @@ export function projectGoalieWithMl(
   const result = projectGoalieFromProfile(profile);
   return {
     ...result,
-    reasoning: `Goalie EB/GSAx-proxy (ridge ML not used for goalies — poor holdout); ${result.reasoning}`,
+    reasoning: `Goalie MoneyPuck GSAx + EB (ridge ML not used for goalies); ${result.reasoning}`,
   };
 }
 
