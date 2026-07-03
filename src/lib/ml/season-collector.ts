@@ -9,8 +9,14 @@ import {
   mapNhlPosition,
 } from "../nhl-api";
 import type { Position } from "../types";
+import {
+  buildSkaterAdvancedFields,
+  mapReportRows,
+  mergeAdvancedSkaterFields,
+} from "./advanced-stats";
 import type { MlDataset, PlayerSeasonRow } from "./types";
 import { enrichAllRows, loadOrBuildContextCaches } from "./enrich-rows";
+import { applyMoneyPuckSkaterFields, loadMoneyPuckSkaterRegistrySync } from "../moneypuck-skaters";
 
 function finite(n: unknown, fallback = 0): number {
   const v = Number(n);
@@ -19,52 +25,74 @@ function finite(n: unknown, fallback = 0): number {
 
 function mergeRow(existing: PlayerSeasonRow, incoming: PlayerSeasonRow): PlayerSeasonRow {
   const teams = new Set(`${existing.team},${incoming.team}`.split(",").filter(Boolean));
-  const gp = existing.gamesPlayed + incoming.gamesPlayed;
-  const blend = (a: number, b: number, gpA: number, gpB: number, sum = false) =>
-    sum ? a + b : (a * gpA + b * gpB) / Math.max(1, gpA + gpB);
+  const gpA = existing.gamesPlayed;
+  const gpB = incoming.gamesPlayed;
+  const gp = gpA + gpB;
+  const sum = (a: number, b: number) => a + b;
+  const wavg = (a: number, b: number) => (a * gpA + b * gpB) / Math.max(1, gpA + gpB);
 
   return {
     ...existing,
+    ...mergeAdvancedSkaterFields(existing, incoming, gpA, gpB),
     team: [...teams].join(","),
     gamesPlayed: gp,
-    goals: existing.goals + incoming.goals,
-    assists: existing.assists + incoming.assists,
-    shots: existing.shots + incoming.shots,
-    blocks: existing.blocks + incoming.blocks,
-    hits: existing.hits + incoming.hits,
-    powerplayPoints: existing.powerplayPoints + incoming.powerplayPoints,
-    penaltyMinutes: existing.penaltyMinutes + incoming.penaltyMinutes,
-    faceoffWins: existing.faceoffWins + incoming.faceoffWins,
-    wins: existing.wins + incoming.wins,
-    shutouts: existing.shutouts + incoming.shutouts,
-    saves: existing.saves + incoming.saves,
-    savePct: blend(existing.savePct, incoming.savePct, existing.gamesPlayed, incoming.gamesPlayed),
+    goals: sum(existing.goals, incoming.goals),
+    assists: sum(existing.assists, incoming.assists),
+    shots: sum(existing.shots, incoming.shots),
+    blocks: sum(existing.blocks, incoming.blocks),
+    hits: sum(existing.hits, incoming.hits),
+    powerplayPoints: sum(existing.powerplayPoints, incoming.powerplayPoints),
+    penaltyMinutes: sum(existing.penaltyMinutes, incoming.penaltyMinutes),
+    faceoffWins: sum(existing.faceoffWins, incoming.faceoffWins),
+    wins: sum(existing.wins, incoming.wins),
+    shutouts: sum(existing.shutouts, incoming.shutouts),
+    saves: sum(existing.saves, incoming.saves),
+    savePct: wavg(existing.savePct, incoming.savePct),
     teamGoalsForPerGame: existing.teamGoalsForPerGame,
   };
 }
 
 async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
-  const [skaters, realtime, faceoffs, goalies, puckPoss, penalties] =
-    await Promise.all([
-      fetchSkaterSummaries(seasonId),
-      fetchSkaterRealtime(seasonId),
-      fetchSkaterFaceoffs(seasonId),
-      fetchGoalieSummaries(seasonId),
-      fetchSkaterStatReport("puckPossessions", seasonId),
-      fetchSkaterStatReport("penalties", seasonId),
-    ]);
+  const [
+    skaters,
+    realtime,
+    faceoffs,
+    goalies,
+    puckPoss,
+    penalties,
+    timeonice,
+    powerplay,
+    penaltykill,
+    percentages,
+    goalsForAgainst,
+    faceoffwins,
+  ] = await Promise.all([
+    fetchSkaterSummaries(seasonId),
+    fetchSkaterRealtime(seasonId),
+    fetchSkaterFaceoffs(seasonId),
+    fetchGoalieSummaries(seasonId),
+    fetchSkaterStatReport("puckPossessions", seasonId),
+    fetchSkaterStatReport("penalties", seasonId),
+    fetchSkaterStatReport("timeonice", seasonId),
+    fetchSkaterStatReport("powerplay", seasonId),
+    fetchSkaterStatReport("penaltykill", seasonId),
+    fetchSkaterStatReport("percentages", seasonId),
+    fetchSkaterStatReport("goalsForAgainst", seasonId),
+    fetchSkaterStatReport("faceoffwins", seasonId),
+  ]);
 
   const rtMap = new Map(realtime.map((r) => [r.playerId, r]));
   const foMap = new Map(faceoffs.map((f) => [f.playerId, f]));
-  const ppMap = new Map(puckPoss.map((p) => [p.playerId, p]));
-
-  const teamGoals = new Map<string, number>();
-  const teamGp = new Map<string, number>();
-  for (const s of skaters) {
-    const team = s.teamAbbrevs.split(",")[0];
-    teamGoals.set(team, (teamGoals.get(team) ?? 0) + finite(s.goals));
-    teamGp.set(team, (teamGp.get(team) ?? 0) + finite(s.gamesPlayed));
-  }
+  const maps = {
+    puckPoss: mapReportRows(puckPoss),
+    penalties: mapReportRows(penalties),
+    timeonice: mapReportRows(timeonice),
+    powerplay: mapReportRows(powerplay),
+    penaltykill: mapReportRows(penaltykill),
+    percentages: mapReportRows(percentages),
+    goalsForAgainst: mapReportRows(goalsForAgainst),
+    faceoffwins: mapReportRows(faceoffwins),
+  };
 
   const byKey = new Map<string, PlayerSeasonRow>();
 
@@ -74,6 +102,7 @@ async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
     const team = s.teamAbbrevs.split(",")[0];
     const rt = rtMap.get(s.playerId);
     const fo = foMap.get(s.playerId);
+    const advanced = buildSkaterAdvancedFields(s, rt, fo, maps);
     const row: PlayerSeasonRow = {
       playerId: s.playerId,
       name: s.skaterFullName,
@@ -93,12 +122,12 @@ async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
         fo?.totalFaceoffs ?? 0,
         fo?.faceoffWinPct ?? s.faceoffWinPct,
       ),
+      ...advanced,
       wins: 0,
       shutouts: 0,
       saves: 0,
       savePct: 0,
-      teamGoalsForPerGame:
-        (teamGoals.get(team) ?? 0) / Math.max(1, teamGp.get(team) ?? 1),
+      teamGoalsForPerGame: 2.85,
     };
     const key = `${s.playerId}-${seasonId}`;
     const existing = byKey.get(key);
@@ -127,15 +156,21 @@ async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
       shutouts: finite(g.shutouts),
       saves: finite(g.saves),
       savePct: finite(g.savePct) > 1 ? finite(g.savePct) / 100 : finite(g.savePct),
-      teamGoalsForPerGame:
-        (teamGoals.get(team) ?? 0) / Math.max(1, teamGp.get(team) ?? 1),
+      teamGoalsForPerGame: 2.85,
     };
     const key = `${g.playerId}-${seasonId}`;
     const existing = byKey.get(key);
     byKey.set(key, existing ? mergeRow(existing, row) : row);
   }
 
-  return [...byKey.values()];
+  const mpRegistry = loadMoneyPuckSkaterRegistrySync();
+  const rows = [...byKey.values()];
+  if (mpRegistry) {
+    for (let i = 0; i < rows.length; i++) {
+      rows[i] = applyMoneyPuckSkaterFields(rows[i], mpRegistry);
+    }
+  }
+  return rows;
 }
 
 export async function buildMlDataset(

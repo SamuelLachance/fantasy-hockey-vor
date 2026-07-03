@@ -2,17 +2,66 @@ import { ML_FEATURE_LAGS, ML_MIN_SEASON_GP } from "../nhl-api";
 import { positionCode } from "./season-collector";
 import {
   GOALIE_ML_TARGETS,
+  SKATER_AUX_LAG_STATS,
   SKATER_ML_TARGETS,
   type PlayerSeasonRow,
   type SkaterMlTarget,
 } from "./types";
+import { targetAuxStats } from "./target-aux-stats";
+import { targetCrossEwmaStats } from "./target-cross-stats";
 
 const CONTEXT_LAG_FIELDS = [
   "teamElo",
   "teamPointPctg",
+  "teamGoalsForPerGame",
+  "teamGoalsAgainstPerGame",
+  "teamGoalDiffPerGame",
+  "teamLeagueRank",
   "capHitUsd",
   "coachTenureSeasons",
 ] as const;
+
+/** Stats that are already rates or per-game from the API — not divided by GP again. */
+const RATE_STATS = new Set([
+  "toiPerGame",
+  "evToiPerGame",
+  "ppToiPerGame",
+  "shToiPerGame",
+  "shiftsPerGame",
+  "satFor60",
+  "shotsFor60",
+  "satPct",
+  "usatPct",
+  "satRelative",
+  "usatRelative",
+  "onIceShootingPct",
+  "shootingPct5v5",
+  "shootingPct",
+  "oZoneStartPct",
+  "dZoneStartPct",
+  "neutralZoneStartPct",
+  "zoneStartPct5v5",
+  "faceoffWinPct",
+  "ppToiPctPerGame",
+  "ppGoalsPer60",
+  "ppShotsPer60",
+  "ppPointsPer60",
+  "shGoalsPer60",
+  "hitsPer60",
+  "blockedShotsPer60",
+  "giveawaysPer60",
+  "takeawaysPer60",
+  "penaltiesDrawnPer60",
+  "savePct",
+  "xGoalsPer60",
+  "onIceXGoalsPct",
+  "offIceXGoalsPct",
+  "onIceCorsiPct",
+  "offIceCorsiPct",
+  "onIceFenwickPct",
+  "offIceFenwickPct",
+  "gameScore",
+]);
 
 export const STATIC_CONTEXT_FEATURE_NAMES = [
   "age",
@@ -21,9 +70,15 @@ export const STATIC_CONTEXT_FEATURE_NAMES = [
   "shoots_L",
   "draft_round",
   "draft_overall_pick",
+  "years_since_draft",
   "cap_hit_m",
   "contract_years_remaining",
   "coach_id_norm",
+  "team_gf_pg",
+  "team_ga_pg",
+  "team_goal_diff_pg",
+  "team_league_rank_norm",
+  "teams_in_lag_window",
 ] as const;
 
 export const CONTEXT_LAG_FEATURE_NAMES = CONTEXT_LAG_FIELDS.flatMap((field) => [
@@ -34,19 +89,27 @@ export const CONTEXT_LAG_FEATURE_NAMES = CONTEXT_LAG_FIELDS.flatMap((field) => [
   `trend_${field}`,
 ]);
 
+export const SKATER_AUX_LAG_FEATURE_NAMES = SKATER_AUX_LAG_STATS.flatMap((stat) => [
+  `lag1_${stat}_pg`,
+  `lag2_${stat}_pg`,
+  `lag3_${stat}_pg`,
+  `ewma_${stat}_pg`,
+  `trend_${stat}_pg`,
+]);
+
 export const SKATER_FEATURE_NAMES = [
   "lag1_gp",
   "lag2_gp",
   "lag3_gp",
   "ewma_gp",
   "trend_gp",
-  "team_gf_pg",
   "pos_C",
   "pos_LW",
   "pos_RW",
   "pos_D",
   ...STATIC_CONTEXT_FEATURE_NAMES,
   ...CONTEXT_LAG_FEATURE_NAMES,
+  ...SKATER_AUX_LAG_FEATURE_NAMES,
   ...SKATER_ML_TARGETS.flatMap((target) => [
     `lag1_${target}_pg`,
     `lag2_${target}_pg`,
@@ -62,8 +125,7 @@ export const GOALIE_FEATURE_NAMES = [
   "lag3_gp",
   "ewma_gp",
   "trend_gp",
-  "team_gf_pg",
-  ...STATIC_CONTEXT_FEATURE_NAMES,
+  ...STATIC_CONTEXT_FEATURE_NAMES.filter((n) => n !== "teams_in_lag_window"),
   ...CONTEXT_LAG_FEATURE_NAMES,
   ...(["wins", "shutouts", "saves", "savePct"] as const).flatMap((target) => [
     `lag1_${target}_pg`,
@@ -88,8 +150,66 @@ function perGame(total: number, gp: number): number {
   return gp > 0 ? total / gp : 0;
 }
 
+function seasonStartYear(seasonId: number): number {
+  return Math.floor(seasonId / 10000);
+}
+
+function yearsSinceDraft(row: PlayerSeasonRow): number {
+  const draftYear = row.draftYear ?? 0;
+  if (draftYear <= 0) return 0;
+  return Math.max(0, seasonStartYear(row.seasonId) - draftYear) / 20;
+}
+
+function teamsInLagWindow(history: PlayerSeasonRow[]): number {
+  const eligible = history
+    .filter((h) => h.gamesPlayed >= ML_MIN_SEASON_GP)
+    .slice(-ML_FEATURE_LAGS);
+  const teams = new Set(
+    eligible.map((h) => h.team.split(",")[0].trim().toUpperCase()).filter(Boolean),
+  );
+  return teams.size / 3;
+}
+
 function getStat(row: PlayerSeasonRow, target: string): number {
+  if (target === "points") {
+    return row.points ?? row.goals + row.assists;
+  }
   return (row as unknown as Record<string, number>)[target] ?? 0;
+}
+
+function normalizeRate(raw: number, field: string): number {
+  if (!Number.isFinite(raw) || raw === 0) return 0;
+  if (
+    field === "toiPerGame" ||
+    field === "evToiPerGame" ||
+    field === "ppToiPerGame" ||
+    field === "shToiPerGame"
+  ) {
+    return raw / 60;
+  }
+  if (
+    field === "shootingPct" ||
+    field === "shootingPct5v5" ||
+    field === "onIceShootingPct" ||
+    field === "oZoneStartPct" ||
+    field === "dZoneStartPct" ||
+    field === "neutralZoneStartPct" ||
+    field === "zoneStartPct5v5" ||
+    field === "satPct" ||
+    field === "usatPct" ||
+    field === "ppToiPctPerGame" ||
+    field === "faceoffWinPct" ||
+    field === "savePct" ||
+    field === "onIceXGoalsPct" ||
+    field === "offIceXGoalsPct" ||
+    field === "onIceCorsiPct" ||
+    field === "offIceCorsiPct" ||
+    field === "onIceFenwickPct" ||
+    field === "offIceFenwickPct"
+  ) {
+    return raw > 1 ? raw / 100 : raw;
+  }
+  return raw;
 }
 
 function statValue(row: PlayerSeasonRow, target: string, usePerGame: boolean): number {
@@ -97,6 +217,8 @@ function statValue(row: PlayerSeasonRow, target: string, usePerGame: boolean): n
   if (target === "savePct") {
     return raw > 1 ? raw / 100 : raw;
   }
+  const asRate = RATE_STATS.has(target);
+  if (asRate) return normalizeRate(raw, target);
   return usePerGame ? perGame(raw, row.gamesPlayed) : raw;
 }
 
@@ -138,6 +260,7 @@ function trend(values: number[]): number {
 
 function contextFieldValue(row: PlayerSeasonRow, field: string): number {
   if (field === "capHitUsd") return (row.capHitUsd ?? 0) / 1_000_000;
+  if (field === "teamLeagueRank") return (row.teamLeagueRank ?? 16) / 32;
   return (row as unknown as Record<string, number>)[field] ?? 0;
 }
 
@@ -158,6 +281,8 @@ function contextLagValues(
 
 function buildStaticContextFeatures(
   targetSeason: PlayerSeasonRow,
+  history: PlayerSeasonRow[],
+  includeTeamsInLag: boolean,
 ): { features: number[]; names: string[] } {
   const features = [
     targetSeason.age ?? 0,
@@ -166,11 +291,24 @@ function buildStaticContextFeatures(
     targetSeason.shootsLeft ?? 0,
     (targetSeason.draftRound ?? 0) / 7,
     (targetSeason.draftOverallPick ?? 0) / 224,
+    yearsSinceDraft(targetSeason),
     (targetSeason.capHitUsd ?? 0) / 1_000_000,
     targetSeason.contractYearsRemaining ?? 0,
     (targetSeason.coachId ?? 0) / 10_000,
+    targetSeason.teamGoalsForPerGame ?? 2.85,
+    targetSeason.teamGoalsAgainstPerGame ?? 2.85,
+    targetSeason.teamGoalDiffPerGame ?? 0,
+    (targetSeason.teamLeagueRank ?? 16) / 32,
+    includeTeamsInLag ? teamsInLagWindow(history) : 0,
   ];
-  return { features, names: [...STATIC_CONTEXT_FEATURE_NAMES] };
+  const names = [...STATIC_CONTEXT_FEATURE_NAMES];
+  if (!includeTeamsInLag) {
+    return {
+      features: features.slice(0, -1),
+      names: names.filter((n) => n !== "teams_in_lag_window"),
+    };
+  }
+  return { features, names };
 }
 
 function buildContextLagFeatures(
@@ -194,47 +332,33 @@ function buildContextLagFeatures(
   return { features, names };
 }
 
-function buildLagFeatures(
+function appendCrossEwmaFeatures(
+  history: PlayerSeasonRow[],
+  crossStats: readonly string[],
+  primaryTargets: readonly string[],
+  usePerGame: boolean,
+  features: number[],
+  names: string[],
+): void {
+  for (const stat of crossStats) {
+    if (primaryTargets.includes(stat)) continue;
+    const perGame = RATE_STATS.has(stat) ? false : usePerGame;
+    const lags = lagValues(history, stat, perGame);
+    features.push(ewma(lags));
+    names.push(`ewma_${stat}_cross`);
+  }
+}
+
+function appendStatLagFeatures(
   history: PlayerSeasonRow[],
   targets: readonly string[],
   usePerGame: boolean,
-  includePosition: boolean,
-  targetSeason?: PlayerSeasonRow,
-): { features: number[]; names: string[] } {
-  const gpLags = lagValues(history, "gamesPlayed", false);
-  const features: number[] = [
-    ...gpLags,
-    ewma(gpLags),
-    trend(gpLags),
-    history[history.length - 1]?.teamGoalsForPerGame ?? 2.85,
-  ];
-  const names: string[] = [
-    "lag1_gp",
-    "lag2_gp",
-    "lag3_gp",
-    "ewma_gp",
-    "trend_gp",
-    "team_gf_pg",
-  ];
-
-  if (includePosition) {
-    const pos = history[history.length - 1]?.position ?? "C";
-    features.push(...positionCode(pos));
-    names.push("pos_C", "pos_LW", "pos_RW", "pos_D");
-  }
-
-  if (targetSeason) {
-    const staticCtx = buildStaticContextFeatures(targetSeason);
-    features.push(...staticCtx.features);
-    names.push(...staticCtx.names);
-  }
-
-  const ctxLags = buildContextLagFeatures(history);
-  features.push(...ctxLags.features);
-  names.push(...ctxLags.names);
-
+  features: number[],
+  names: string[],
+): void {
   for (const target of targets) {
-    const lags = lagValues(history, target, usePerGame);
+    const perGame = RATE_STATS.has(target) ? false : usePerGame;
+    const lags = lagValues(history, target, perGame);
     features.push(...lags, ewma(lags), trend(lags));
     names.push(
       `lag1_${target}_pg`,
@@ -244,6 +368,71 @@ function buildLagFeatures(
       `trend_${target}_pg`,
     );
   }
+}
+
+function buildLagFeatures(
+  history: PlayerSeasonRow[],
+  targets: readonly string[],
+  usePerGame: boolean,
+  includePosition: boolean,
+  targetSeason?: PlayerSeasonRow,
+  skaterTarget?: SkaterMlTarget,
+): { features: number[]; names: string[] } {
+  const gpLags = lagValues(history, "gamesPlayed", false);
+  const features: number[] = [...gpLags, ewma(gpLags), trend(gpLags)];
+  const names: string[] = [
+    "lag1_gp",
+    "lag2_gp",
+    "lag3_gp",
+    "ewma_gp",
+    "trend_gp",
+  ];
+
+  if (includePosition) {
+    const pos = history[history.length - 1]?.position ?? "C";
+    features.push(...positionCode(pos));
+    names.push("pos_C", "pos_LW", "pos_RW", "pos_D");
+  } else if (!targetSeason) {
+    features.push(history[history.length - 1]?.teamGoalsForPerGame ?? 2.85);
+    names.push("team_gf_pg");
+  }
+
+  if (targetSeason) {
+    const staticCtx = buildStaticContextFeatures(
+      targetSeason,
+      history,
+      includePosition,
+    );
+    if (includePosition) {
+      features.push(...staticCtx.features);
+      names.push(...staticCtx.names);
+    } else {
+      const filtered = buildStaticContextFeatures(targetSeason, history, false);
+      features.push(...filtered.features);
+      names.push(...filtered.names);
+    }
+  }
+
+  const ctxLags = buildContextLagFeatures(history);
+  features.push(...ctxLags.features);
+  names.push(...ctxLags.names);
+
+  if (includePosition) {
+    const aux = skaterTarget ? targetAuxStats(skaterTarget) : SKATER_AUX_LAG_STATS;
+    appendStatLagFeatures(history, aux, true, features, names);
+    if (skaterTarget) {
+      appendCrossEwmaFeatures(
+        history,
+        targetCrossEwmaStats(skaterTarget),
+        targets,
+        true,
+        features,
+        names,
+      );
+    }
+  }
+
+  appendStatLagFeatures(history, targets, usePerGame, features, names);
 
   return { features, names };
 }
@@ -280,6 +469,7 @@ export function buildSkaterTrainingExamplesForTarget(
         true,
         true,
         targetSeason,
+        target,
       );
       examples.push({
         playerId: targetSeason.playerId,
@@ -395,6 +585,26 @@ export function goalieTargetValue(
   return perGame(getStat(row, target), row.gamesPlayed);
 }
 
+export function extractEwmaFeature(
+  featureNames: string[],
+  features: number[],
+  target: string,
+): number {
+  const key = `ewma_${target}_pg`;
+  const i = featureNames.indexOf(key);
+  return i >= 0 ? features[i] : 0;
+}
+
+export function extractLag1Feature(
+  featureNames: string[],
+  features: number[],
+  target: string,
+): number {
+  const key = `lag1_${target}_pg`;
+  const i = featureNames.indexOf(key);
+  return i >= 0 ? features[i] : 0;
+}
+
 export function buildTargetInferenceFeatures(
   history: PlayerSeasonRow[],
   target: string,
@@ -408,6 +618,7 @@ export function buildTargetInferenceFeatures(
     true,
     !isGoalie,
     projectionRow,
+    isGoalie ? undefined : (target as SkaterMlTarget),
   );
   return { features, featureNames: names };
 }
@@ -439,6 +650,8 @@ function syntheticTargetRow(
       saves: 0,
       savePct: 0.905,
       teamGoalsForPerGame: 2.85,
+      teamGoalsAgainstPerGame: 2.85,
+      teamGoalDiffPerGame: 0,
     };
   }
   return {

@@ -17,6 +17,11 @@ import {
   type PlayerLanding,
   type RosterPlayer,
 } from "./nhl-api";
+import {
+  advancedFieldsToProfileRecord,
+  buildSkaterAdvancedFields,
+  mapReportRows,
+} from "./ml/advanced-stats";
 import { ageFromBirthDate, parseBirthDate, seasonStartDate } from "./age";
 import { fetchContractByNhlId } from "./contracts";
 import {
@@ -320,7 +325,7 @@ export async function collectAllProfiles(
 
   for (const seasonId of BASE_SEASON_IDS) {
     const label = seasonIdToLabel(seasonId);
-    const [skaters, realtime, faceoffs, goalies, puckPoss, penalties] =
+    const [skaters, realtime, faceoffs, goalies, puckPoss, penalties, timeonice, powerplay, penaltykill, percentages, goalsForAgainst, faceoffwins] =
       await Promise.all([
         fetchSkaterSummaries(seasonId),
         fetchSkaterRealtime(seasonId),
@@ -328,12 +333,26 @@ export async function collectAllProfiles(
         fetchGoalieSummaries(seasonId),
         fetchSkaterStatReport("puckPossessions", seasonId),
         fetchSkaterStatReport("penalties", seasonId),
+        fetchSkaterStatReport("timeonice", seasonId),
+        fetchSkaterStatReport("powerplay", seasonId),
+        fetchSkaterStatReport("penaltykill", seasonId),
+        fetchSkaterStatReport("percentages", seasonId),
+        fetchSkaterStatReport("goalsForAgainst", seasonId),
+        fetchSkaterStatReport("faceoffwins", seasonId),
       ]);
 
     const rtMap = new Map(realtime.map((r) => [r.playerId, r]));
     const foMap = new Map(faceoffs.map((f) => [f.playerId, f]));
-    const ppMap = new Map(puckPoss.map((p) => [p.playerId, p]));
-    const penMap = new Map(penalties.map((p) => [p.playerId, p]));
+    const maps = {
+      puckPoss: mapReportRows(puckPoss),
+      penalties: mapReportRows(penalties),
+      timeonice: mapReportRows(timeonice),
+      powerplay: mapReportRows(powerplay),
+      penaltykill: mapReportRows(penaltykill),
+      percentages: mapReportRows(percentages),
+      goalsForAgainst: mapReportRows(goalsForAgainst),
+      faceoffwins: mapReportRows(faceoffwins),
+    };
 
     for (const s of skaters) {
       const pos = mapNhlPosition(s.positionCode);
@@ -341,7 +360,11 @@ export async function collectAllProfiles(
       playerIds.add(s.playerId);
       const fo = foMap.get(s.playerId);
       const rt = rtMap.get(s.playerId);
-      const pp = ppMap.get(s.playerId);
+      const advancedFields = buildSkaterAdvancedFields(s, rt, fo, maps);
+      const faceoffWins = computeFaceoffWins(
+        fo?.totalFaceoffs ?? 0,
+        fo?.faceoffWinPct ?? s.faceoffWinPct,
+      );
       const season: SeasonHistory = {
         season: label,
         seasonId,
@@ -361,21 +384,7 @@ export async function collectAllProfiles(
           shootingPct: finite((s as { shootingPct?: number }).shootingPct),
           toiPerGame: finite((s as { timeOnIcePerGame?: number }).timeOnIcePerGame),
         },
-        advanced: {
-          blocks: finite(rt?.blockedShots),
-          hits: finite(rt?.hits),
-          giveaways: finite((rt as { giveaways?: number })?.giveaways),
-          takeaways: finite((rt as { takeaways?: number })?.takeaways),
-          faceoffWins: computeFaceoffWins(
-            fo?.totalFaceoffs ?? 0,
-            fo?.faceoffWinPct ?? s.faceoffWinPct,
-          ),
-          satFor60: finite((pp as { individualSatForPer60?: number })?.individualSatForPer60),
-          shotsFor60: finite((pp as { individualShotsForPer60?: number })?.individualShotsForPer60),
-          oZoneStartPct: finite((pp as { offensiveZoneStartPct?: number })?.offensiveZoneStartPct),
-          dZoneStartPct: finite((pp as { defensiveZoneStartPct?: number })?.defensiveZoneStartPct),
-          penaltiesDrawn: finite((penMap.get(s.playerId) as { penaltiesDrawn?: number })?.penaltiesDrawn),
-        },
+        advanced: advancedFieldsToProfileRecord(advancedFields, rt, faceoffWins),
       };
 
       const existing = baseRecords.get(s.playerId);

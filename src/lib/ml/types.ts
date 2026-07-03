@@ -21,6 +21,69 @@ export const GOALIE_ML_TARGETS = [
 export type SkaterMlTarget = (typeof SKATER_ML_TARGETS)[number];
 export type GoalieMlTarget = (typeof GOALIE_ML_TARGETS)[number];
 
+/** Non-target stats included as lag features in every skater model. */
+export const SKATER_AUX_LAG_STATS = [
+  "toiPerGame",
+  "evToiPerGame",
+  "ppToiPerGame",
+  "shToiPerGame",
+  "shiftsPerGame",
+  "satFor60",
+  "shotsFor60",
+  "satPct",
+  "usatPct",
+  "satRelative",
+  "usatRelative",
+  "onIceShootingPct",
+  "shootingPct5v5",
+  "oZoneStartPct",
+  "dZoneStartPct",
+  "neutralZoneStartPct",
+  "zoneStartPct5v5",
+  "evGoals",
+  "evPoints",
+  "ppGoals",
+  "ppGoalsFor",
+  "points",
+  "shootingPct",
+  "plusMinus",
+  "evenStrengthGoalDiff",
+  "ppToiPctPerGame",
+  "ppGoalsPer60",
+  "ppShotsPer60",
+  "ppPointsPer60",
+  "shGoalsPer60",
+  "hitsPer60",
+  "blockedShotsPer60",
+  "giveawaysPer60",
+  "takeawaysPer60",
+  "penaltiesDrawnPer60",
+  "giveaways",
+  "takeaways",
+  "penaltiesDrawn",
+  "totalShotAttempts",
+  "missedShots",
+  "totalFaceoffs",
+  "faceoffWinPct",
+  /** MoneyPuck expected-goals & territorial metrics */
+  "xGoals",
+  "xGoalsPer60",
+  "goalsAboveExpected",
+  "flurryAdjustedxGoals",
+  "highDangerGoals",
+  "highDangerShots",
+  "highDangerxGoals",
+  "onIceXGoalsPct",
+  "offIceXGoalsPct",
+  "onIceCorsiPct",
+  "offIceCorsiPct",
+  "onIceFenwickPct",
+  "offIceFenwickPct",
+  "gameScore",
+] as const;
+
+export type SkaterAuxLagStat = (typeof SKATER_AUX_LAG_STATS)[number];
+
 export interface PlayerSeasonRow {
   playerId: number;
   name: string;
@@ -37,11 +100,70 @@ export interface PlayerSeasonRow {
   powerplayPoints: number;
   penaltyMinutes: number;
   faceoffWins: number;
+  /** Summary / advanced stats for auxiliary ML features */
+  points?: number;
+  plusMinus?: number;
+  evGoals?: number;
+  evPoints?: number;
+  shootingPct?: number;
+  toiPerGame?: number;
+  giveaways?: number;
+  takeaways?: number;
+  satFor60?: number;
+  shotsFor60?: number;
+  oZoneStartPct?: number;
+  dZoneStartPct?: number;
+  penaltiesDrawn?: number;
+  faceoffWinPct?: number;
+  evToiPerGame?: number;
+  ppToiPerGame?: number;
+  shToiPerGame?: number;
+  shiftsPerGame?: number;
+  satPct?: number;
+  usatPct?: number;
+  satRelative?: number;
+  usatRelative?: number;
+  onIceShootingPct?: number;
+  shootingPct5v5?: number;
+  neutralZoneStartPct?: number;
+  zoneStartPct5v5?: number;
+  ppGoals?: number;
+  ppToiPctPerGame?: number;
+  ppGoalsPer60?: number;
+  ppShotsPer60?: number;
+  ppPointsPer60?: number;
+  shGoalsPer60?: number;
+  hitsPer60?: number;
+  blockedShotsPer60?: number;
+  giveawaysPer60?: number;
+  takeawaysPer60?: number;
+  totalShotAttempts?: number;
+  missedShots?: number;
+  penaltiesDrawnPer60?: number;
+  totalFaceoffs?: number;
+  evenStrengthGoalDiff?: number;
+  ppGoalsFor?: number;
+  xGoals?: number;
+  xGoalsPer60?: number;
+  goalsAboveExpected?: number;
+  flurryAdjustedxGoals?: number;
+  highDangerGoals?: number;
+  highDangerShots?: number;
+  highDangerxGoals?: number;
+  onIceXGoalsPct?: number;
+  offIceXGoalsPct?: number;
+  onIceCorsiPct?: number;
+  offIceCorsiPct?: number;
+  onIceFenwickPct?: number;
+  offIceFenwickPct?: number;
+  gameScore?: number;
   wins: number;
   shutouts: number;
   saves: number;
   savePct: number;
   teamGoalsForPerGame: number;
+  teamGoalsAgainstPerGame?: number;
+  teamGoalDiffPerGame?: number;
   /** ML context — player age at season start */
   age?: number;
   heightInches?: number;
@@ -74,6 +196,12 @@ export interface RidgeModel {
   weights: number[];
   bias: number;
   lambda: number;
+  /** Skater models trained on D-only or F-only rows; default all. */
+  positionGroup?: "all" | "D" | "F";
+  /** Weight on EWMA lag rate in production blend; ML gets (1 − ewmaBlendWeight). */
+  ewmaBlendWeight?: number;
+  /** Optional 3-way blend: ml + ewma + lag1 (most recent season rate). */
+  blendWeights?: { ml: number; ewma: number; lag1: number };
 }
 
 export interface MlModelBundle {

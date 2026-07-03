@@ -7,6 +7,7 @@ export function fitRidge(
   target: string,
   isGoalie: boolean,
   lambda = 1.5,
+  sampleWeights?: number[],
 ): RidgeModel {
   const n = X.length;
   const p = featureNames.length;
@@ -16,17 +17,25 @@ export function fitRidge(
 
   const means = Array.from({ length: p }, (_, j) => {
     let sum = 0;
-    for (let i = 0; i < n; i++) sum += X[i][j];
-    return sum / n;
+    let wSum = 0;
+    for (let i = 0; i < n; i++) {
+      const w = sampleWeights?.[i] ?? 1;
+      sum += w * X[i][j];
+      wSum += w;
+    }
+    return sum / Math.max(1, wSum);
   });
 
   const stds = Array.from({ length: p }, (_, j) => {
     let sum = 0;
+    let wSum = 0;
     for (let i = 0; i < n; i++) {
+      const w = sampleWeights?.[i] ?? 1;
       const d = X[i][j] - means[j];
-      sum += d * d;
+      sum += w * d * d;
+      wSum += w;
     }
-    const sd = Math.sqrt(sum / Math.max(1, n - 1)) || 1;
+    const sd = Math.sqrt(sum / Math.max(1, wSum - 1)) || 1;
     return sd < 1e-8 ? 1 : sd;
   });
 
@@ -34,14 +43,20 @@ export function fitRidge(
   const XtX = Array.from({ length: p }, () => Array(p).fill(0));
   const Xty = Array(p).fill(0);
   let yMean = 0;
-  for (let i = 0; i < n; i++) yMean += y[i];
-  yMean /= n;
+  let wTotal = 0;
+  for (let i = 0; i < n; i++) {
+    const w = sampleWeights?.[i] ?? 1;
+    yMean += w * y[i];
+    wTotal += w;
+  }
+  yMean /= Math.max(1, wTotal);
 
   for (let i = 0; i < n; i++) {
+    const w = sampleWeights?.[i] ?? 1;
     for (let a = 0; a < p; a++) {
-      Xty[a] += Xs[i][a] * (y[i] - yMean);
+      Xty[a] += w * Xs[i][a] * (y[i] - yMean);
       for (let b = 0; b < p; b++) {
-        XtX[a][b] += Xs[i][a] * Xs[i][b];
+        XtX[a][b] += w * Xs[i][a] * Xs[i][b];
       }
     }
   }
@@ -99,6 +114,121 @@ export function predictRidge(model: RidgeModel, features: number[]): number {
     sum += model.weights[j] * scaled;
   }
   return sum;
+}
+
+const SKATER_LAMBDA_GRID = [5, 10, 25, 50, 100, 200, 400, 600, 800, 1200];
+
+export function selectLambda(
+  trainX: number[][],
+  trainY: number[],
+  valX: number[][],
+  valY: number[],
+  featureNames: string[],
+  target: string,
+  isGoalie: boolean,
+  trainWeights?: number[],
+  valEwma?: number[],
+  valLag1?: number[],
+): number {
+  if (valX.length === 0) return 100;
+  let bestLambda = 100;
+  let bestR2 = -Infinity;
+  for (const lambda of SKATER_LAMBDA_GRID) {
+    const model = fitRidge(
+      trainX,
+      trainY,
+      featureNames,
+      target,
+      isGoalie,
+      lambda,
+      trainWeights,
+    );
+    const mlPreds = valX.map((x) => predictRidge(model, x));
+    let r2: number;
+    if (valEwma && valLag1) {
+      const blend = selectBlendWeights(valY, mlPreds, valEwma, valLag1);
+      const blended = applyBlendWeights(mlPreds, valEwma, valLag1, blend);
+      r2 = evaluateRegression(valY, blended).r2;
+    } else {
+      r2 = evaluateRegression(valY, mlPreds).r2;
+    }
+    if (r2 > bestR2) {
+      bestR2 = r2;
+      bestLambda = lambda;
+    }
+  }
+  return bestLambda;
+}
+
+export interface BlendWeights {
+  ml: number;
+  ewma: number;
+  lag1: number;
+}
+
+export function applyBlendWeights(
+  mlPreds: number[],
+  ewmaPreds: number[],
+  lag1Preds: number[],
+  weights: BlendWeights,
+): number[] {
+  return mlPreds.map((ml, i) => {
+    const ewma = ewmaPreds[i];
+    const lag1 = lag1Preds[i];
+    let rate = ml * weights.ml;
+    if (ewma > 0) rate += ewma * weights.ewma;
+    if (lag1 > 0) rate += lag1 * weights.lag1;
+    if (ewma <= 0 && lag1 <= 0) rate = ml;
+    return Math.max(0, rate);
+  });
+}
+
+export function selectBlendWeights(
+  valY: number[],
+  mlPreds: number[],
+  ewmaPreds: number[],
+  lag1Preds: number[],
+): BlendWeights {
+  if (valY.length === 0) return { ml: 0.15, ewma: 0.7, lag1: 0.15 };
+
+  let best: BlendWeights = { ml: 1, ewma: 0, lag1: 0 };
+  let bestR2 = -Infinity;
+
+  for (let wm = 0; wm <= 10; wm++) {
+    for (let we = 0; we <= 10 - wm; we++) {
+      const wl = 10 - wm - we;
+      const weights: BlendWeights = { ml: wm / 10, ewma: we / 10, lag1: wl / 10 };
+      const preds = applyBlendWeights(mlPreds, ewmaPreds, lag1Preds, weights);
+      const r2 = evaluateRegression(valY, preds).r2;
+      if (r2 > bestR2) {
+        bestR2 = r2;
+        best = weights;
+      }
+    }
+  }
+  return best;
+}
+
+/** @deprecated use selectBlendWeights */
+export function selectEwmaBlendWeight(
+  valY: number[],
+  mlPreds: number[],
+  ewmaPreds: number[],
+): number {
+  const w = selectBlendWeights(valY, mlPreds, ewmaPreds, ewmaPreds);
+  return w.ewma;
+}
+
+export function blendPredictions(
+  mlPreds: number[],
+  ewmaPreds: number[],
+  ewmaWeight: number,
+): number[] {
+  return applyBlendWeights(mlPreds, ewmaPreds, ewmaPreds, {
+    ml: 1 - ewmaWeight,
+    ewma: ewmaWeight,
+    lag1: 0,
+  });
 }
 
 export function evaluateRegression(

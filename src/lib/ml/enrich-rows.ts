@@ -12,6 +12,11 @@ import { lookupDraftByName } from "../draft-registry";
 import type { PlayerSeasonRow } from "./types";
 import { buildTeamSeasonContexts } from "./team-season-context";
 import { contractSeasonKey, teamSeasonKey } from "./context-types";
+import {
+  applyMoneyPuckSkaterFields,
+  loadMoneyPuckSkaterRegistrySync,
+  type MoneyPuckSkaterRegistry,
+} from "../moneypuck-skaters";
 
 const CACHE_PATH = join(process.cwd(), "src", "data", "ml", "context-cache.json");
 const MAX_CACHE_AGE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -102,6 +107,7 @@ export async function loadOrBuildContextCaches(
 export function enrichPlayerSeasonRow(
   row: PlayerSeasonRow,
   caches: MlContextCaches,
+  mpRegistry: MoneyPuckSkaterRegistry | null = loadMoneyPuckSkaterRegistrySync(),
 ): PlayerSeasonRow {
   const primaryTeam = row.team.split(",")[0].trim().toUpperCase();
   const teamCtx = caches.teamBySeasonTeam[teamSeasonKey(row.seasonId, primaryTeam)];
@@ -122,8 +128,10 @@ export function enrichPlayerSeasonRow(
   const contract =
     caches.contractByPlayerSeason[contractSeasonKey(row.playerId, seasonLabel)];
 
+  const withMoneyPuck = applyMoneyPuckSkaterFields(row, mpRegistry);
+
   return {
-    ...row,
+    ...withMoneyPuck,
     age: bio ? ageAtSeasonStart(bio.birthDate, row.seasonId) : 0,
     heightInches: bio?.heightInches ?? 72,
     weightPounds: bio?.weightPounds ?? 190,
@@ -133,6 +141,9 @@ export function enrichPlayerSeasonRow(
     draftOverallPick: draftOverall,
     capHitUsd: contract?.capHitUsd ?? 0,
     contractYearsRemaining: contract?.yearsRemaining ?? 0,
+    teamGoalsForPerGame: teamCtx?.goalsForPerGame ?? row.teamGoalsForPerGame ?? 2.85,
+    teamGoalsAgainstPerGame: teamCtx?.goalsAgainstPerGame ?? 2.85,
+    teamGoalDiffPerGame: teamCtx?.goalDiffPerGame ?? 0,
     teamPointPctg: teamCtx?.pointPctg ?? 0.5,
     teamLeagueRank: teamCtx?.leagueRank ?? 16,
     teamElo: teamCtx?.teamElo ?? 500,
@@ -145,5 +156,6 @@ export function enrichAllRows(
   rows: PlayerSeasonRow[],
   caches: MlContextCaches,
 ): PlayerSeasonRow[] {
-  return rows.map((row) => enrichPlayerSeasonRow(row, caches));
+  const mpRegistry = loadMoneyPuckSkaterRegistrySync();
+  return rows.map((row) => enrichPlayerSeasonRow(row, caches, mpRegistry));
 }

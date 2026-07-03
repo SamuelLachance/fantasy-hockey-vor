@@ -8,14 +8,17 @@ import { projectedGamesFromProfile, type GoalieRole } from "../projection-gp";
 import type { GoalieProjection, SkaterProjection } from "../types";
 import {
   buildTargetInferenceFeatures,
+  extractEwmaFeature,
+  extractLag1Feature,
 } from "./features";
 import { loadContextCaches } from "./enrich-rows";
 import {
   buildProjectionTargetRow,
   profileToSeasonRows,
 } from "./inference-context";
-import { predictRidge } from "./ridge";
-import type { MlModelBundle, PlayerSeasonRow } from "./types";
+import { applyBlendWeights, predictRidge } from "./ridge";
+import type { MlModelBundle, PlayerSeasonRow, RidgeModel } from "./types";
+import { SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
@@ -70,6 +73,19 @@ function rowStat(row: PlayerSeasonRow, target: string): number {
   return (row as unknown as Record<string, number>)[target] ?? 0;
 }
 
+function resolveSkaterModel(
+  models: MlModelBundle,
+  target: string,
+  position: PlayerProfile["position"],
+): RidgeModel | undefined {
+  const group = position === "D" ? "D" : "F";
+  const candidates = models.skaterModels.filter((m) => m.target === target);
+  return (
+    candidates.find((m) => m.positionGroup === group) ??
+    candidates.find((m) => !m.positionGroup || m.positionGroup === "all")
+  );
+}
+
 export function projectSkaterWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
@@ -80,16 +96,32 @@ export function projectSkaterWithMl(
   const gamesPlayed = projectedGamesFromProfile(profile);
 
   const rates: Record<string, number> = {};
-  for (const model of models.skaterModels) {
-    const { features } = buildTargetInferenceFeatures(
+  for (const target of SKATER_ML_TARGETS) {
+    const model = resolveSkaterModel(models, target, profile.position);
+    if (!model) continue;
+    const { features, featureNames } = buildTargetInferenceFeatures(
       history,
-      model.target,
+      target,
       false,
       targetRow,
     );
     const ml = Math.max(0, predictRidge(model, features));
-    const ewma = ewmaPerGameRate(history, (r) => rowStat(r, model.target));
-    rates[model.target] = anchorPerGameRate(model.target, ewma, ml, profile);
+    const ewma = extractEwmaFeature(featureNames, features, target);
+    const lag1 = extractLag1Feature(featureNames, features, target);
+    const historyEwma = ewmaPerGameRate(history, (r) => rowStat(r, target));
+    const ewmaRate = ewma > 0 ? ewma : historyEwma;
+
+    if (model.blendWeights) {
+      const [blended] = applyBlendWeights([ml], [ewmaRate], [lag1], model.blendWeights);
+      rates[target] = blended;
+    } else {
+      const blendW = model.ewmaBlendWeight ?? 0.85;
+      if (ewmaRate > 0) {
+        rates[target] = Math.max(0, ewmaRate * blendW + ml * (1 - blendW));
+      } else {
+        rates[target] = anchorPerGameRate(target, historyEwma, ml, profile);
+      }
+    }
   }
 
   const raw = clampSkaterProjection(

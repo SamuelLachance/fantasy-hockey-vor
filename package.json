@@ -18,6 +18,8 @@
     "draft:registry": "tsx scripts/build-draft-registry.ts",
     "refresh:draft": "tsx scripts/refresh-draft-data.ts",
     "moneypuck:goalies": "tsx scripts/build-moneypuck-goalies.ts",
+    "moneypuck:skaters": "tsx scripts/build-moneypuck-skaters.ts",
+    "ml:enrich-moneypuck": "tsx scripts/enrich-moneypuck-skaters.ts",
     "yahoo:auth": "tsx scripts/fetch-yahoo-positions.ts auth",
     "yahoo:fetch": "tsx scripts/fetch-yahoo-positions.ts fetch",
     "generate": "tsx scripts/generate-projections.ts"

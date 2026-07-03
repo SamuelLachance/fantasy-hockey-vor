@@ -6,13 +6,46 @@ import type { MlContextCaches } from "./context-types";
 import { contractSeasonKey, teamSeasonKey } from "./context-types";
 import { enrichPlayerSeasonRow } from "./enrich-rows";
 import type { PlayerSeasonRow } from "./types";
+import { SKATER_AUX_LAG_STATS } from "./types";
 import { seasonIdToLabel } from "../nhl-api";
+import {
+  loadMoneyPuckSkaterRegistrySync,
+  lookupMoneyPuckSkaterSeason,
+  moneyPuckToSkaterFields,
+} from "../moneypuck-skaters";
 
-export function profileToSeasonRows(
+function adv(s: PlayerProfile["teamHistory"][number], key: string): number {
+  return s.advanced[key] ?? s.stats[key] ?? 0;
+}
+
+function profileSeasonToRow(
   profile: PlayerProfile,
-  caches: MlContextCaches | null,
-): PlayerSeasonRow[] {
-  const rows: PlayerSeasonRow[] = profile.teamHistory.map((s) => ({
+  s: PlayerProfile["teamHistory"][number],
+  mpRegistry: ReturnType<typeof loadMoneyPuckSkaterRegistrySync>,
+): PlayerSeasonRow {
+  const goals = s.stats.goals ?? 0;
+  const assists = s.stats.assists ?? 0;
+  const aux: Partial<PlayerSeasonRow> = {};
+  for (const stat of SKATER_AUX_LAG_STATS) {
+    if (stat === "points") {
+      aux.points = s.stats.points ?? goals + assists;
+    } else if (stat === "evGoals" || stat === "evPoints" || stat === "shootingPct") {
+      aux[stat] = s.stats[stat] ?? 0;
+    } else if (stat === "toiPerGame") {
+      aux.toiPerGame = s.stats.toiPerGame ?? 0;
+    } else if (stat === "plusMinus") {
+      aux.plusMinus = s.stats.plusMinus ?? 0;
+    } else {
+      aux[stat as keyof PlayerSeasonRow] = adv(s, stat) as never;
+    }
+  }
+
+  const mp =
+    !s.isGoalie && mpRegistry
+      ? lookupMoneyPuckSkaterSeason(mpRegistry, profile.id, s.seasonId, profile.name)
+      : null;
+
+  return {
     playerId: profile.id,
     name: profile.name,
     seasonId: s.seasonId,
@@ -20,20 +53,35 @@ export function profileToSeasonRows(
     position: profile.position,
     isGoalie: s.isGoalie,
     gamesPlayed: s.gamesPlayed,
-    goals: s.stats.goals ?? 0,
-    assists: s.stats.assists ?? 0,
+    goals,
+    assists,
     shots: s.stats.shots ?? 0,
     blocks: s.advanced.blocks ?? 0,
     hits: s.advanced.hits ?? 0,
     powerplayPoints: s.stats.ppPoints ?? 0,
     penaltyMinutes: s.stats.pim ?? 0,
     faceoffWins: s.advanced.faceoffWins ?? 0,
+    ...aux,
+    ...(mp ? moneyPuckToSkaterFields(mp) : {}),
     wins: s.stats.wins ?? 0,
     shutouts: s.stats.shutouts ?? 0,
     saves: s.stats.saves ?? 0,
     savePct: s.stats.savePct ?? 0.905,
     teamGoalsForPerGame: profile.teamContext.goalsForPerGame,
-  }));
+    teamGoalsAgainstPerGame: profile.teamContext.goalsAgainstPerGame,
+    teamGoalDiffPerGame:
+      profile.teamContext.goalsForPerGame - profile.teamContext.goalsAgainstPerGame,
+  };
+}
+
+export function profileToSeasonRows(
+  profile: PlayerProfile,
+  caches: MlContextCaches | null,
+): PlayerSeasonRow[] {
+  const mpRegistry = loadMoneyPuckSkaterRegistrySync();
+  const rows: PlayerSeasonRow[] = profile.teamHistory.map((s) =>
+    profileSeasonToRow(profile, s, mpRegistry),
+  );
 
   if (caches) {
     return rows.map((r) => enrichPlayerSeasonRow(r, caches));
@@ -88,7 +136,12 @@ export function buildProjectionTargetRow(
     shutouts: 0,
     saves: 0,
     savePct: 0.905,
-    teamGoalsForPerGame: profile.teamContext.goalsForPerGame,
+    teamGoalsForPerGame: teamCtx?.goalsForPerGame ?? profile.teamContext.goalsForPerGame,
+    teamGoalsAgainstPerGame:
+      teamCtx?.goalsAgainstPerGame ?? profile.teamContext.goalsAgainstPerGame,
+    teamGoalDiffPerGame:
+      teamCtx?.goalDiffPerGame ??
+      profile.teamContext.goalsForPerGame - profile.teamContext.goalsAgainstPerGame,
     age: ageAtSeasonStart(birthDate, seasonId),
     heightInches: profile.bio.heightInches,
     weightPounds: profile.bio.weightPounds,
