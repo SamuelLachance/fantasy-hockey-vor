@@ -1,8 +1,10 @@
 import type { PlayerProfile } from "../profile-types";
 import { projectGoalieFromProfile } from "../contextual-projections";
 import {
+  anchorSkaterProjectionToHistory,
   clampSkaterProjection,
 } from "../projection-sanity";
+import { projectedGamesFromProfile } from "../projection-gp";
 import type { GoalieProjection, SkaterProjection } from "../types";
 import {
   buildTargetInferenceFeatures,
@@ -11,7 +13,6 @@ import { predictRidge } from "./ridge";
 import type { MlModelBundle, PlayerSeasonRow } from "./types";
 import { loadMlModels } from "./train";
 
-const FULL_SEASON_GP = 82;
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 
 function ewmaPerGameRate(
@@ -28,9 +29,36 @@ function ewmaPerGameRate(
   }, 0);
 }
 
-function blendRate(ewma: number, ml: number, ewmaWeight = 0.7): number {
-  const blended = ewma * ewmaWeight + ml * (1 - ewmaWeight);
-  return Math.max(0, blended > 0 ? blended : ewma);
+function careerRate(profile: PlayerProfile, field: string): number {
+  const gp = profile.careerTotals.gamesPlayed ?? 0;
+  if (gp < 5) return 0;
+  return Number(profile.careerTotals[field] ?? 0) / gp;
+}
+
+function anchorPerGameRate(
+  target: string,
+  ewma: number,
+  ml: number,
+  profile: PlayerProfile,
+): number {
+  const career = careerRate(profile, target === "powerplayPoints" ? "powerPlayPoints" : target === "penaltyMinutes" ? "pim" : target);
+
+  if (ewma > 0) {
+    return Math.max(0, ewma * 0.82 + ml * 0.18);
+  }
+
+  if (career > 0) {
+    return Math.min(ml, career * 1.2);
+  }
+
+  if (target === "goals") {
+    return profile.position === "D" ? 0.03 : 0.08;
+  }
+  if (target === "powerplayPoints") {
+    return 0;
+  }
+
+  return Math.min(ml, ewma);
 }
 
 function profileToSeasonRows(profile: PlayerProfile): PlayerSeasonRow[] {
@@ -67,17 +95,17 @@ export function projectSkaterWithMl(
   models: MlModelBundle,
 ): { projection: SkaterProjection; gamesPlayed: number; reasoning: string } {
   const history = profileToSeasonRows(profile).filter((r) => !r.isGoalie);
-  const gamesPlayed = FULL_SEASON_GP;
+  const gamesPlayed = projectedGamesFromProfile(profile);
 
   const rates: Record<string, number> = {};
   for (const model of models.skaterModels) {
     const { features } = buildTargetInferenceFeatures(history, model.target, false);
     const ml = Math.max(0, predictRidge(model, features));
     const ewma = ewmaPerGameRate(history, (r) => rowStat(r, model.target));
-    rates[model.target] = ewma > 0 ? blendRate(ewma, ml, 0.72) : ml;
+    rates[model.target] = anchorPerGameRate(model.target, ewma, ml, profile);
   }
 
-  const projection = clampSkaterProjection(
+  const raw = clampSkaterProjection(
     {
       goals: Math.round(rates.goals * gamesPlayed),
       assists: Math.round(rates.assists * gamesPlayed),
@@ -92,6 +120,8 @@ export function projectSkaterWithMl(
     profile.position,
   );
 
+  const projection = anchorSkaterProjectionToHistory(profile, raw, gamesPlayed);
+
   const avgR2 =
     Object.values(models.metrics.skater).reduce((s, m) => s + m.r2, 0) /
     Object.keys(models.metrics.skater).length;
@@ -99,7 +129,7 @@ export function projectSkaterWithMl(
   return {
     projection,
     gamesPlayed,
-    reasoning: `ML time-series model (${models.featureLags}-season lags, 2010-2025 training, holdout R²≈${avgR2.toFixed(2)}); projected ${gamesPlayed} GP full season`,
+    reasoning: `ML time-series (${models.featureLags}-season lags) anchored to career rates; ${gamesPlayed} GP based on durability`,
   };
 }
 
@@ -107,8 +137,6 @@ export function projectGoalieWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
-  // Goalie ML holdout R² is near zero (tiny sample, high variance) and savePct
-  // predictions collapse to the 87.5% floor. Use the EWMA contextual engine instead.
   const contextual = projectGoalieFromProfile(profile);
 
   const skaterAvgR2 =
@@ -117,7 +145,7 @@ export function projectGoalieWithMl(
 
   return {
     ...contextual,
-    reasoning: `Goalie EWMA rates from recent seasons (ML skater holdout R²≈${skaterAvgR2.toFixed(2)}; goalie ML skipped — insufficient training signal)`,
+    reasoning: `Goalie EWMA from recent seasons (ML skater holdout R²≈${skaterAvgR2.toFixed(2)})`,
   };
 }
 

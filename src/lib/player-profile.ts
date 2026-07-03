@@ -17,8 +17,10 @@ import {
   type PlayerLanding,
   type RosterPlayer,
 } from "./nhl-api";
+import { ageFromBirthDate, parseBirthDate, seasonStartDate } from "./age";
+import { fetchContractByNhlId } from "./contracts";
 import type {
-  ContractEstimate,
+  ContractInfo,
   DraftInfo,
   InjuryProfile,
   PlayerBio,
@@ -36,38 +38,19 @@ function finite(n: unknown, fallback = 0): number {
   return Number.isFinite(value) ? value : fallback;
 }
 
-function ageFromBirthDate(birthDate: string): number {
-  const birth = new Date(birthDate);
-  const ref = new Date("2026-10-01");
-  let age = ref.getFullYear() - birth.getFullYear();
-  const m = ref.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) age--;
-  return age;
-}
-
 function rosterName(player: RosterPlayer): string {
   return `${player.firstName.default} ${player.lastName.default}`;
 }
 
-function careerStage(age: number, draft: DraftInfo | null): ContractEstimate {
-  const yearsSinceDraft = draft ? 2026 - draft.year : Math.max(0, age - 18);
-  let stage: ContractEstimate["careerStage"] = "prime";
-  if (yearsSinceDraft <= 1) stage = "rookie";
-  else if (yearsSinceDraft <= 3) stage = "entry_level";
-  else if (age >= 34) stage = "decline";
-  else if (age >= 30) stage = "veteran";
-
-  const contractYearNote =
-    stage === "rookie" || stage === "entry_level"
-      ? "Likely on entry-level or early contract; motivation for bigger role"
-      : stage === "decline"
-        ? "Veteran contract year risk; possible reduced usage"
-        : stage === "veteran"
-          ? "Prime veteran years; stable role expected"
-          : "Peak production window";
-
-  return { yearsSinceDraft, careerStage: stage, contractYearNote };
-}
+const EMPTY_CONTRACT: ContractInfo = {
+  capHitUsd: null,
+  aavUsd: null,
+  yearsRemaining: null,
+  expiryStatus: null,
+  contractType: null,
+  source: "unavailable",
+  summary: "Contract data unavailable",
+};
 
 function sumRecord(
   a: Record<string, number>,
@@ -170,8 +153,17 @@ export function consolidateSeasonHistory(
 export function normalizeProfile(profile: PlayerProfile): PlayerProfile {
   const teamHistory = consolidateSeasonHistory(profile.teamHistory);
   const injury = buildInjuryProfile(teamHistory, profile.isGoalie);
+  const seasonStart = seasonStartDate();
+  const birthDate = profile.bio.birthDate;
+  const bio: PlayerBio = {
+    ...profile.bio,
+    birthDate,
+    age: ageFromBirthDate(birthDate),
+    ageAtSeasonStart: ageFromBirthDate(birthDate, seasonStart),
+  };
   const partial = {
     ...profile,
+    bio,
     teamHistory,
     injury,
     advancedSeasonLatest:
@@ -248,7 +240,7 @@ function buildContextNarrative(profile: Omit<PlayerProfile, "contextNarrative" |
     `Team ${profile.teamContext.teamAbbrev} ranks #${profile.teamContext.leagueRank} (${(profile.teamContext.pointsPct * 100).toFixed(1)}% pts), ${profile.teamContext.goalsForPerGame.toFixed(2)} GF/G`,
   );
   lines.push(`Durability: ${profile.injury.trend} — ${profile.injury.note}`);
-  lines.push(`Contract stage: ${profile.contract.careerStage} — ${profile.contract.contractYearNote}`);
+  lines.push(`Contract: ${profile.contract.summary}`);
 
   if (profile.awards.length > 0) {
     lines.push(`Awards: ${profile.awards.slice(0, 5).join(", ")}`);
@@ -463,8 +455,31 @@ export async function collectAllProfiles(
     const landing = await fetchPlayerLanding(id);
     const teamCtx = teamMap.get(base.team) ?? standings[0];
 
+    const firstName = landing?.firstName.default ?? base.name.split(" ")[0];
+    const lastName =
+      landing?.lastName.default ?? base.name.split(" ").slice(1).join(" ");
+
+    const contractData = await fetchContractByNhlId(id, firstName, lastName);
+
     const birthDate =
-      landing?.birthDate ?? "2000-01-01";
+      parseBirthDate(contractData.birthDate ?? "") ??
+      parseBirthDate(landing?.birthDate ?? "") ??
+      landing?.birthDate ??
+      "2000-01-01";
+
+    const seasonStart = seasonStartDate();
+    const bio: PlayerBio = {
+      age: ageFromBirthDate(birthDate),
+      ageAtSeasonStart: ageFromBirthDate(birthDate, seasonStart),
+      birthDate,
+      birthCity: landing?.birthCity?.default ?? "",
+      birthCountry: landing?.birthCountry ?? "",
+      heightInches: finite(landing?.heightInInches, 72),
+      weightPounds: finite(landing?.weightInPounds, 190),
+      shootsCatches: (landing?.shootsCatches === "R" ? "R" : "L"),
+      sweaterNumber: landing?.sweaterNumber ?? null,
+    };
+
     const draft: DraftInfo | null = landing?.draftDetails
       ? {
           year: landing.draftDetails.year,
@@ -474,17 +489,6 @@ export async function collectAllProfiles(
           team: landing.draftDetails.teamAbbrev,
         }
       : null;
-
-    const bio: PlayerBio = {
-      age: ageFromBirthDate(birthDate),
-      birthDate,
-      birthCity: landing?.birthCity?.default ?? "",
-      birthCountry: landing?.birthCountry ?? "",
-      heightInches: finite(landing?.heightInInches, 72),
-      weightPounds: finite(landing?.weightInPounds, 190),
-      shootsCatches: (landing?.shootsCatches === "R" ? "R" : "L"),
-      sweaterNumber: landing?.sweaterNumber ?? null,
-    };
 
     const teamContext: TeamContext = {
       teamAbbrev: teamCtx.teamAbbrev,
@@ -501,7 +505,7 @@ export async function collectAllProfiles(
 
     const seasons = consolidateSeasonHistory(base.seasons);
     const injury = buildInjuryProfile(seasons, base.isGoalie);
-    const contract = careerStage(bio.age, draft);
+    const contract = contractData.source === "capwages" ? contractData : EMPTY_CONTRACT;
 
     const latestAdvanced =
       seasons.length > 0 ? seasons[seasons.length - 1].advanced : {};

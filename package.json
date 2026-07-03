@@ -12,6 +12,7 @@
     "ai-project": "tsx scripts/ai-project.ts",
     "ml:dataset": "tsx scripts/build-ml-dataset.ts",
     "ml:train": "tsx scripts/train-ml.ts",
+    "refresh-contracts": "tsx scripts/refresh-contracts.ts",
     "generate": "tsx scripts/generate-projections.ts"
   },
   "dependencies": {

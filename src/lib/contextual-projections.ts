@@ -1,5 +1,6 @@
 import type { PlayerProfile, SeasonHistory } from "./profile-types";
 import {
+  anchorSkaterProjectionToHistory,
   clampGoalieProjection,
   clampSkaterProjection,
 } from "./projection-sanity";
@@ -11,6 +12,8 @@ const SEASON_WEIGHTS = [0.15, 0.3, 0.55];
 const FULL_SEASON_GP = 82;
 const GOALIE_MIN_GP = 20;
 const GOALIE_MAX_GP = 58;
+import { projectedGamesFromProfile } from "./projection-gp";
+
 const LEAGUE_GOALIE_RATES = {
   winRate: 0.45,
   shutoutRate: 0.04,
@@ -187,8 +190,8 @@ function ageCurve(position: Position, age: number): number {
   return 1;
 }
 
-function projectedSkaterGames(): number {
-  return FULL_SEASON_GP;
+function projectedSkaterGames(profile: PlayerProfile): number {
+  return projectedGamesFromProfile(profile);
 }
 
 function projectedGoalieGames(seasons: SeasonHistory[]): number {
@@ -214,7 +217,7 @@ export function projectSkaterFromProfile(
   const seasons = profile.teamHistory.filter((s) => !s.isGoalie);
   const last = seasons[seasons.length - 1];
   const prev = seasons[seasons.length - 2];
-  const gamesPlayed = projectedSkaterGames();
+  const gamesPlayed = projectedSkaterGames(profile);
 
   const teamMult = teamOffenseMultiplier(profile);
   const ageMult = ageCurve(profile.position, profile.bio.age);
@@ -267,12 +270,10 @@ export function projectSkaterFromProfile(
 
   const mult = teamMult * ageMult * draftMult * trendMult * usageBoost;
 
-  const projection = applySkaterRates(
-    rates,
+  const projection = anchorSkaterProjectionToHistory(
     profile,
+    applySkaterRates(rates, profile, gamesPlayed, mult, teamMult),
     gamesPlayed,
-    mult,
-    teamMult,
   );
 
   const reasoning = [

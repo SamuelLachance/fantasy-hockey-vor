@@ -1,5 +1,6 @@
 import type { Position } from "./types";
 import type { GoalieProjection, SkaterProjection } from "./types";
+import type { PlayerProfile } from "./profile-types";
 
 interface SkaterRateLimits {
   goals: number;
@@ -44,12 +45,12 @@ const SKATER_RATE_LIMITS: Record<Exclude<Position, "G">, SkaterRateLimits> = {
     faceoffWins: 3,
   },
   D: {
-    goals: 0.55,
-    assists: 1.4,
-    shots: 4.5,
+    goals: 0.18,
+    assists: 1.1,
+    shots: 3.5,
     blocks: 3.2,
     hits: 4.5,
-    powerplayPoints: 0.95,
+    powerplayPoints: 0.45,
     penaltyMinutes: 4.5,
     faceoffWins: 0,
   },
@@ -158,6 +159,62 @@ export function clampGoalieProjection(
   };
 }
 
+function careerPerGame(
+  profile: PlayerProfile,
+  stat: keyof PlayerProfile["careerTotals"],
+): number {
+  const gp = profile.careerTotals.gamesPlayed ?? 0;
+  if (gp < 5) return 0;
+  const total = Number(profile.careerTotals[stat] ?? 0);
+  return total / gp;
+}
+
+function maxSeasonPerGame(profile: PlayerProfile, stat: string): number {
+  let max = 0;
+  for (const s of profile.teamHistory) {
+    if (s.isGoalie || s.gamesPlayed < 10) continue;
+    const val = Number(s.stats[stat] ?? s.advanced[stat] ?? 0);
+    max = Math.max(max, val / s.gamesPlayed);
+  }
+  return max;
+}
+
+/** Pull ML/contextual projections back toward provable NHL history. */
+export function anchorSkaterProjectionToHistory(
+  profile: PlayerProfile,
+  projection: SkaterProjection,
+  gamesPlayed: number,
+): SkaterProjection {
+  const gp = Math.max(1, gamesPlayed);
+  const careerGoals = careerPerGame(profile, "goals");
+  const careerPpp = careerPerGame(profile, "powerPlayPoints");
+  const maxGoalRate = maxSeasonPerGame(profile, "goals");
+  const maxPppRate = maxSeasonPerGame(profile, "ppPoints");
+
+  let goals = projection.goals;
+  let powerplayPoints = projection.powerplayPoints;
+
+  if (careerGoals <= 0 && maxGoalRate <= 0) {
+    goals = profile.position === "D" ? Math.min(goals, 4) : Math.min(goals, 8);
+  } else {
+    const ceiling = Math.max(careerGoals, maxGoalRate) * gp * 1.35;
+    goals = Math.min(goals, Math.round(ceiling));
+  }
+
+  if (careerPpp <= 0 && maxPppRate <= 0) {
+    powerplayPoints = Math.min(powerplayPoints, Math.round(goals * 0.35));
+  } else {
+    const pppCeiling = Math.max(careerPpp, maxPppRate) * gp * 1.35;
+    powerplayPoints = Math.min(powerplayPoints, Math.round(pppCeiling));
+  }
+
+  return clampSkaterProjection(
+    { ...projection, goals, powerplayPoints },
+    gamesPlayed,
+    profile.position,
+  );
+}
+
 export interface ProjectionIssue {
   name: string;
   position: Position;
@@ -202,6 +259,9 @@ export function findProjectionIssues(
     if (s.blocks / gp > limits.blocks + 0.001) issues.push({ name: player.name, position: player.position, reason: "blocks rate too high" });
     if (s.hits / gp > limits.hits + 0.001) issues.push({ name: player.name, position: player.position, reason: "hits rate too high" });
     if (s.shots < s.goals) issues.push({ name: player.name, position: player.position, reason: "shots below goals" });
+    if (s.powerplayPoints > s.goals + s.assists + 2) {
+      issues.push({ name: player.name, position: player.position, reason: "powerplay points exceed points" });
+    }
   }
 
   return issues;

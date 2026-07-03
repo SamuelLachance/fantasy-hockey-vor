@@ -10,6 +10,7 @@ export interface DraftInfo {
 
 export interface PlayerBio {
   age: number;
+  ageAtSeasonStart: number;
   birthDate: string;
   birthCity: string;
   birthCountry: string;
@@ -51,10 +52,22 @@ export interface InjuryProfile {
   note: string;
 }
 
-export interface ContractEstimate {
-  yearsSinceDraft: number;
-  careerStage: "rookie" | "entry_level" | "prime" | "veteran" | "decline";
-  contractYearNote: string;
+export interface ContractInfo {
+  capHitUsd: number | null;
+  aavUsd: number | null;
+  yearsRemaining: number | null;
+  expiryStatus: string | null;
+  contractType: string | null;
+  birthDate?: string;
+  source: "capwages" | "unavailable";
+  summary: string;
+}
+
+/** @deprecated use ContractInfo */
+export interface ContractEstimate extends ContractInfo {
+  yearsSinceDraft?: number;
+  careerStage?: "rookie" | "entry_level" | "prime" | "veteran" | "decline";
+  contractYearNote?: string;
 }
 
 export interface PlayerProfile {
@@ -70,7 +83,7 @@ export interface PlayerProfile {
   teamContext: TeamContext;
   teamHistory: SeasonHistory[];
   injury: InjuryProfile;
-  contract: ContractEstimate;
+  contract: ContractInfo;
   careerTotals: Record<string, number>;
   awards: string[];
   last5Games: Record<string, number>[];
