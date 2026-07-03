@@ -82,12 +82,8 @@ export function RankingsTable({ players }: RankingsTableProps) {
     );
   }
 
-  const categories: readonly Category[] =
-    position === "ALL"
-      ? []
-      : position === "G"
-        ? GOALIE_CATEGORIES
-        : SKATER_CATEGORIES;
+  const tableCategories: readonly Category[] =
+    position === "G" ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
 
   return (
     <div className="space-y-4">
@@ -162,7 +158,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     GP <SortIcon column="gamesPlayed" />
                   </button>
                 </th>
-                {categories.map((cat) => (
+                {tableCategories.map((cat) => (
                   <th key={cat} className="px-3 py-3 text-center">
                     {CATEGORY_LABELS[cat]}
                   </th>
@@ -202,18 +198,20 @@ export function RankingsTable({ players }: RankingsTableProps) {
                       <td className="px-4 py-3 font-mono text-slate-400">
                         {player.gamesPlayed}
                       </td>
-                      {cats.map((cat) => (
+                      {tableCategories.map((cat) => (
                         <td
                           key={cat}
                           className="px-3 py-3 text-center font-mono text-slate-300"
                         >
-                          {formatStat(player, cat)}
+                          {position !== "G" && player.isGoalie
+                            ? "—"
+                            : formatStat(player, cat)}
                         </td>
                       ))}
                     </tr>
                     {isExpanded && (
                       <tr className="bg-slate-950/40">
-                        <td colSpan={6 + cats.length} className="px-6 py-4">
+                        <td colSpan={6 + tableCategories.length} className="px-6 py-4">
                           <div className="mb-4 flex flex-wrap items-center gap-2">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-semibold ${
