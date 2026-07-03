@@ -404,12 +404,15 @@ export async function collectAllProfiles(
         isGoalie: true,
         stats: {
           wins: finite(g.wins),
-          losses: finite((g as { losses?: number }).losses),
+          losses: finite(g.losses),
           shutouts: finite(g.shutouts),
           saves: finite(g.saves),
           savePct: finite(g.savePct),
-          gaa: finite((g as { goalsAgainstAverage?: number }).goalsAgainstAverage),
-          gamesStarted: finite((g as { gamesStarted?: number }).gamesStarted),
+          shotsAgainst: finite(g.shotsAgainst),
+          goalsAgainst: finite(g.goalsAgainst),
+          timeOnIce: finite(g.timeOnIce),
+          gaa: finite(g.goalsAgainstAverage),
+          gamesStarted: finite(g.gamesStarted),
         },
         advanced: {},
       };

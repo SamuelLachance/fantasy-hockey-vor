@@ -66,6 +66,9 @@ export interface RawGoalieSummary {
   shutouts: number;
   saves: number;
   savePct: number;
+  shotsAgainst?: number;
+  goalsAgainst?: number;
+  timeOnIce?: number;
   losses?: number;
   goalsAgainstAverage?: number;
   gamesStarted?: number;

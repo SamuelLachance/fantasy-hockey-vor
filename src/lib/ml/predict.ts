@@ -122,17 +122,12 @@ export function projectSkaterWithMl(
 
 export function projectGoalieWithMl(
   profile: PlayerProfile,
-  models: MlModelBundle,
+  _models: MlModelBundle,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
-  const contextual = projectGoalieFromProfile(profile);
-
-  const skaterAvgR2 =
-    Object.values(models.metrics.skater).reduce((s, m) => s + m.r2, 0) /
-    Object.keys(models.metrics.skater).length;
-
+  const result = projectGoalieFromProfile(profile);
   return {
-    ...contextual,
-    reasoning: `Goalie EWMA from recent seasons (ML skater holdout R²≈${skaterAvgR2.toFixed(2)})`,
+    ...result,
+    reasoning: `Goalie EB/GSAx-proxy (ridge ML not used for goalies — poor holdout); ${result.reasoning}`,
   };
 }
 

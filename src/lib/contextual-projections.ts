@@ -1,10 +1,16 @@
 import type { PlayerProfile, SeasonHistory } from "./profile-types";
 import {
+  estimateShrunkGoalieSkill,
+  estimateShrunkGoalieSkillFromCareer,
+  LEAGUE_SV_PCT,
+  saveSkillWinMultiplier,
+} from "./goalie-skill";
+import {
   anchorSkaterProjectionToHistory,
   clampGoalieProjection,
   clampSkaterProjection,
 } from "./projection-sanity";
-import { rookieGoalieProjection, rookieSkaterProjection } from "./projections";
+import { rookieSkaterProjection } from "./projections";
 import type { GoalieProjection, Position, SkaterProjection } from "./types";
 
 const MIN_SEASON_GP = 10;
@@ -17,8 +23,8 @@ import { projectedGamesFromProfile } from "./projection-gp";
 const LEAGUE_GOALIE_RATES = {
   winRate: 0.45,
   shutoutRate: 0.04,
-  savesPerGame: 26,
-  savePct: 0.905,
+  savesPerGame: 28,
+  savePct: LEAGUE_SV_PCT,
 };
 
 function finite(n: unknown, fallback = 0): number {
@@ -58,24 +64,6 @@ function weightedPerGameRate(
   }, 0);
 }
 
-function weightedSavePct(seasons: SeasonHistory[]): number {
-  const eligible = seasons.filter(
-    (s) => s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP,
-  );
-  if (eligible.length === 0) return LEAGUE_GOALIE_RATES.savePct;
-
-  const recent = eligible.slice(-3);
-  const weights = SEASON_WEIGHTS.slice(-recent.length);
-  const totalWeight = weights.reduce((a, b) => a + b, 0);
-  const pct = recent.reduce(
-    (sum, season, i) =>
-      sum +
-      normalizeSavePct(season.stats.savePct) * (weights[i] / totalWeight),
-    0,
-  );
-  return Math.max(0.875, Math.min(0.93, pct));
-}
-
 const MAX_GOALIE_WIN_RATE = 0.62;
 
 function careerSkaterRates(profile: PlayerProfile) {
@@ -98,20 +86,6 @@ function careerSkaterRates(profile: PlayerProfile) {
     faceoffWins: last
       ? perGame(finite(last.advanced.faceoffWins), last.gamesPlayed)
       : 0,
-  };
-}
-
-function careerGoalieRates(profile: PlayerProfile) {
-  const career = profile.careerTotals;
-  const gp = finite(career.gamesPlayed);
-  if (gp < MIN_SEASON_GP) return null;
-
-  const saves = finite(career.saves ?? career.shotsAgainst);
-  return {
-    winRate: perGame(finite(career.wins), gp),
-    shutoutRate: perGame(finite(career.shutouts), gp),
-    saveRate: perGame(saves, gp),
-    savePct: normalizeSavePct(career.savePctg ?? career.savePct),
   };
 }
 
@@ -294,6 +268,7 @@ export function projectGoalieFromProfile(
   const gamesPlayed = projectedGoalieGames(seasons);
 
   const teamWinPct = profile.teamContext.pointsPct;
+  const teamGaPerGame = profile.teamContext.goalsAgainstPerGame;
   const ageMult = ageCurve("G", profile.bio.age);
   const teamBoost = 0.85 + teamWinPct * 0.3;
 
@@ -301,50 +276,57 @@ export function projectGoalieFromProfile(
     .filter((s) => s.gamesPlayed >= MIN_SEASON_GP)
     .reduce((sum, s) => sum + s.gamesPlayed, 0);
 
-  let winRate = weightedPerGameRate(seasons, (s) => finite(s.stats.wins));
-  let shutoutRate = weightedPerGameRate(seasons, (s) => finite(s.stats.shutouts));
-  let saveRate = weightedPerGameRate(seasons, (s) => finite(s.stats.saves));
-  let savePct = weightedSavePct(seasons);
-  let source = "recent seasons";
+  let skill = estimateShrunkGoalieSkill(seasons, teamGaPerGame);
 
   if (eligibleGp < MIN_SEASON_GP) {
-    const career = careerGoalieRates(profile);
-    if (career) {
-      winRate = career.winRate;
-      shutoutRate = career.shutoutRate;
-      saveRate = career.saveRate;
-      savePct = career.savePct;
-      source = "career totals";
+    const careerSkill = estimateShrunkGoalieSkillFromCareer(profile, teamGaPerGame);
+    if (careerSkill) {
+      skill = careerSkill;
     } else {
-      const baseline = rookieGoalieProjection();
-      const baselineGp = 55;
-      winRate = baseline.wins / baselineGp;
-      shutoutRate = baseline.shutouts / baselineGp;
-      saveRate = baseline.saves / baselineGp;
-      savePct = baseline.savePct;
-      source = "league baseline";
+      skill = {
+        savePct: LEAGUE_SV_PCT,
+        gsaa: 0,
+        gsaxProxy: 0,
+        gsaaPer60: 0,
+        shotsPerGame: LEAGUE_GOALIE_RATES.savesPerGame,
+        totalWeightedShots: 0,
+        winRate: LEAGUE_GOALIE_RATES.winRate,
+        shutoutRate: LEAGUE_GOALIE_RATES.shutoutRate,
+        source: "league baseline",
+      };
     }
   }
 
-  if (winRate <= 0) winRate = LEAGUE_GOALIE_RATES.winRate * teamBoost;
-  if (shutoutRate <= 0) shutoutRate = LEAGUE_GOALIE_RATES.shutoutRate;
-  if (saveRate <= 0) saveRate = LEAGUE_GOALIE_RATES.savesPerGame;
-  winRate = Math.min(winRate, MAX_GOALIE_WIN_RATE);
+  const skillWinMult = saveSkillWinMultiplier(skill.savePct);
+  let winRate = skill.winRate > 0 ? skill.winRate : LEAGUE_GOALIE_RATES.winRate;
+  let shutoutRate =
+    skill.shutoutRate > 0 ? skill.shutoutRate : LEAGUE_GOALIE_RATES.shutoutRate;
+  const shotsPerGame =
+    skill.shotsPerGame > 0 ? skill.shotsPerGame : LEAGUE_GOALIE_RATES.savesPerGame;
+  const savePct = Math.max(0.875, Math.min(0.93, skill.savePct));
+
+  winRate = Math.min(
+    MAX_GOALIE_WIN_RATE,
+    winRate * ageMult * teamBoost * skillWinMult,
+  );
+
+  const projectedSaves = Math.round(savePct * shotsPerGame * gamesPlayed);
 
   const projection = clampGoalieProjection(
     {
-      wins: Math.round(winRate * gamesPlayed * ageMult * teamBoost),
+      wins: Math.round(winRate * gamesPlayed),
       shutouts: Math.round(shutoutRate * gamesPlayed * ageMult),
-      saves: Math.round(saveRate * gamesPlayed),
+      saves: projectedSaves,
       savePct: Math.round(savePct * 10000) / 10000,
     },
     gamesPlayed,
   );
 
   const reasoning = [
-    `Rates from ${source}`,
-    `Projected ${gamesPlayed} GP (starter share, max ${GOALIE_MAX_GP})`,
-    `Team win context ${teamBoost.toFixed(2)}`,
+    skill.source,
+    `EB save% ${savePct.toFixed(3)} (GSAx proxy ${skill.gsaxProxy >= 0 ? "+" : ""}${skill.gsaxProxy.toFixed(1)} on weighted sample)`,
+    `${shotsPerGame.toFixed(1)} SA/GP × ${gamesPlayed} GP`,
+    `Team GA/G ${teamGaPerGame.toFixed(2)} win mult ${skillWinMult.toFixed(2)}`,
     `Age ${profile.bio.age}`,
   ].join("; ");
 
