@@ -16,7 +16,15 @@ import { PROJECTION_SEASON } from "../src/lib/nhl-api";
 import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
-import { findProjectionIssues, clampGoalieProjection, clampSkaterProjection } from "../src/lib/projection-sanity";
+import {
+  findProjectionIssues,
+  clampGoalieProjection,
+  clampSkaterProjection,
+} from "../src/lib/projection-sanity";
+import {
+  buildGoalieRoleMap,
+  projectedGoalieGames,
+} from "../src/lib/projection-gp";
 import {
   applyYahooPositionsToPlayer,
   loadYahooPositions,
@@ -64,6 +72,7 @@ function buildFromProfile(
   profile: PlayerProfile,
   aiCache: ReturnType<typeof loadAiCache>,
   mlModels: MlModelBundle | null,
+  goalieRoleMap: ReturnType<typeof buildGoalieRoleMap>,
 ): Omit<
   PlayerProjection,
   "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
@@ -72,14 +81,16 @@ function buildFromProfile(
   const aiGoalie = aiCache?.goalies[profile.id];
 
   if (profile.isGoalie && aiGoalie) {
+    const gamesPlayed = projectedGoalieGames(profile, goalieRoleMap);
+    const gpScale = aiGoalie.gamesPlayed > 0 ? gamesPlayed / aiGoalie.gamesPlayed : 1;
     const projection = clampGoalieProjection(
       {
-        wins: aiGoalie.wins,
-        shutouts: aiGoalie.shutouts,
-        saves: aiGoalie.saves,
+        wins: Math.round(aiGoalie.wins * gpScale),
+        shutouts: Math.round(aiGoalie.shutouts * gpScale),
+        saves: Math.round(aiGoalie.saves * gpScale),
         savePct: aiGoalie.savePct,
       },
-      aiGoalie.gamesPlayed,
+      gamesPlayed,
     );
     return {
       id: profile.id,
@@ -88,7 +99,7 @@ function buildFromProfile(
       position: "G",
       positions: ["G"],
       isGoalie: true,
-      gamesPlayed: aiGoalie.gamesPlayed,
+      gamesPlayed,
       projection,
       projectionMethod: "ai",
       confidence: aiGoalie.confidence,
@@ -130,7 +141,7 @@ function buildFromProfile(
 
   if (mlModels) {
     const ml = profile.isGoalie
-      ? projectGoalieWithMl(profile, mlModels)
+      ? projectGoalieWithMl(profile, mlModels, goalieRoleMap)
       : projectSkaterWithMl(profile, mlModels);
     return {
       id: profile.id,
@@ -149,7 +160,7 @@ function buildFromProfile(
   }
 
   const contextual = profile.isGoalie
-    ? projectGoalieFromProfile(profile)
+    ? projectGoalieFromProfile(profile, goalieRoleMap)
     : projectSkaterFromProfile(profile);
 
   return {
@@ -172,6 +183,7 @@ async function main() {
   console.log(`Generating ${PROJECTION_SEASON} projections from full player dossiers...`);
 
   const profiles = (await loadProfiles()).map(normalizeProfile);
+  const goalieRoleMap = buildGoalieRoleMap(profiles);
   const aiCache = loadAiCache();
   const mlModels = getMlModels();
   const aiCount =
@@ -190,7 +202,7 @@ async function main() {
     );
   }
 
-  const raw = profiles.map((p) => buildFromProfile(p, aiCache, mlModels));
+  const raw = profiles.map((p) => buildFromProfile(p, aiCache, mlModels, goalieRoleMap));
   const yahooPositions = loadYahooPositions();
   console.log(yahooPositionsSummary(yahooPositions));
 

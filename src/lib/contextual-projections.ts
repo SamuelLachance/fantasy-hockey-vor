@@ -13,13 +13,18 @@ import {
 } from "./projection-sanity";
 import { rookieSkaterProjection } from "./projections";
 import type { GoalieProjection, Position, SkaterProjection } from "./types";
+import {
+  GOALIE_BACKUP_GP,
+  GOALIE_STARTER_GP,
+  goalieRoleLabel,
+  projectedGamesFromProfile,
+  projectedGoalieGames,
+  type GoalieRole,
+} from "./projection-gp";
 
 const MIN_SEASON_GP = 10;
 const SEASON_WEIGHTS = [0.15, 0.3, 0.55];
 const FULL_SEASON_GP = 82;
-const GOALIE_MIN_GP = 20;
-const GOALIE_MAX_GP = 58;
-import { projectedGamesFromProfile } from "./projection-gp";
 
 const LEAGUE_GOALIE_RATES = {
   winRate: 0.45,
@@ -169,23 +174,6 @@ function projectedSkaterGames(profile: PlayerProfile): number {
   return projectedGamesFromProfile(profile);
 }
 
-function projectedGoalieGames(seasons: SeasonHistory[]): number {
-  const eligible = seasons.filter((s) => s.gamesPlayed >= MIN_SEASON_GP);
-  if (eligible.length === 0) return 30;
-
-  const recent = eligible.slice(-3);
-  const weights = SEASON_WEIGHTS.slice(-recent.length);
-  const totalWeight = weights.reduce((a, b) => a + b, 0);
-  const weightedGp = recent.reduce(
-    (sum, season, i) => sum + season.gamesPlayed * (weights[i] / totalWeight),
-    0,
-  );
-
-  return Math.round(
-    Math.min(GOALIE_MAX_GP, Math.max(GOALIE_MIN_GP, weightedGp)),
-  );
-}
-
 export function projectSkaterFromProfile(
   profile: PlayerProfile,
 ): { projection: SkaterProjection; gamesPlayed: number; reasoning: string } {
@@ -264,9 +252,11 @@ export function projectSkaterFromProfile(
 
 export function projectGoalieFromProfile(
   profile: PlayerProfile,
+  goalieRoleMap?: Map<number, GoalieRole>,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
   const seasons = profile.teamHistory.filter((s) => s.isGoalie);
-  const gamesPlayed = projectedGoalieGames(seasons);
+  const gamesPlayed = projectedGoalieGames(profile, goalieRoleMap);
+  const role = goalieRoleLabel(profile, goalieRoleMap);
 
   const teamWinPct = profile.teamContext.pointsPct;
   const teamGaPerGame = profile.teamContext.goalsAgainstPerGame;
@@ -329,7 +319,7 @@ export function projectGoalieFromProfile(
     skill.gsaxSource === "moneypuck"
       ? `GSAx ${skill.gsax >= 0 ? "+" : ""}${skill.gsax.toFixed(1)} (${skill.gsaxPerGame.toFixed(2)}/GP), save% ${savePct.toFixed(3)}`
       : `EB save% ${savePct.toFixed(3)} (proxy GSAx ${skill.gsax >= 0 ? "+" : ""}${skill.gsax.toFixed(1)})`,
-    `${skill.shotsPerGame.toFixed(1)} SOG/GP × ${gamesPlayed} GP`,
+    `${skill.shotsPerGame.toFixed(1)} SOG/GP × ${gamesPlayed} GP (${role}, ${role === "starter" ? GOALIE_STARTER_GP : GOALIE_BACKUP_GP} GP baseline)`,
     `Team GA/G ${teamGaPerGame.toFixed(2)} win mult ${skillWinMult.toFixed(2)}`,
     `Age ${profile.bio.age}`,
   ].join("; ");

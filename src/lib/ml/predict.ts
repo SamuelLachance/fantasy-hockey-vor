@@ -4,7 +4,7 @@ import {
   anchorSkaterProjectionToHistory,
   clampSkaterProjection,
 } from "../projection-sanity";
-import { projectedGamesFromProfile } from "../projection-gp";
+import { projectedGamesFromProfile, type GoalieRole } from "../projection-gp";
 import type { GoalieProjection, SkaterProjection } from "../types";
 import {
   buildTargetInferenceFeatures,
@@ -123,8 +123,9 @@ export function projectSkaterWithMl(
 export function projectGoalieWithMl(
   profile: PlayerProfile,
   _models: MlModelBundle,
+  goalieRoleMap?: Map<number, GoalieRole>,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
-  const result = projectGoalieFromProfile(profile);
+  const result = projectGoalieFromProfile(profile, goalieRoleMap);
   return {
     ...result,
     reasoning: `Goalie MoneyPuck GSAx + EB (ridge ML not used for goalies); ${result.reasoning}`,
