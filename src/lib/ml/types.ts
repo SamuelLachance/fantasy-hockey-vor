@@ -42,6 +42,23 @@ export interface PlayerSeasonRow {
   saves: number;
   savePct: number;
   teamGoalsForPerGame: number;
+  /** ML context — player age at season start */
+  age?: number;
+  heightInches?: number;
+  weightPounds?: number;
+  shootsLeft?: number;
+  draftYear?: number;
+  draftRound?: number;
+  draftOverallPick?: number;
+  draftOverallLog?: number;
+  yearsSinceDraft?: number;
+  capHitUsd?: number;
+  contractYearsRemaining?: number;
+  teamPointPctg?: number;
+  teamLeagueRank?: number;
+  teamElo?: number;
+  coachId?: number;
+  coachTenureSeasons?: number;
 }
 
 export interface MlDataset {

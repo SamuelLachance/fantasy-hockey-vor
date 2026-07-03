@@ -9,6 +9,11 @@ import type { GoalieProjection, SkaterProjection } from "../types";
 import {
   buildTargetInferenceFeatures,
 } from "./features";
+import { loadContextCaches } from "./enrich-rows";
+import {
+  buildProjectionTargetRow,
+  profileToSeasonRows,
+} from "./inference-context";
 import { predictRidge } from "./ridge";
 import type { MlModelBundle, PlayerSeasonRow } from "./types";
 import { loadMlModels } from "./train";
@@ -61,31 +66,6 @@ function anchorPerGameRate(
   return Math.min(ml, ewma);
 }
 
-function profileToSeasonRows(profile: PlayerProfile): PlayerSeasonRow[] {
-  return profile.teamHistory.map((s) => ({
-    playerId: profile.id,
-    name: profile.name,
-    seasonId: s.seasonId,
-    team: s.team,
-    position: profile.position,
-    isGoalie: s.isGoalie,
-    gamesPlayed: s.gamesPlayed,
-    goals: s.stats.goals ?? 0,
-    assists: s.stats.assists ?? 0,
-    shots: s.stats.shots ?? 0,
-    blocks: s.advanced.blocks ?? 0,
-    hits: s.advanced.hits ?? 0,
-    powerplayPoints: s.stats.ppPoints ?? 0,
-    penaltyMinutes: s.stats.pim ?? 0,
-    faceoffWins: s.advanced.faceoffWins ?? 0,
-    wins: s.stats.wins ?? 0,
-    shutouts: s.stats.shutouts ?? 0,
-    saves: s.stats.saves ?? 0,
-    savePct: s.stats.savePct ?? 0.905,
-    teamGoalsForPerGame: profile.teamContext.goalsForPerGame,
-  }));
-}
-
 function rowStat(row: PlayerSeasonRow, target: string): number {
   return (row as unknown as Record<string, number>)[target] ?? 0;
 }
@@ -94,12 +74,19 @@ export function projectSkaterWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
 ): { projection: SkaterProjection; gamesPlayed: number; reasoning: string } {
-  const history = profileToSeasonRows(profile).filter((r) => !r.isGoalie);
+  const caches = loadContextCaches();
+  const history = profileToSeasonRows(profile, caches).filter((r) => !r.isGoalie);
+  const targetRow = buildProjectionTargetRow(profile, caches);
   const gamesPlayed = projectedGamesFromProfile(profile);
 
   const rates: Record<string, number> = {};
   for (const model of models.skaterModels) {
-    const { features } = buildTargetInferenceFeatures(history, model.target, false);
+    const { features } = buildTargetInferenceFeatures(
+      history,
+      model.target,
+      false,
+      targetRow,
+    );
     const ml = Math.max(0, predictRidge(model, features));
     const ewma = ewmaPerGameRate(history, (r) => rowStat(r, model.target));
     rates[model.target] = anchorPerGameRate(model.target, ewma, ml, profile);
@@ -129,7 +116,7 @@ export function projectSkaterWithMl(
   return {
     projection,
     gamesPlayed,
-    reasoning: `ML time-series (${models.featureLags}-season lags) anchored to career rates; ${gamesPlayed} GP based on durability`,
+    reasoning: `ML time-series (${models.featureLags}-season lags + player/team context) anchored to career rates; ${gamesPlayed} GP based on durability`,
   };
 }
 

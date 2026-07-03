@@ -10,6 +10,7 @@ import {
 } from "../nhl-api";
 import type { Position } from "../types";
 import type { MlDataset, PlayerSeasonRow } from "./types";
+import { enrichAllRows, loadOrBuildContextCaches } from "./enrich-rows";
 
 function finite(n: unknown, fallback = 0): number {
   const v = Number(n);
@@ -151,10 +152,14 @@ export async function buildMlDataset(
     await new Promise((r) => setTimeout(r, 400));
   }
 
+  console.log(`Enriching ${rows.length} player-seasons with bio, contract, team ELO, coach...`);
+  const caches = await loadOrBuildContextCaches(rows);
+  const enriched = enrichAllRows(rows, caches);
+
   return {
     builtAt: new Date().toISOString(),
     seasonIds,
-    rows,
+    rows: enriched,
   };
 }
 

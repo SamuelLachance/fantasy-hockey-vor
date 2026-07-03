@@ -5,9 +5,10 @@ import type { MlDataset } from "../src/lib/ml/types";
 
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+const force = process.argv.includes("--force");
 
 async function main() {
-  if (existsSync(DATA_PATH)) {
+  if (!force && existsSync(DATA_PATH)) {
     const cached = JSON.parse(readFileSync(DATA_PATH, "utf8")) as MlDataset;
     const age = Date.now() - new Date(cached.builtAt).getTime();
     if (age < MAX_AGE_MS && cached.rows.length > 0) {
