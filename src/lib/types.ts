@@ -55,7 +55,7 @@ export interface PlayerProjection {
   vor: number;
   rank: number;
   positionRank: number;
-  projectionMethod?: "ai" | "contextual";
+  projectionMethod?: "ml" | "ai" | "contextual";
   confidence?: number;
   reasoning?: string;
   profileSummary?: string;

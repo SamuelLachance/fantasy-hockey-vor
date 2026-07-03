@@ -282,7 +282,8 @@ export function buildTargetInferenceFeatures(
   target: string,
   isGoalie: boolean,
 ): { features: number[]; featureNames: string[] } {
-  return buildLagFeatures(history, [target], true, !isGoalie);
+  const { features, names } = buildLagFeatures(history, [target], true, !isGoalie);
+  return { features, featureNames: names };
 }
 
 export function buildInferenceFeatures(
@@ -290,13 +291,16 @@ export function buildInferenceFeatures(
   isGoalie: boolean,
 ): { features: number[]; featureNames: string[] } {
   if (isGoalie) {
-    return buildLagFeatures(history, ["wins"], true, false);
+    const { features, names } = buildLagFeatures(history, ["wins"], true, false);
+    return { features, featureNames: names };
   }
-  return buildLagFeatures(history, ["goals"], true, true);
+  const { features, names } = buildLagFeatures(history, ["goals"], true, true);
+  return { features, featureNames: names };
 }
 
 export function buildGoalieGpInferenceFeatures(
   history: PlayerSeasonRow[],
 ): { features: number[]; featureNames: string[] } {
-  return buildLagFeatures(history, [], false, false);
+  const { features, names } = buildLagFeatures(history, [], false, false);
+  return { features, featureNames: names };
 }
