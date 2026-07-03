@@ -8,6 +8,9 @@ import type { GoalieProjection, Position, SkaterProjection } from "./types";
 
 const MIN_SEASON_GP = 10;
 const SEASON_WEIGHTS = [0.15, 0.3, 0.55];
+const FULL_SEASON_GP = 82;
+const GOALIE_MIN_GP = 20;
+const GOALIE_MAX_GP = 58;
 const LEAGUE_GOALIE_RATES = {
   winRate: 0.45,
   shutoutRate: 0.04,
@@ -184,14 +187,25 @@ function ageCurve(position: Position, age: number): number {
   return 1;
 }
 
-function projectedGames(profile: PlayerProfile): number {
-  const base = profile.injury.avgGamesPlayedLast3 || profile.injury.gamesPlayedLastSeason || 55;
-  const durability = profile.injury.durabilityScore;
-  const stage = profile.contract.careerStage;
-  let gp = base * (0.6 + durability * 0.4);
-  if (stage === "rookie") gp = Math.min(gp, 70);
-  if (profile.isGoalie) return Math.round(Math.min(58, Math.max(20, gp)));
-  return Math.round(Math.min(78, Math.max(30, gp)));
+function projectedSkaterGames(): number {
+  return FULL_SEASON_GP;
+}
+
+function projectedGoalieGames(seasons: SeasonHistory[]): number {
+  const eligible = seasons.filter((s) => s.gamesPlayed >= MIN_SEASON_GP);
+  if (eligible.length === 0) return 30;
+
+  const recent = eligible.slice(-3);
+  const weights = SEASON_WEIGHTS.slice(-recent.length);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  const weightedGp = recent.reduce(
+    (sum, season, i) => sum + season.gamesPlayed * (weights[i] / totalWeight),
+    0,
+  );
+
+  return Math.round(
+    Math.min(GOALIE_MAX_GP, Math.max(GOALIE_MIN_GP, weightedGp)),
+  );
 }
 
 export function projectSkaterFromProfile(
@@ -200,7 +214,7 @@ export function projectSkaterFromProfile(
   const seasons = profile.teamHistory.filter((s) => !s.isGoalie);
   const last = seasons[seasons.length - 1];
   const prev = seasons[seasons.length - 2];
-  const gamesPlayed = projectedGames(profile);
+  const gamesPlayed = projectedSkaterGames();
 
   const teamMult = teamOffenseMultiplier(profile);
   const ageMult = ageCurve(profile.position, profile.bio.age);
@@ -230,7 +244,7 @@ export function projectSkaterFromProfile(
       source = "career totals";
     } else {
       const baseline = rookieSkaterProjection(profile.position);
-      const baselineGp = 72;
+      const baselineGp = FULL_SEASON_GP;
       rates = {
         goals: baseline.goals / baselineGp,
         assists: baseline.assists / baselineGp,
@@ -263,11 +277,10 @@ export function projectSkaterFromProfile(
 
   const reasoning = [
     `Rates from ${source}`,
+    `Projected ${gamesPlayed} GP (full season)`,
     `Team offense mult ${teamMult.toFixed(2)} (#${profile.teamContext.leagueRank} ${profile.teamContext.teamAbbrev})`,
     `Age ${profile.bio.age} curve ${ageMult.toFixed(2)}`,
     profile.draft ? `Draft #${profile.draft.overallPick} pedigree ${draftMult.toFixed(2)}` : "Undrafted",
-    `Durability ${profile.injury.durabilityScore} → ${gamesPlayed} GP`,
-    profile.injury.note,
   ].join("; ");
 
   return { projection, gamesPlayed, reasoning };
@@ -277,11 +290,10 @@ export function projectGoalieFromProfile(
   profile: PlayerProfile,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
   const seasons = profile.teamHistory.filter((s) => s.isGoalie);
-  const gamesPlayed = projectedGames(profile);
+  const gamesPlayed = projectedGoalieGames(seasons);
 
   const teamWinPct = profile.teamContext.pointsPct;
   const ageMult = ageCurve("G", profile.bio.age);
-  const durability = profile.injury.durabilityScore;
   const teamBoost = 0.85 + teamWinPct * 0.3;
 
   const eligibleGp = seasons
@@ -322,7 +334,7 @@ export function projectGoalieFromProfile(
     {
       wins: Math.round(winRate * gamesPlayed * ageMult * teamBoost),
       shutouts: Math.round(shutoutRate * gamesPlayed * ageMult),
-      saves: Math.round(saveRate * gamesPlayed * Math.max(durability, 0.5)),
+      saves: Math.round(saveRate * gamesPlayed),
       savePct: Math.round(savePct * 10000) / 10000,
     },
     gamesPlayed,
@@ -330,10 +342,9 @@ export function projectGoalieFromProfile(
 
   const reasoning = [
     `Rates from ${source}`,
+    `Projected ${gamesPlayed} GP (starter share, max ${GOALIE_MAX_GP})`,
     `Team win context ${teamBoost.toFixed(2)}`,
     `Age ${profile.bio.age}`,
-    `Durability ${durability} → ${gamesPlayed} GP`,
-    profile.injury.note,
   ].join("; ");
 
   return { projection, gamesPlayed, reasoning };

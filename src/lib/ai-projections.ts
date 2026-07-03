@@ -69,7 +69,7 @@ Categories for skaters: goals, assists, shots, blocks, hits, powerplay points, p
 
 Use ALL context: age, height/weight, handedness, draft pedigree, team strength & recent form, team changes, injury/durability history, contract stage motivation, advanced usage (SAT, zone starts), trend from prior seasons, linemate/team offense environment.
 
-Predict realistic full-season totals (not per-game). Account for expected games played based on injury history.
+Predict realistic full-season category totals (not per-game). Skaters are projected for an 82-game season. Goalies are projected for a starter workload (typically 20-58 games), not a full 82-game season.
 
 Return ONLY valid JSON matching: ${SKATER_SCHEMA}
 
@@ -92,7 +92,7 @@ function buildGoaliePrompt(profiles: PlayerProfile[]): string {
 
   return `You are an elite NHL fantasy goalie analyst. Project ${PROJECTION_SEASON} for categories: wins, shutouts, saves, save percentage.
 
-Use team quality, expected games started, age, injury history, platoon risk, team defensive environment.
+Use team quality, expected games started based on recent workload (not injuries), age, platoon risk, team defensive environment. Project 20-58 games for goalies depending on role.
 
 Return ONLY valid JSON matching: ${GOALIE_SCHEMA}
 
