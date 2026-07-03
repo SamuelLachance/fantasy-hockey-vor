@@ -81,6 +81,44 @@ function sumRecord(
   return out;
 }
 
+function normalizeSavePct(raw: unknown): number {
+  const value = finite(raw, 0.905);
+  if (value <= 0) return 0.905;
+  return value > 1 ? value / 100 : value;
+}
+
+function weightedStat(
+  a: number,
+  gpA: number,
+  b: number,
+  gpB: number,
+): number {
+  const totalGp = gpA + gpB;
+  return totalGp > 0 ? (a * gpA + b * gpB) / totalGp : 0;
+}
+
+function mergeSeasonStats(
+  existing: SeasonHistory,
+  incoming: SeasonHistory,
+): Record<string, number> {
+  const merged = sumRecord(existing.stats, incoming.stats);
+  if (!existing.isGoalie) return merged;
+
+  merged.savePct = weightedStat(
+    normalizeSavePct(existing.stats.savePct),
+    existing.gamesPlayed,
+    normalizeSavePct(incoming.stats.savePct),
+    incoming.gamesPlayed,
+  );
+  merged.gaa = weightedStat(
+    finite(existing.stats.gaa),
+    existing.gamesPlayed,
+    finite(incoming.stats.gaa),
+    incoming.gamesPlayed,
+  );
+  return merged;
+}
+
 /** Merge two rows for the same player/season (e.g. mid-season trade). */
 function mergeSeasonHistory(
   existing: SeasonHistory,
@@ -98,7 +136,7 @@ function mergeSeasonHistory(
     team: [...teams].join(","),
     gamesPlayed: existing.gamesPlayed + incoming.gamesPlayed,
     isGoalie: existing.isGoalie,
-    stats: sumRecord(existing.stats, incoming.stats),
+    stats: mergeSeasonStats(existing, incoming),
     // Realtime/advanced feeds are full-season totals — never sum duplicates.
     advanced: existing.advanced,
   };
