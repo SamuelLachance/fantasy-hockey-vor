@@ -515,7 +515,6 @@ export function buildSkaterTrainingExamplesForTarget(
     for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
       const targetSeason = history[i];
       if (targetSeason.gamesPlayed < ML_MIN_SEASON_GP) continue;
-      if (target === "faceoffWins" && targetSeason.position !== "C") continue;
       const prior = history.slice(0, i);
       const { features, names } = buildLagFeatures(
         prior,

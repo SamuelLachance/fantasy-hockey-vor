@@ -59,7 +59,6 @@ const RECENCY_HALF_LIFE: Record<string, number> = {
 };
 
 const POSITION_SPLIT_TARGETS = new Set(["blocks", "hits", "penaltyMinutes"]);
-const CENTER_ONLY_TARGETS = new Set(["faceoffWins"]);
 
 const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
   "injury_only",
@@ -108,9 +107,6 @@ function filterExamplesForTarget(
   let filtered = examples;
   if (positionGroup !== "all") {
     filtered = filtered.filter((ex) => rowPositionGroup(ex.targetSeason) === positionGroup);
-  }
-  if (CENTER_ONLY_TARGETS.has(target)) {
-    filtered = filtered.filter((ex) => ex.targetSeason.position === "C");
   }
   return filtered;
 }
@@ -191,6 +187,28 @@ function mlContextualWeight(valBlendR2: number): number {
   return mlW / (mlW + contextualW);
 }
 
+function finalizeFaceoffRate(
+  target: string,
+  position: string | undefined,
+  rate: number,
+): number {
+  if (target === "faceoffWins" && position !== "C") {
+    return 0;
+  }
+  return rate;
+}
+
+function holdoutTargetRate(
+  ex: TrainingExample,
+  target: string,
+  rate: number,
+): number {
+  if (target === "faceoffWins" && ex.targetSeason.position !== "C") {
+    return 0;
+  }
+  return rate;
+}
+
 function applyProductionStrategy(
   strategy: ProductionStrategy,
   ml: number,
@@ -251,12 +269,16 @@ function selectProductionStrategy(
     const preds = test.map((ex, i) => {
       const prior = priorHistoryForExample(historyMap, ex);
       const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
-      return applyProductionStrategy(
-        strategy,
-        testMl[i],
-        testEwma[i],
-        testLag1[i],
-        contextual,
+      return finalizeFaceoffRate(
+        target,
+        ex.targetSeason.position,
+        applyProductionStrategy(
+          strategy,
+          testMl[i],
+          testEwma[i],
+          testLag1[i],
+          contextual,
+        ),
       );
     });
     const r2 = evaluateRegression(testY, preds).r2;
@@ -502,7 +524,11 @@ function trainSkaterTarget(
 
   const testX = test.map((ex) => ex.features);
   const testY = test.map((ex) =>
-    skaterTargetValue(ex, target as (typeof SKATER_ML_TARGETS)[number]),
+    holdoutTargetRate(
+      ex,
+      target,
+      skaterTargetValue(ex, target as (typeof SKATER_ML_TARGETS)[number]),
+    ),
   );
   const testMl = testX.map((x) => predictRidge(model, x));
   const testEwma = test.map((ex) =>
@@ -527,12 +553,16 @@ function trainSkaterTarget(
   const testPred = test.map((ex, i) => {
     const prior = priorHistoryForExample(historyMap, ex);
     const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
-    return applyProductionStrategy(
-      productionStrategy,
-      testMl[i],
-      testEwma[i],
-      testLag1[i],
-      contextual,
+    return finalizeFaceoffRate(
+      target,
+      ex.targetSeason.position,
+      applyProductionStrategy(
+        productionStrategy,
+        testMl[i],
+        testEwma[i],
+        testLag1[i],
+        contextual,
+      ),
     );
   });
   const holdoutMetrics = evaluateRegression(testY, testPred);
