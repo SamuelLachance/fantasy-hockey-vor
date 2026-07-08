@@ -11,6 +11,7 @@ import {
 import { lookupDraftByName } from "../draft-registry";
 import type { PlayerSeasonRow } from "./types";
 import { buildTeamSeasonContexts } from "./team-season-context";
+import { buildTeamStyleBySeasonTeam, type TeamStyleContext } from "./team-style";
 import { contractSeasonKey, teamSeasonKey } from "./context-types";
 import {
   applyMoneyPuckSkaterFields,
@@ -107,10 +108,12 @@ export async function loadOrBuildContextCaches(
 export function enrichPlayerSeasonRow(
   row: PlayerSeasonRow,
   caches: MlContextCaches,
+  teamStyle?: Map<string, TeamStyleContext>,
   mpRegistry: MoneyPuckSkaterRegistry | null = loadMoneyPuckSkaterRegistrySync(),
 ): PlayerSeasonRow {
   const primaryTeam = row.team.split(",")[0].trim().toUpperCase();
   const teamCtx = caches.teamBySeasonTeam[teamSeasonKey(row.seasonId, primaryTeam)];
+  const style = teamStyle?.get(teamSeasonKey(row.seasonId, primaryTeam));
   const bio = caches.playerBio[row.playerId];
   const registry = loadDraftRegistrySync();
   const draftFromRegistry =
@@ -149,13 +152,20 @@ export function enrichPlayerSeasonRow(
     teamElo: teamCtx?.teamElo ?? 500,
     coachId: teamCtx?.coachId ?? 0,
     coachTenureSeasons: teamCtx?.coachTenureSeasons ?? 0,
+    teamHitsPerGame: style?.hitsPerGame ?? 22,
+    teamPimPerGame: style?.pimPerGame ?? 8,
+    teamBlocksPerGame: style?.blocksPerGame ?? 14,
+    teamPpGoalShare: style?.ppGoalShare ?? 0.2,
+    teamPkGaPer60: style?.pkGoalsAgainstPer60 ?? 2.5,
   };
 }
 
 export function enrichAllRows(
   rows: PlayerSeasonRow[],
   caches: MlContextCaches,
+  teamStyle?: Map<string, TeamStyleContext>,
 ): PlayerSeasonRow[] {
   const mpRegistry = loadMoneyPuckSkaterRegistrySync();
-  return rows.map((row) => enrichPlayerSeasonRow(row, caches, mpRegistry));
+  const style = teamStyle ?? buildTeamStyleBySeasonTeam(rows);
+  return rows.map((row) => enrichPlayerSeasonRow(row, caches, style, mpRegistry));
 }

@@ -1,5 +1,27 @@
 import type { ModelMetrics, RidgeModel } from "./types";
 
+const LOG_TARGET_EPS = 0.08;
+
+export const LOG_TARGET_STATS = new Set(["blocks"]);
+
+export function usesLogTarget(target: string): boolean {
+  return LOG_TARGET_STATS.has(target);
+}
+
+export function transformTarget(y: number, logTarget: boolean, eps = LOG_TARGET_EPS): number {
+  if (!logTarget) return y;
+  return Math.log(Math.max(0, y) + eps);
+}
+
+export function inverseTransformTarget(
+  y: number,
+  logTarget: boolean,
+  eps = LOG_TARGET_EPS,
+): number {
+  if (!logTarget) return y;
+  return Math.max(0, Math.exp(y) - eps);
+}
+
 export function fitRidge(
   X: number[][],
   y: number[],
@@ -8,12 +30,16 @@ export function fitRidge(
   isGoalie: boolean,
   lambda = 1.5,
   sampleWeights?: number[],
+  logTarget = false,
 ): RidgeModel {
   const n = X.length;
   const p = featureNames.length;
   if (n === 0 || p === 0) {
     throw new Error(`No training samples for ${target}`);
   }
+
+  const eps = LOG_TARGET_EPS;
+  const yFit = y.map((v) => transformTarget(v, logTarget, eps));
 
   const means = Array.from({ length: p }, (_, j) => {
     let sum = 0;
@@ -46,7 +72,7 @@ export function fitRidge(
   let wTotal = 0;
   for (let i = 0; i < n; i++) {
     const w = sampleWeights?.[i] ?? 1;
-    yMean += w * y[i];
+    yMean += w * yFit[i];
     wTotal += w;
   }
   yMean /= Math.max(1, wTotal);
@@ -54,7 +80,7 @@ export function fitRidge(
   for (let i = 0; i < n; i++) {
     const w = sampleWeights?.[i] ?? 1;
     for (let a = 0; a < p; a++) {
-      Xty[a] += w * Xs[i][a] * (y[i] - yMean);
+      Xty[a] += w * Xs[i][a] * (yFit[i] - yMean);
       for (let b = 0; b < p; b++) {
         XtX[a][b] += w * Xs[i][a] * Xs[i][b];
       }
@@ -75,6 +101,8 @@ export function fitRidge(
     weights,
     bias,
     lambda,
+    logTarget,
+    logEps: eps,
   };
 }
 
@@ -113,10 +141,13 @@ export function predictRidge(model: RidgeModel, features: number[]): number {
     const scaled = (features[j] - model.means[j]) / model.stds[j];
     sum += model.weights[j] * scaled;
   }
-  return sum;
+  return inverseTransformTarget(sum, model.logTarget ?? false, model.logEps ?? LOG_TARGET_EPS);
 }
 
 const SKATER_LAMBDA_GRID = [5, 10, 25, 50, 100, 200, 400, 600, 800, 1200];
+
+const LOW_BLEND_ML_TARGETS = new Set(["penaltyMinutes", "hits"]);
+const MIN_EWMA_LAG1_SHARE = 0.55;
 
 export function selectLambda(
   trainX: number[][],
@@ -129,6 +160,7 @@ export function selectLambda(
   trainWeights?: number[],
   valEwma?: number[],
   valLag1?: number[],
+  logTarget = false,
 ): number {
   if (valX.length === 0) return 100;
   let bestLambda = 100;
@@ -142,11 +174,12 @@ export function selectLambda(
       isGoalie,
       lambda,
       trainWeights,
+      logTarget,
     );
     const mlPreds = valX.map((x) => predictRidge(model, x));
     let r2: number;
     if (valEwma && valLag1) {
-      const blend = selectBlendWeights(valY, mlPreds, valEwma, valLag1);
+      const blend = selectBlendWeights(valY, mlPreds, valEwma, valLag1, target);
       const blended = applyBlendWeights(mlPreds, valEwma, valLag1, blend);
       r2 = evaluateRegression(valY, blended).r2;
     } else {
@@ -183,11 +216,38 @@ export function applyBlendWeights(
   });
 }
 
+function normalizeBlend(weights: BlendWeights): BlendWeights {
+  const sum = weights.ml + weights.ewma + weights.lag1;
+  if (sum <= 0) return { ml: 1, ewma: 0, lag1: 0 };
+  return {
+    ml: weights.ml / sum,
+    ewma: weights.ewma / sum,
+    lag1: weights.lag1 / sum,
+  };
+}
+
+function enforceMinEwmaLag1Share(weights: BlendWeights, target: string): BlendWeights {
+  if (!LOW_BLEND_ML_TARGETS.has(target)) return weights;
+  const historyShare = weights.ewma + weights.lag1;
+  if (historyShare >= MIN_EWMA_LAG1_SHARE) return weights;
+
+  const deficit = MIN_EWMA_LAG1_SHARE - historyShare;
+  const newMl = Math.max(0, weights.ml - deficit);
+  const cut = weights.ml - newMl;
+  const histTotal = Math.max(weights.ewma + weights.lag1, 1e-6);
+  return normalizeBlend({
+    ml: newMl,
+    ewma: weights.ewma + cut * (weights.ewma / histTotal || 0.65),
+    lag1: weights.lag1 + cut * (weights.lag1 / histTotal || 0.35),
+  });
+}
+
 export function selectBlendWeights(
   valY: number[],
   mlPreds: number[],
   ewmaPreds: number[],
   lag1Preds: number[],
+  target = "",
 ): BlendWeights {
   if (valY.length === 0) return { ml: 0.15, ewma: 0.7, lag1: 0.15 };
 
@@ -206,7 +266,7 @@ export function selectBlendWeights(
       }
     }
   }
-  return best;
+  return enforceMinEwmaLag1Share(best, target);
 }
 
 /** @deprecated use selectBlendWeights */

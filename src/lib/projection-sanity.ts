@@ -179,20 +179,57 @@ function maxSeasonPerGame(profile: PlayerProfile, stat: string): number {
   return max;
 }
 
-/** Pull ML/contextual projections back toward provable NHL history. */
+function careerStatPerGame(profile: PlayerProfile, stat: string): number {
+  const gp = profile.careerTotals.gamesPlayed ?? 0;
+  const careerKey = stat === "pim" ? "pim" : stat;
+  const careerVal = profile.careerTotals[careerKey];
+  if (careerVal != null && gp >= 5) return Number(careerVal) / gp;
+
+  let total = 0;
+  let games = 0;
+  for (const s of profile.teamHistory) {
+    if (s.isGoalie || s.gamesPlayed < 10) continue;
+    total += Number(s.stats[careerKey] ?? s.advanced[careerKey] ?? 0);
+    games += s.gamesPlayed;
+  }
+  return games > 0 ? total / games : 0;
+}
+
+/** Pull ML/contextual projections back toward provable NHL history (empirical-Bayes style). */
 export function anchorSkaterProjectionToHistory(
   profile: PlayerProfile,
   projection: SkaterProjection,
   gamesPlayed: number,
 ): SkaterProjection {
   const gp = Math.max(1, gamesPlayed);
+  const careerGp = profile.careerTotals.gamesPlayed ?? 0;
+
+  const shrink = (
+    projected: number,
+    stat: string,
+    ceilingMult = 1.35,
+  ): number => {
+    const careerRate = careerStatPerGame(profile, stat);
+    const maxRate = maxSeasonPerGame(profile, stat === "pim" ? "pim" : stat);
+    if (careerRate <= 0 && maxRate <= 0) return projected;
+
+    const priorRate = Math.max(careerRate, maxRate * 0.85);
+    const priorWeight = Math.min(30, Math.max(8, careerGp * 0.25));
+    const projectedRate = projected / gp;
+    const shrunkRate =
+      (priorRate * priorWeight + projectedRate * priorWeight) /
+      (priorWeight + priorWeight);
+    const ceiling = Math.max(priorRate, maxRate) * gp * ceilingMult;
+    return Math.min(Math.round(shrunkRate * gp), Math.round(ceiling));
+  };
+
+  let goals = projection.goals;
+  let powerplayPoints = projection.powerplayPoints;
+
   const careerGoals = careerPerGame(profile, "goals");
   const careerPpp = careerPerGame(profile, "powerPlayPoints");
   const maxGoalRate = maxSeasonPerGame(profile, "goals");
   const maxPppRate = maxSeasonPerGame(profile, "ppPoints");
-
-  let goals = projection.goals;
-  let powerplayPoints = projection.powerplayPoints;
 
   if (careerGoals <= 0 && maxGoalRate <= 0) {
     goals = profile.position === "D" ? Math.min(goals, 4) : Math.min(goals, 8);
@@ -208,8 +245,12 @@ export function anchorSkaterProjectionToHistory(
     powerplayPoints = Math.min(powerplayPoints, Math.round(pppCeiling));
   }
 
+  const blocks = shrink(projection.blocks, "blocks", 1.4);
+  const hits = shrink(projection.hits, "hits", 1.4);
+  const penaltyMinutes = shrink(projection.penaltyMinutes, "pim", 1.5);
+
   return clampSkaterProjection(
-    { ...projection, goals, powerplayPoints },
+    { ...projection, goals, powerplayPoints, blocks, hits, penaltyMinutes },
     gamesPlayed,
     profile.position,
   );

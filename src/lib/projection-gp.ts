@@ -70,15 +70,44 @@ export function projectedGoalieGames(
   return lastSeasonGp >= 35 ? GOALIE_STARTER_GP : GOALIE_BACKUP_GP;
 }
 
-/** Skaters use full-season GP. Goalies use fixed starter/backup baselines. */
+/** Injury-informed skater GP with optional ML ridge blend. */
+export function projectedSkaterGames(
+  profile: PlayerProfile,
+  mlGp?: number | null,
+): number {
+  const injury = profile.injury;
+  const baseGp =
+    injury.avgGamesPlayedLast3 > 0
+      ? injury.avgGamesPlayedLast3
+      : injury.gamesPlayedLastSeason > 0
+        ? injury.gamesPlayedLastSeason
+        : FULL_SEASON;
+
+  let gp = Math.round(baseGp * (0.82 + 0.18 * injury.durabilityScore));
+
+  if (injury.trend === "injury_prone") {
+    gp = Math.round(gp * 0.92);
+  } else if (injury.trend === "healthy" && injury.durabilityScore >= 0.9) {
+    gp = Math.round(gp * 1.02);
+  }
+
+  if (mlGp != null && mlGp > 0) {
+    gp = Math.round(gp * 0.45 + mlGp * 0.55);
+  }
+
+  return Math.max(10, Math.min(FULL_SEASON, gp));
+}
+
+/** Skaters use injury/ML GP; goalies use fixed starter/backup baselines. */
 export function projectedGamesFromProfile(
   profile: PlayerProfile,
   goalieRoleMap?: Map<number, GoalieRole>,
+  skaterMlGp?: number | null,
 ): number {
   if (profile.isGoalie) {
     return projectedGoalieGames(profile, goalieRoleMap);
   }
-  return FULL_SEASON;
+  return projectedSkaterGames(profile, skaterMlGp);
 }
 
 export function goalieRoleLabel(

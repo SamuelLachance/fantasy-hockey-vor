@@ -8,7 +8,7 @@ export const TARGET_CROSS_EWMA_STATS: Record<SkaterMlTarget, readonly string[]> 
   blocks: ["hits", "blockedShotsPer60", "dZoneStartPct"],
   hits: ["blocks", "hitsPer60", "takeaways"],
   powerplayPoints: ["ppGoals", "goals", "ppToiPctPerGame"],
-  penaltyMinutes: ["penaltiesDrawn", "hits", "giveaways"],
+  penaltyMinutes: ["penaltiesTaken", "penaltiesDrawn", "hits", "giveaways", "shToiPerGame"],
   faceoffWins: ["faceoffWinPct", "totalFaceoffs"],
 };
 

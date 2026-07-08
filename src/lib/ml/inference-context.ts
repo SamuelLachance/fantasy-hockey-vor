@@ -158,6 +158,11 @@ export function buildProjectionTargetRow(
     teamElo: teamCtx?.teamElo ?? 500,
     coachId: teamCtx?.coachId ?? 0,
     coachTenureSeasons: teamCtx?.coachTenureSeasons ?? 0,
+    teamHitsPerGame: 22,
+    teamPimPerGame: 8,
+    teamBlocksPerGame: 14,
+    teamPpGoalShare: 0.2,
+    teamPkGaPer60: 2.5,
   };
 
   return row;

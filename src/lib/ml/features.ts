@@ -9,6 +9,7 @@ import {
 } from "./types";
 import { targetAuxStats } from "./target-aux-stats";
 import { targetCrossEwmaStats } from "./target-cross-stats";
+import { teamChangedFlag, yearsOnCurrentTeam } from "./team-style";
 
 const CONTEXT_LAG_FIELDS = [
   "teamElo",
@@ -52,6 +53,7 @@ const RATE_STATS = new Set([
   "giveawaysPer60",
   "takeawaysPer60",
   "penaltiesDrawnPer60",
+  "penaltiesTakenPer60",
   "savePct",
   "xGoalsPer60",
   "onIceXGoalsPct",
@@ -79,6 +81,16 @@ export const STATIC_CONTEXT_FEATURE_NAMES = [
   "team_goal_diff_pg",
   "team_league_rank_norm",
   "teams_in_lag_window",
+  "team_hits_pg",
+  "team_pim_pg",
+  "team_blocks_pg",
+  "team_pp_goal_share",
+  "team_pk_ga_per60",
+  "team_changed",
+  "years_on_team_norm",
+  "age_curve_mult",
+  "team_offense_mult",
+  "draft_pedigree_mult",
 ] as const;
 
 export const CONTEXT_LAG_FEATURE_NAMES = CONTEXT_LAG_FIELDS.flatMap((field) => [
@@ -144,6 +156,8 @@ export const GOALIE_GP_FEATURE_NAMES = [
   "trend_gp",
 ] as const;
 
+export const SKATER_GP_FEATURE_NAMES = GOALIE_GP_FEATURE_NAMES;
+
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 
 function perGame(total: number, gp: number): number {
@@ -158,6 +172,32 @@ function yearsSinceDraft(row: PlayerSeasonRow): number {
   const draftYear = row.draftYear ?? 0;
   if (draftYear <= 0) return 0;
   return Math.max(0, seasonStartYear(row.seasonId) - draftYear) / 20;
+}
+
+function ageCurveMultiplier(position: string, age: number): number {
+  if (position === "D") {
+    if (age <= 23) return 1.07;
+    if (age <= 27) return 1.02;
+    if (age >= 34) return 0.92;
+    return 1;
+  }
+  if (age <= 22) return 1.09;
+  if (age <= 26) return 1.04;
+  if (age >= 33) return 0.91;
+  if (age >= 36) return 0.84;
+  return 1;
+}
+
+function draftPedigreeMultiplier(draftOverall: number, age: number): number {
+  if (draftOverall <= 0) return 0.95;
+  if (draftOverall <= 15 && age <= 26) return 1.08;
+  if (draftOverall <= 50 && age <= 24) return 1.04;
+  if (draftOverall >= 120) return 0.97;
+  return 1;
+}
+
+function teamOffenseMultiplier(teamGfPg: number): number {
+  return Math.max(0.75, Math.min(1.25, teamGfPg / 2.85));
 }
 
 function teamsInLagWindow(history: PlayerSeasonRow[]): number {
@@ -284,22 +324,35 @@ function buildStaticContextFeatures(
   history: PlayerSeasonRow[],
   includeTeamsInLag: boolean,
 ): { features: number[]; names: string[] } {
+  const age = targetSeason.age ?? 0;
+  const draftOverall = targetSeason.draftOverallPick ?? 0;
+  const teamGf = targetSeason.teamGoalsForPerGame ?? 2.85;
   const features = [
-    targetSeason.age ?? 0,
+    age,
     targetSeason.heightInches ?? 72,
     targetSeason.weightPounds ?? 190,
     targetSeason.shootsLeft ?? 0,
     (targetSeason.draftRound ?? 0) / 7,
-    (targetSeason.draftOverallPick ?? 0) / 224,
+    draftOverall / 224,
     yearsSinceDraft(targetSeason),
     (targetSeason.capHitUsd ?? 0) / 1_000_000,
     targetSeason.contractYearsRemaining ?? 0,
     (targetSeason.coachId ?? 0) / 10_000,
-    targetSeason.teamGoalsForPerGame ?? 2.85,
+    teamGf,
     targetSeason.teamGoalsAgainstPerGame ?? 2.85,
     targetSeason.teamGoalDiffPerGame ?? 0,
     (targetSeason.teamLeagueRank ?? 16) / 32,
     includeTeamsInLag ? teamsInLagWindow(history) : 0,
+    (targetSeason.teamHitsPerGame ?? 22) / 30,
+    (targetSeason.teamPimPerGame ?? 8) / 12,
+    (targetSeason.teamBlocksPerGame ?? 14) / 20,
+    targetSeason.teamPpGoalShare ?? 0.2,
+    (targetSeason.teamPkGaPer60 ?? 2.5) / 4,
+    teamChangedFlag(history),
+    yearsOnCurrentTeam(history) / 5,
+    ageCurveMultiplier(targetSeason.position, age),
+    teamOffenseMultiplier(teamGf),
+    draftPedigreeMultiplier(draftOverall, age),
   ];
   const names = [...STATIC_CONTEXT_FEATURE_NAMES];
   if (!includeTeamsInLag) {
@@ -462,6 +515,7 @@ export function buildSkaterTrainingExamplesForTarget(
     for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
       const targetSeason = history[i];
       if (targetSeason.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      if (target === "faceoffWins" && targetSeason.position !== "C") continue;
       const prior = history.slice(0, i);
       const { features, names } = buildLagFeatures(
         prior,
@@ -552,6 +606,40 @@ export function buildGoalieGpExamples(rows: PlayerSeasonRow[]): TrainingExample[
         [],
         false,
         false,
+        target,
+      );
+      examples.push({
+        playerId: target.playerId,
+        seasonId: target.seasonId,
+        targetSeason: target,
+        features,
+        featureNames: names,
+      });
+    }
+  }
+  return examples;
+}
+
+export function buildSkaterGpExamples(rows: PlayerSeasonRow[]): TrainingExample[] {
+  const byPlayer = new Map<number, PlayerSeasonRow[]>();
+  for (const row of rows.filter((r) => !r.isGoalie)) {
+    const list = byPlayer.get(row.playerId) ?? [];
+    list.push(row);
+    byPlayer.set(row.playerId, list);
+  }
+
+  const examples: TrainingExample[] = [];
+  for (const history of byPlayer.values()) {
+    history.sort((a, b) => a.seasonId - b.seasonId);
+    for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
+      const target = history[i];
+      if (target.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const prior = history.slice(0, i);
+      const { features, names } = buildLagFeatures(
+        prior,
+        [],
+        false,
+        true,
         target,
       );
       examples.push({
@@ -683,6 +771,21 @@ export function buildGoalieGpInferenceFeatures(
     [],
     false,
     false,
+    projectionRow,
+  );
+  return { features, featureNames: names };
+}
+
+export function buildSkaterGpInferenceFeatures(
+  history: PlayerSeasonRow[],
+  targetSeason?: PlayerSeasonRow,
+): { features: number[]; featureNames: string[] } {
+  const projectionRow = targetSeason ?? syntheticTargetRow(history, false);
+  const { features, names } = buildLagFeatures(
+    history,
+    [],
+    false,
+    true,
     projectionRow,
   );
   return { features, featureNames: names };

@@ -95,11 +95,15 @@ export const TARGET_AUX_LAG_STATS: Record<SkaterMlTarget, readonly string[]> = {
     "onIceXGoalsPct",
   ],
   penaltyMinutes: [
+    "penaltiesTaken",
+    "penaltiesTakenPer60",
     "penaltiesDrawn",
     "penaltiesDrawnPer60",
+    "shToiPerGame",
+    "hitsPer60",
+    "hits",
     "giveaways",
     "giveawaysPer60",
-    "hitsPer60",
     "takeawaysPer60",
   ],
   faceoffWins: [

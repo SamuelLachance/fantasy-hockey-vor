@@ -16,6 +16,7 @@ import {
 } from "./advanced-stats";
 import type { MlDataset, PlayerSeasonRow } from "./types";
 import { enrichAllRows, loadOrBuildContextCaches } from "./enrich-rows";
+import { buildTeamStyleBySeasonTeam } from "./team-style";
 import { applyMoneyPuckSkaterFields, loadMoneyPuckSkaterRegistrySync } from "../moneypuck-skaters";
 
 function finite(n: unknown, fallback = 0): number {
@@ -189,7 +190,8 @@ export async function buildMlDataset(
 
   console.log(`Enriching ${rows.length} player-seasons with bio, contract, team ELO, coach...`);
   const caches = await loadOrBuildContextCaches(rows);
-  const enriched = enrichAllRows(rows, caches);
+  const teamStyle = buildTeamStyleBySeasonTeam(rows);
+  const enriched = enrichAllRows(rows, caches, teamStyle);
 
   return {
     builtAt: new Date().toISOString(),

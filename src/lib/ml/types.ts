@@ -58,9 +58,11 @@ export const SKATER_AUX_LAG_STATS = [
   "giveawaysPer60",
   "takeawaysPer60",
   "penaltiesDrawnPer60",
+  "penaltiesTakenPer60",
   "giveaways",
   "takeaways",
   "penaltiesDrawn",
+  "penaltiesTaken",
   "totalShotAttempts",
   "missedShots",
   "totalFaceoffs",
@@ -114,6 +116,8 @@ export interface PlayerSeasonRow {
   oZoneStartPct?: number;
   dZoneStartPct?: number;
   penaltiesDrawn?: number;
+  penaltiesTaken?: number;
+  penaltiesTakenPer60?: number;
   faceoffWinPct?: number;
   evToiPerGame?: number;
   ppToiPerGame?: number;
@@ -164,6 +168,11 @@ export interface PlayerSeasonRow {
   teamGoalsForPerGame: number;
   teamGoalsAgainstPerGame?: number;
   teamGoalDiffPerGame?: number;
+  teamHitsPerGame?: number;
+  teamPimPerGame?: number;
+  teamBlocksPerGame?: number;
+  teamPpGoalShare?: number;
+  teamPkGaPer60?: number;
   /** ML context — player age at season start */
   age?: number;
   heightInches?: number;
@@ -202,6 +211,10 @@ export interface RidgeModel {
   ewmaBlendWeight?: number;
   /** Optional 3-way blend: ml + ewma + lag1 (most recent season rate). */
   blendWeights?: { ml: number; ewma: number; lag1: number };
+  /** Fit on log(y + eps) for count-like per-game targets. */
+  logTarget?: boolean;
+  logEps?: number;
+  holdoutR2?: number;
 }
 
 export interface MlModelBundle {
@@ -209,12 +222,15 @@ export interface MlModelBundle {
   featureLags: number;
   minSeasonGp: number;
   skaterModels: RidgeModel[];
+  skaterGpModel?: RidgeModel;
   goalieModels: RidgeModel[];
   goalieGpModel: RidgeModel;
+  validationScheme?: string;
   metrics: {
     skater: Record<string, ModelMetrics>;
     goalie: Record<string, ModelMetrics>;
     goalieGp: ModelMetrics;
+    skaterGp?: ModelMetrics;
   };
 }
 

@@ -49,6 +49,8 @@ export function buildSkaterAdvancedFields(
   | "oZoneStartPct"
   | "dZoneStartPct"
   | "penaltiesDrawn"
+  | "penaltiesTaken"
+  | "penaltiesTakenPer60"
   | "faceoffWinPct"
   | "evToiPerGame"
   | "ppToiPerGame"
@@ -104,6 +106,8 @@ export function buildSkaterAdvancedFields(
     oZoneStartPct: field(pp, "offensiveZoneStartPct"),
     dZoneStartPct: field(pp, "defensiveZoneStartPct"),
     penaltiesDrawn: field(pen, "penaltiesDrawn"),
+    penaltiesTaken: field(pen, "penalties") || field(pen, "netPenalties"),
+    penaltiesTakenPer60: field(pen, "penaltiesTakenPer60") || field(pen, "netPenaltiesPer60"),
     faceoffWinPct: finite(fo?.faceoffWinPct ?? s.faceoffWinPct),
     evToiPerGame: field(toi, "evTimeOnIcePerGame"),
     ppToiPerGame: field(toi, "ppTimeOnIcePerGame"),
@@ -200,12 +204,14 @@ const RATE_FIELDS = new Set([
   "giveawaysPer60",
   "takeawaysPer60",
   "penaltiesDrawnPer60",
+  "penaltiesTakenPer60",
 ]);
 
 const COUNT_FIELDS = new Set([
   "giveaways",
   "takeaways",
   "penaltiesDrawn",
+  "penaltiesTaken",
   "ppGoals",
   "totalShotAttempts",
   "missedShots",
