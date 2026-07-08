@@ -17,6 +17,7 @@ import {
   buildTargetInferenceFeatures,
   extractEwmaFeature,
   extractLag1Feature,
+  priorNhlSeasons,
 } from "./features";
 import { loadContextCaches } from "./enrich-rows";
 import {
@@ -25,7 +26,7 @@ import {
 } from "./inference-context";
 import { applyBlendWeights, predictRidge } from "./ridge";
 import type { MlModelBundle, PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
-import { SKATER_ML_TARGETS } from "./types";
+import { LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
@@ -87,6 +88,33 @@ function contextualPerGameRates(
   };
 }
 
+function resolveProductionStrategy(
+  model: RidgeModel,
+  prior: PlayerSeasonRow[],
+): ProductionStrategy {
+  if (priorNhlSeasons(prior) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
+    if (model.lowHistoryStrategy) {
+      return model.lowHistoryStrategy;
+    }
+    if (model.productionStrategy?.type === "ml_only" && model.blendWeights) {
+      return { type: "tuned_blend", blendWeights: model.blendWeights };
+    }
+    if (model.productionStrategy?.type === "ml_only") {
+      return { type: "ewma_only" };
+    }
+  }
+  return (
+    model.productionStrategy ?? {
+      type: "tuned_blend" as const,
+      blendWeights: model.blendWeights ?? {
+        ml: 1 - (model.ewmaBlendWeight ?? 0.85),
+        ewma: model.ewmaBlendWeight ?? 0.85,
+        lag1: 0,
+      },
+    }
+  );
+}
+
 function applyProductionStrategy(
   strategy: ProductionStrategy,
   ml: number,
@@ -143,14 +171,7 @@ function predictRateForTarget(
   const ewmaRate = ewma > 0 ? ewma : historyEwma;
   const ctxRate = contextualRates?.[target] ?? ewmaRate;
 
-  const strategy = model.productionStrategy ?? {
-    type: "tuned_blend" as const,
-    blendWeights: model.blendWeights ?? {
-      ml: 1 - (model.ewmaBlendWeight ?? 0.85),
-      ewma: model.ewmaBlendWeight ?? 0.85,
-      lag1: 0,
-    },
-  };
+  const strategy = resolveProductionStrategy(model, history);
 
   if (strategy.type === "ml_contextual_ensemble" && contextualRates) {
     const mlShare =

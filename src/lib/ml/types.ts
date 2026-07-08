@@ -21,6 +21,9 @@ export const GOALIE_ML_TARGETS = [
 export type SkaterMlTarget = (typeof SKATER_ML_TARGETS)[number];
 export type GoalieMlTarget = (typeof GOALIE_ML_TARGETS)[number];
 
+/** Players with this many or fewer prior NHL seasons (GP≥10) use lowHistoryStrategy. */
+export const LOW_HISTORY_MAX_PRIOR_SEASONS = 2;
+
 export type ProductionStrategyType =
   | "ml_only"
   | "ewma_only"
@@ -277,6 +280,8 @@ export interface RidgeModel {
   logEps?: number;
   holdoutR2?: number;
   productionStrategy?: ProductionStrategy;
+  /** Champion strategy when prior NHL seasons < 3 (sparse lag history). */
+  lowHistoryStrategy?: ProductionStrategy;
 }
 
 export interface MlModelBundle {

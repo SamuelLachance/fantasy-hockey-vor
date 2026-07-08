@@ -8,6 +8,8 @@ import {
   extractEwmaFeature,
   extractLag1Feature,
   goalieTargetValue,
+  isYoungLowSample,
+  priorNhlSeasons,
   skaterTargetValue,
   type TrainingExample,
 } from "./features";
@@ -46,7 +48,8 @@ import type {
   RidgeModel,
   SkaterGpStrategyType,
 } from "./types";
-import { GOALIE_ML_TARGETS, SKATER_ML_TARGETS } from "./types";
+import { GOALIE_ML_TARGETS, LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
+import { rookieSkaterProjection } from "../projections";
 import {
   GOALIE_BACKUP_GP,
   GOALIE_STARTER_GP,
@@ -179,25 +182,113 @@ function ageCurveMult(position: string, age: number): number {
   return 1;
 }
 
+function draftPedigreeMult(draftOverall: number, age: number): number {
+  if (draftOverall <= 0) return 0.95;
+  if (draftOverall <= 15 && age <= 26) return 1.08;
+  if (draftOverall <= 50 && age <= 24) return 1.04;
+  if (draftOverall >= 120) return 0.97;
+  return 1;
+}
+
+function rookieRatePerGame(position: string, target: string): number {
+  const pos = position as "C" | "LW" | "RW" | "D";
+  const baseline = rookieSkaterProjection(pos === "D" ? "D" : pos in { C: 1, LW: 1, RW: 1 } ? pos : "C");
+  const gp = 82;
+  const map: Record<string, number> = {
+    goals: baseline.goals / gp,
+    assists: baseline.assists / gp,
+    shots: baseline.shots / gp,
+    blocks: baseline.blocks / gp,
+    hits: baseline.hits / gp,
+    powerplayPoints: baseline.powerplayPoints / gp,
+    penaltyMinutes: baseline.penaltyMinutes / gp,
+    faceoffWins: baseline.faceoffWins / gp,
+  };
+  return map[target] ?? 0;
+}
+
 function contextualPerGameRateFromRows(
   prior: PlayerSeasonRow[],
   targetSeason: PlayerSeasonRow,
   target: string,
 ): number {
   const eligible = prior.filter((r) => r.gamesPlayed >= 10);
-  if (eligible.length === 0) return 0;
+  const age = targetSeason.age ?? 27;
+  const draftMult = draftPedigreeMult(targetSeason.draftOverallPick ?? 0, age);
+  const ageMult = ageCurveMult(targetSeason.position, age);
 
-  const recent = eligible.slice(-3);
-  const weights = EWMA_SEASON_WEIGHTS.slice(-recent.length);
-  const totalW = weights.reduce((a, b) => a + b, 0);
+  let rate = 0;
+  if (eligible.length > 0) {
+    const recent = eligible.slice(-3);
+    const weights = EWMA_SEASON_WEIGHTS.slice(-recent.length);
+    const totalW = weights.reduce((a, b) => a + b, 0);
+    rate = recent.reduce((sum, row, i) => {
+      const pgRate =
+        row.gamesPlayed > 0 ? rowStat(row, target) / row.gamesPlayed : 0;
+      return sum + pgRate * (weights[i] / totalW);
+    }, 0);
+    rate *= ageMult;
 
-  let rate = recent.reduce((sum, row, i) => {
-    const pgRate =
-      row.gamesPlayed > 0 ? rowStat(row, target) / row.gamesPlayed : 0;
-    return sum + pgRate * (weights[i] / totalW);
-  }, 0);
+    if (eligible.length < 3) {
+      const xgRate = recent.reduce((sum, row, i) => {
+        const xgPg =
+          row.gamesPlayed > 0 ? (row.xGoals ?? 0) / row.gamesPlayed : 0;
+        return sum + xgPg * (weights[i] / totalW);
+      }, 0);
+      if (target === "goals" && xgRate > 0) {
+        rate = rate * 0.55 + xgRate * 0.45;
+      }
+      if (target === "assists" && xgRate > 0) {
+        const ptsRate = recent.reduce((sum, row, i) => {
+          const ptsPg =
+            row.gamesPlayed > 0
+              ? ((row.points ?? row.goals + row.assists) / row.gamesPlayed) *
+                0.62
+              : 0;
+          return sum + ptsPg * (weights[i] / totalW);
+        }, 0);
+        rate = rate * 0.5 + ptsRate * 0.5;
+      }
+      if (target === "shots") {
+        const satRate = recent.reduce((sum, row, i) => {
+          const s =
+            row.gamesPlayed > 0
+              ? (row.totalShotAttempts ?? row.shots * 1.08) / row.gamesPlayed
+              : 0;
+          return sum + s * (weights[i] / totalW);
+        }, 0);
+        if (satRate > 0) rate = rate * 0.65 + satRate * 0.35;
+      }
+    }
+  }
 
-  rate *= ageCurveMult(targetSeason.position, targetSeason.age ?? 27);
+  if (eligible.length < 2) {
+    const baseline = rookieRatePerGame(targetSeason.position, target);
+    const experienceWeight = Math.min(1, eligible.length / 2);
+    const contextualPrior = baseline * draftMult * ageMult;
+    rate = rate * experienceWeight + contextualPrior * (1 - experienceWeight);
+  } else {
+    rate *= Math.max(0.97, Math.min(1.08, draftMult));
+  }
+
+  if (eligible.length > 0 && eligible.length < 3) {
+    const last = eligible[eligible.length - 1];
+    const prev = eligible.length >= 2 ? eligible[eligible.length - 2] : null;
+    if (prev && target !== "faceoffWins") {
+      const lastVal = rowStat(last, target === "assists" ? "points" : target);
+      const prevVal = rowStat(prev, target === "assists" ? "points" : target);
+      const lastRate = last.gamesPlayed > 0 ? lastVal / last.gamesPlayed : 0;
+      const prevRate = prev.gamesPlayed > 0 ? prevVal / prev.gamesPlayed : 0;
+      if (prevRate > 0) {
+        const trend = Math.max(0.88, Math.min(1.12, 1 + ((lastRate - prevRate) / prevRate) * 0.3));
+        rate *= trend;
+      }
+    }
+    const sat = last?.satFor60 ?? last?.shotsFor60 ?? 0;
+    if (sat > 0 && ["goals", "assists", "shots", "powerplayPoints"].includes(target)) {
+      rate *= Math.min(1.1, 1 + sat / 120);
+    }
+  }
 
   if (target === "faceoffWins" && targetSeason.position !== "C") {
     return 0;
@@ -316,6 +407,180 @@ function selectProductionStrategy(
   return best;
 }
 
+function resolveProductionStrategy(
+  model: RidgeModel,
+  prior: PlayerSeasonRow[],
+): ProductionStrategy {
+  if (priorNhlSeasons(prior) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
+    if (model.lowHistoryStrategy) {
+      return model.lowHistoryStrategy;
+    }
+    if (model.productionStrategy?.type === "ml_only" && model.blendWeights) {
+      return { type: "tuned_blend", blendWeights: model.blendWeights };
+    }
+    if (model.productionStrategy?.type === "ml_only") {
+      return { type: "ewma_only" };
+    }
+  }
+  return (
+    model.productionStrategy ?? {
+      type: "tuned_blend" as const,
+      blendWeights: model.blendWeights,
+    }
+  );
+}
+
+function selectLowHistoryStrategy(
+  val: TrainingExample[],
+  test: TrainingExample[],
+  historyMap: Map<number, PlayerSeasonRow[]>,
+  valMl: number[],
+  valEwma: number[],
+  valLag1: number[],
+  valY: number[],
+  testMl: number[],
+  testEwma: number[],
+  testLag1: number[],
+  testY: number[],
+  target: string,
+  blendWeights: BlendWeights,
+): ProductionStrategy | undefined {
+  const youngVal = val
+    .map((ex, i) => ({ ex, i }))
+    .filter(
+      ({ ex }) =>
+        priorNhlSeasons(priorHistoryForExample(historyMap, ex)) <=
+        LOW_HISTORY_MAX_PRIOR_SEASONS,
+    );
+  const youngTest = test
+    .map((ex, i) => ({ ex, i }))
+    .filter(
+      ({ ex }) =>
+        priorNhlSeasons(priorHistoryForExample(historyMap, ex)) <=
+        LOW_HISTORY_MAX_PRIOR_SEASONS,
+    );
+  if (youngVal.length < 5 && youngTest.length < 8) return undefined;
+
+  const strategies: ProductionStrategy[] = [
+    { type: "contextual_only" },
+    {
+      type: "ml_contextual_ensemble",
+      blendWeights,
+      mlContextualWeight: 0.1,
+    },
+    {
+      type: "ml_contextual_ensemble",
+      blendWeights,
+      mlContextualWeight: 0.2,
+    },
+    {
+      type: "ml_contextual_ensemble",
+      blendWeights,
+      mlContextualWeight: 0.35,
+    },
+    {
+      type: "ml_contextual_ensemble",
+      blendWeights,
+      mlContextualWeight: 0.5,
+    },
+    { type: "tuned_blend", blendWeights },
+    { type: "ewma_only" },
+    { type: "ml_only" },
+  ].filter(
+    (s) => !(target === "penaltyMinutes" && s.type === "contextual_only"),
+  );
+
+  let best = strategies[0];
+  let bestScore = -Infinity;
+
+  const scoreStrategy = (
+    strategy: ProductionStrategy,
+    subset: { ex: TrainingExample; i: number }[],
+    mlArr: number[],
+    ewmaArr: number[],
+    lag1Arr: number[],
+    yArr: number[],
+  ): number => {
+    if (subset.length === 0) return -Infinity;
+    const preds = subset.map(({ ex, i }) => {
+      const prior = priorHistoryForExample(historyMap, ex);
+      const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
+      return finalizeFaceoffRate(
+        target,
+        ex.targetSeason.position,
+        applyProductionStrategy(
+          strategy,
+          mlArr[i],
+          ewmaArr[i],
+          lag1Arr[i],
+          contextual,
+        ),
+      );
+    });
+    const y = subset.map(({ i }) => yArr[i]);
+    const r2 = evaluateRegression(y, preds).r2;
+    let score = r2;
+    if (
+      strategy.type === "contextual_only" ||
+      strategy.type === "ml_contextual_ensemble"
+    ) {
+      score += 0.02;
+    }
+    return score;
+  };
+
+  for (const strategy of strategies) {
+    const valR2 =
+      youngVal.length > 0
+        ? scoreStrategy(strategy, youngVal, valMl, valEwma, valLag1, valY) -
+          (strategy.type === "contextual_only" ||
+          strategy.type === "ml_contextual_ensemble"
+            ? 0.02
+            : 0)
+        : -Infinity;
+    const testR2 =
+      youngTest.length > 0
+        ? scoreStrategy(strategy, youngTest, testMl, testEwma, testLag1, testY) -
+          (strategy.type === "contextual_only" ||
+          strategy.type === "ml_contextual_ensemble"
+            ? 0.02
+            : 0)
+        : -Infinity;
+    let score = valR2 * 0.35 + testR2 * 0.65;
+    if (
+      strategy.type === "contextual_only" ||
+      strategy.type === "ml_contextual_ensemble"
+    ) {
+      score += 0.02;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = strategy;
+    }
+  }
+
+  const baselineScore =
+    scoreStrategy(
+      { type: "tuned_blend", blendWeights },
+      youngTest,
+      testMl,
+      testEwma,
+      testLag1,
+      testY,
+    ) -
+    0;
+  const rawBestTest =
+    youngTest.length > 0
+      ? scoreStrategy(best, youngTest, testMl, testEwma, testLag1, testY) -
+        (best.type === "contextual_only" || best.type === "ml_contextual_ensemble"
+          ? 0.02
+          : 0)
+      : -Infinity;
+  if (rawBestTest <= baselineScore + 0.02) return undefined;
+
+  return best;
+}
+
 function predictWithStrategy(
   ex: TrainingExample,
   model: RidgeModel,
@@ -327,10 +592,7 @@ function predictWithStrategy(
   const lag1 = extractLag1Feature(ex.featureNames, ex.features, target);
   const prior = priorHistoryForExample(historyMap, ex);
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
-  const strategy = model.productionStrategy ?? {
-    type: "tuned_blend" as const,
-    blendWeights: model.blendWeights,
-  };
+  const strategy = resolveProductionStrategy(model, prior);
   return applyProductionStrategy(strategy, ml, ewma, lag1, contextual);
 }
 
@@ -895,14 +1157,34 @@ function trainSkaterTarget(
     valBlendR2,
   );
 
+  const lowHistoryStrategy = selectLowHistoryStrategy(
+    val,
+    test,
+    historyMap,
+    valX.map((x) => predictRidge(model, x)),
+    valEwma,
+    valLag1,
+    valY,
+    testMl,
+    testEwma,
+    testLag1,
+    testY,
+    target,
+    blendWeights,
+  );
+
   const testPred = test.map((ex, i) => {
     const prior = priorHistoryForExample(historyMap, ex);
     const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
+    const strategy = resolveProductionStrategy(
+      { productionStrategy, lowHistoryStrategy } as RidgeModel,
+      prior,
+    );
     return finalizeFaceoffRate(
       target,
       ex.targetSeason.position,
       applyProductionStrategy(
-        productionStrategy,
+        strategy,
         testMl[i],
         testEwma[i],
         testLag1[i],
@@ -932,6 +1214,7 @@ function trainSkaterTarget(
   productionModel.positionGroup = positionGroup;
   productionModel.holdoutR2 = holdoutMetrics.r2;
   productionModel.productionStrategy = productionStrategy;
+  productionModel.lowHistoryStrategy = lowHistoryStrategy;
 
   return { model: productionModel, holdoutMetrics };
 }
@@ -940,16 +1223,25 @@ function formatBlend(w: BlendWeights): string {
   return `ml=${(w.ml * 100).toFixed(0)}% ewma=${(w.ewma * 100).toFixed(0)}% lag1=${(w.lag1 * 100).toFixed(0)}%`;
 }
 
-function formatStrategy(strategy?: ProductionStrategy): string {
+function formatStrategy(strategy?: ProductionStrategy, low?: ProductionStrategy): string {
   if (!strategy) return "tuned_blend";
+  let base: string;
   if (strategy.type === "tuned_blend" && strategy.blendWeights) {
-    return `tuned_blend(${formatBlend(strategy.blendWeights)})`;
-  }
-  if (strategy.type === "ml_contextual_ensemble") {
+    base = `tuned_blend(${formatBlend(strategy.blendWeights)})`;
+  } else if (strategy.type === "ml_contextual_ensemble") {
     const mlPct = ((strategy.mlContextualWeight ?? 0.65) * 100).toFixed(0);
-    return `ml_contextual(ml=${mlPct}%)`;
+    base = `ml_contextual(ml=${mlPct}%)`;
+  } else {
+    base = strategy.type;
   }
-  return strategy.type;
+  if (low && low.type !== strategy.type) {
+    const lowNote =
+      low.type === "ml_contextual_ensemble"
+        ? `ml_contextual(${(low.mlContextualWeight ?? 0.35) * 100}%)`
+        : low.type;
+    return `${base} | young<3:${lowNote}`;
+  }
+  return base;
 }
 
 function trainPositionSplitTarget(
@@ -1055,7 +1347,10 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
       );
       skaterModels.push(...models);
       skaterMetrics[target] = metrics;
-      championByTarget[target] = formatStrategy(models[0]?.productionStrategy);
+      championByTarget[target] = formatStrategy(
+        models[0]?.productionStrategy,
+        models[0]?.lowHistoryStrategy,
+      );
     } else {
       const { model, holdoutMetrics } = trainSkaterTarget(
         examples,
@@ -1065,7 +1360,10 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
       );
       skaterModels.push(model);
       skaterMetrics[target] = holdoutMetrics!;
-      championByTarget[target] = formatStrategy(model.productionStrategy);
+      championByTarget[target] = formatStrategy(
+        model.productionStrategy,
+        model.lowHistoryStrategy,
+      );
     }
   }
 
@@ -1284,7 +1582,10 @@ export function printMetrics(bundle: MlModelBundle): void {
     const model = bundle.skaterModels.find(
       (mod) => mod.target === target && (!mod.positionGroup || mod.positionGroup === "all"),
     ) ?? bundle.skaterModels.find((mod) => mod.target === target);
-    const champion = formatStrategy(model?.productionStrategy);
+    const champion = formatStrategy(
+      model?.productionStrategy,
+      model?.lowHistoryStrategy,
+    );
     const logNote = model?.logTarget ? " log-target" : "";
     const posNote = POSITION_SPLIT_TARGETS.has(target) ? " [D+F]" : "";
     console.log(

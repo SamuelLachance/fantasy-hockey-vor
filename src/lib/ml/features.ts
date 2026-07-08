@@ -2,6 +2,7 @@ import { ML_FEATURE_LAGS, ML_MIN_SEASON_GP } from "../nhl-api";
 import { positionCode } from "./season-collector";
 import {
   GOALIE_ML_TARGETS,
+  LOW_HISTORY_MAX_PRIOR_SEASONS,
   SKATER_AUX_LAG_STATS,
   SKATER_ML_TARGETS,
   type PlayerSeasonRow,
@@ -91,7 +92,24 @@ export const STATIC_CONTEXT_FEATURE_NAMES = [
   "age_curve_mult",
   "team_offense_mult",
   "draft_pedigree_mult",
+  "nhl_seasons_norm",
+  "career_gp_norm",
+  "is_young_low_sample",
 ] as const;
+
+export function priorNhlSeasons(history: PlayerSeasonRow[]): number {
+  return history.filter((h) => h.gamesPlayed >= ML_MIN_SEASON_GP).length;
+}
+
+export function priorCareerGp(history: PlayerSeasonRow[]): number {
+  return history
+    .filter((h) => h.gamesPlayed >= ML_MIN_SEASON_GP)
+    .reduce((sum, h) => sum + h.gamesPlayed, 0);
+}
+
+export function isYoungLowSample(history: PlayerSeasonRow[]): boolean {
+  return priorNhlSeasons(history) <= LOW_HISTORY_MAX_PRIOR_SEASONS;
+}
 
 export const CONTEXT_LAG_FEATURE_NAMES = CONTEXT_LAG_FIELDS.flatMap((field) => [
   `lag1_${field}`,
@@ -353,6 +371,9 @@ function buildStaticContextFeatures(
     ageCurveMultiplier(targetSeason.position, age),
     teamOffenseMultiplier(teamGf),
     draftPedigreeMultiplier(draftOverall, age),
+    priorNhlSeasons(history) / 5,
+    priorCareerGp(history) / 300,
+    isYoungLowSample(history) ? 1 : 0,
   ];
   const names = [...STATIC_CONTEXT_FEATURE_NAMES];
   if (!includeTeamsInLag) {
