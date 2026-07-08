@@ -461,32 +461,34 @@ function selectLowHistoryStrategy(
     );
   if (youngVal.length < 5 && youngTest.length < 8) return undefined;
 
-  const strategies: ProductionStrategy[] = [
-    { type: "contextual_only" },
-    {
-      type: "ml_contextual_ensemble",
-      blendWeights,
-      mlContextualWeight: 0.1,
-    },
-    {
-      type: "ml_contextual_ensemble",
-      blendWeights,
-      mlContextualWeight: 0.2,
-    },
-    {
-      type: "ml_contextual_ensemble",
-      blendWeights,
-      mlContextualWeight: 0.35,
-    },
-    {
-      type: "ml_contextual_ensemble",
-      blendWeights,
-      mlContextualWeight: 0.5,
-    },
-    { type: "tuned_blend", blendWeights },
-    { type: "ewma_only" },
-    { type: "ml_only" },
-  ].filter(
+  const strategies = (
+    [
+      { type: "contextual_only" },
+      {
+        type: "ml_contextual_ensemble",
+        blendWeights,
+        mlContextualWeight: 0.1,
+      },
+      {
+        type: "ml_contextual_ensemble",
+        blendWeights,
+        mlContextualWeight: 0.2,
+      },
+      {
+        type: "ml_contextual_ensemble",
+        blendWeights,
+        mlContextualWeight: 0.35,
+      },
+      {
+        type: "ml_contextual_ensemble",
+        blendWeights,
+        mlContextualWeight: 0.5,
+      },
+      { type: "tuned_blend", blendWeights },
+      { type: "ewma_only" },
+      { type: "ml_only" },
+    ] satisfies ProductionStrategy[]
+  ).filter(
     (s) => !(target === "penaltyMinutes" && s.type === "contextual_only"),
   );
 
@@ -1551,6 +1553,8 @@ export function saveMlModels(bundle: MlModelBundle): void {
       championByTarget?: Record<string, string>;
       skaterGpMlHoldout?: ModelMetrics;
       goalieGpMlHoldout?: ModelMetrics;
+      skaterGpValMetrics?: ModelMetrics;
+      goalieGpValMetrics?: ModelMetrics;
       skaterGpValClassAcc?: number;
       skaterGpHoldoutClassAcc?: number;
       goalieGpValClassAcc?: number;
