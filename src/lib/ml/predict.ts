@@ -208,7 +208,10 @@ export function projectSkaterWithMl(
   const targetRow = buildProjectionTargetRow(profile, caches);
   const mlGp = predictSkaterGp(profile, models, history, targetRow);
   const gamesPlayed = projectedGamesFromProfile(profile, undefined, mlGp, {
-    skaterGpStrategy: models.skaterGpStrategy ?? "blend_45_55",
+    skaterGpStrategy: models.skaterGpStrategy ?? "ensemble",
+    skaterGpLag1EwmaBlend: models.skaterGpLag1EwmaBlend,
+    skaterGpEnsembleWeights: models.skaterGpEnsembleWeights,
+    skaterGpTwoStepConfig: models.skaterGpTwoStepConfig,
   });
 
   const contextualRates = blendContextual
@@ -253,7 +256,7 @@ export function projectSkaterWithMl(
 
   const projection = anchorSkaterProjectionToHistory(profile, raw, gamesPlayed);
 
-  const gpStrategy = models.skaterGpStrategy ?? "blend_45_55";
+  const gpStrategy = models.skaterGpStrategy ?? "ensemble";
   const gpNote =
     gpStrategy === "injury_only"
       ? "injury-profile GP"
@@ -279,7 +282,10 @@ export function projectGoalieWithMl(
   const mlGp = predictGoalieGp(profile, models, history, targetRow);
   const result = projectGoalieFromProfile(profile, goalieRoleMap);
   const gamesPlayed = projectedGamesFromProfile(profile, goalieRoleMap, null, {
-    goalieGpStrategy: models.goalieGpStrategy ?? "trend_based",
+    goalieGpStrategy: models.goalieGpStrategy ?? "ensemble",
+    goalieGpLag1EwmaBlend: models.goalieGpLag1EwmaBlend,
+    goalieGpEnsembleWeights: models.goalieGpEnsembleWeights,
+    goalieGpTwoStepConfig: models.goalieGpTwoStepConfig,
     goalieMlGp: mlGp,
   });
 
@@ -295,7 +301,7 @@ export function projectGoalieWithMl(
     gamesPlayed,
   );
 
-  const gpStrategy = models.goalieGpStrategy ?? "trend_based";
+  const gpStrategy = models.goalieGpStrategy ?? "ensemble";
   return {
     projection,
     gamesPlayed,

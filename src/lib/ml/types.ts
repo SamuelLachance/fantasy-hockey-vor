@@ -37,12 +37,50 @@ export interface ProductionStrategy {
 }
 
 export type SkaterGpStrategyType =
+  | "two_step_full_season"
+  | "ensemble"
+  | "lag1_only"
+  | "ewma_only"
+  | "lag1_ewma_blend"
   | "injury_only"
   | "ml_only"
   | "blend_45_55"
   | "blend_55_45";
 
-export type GoalieGpStrategyType = "fixed_role" | "trend_based" | "ml_only";
+export type GoalieGpStrategyType =
+  | "two_step_full_season"
+  | "ensemble"
+  | "lag1_only"
+  | "ewma_only"
+  | "lag1_ewma_blend"
+  | "fixed_role"
+  | "trend_based"
+  | "ml_only";
+
+export interface GpLag1EwmaBlend {
+  lag1: number;
+  ewma: number;
+}
+
+export interface GpEnsembleWeights {
+  lag1: number;
+  ewma: number;
+  ml: number;
+  injury: number;
+}
+
+export interface GpTwoStepConfig {
+  /** Actual GP at/above this = full-season label in metrics. */
+  labelMinGp: number;
+  /** Predict full-season workload when lag1 >= this. */
+  classifyLag1Min: number;
+  /** Optional EWMA floor (0 = disabled). */
+  classifyEwmaMin: number;
+  durabilityMin: number;
+  /** GP when classified as full-season. */
+  fullSeasonGp: number;
+  partialEnsembleWeights: GpEnsembleWeights;
+}
 
 /** Non-target stats included as lag features in every skater model. */
 export const SKATER_AUX_LAG_STATS = [
@@ -248,9 +286,15 @@ export interface MlModelBundle {
   skaterModels: RidgeModel[];
   skaterGpModel?: RidgeModel;
   skaterGpStrategy?: SkaterGpStrategyType;
+  skaterGpLag1EwmaBlend?: GpLag1EwmaBlend;
+  skaterGpEnsembleWeights?: GpEnsembleWeights;
+  skaterGpTwoStepConfig?: GpTwoStepConfig;
   goalieModels: RidgeModel[];
   goalieGpModel: RidgeModel;
   goalieGpStrategy?: GoalieGpStrategyType;
+  goalieGpLag1EwmaBlend?: GpLag1EwmaBlend;
+  goalieGpEnsembleWeights?: GpEnsembleWeights;
+  goalieGpTwoStepConfig?: GpTwoStepConfig;
   goalieModelsEvalOnly?: boolean;
   validationScheme?: string;
   metrics: {

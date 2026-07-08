@@ -21,8 +21,23 @@ import {
   usesLogTarget,
   type BlendWeights,
 } from "./ridge";
+import {
+  DEFAULT_GP_LAG1_EWMA,
+  durabilityFromGpHistory,
+  extractEwmaGp,
+  extractLag1Gp,
+  lag1EwmaGp,
+} from "./gp-predict";
+import {
+  classificationAccuracy,
+  predictTwoStepGpFromExample,
+  tuneTwoStepConfig,
+} from "./gp-two-step";
 import type {
   GoalieGpStrategyType,
+  GpEnsembleWeights,
+  GpLag1EwmaBlend,
+  GpTwoStepConfig,
   MlDataset,
   MlModelBundle,
   ModelMetrics,
@@ -61,6 +76,11 @@ const RECENCY_HALF_LIFE: Record<string, number> = {
 const POSITION_SPLIT_TARGETS = new Set(["blocks", "hits", "penaltyMinutes"]);
 
 const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
+  "two_step_full_season",
+  "ensemble",
+  "lag1_only",
+  "ewma_only",
+  "lag1_ewma_blend",
   "injury_only",
   "ml_only",
   "blend_45_55",
@@ -68,8 +88,13 @@ const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
 ];
 
 const GOALIE_GP_CANDIDATES: GoalieGpStrategyType[] = [
-  "fixed_role",
+  "two_step_full_season",
+  "ensemble",
+  "lag1_only",
+  "ewma_only",
+  "lag1_ewma_blend",
   "trend_based",
+  "fixed_role",
   "ml_only",
 ];
 
@@ -380,6 +405,223 @@ function goalieGpFixedFromHistory(prior: PlayerSeasonRow[]): number {
     : GOALIE_BACKUP_GP;
 }
 
+function within10Accuracy(yTrue: number[], yPred: number[]): number {
+  if (yTrue.length === 0) return 0;
+  let hits = 0;
+  for (let i = 0; i < yTrue.length; i++) {
+    if (Math.abs(yTrue[i] - yPred[i]) <= 10) hits++;
+  }
+  return hits / yTrue.length;
+}
+
+function tuneGpEnsemble(
+  examples: TrainingExample[],
+  historyMap: Map<number, PlayerSeasonRow[]>,
+  gpModel: RidgeModel,
+  isGoalie: boolean,
+): GpEnsembleWeights {
+  if (examples.length === 0) {
+    return { lag1: 0.15, ewma: 0.25, ml: 0.5, injury: 0.1 };
+  }
+  let best: GpEnsembleWeights = { lag1: 0.15, ewma: 0.25, ml: 0.5, injury: 0.1 };
+  let bestScore = -Infinity;
+  const y = examples.map((ex) => ex.targetSeason.gamesPlayed);
+
+  for (let wl = 0; wl <= 10; wl++) {
+    for (let we = 0; we <= 10 - wl; we++) {
+      for (let wm = 0; wm <= 10 - wl - we; wm++) {
+        const wi = 10 - wl - we - wm;
+        const weights: GpEnsembleWeights = {
+          lag1: wl / 10,
+          ewma: we / 10,
+          ml: wm / 10,
+          injury: wi / 10,
+        };
+        const preds = examples.map((ex) => {
+          const prior = priorHistoryForExample(historyMap, ex);
+          return predictGpEnsembleFromExample(
+            ex,
+            prior,
+            gpModel,
+            weights,
+            isGoalie,
+          );
+        });
+        const acc = within10Accuracy(y, preds);
+        const r2 = evaluateRegression(y, preds).r2;
+        const score = acc * 0.65 + r2 * 0.35;
+        if (score > bestScore) {
+          bestScore = score;
+          best = weights;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function predictGpEnsembleFromExample(
+  ex: TrainingExample,
+  prior: PlayerSeasonRow[],
+  gpModel: RidgeModel,
+  weights: GpEnsembleWeights,
+  isGoalie: boolean,
+): number {
+  const lag1 = extractLag1Gp(ex.featureNames, ex.features);
+  const ewma = extractEwmaGp(ex.featureNames, ex.features);
+  const ml = predictRidge(gpModel, ex.features);
+  const injury = isGoalie
+    ? goalieGpTrendFromHistory(prior, ex.targetSeason)
+    : injuryGpFromHistory(prior);
+  return Math.max(
+    10,
+    Math.min(
+      FULL_SEASON,
+      Math.round(
+        lag1 * weights.lag1 +
+          ewma * weights.ewma +
+          ml * weights.ml +
+          injury * weights.injury,
+      ),
+    ),
+  );
+}
+
+function persistenceGpFromExample(
+  ex: TrainingExample,
+  prior: PlayerSeasonRow[],
+  blend: GpLag1EwmaBlend,
+  isGoalie: boolean,
+): number {
+  const lag1 = extractLag1Gp(ex.featureNames, ex.features);
+  const ewma = extractEwmaGp(ex.featureNames, ex.features);
+  const gps = prior
+    .filter((r) => r.gamesPlayed >= 10)
+    .slice(-3)
+    .map((r) => r.gamesPlayed);
+  const durability = durabilityFromGpHistory(gps);
+  return lag1EwmaGp(
+    lag1,
+    ewma,
+    blend,
+    ex.targetSeason.age ?? 27,
+    isGoalie,
+    durability,
+  );
+}
+
+function tuneLag1EwmaBlend(
+  examples: TrainingExample[],
+  historyMap: Map<number, PlayerSeasonRow[]>,
+  isGoalie: boolean,
+): GpLag1EwmaBlend {
+  if (examples.length === 0) return DEFAULT_GP_LAG1_EWMA;
+  let best = DEFAULT_GP_LAG1_EWMA;
+  let bestR2 = -Infinity;
+  const y = examples.map((ex) => ex.targetSeason.gamesPlayed);
+
+  for (let wl = 0; wl <= 10; wl++) {
+    const blend = { lag1: wl / 10, ewma: (10 - wl) / 10 };
+    const preds = examples.map((ex) => {
+      const prior = priorHistoryForExample(historyMap, ex);
+      return persistenceGpFromExample(ex, prior, blend, isGoalie);
+    });
+    const r2 = evaluateRegression(y, preds).r2;
+    if (r2 > bestR2) {
+      bestR2 = r2;
+      best = blend;
+    }
+  }
+  return best;
+}
+
+function predictSkaterGpForStrategy(
+  ex: TrainingExample,
+  prior: PlayerSeasonRow[],
+  strategy: SkaterGpStrategyType,
+  gpModel: RidgeModel,
+  lag1EwmaBlend: GpLag1EwmaBlend,
+  ensembleWeights: GpEnsembleWeights,
+  twoStepConfig: GpTwoStepConfig,
+): number {
+  if (strategy === "two_step_full_season") {
+    return predictTwoStepGpFromExample(
+      ex,
+      prior,
+      gpModel,
+      twoStepConfig,
+      false,
+      injuryGpFromHistory(prior),
+    );
+  }
+  if (strategy === "ensemble") {
+    return predictGpEnsembleFromExample(
+      ex,
+      prior,
+      gpModel,
+      ensembleWeights,
+      false,
+    );
+  }
+  const injuryGp = injuryGpFromHistory(prior);
+  const mlGp = predictRidge(gpModel, ex.features);
+  switch (strategy) {
+    case "lag1_only":
+      return persistenceGpFromExample(ex, prior, { lag1: 1, ewma: 0 }, false);
+    case "ewma_only":
+      return persistenceGpFromExample(ex, prior, { lag1: 0, ewma: 1 }, false);
+    case "lag1_ewma_blend":
+      return persistenceGpFromExample(ex, prior, lag1EwmaBlend, false);
+    default:
+      return applySkaterGpStrategy(strategy, injuryGp, mlGp);
+  }
+}
+
+function predictGoalieGpForStrategy(
+  ex: TrainingExample,
+  prior: PlayerSeasonRow[],
+  strategy: GoalieGpStrategyType,
+  gpModel: RidgeModel,
+  lag1EwmaBlend: GpLag1EwmaBlend,
+  ensembleWeights: GpEnsembleWeights,
+  twoStepConfig: GpTwoStepConfig,
+): number {
+  if (strategy === "two_step_full_season") {
+    return predictTwoStepGpFromExample(
+      ex,
+      prior,
+      gpModel,
+      twoStepConfig,
+      true,
+      goalieGpTrendFromHistory(prior, ex.targetSeason),
+    );
+  }
+  if (strategy === "ensemble") {
+    return predictGpEnsembleFromExample(
+      ex,
+      prior,
+      gpModel,
+      ensembleWeights,
+      true,
+    );
+  }
+  const mlGp = predictRidge(gpModel, ex.features);
+  switch (strategy) {
+    case "lag1_only":
+      return persistenceGpFromExample(ex, prior, { lag1: 1, ewma: 0 }, true);
+    case "ewma_only":
+      return persistenceGpFromExample(ex, prior, { lag1: 0, ewma: 1 }, true);
+    case "lag1_ewma_blend":
+      return persistenceGpFromExample(ex, prior, lag1EwmaBlend, true);
+    case "ml_only":
+      return Math.max(10, Math.min(FULL_SEASON, Math.round(mlGp)));
+    case "fixed_role":
+      return goalieGpFixedFromHistory(prior);
+    default:
+      return goalieGpTrendFromHistory(prior, ex.targetSeason);
+  }
+}
+
 function applySkaterGpStrategy(
   strategy: SkaterGpStrategyType,
   injuryGp: number,
@@ -400,62 +642,165 @@ function applySkaterGpStrategy(
 }
 
 function selectSkaterGpStrategy(
+  val: TrainingExample[],
   test: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
   gpModel: RidgeModel,
-): { strategy: SkaterGpStrategyType; metrics: ModelMetrics } {
-  const testY = test.map((ex) => ex.targetSeason.gamesPlayed);
-  let best: SkaterGpStrategyType = SKATER_GP_CANDIDATES[0];
-  let bestMetrics: ModelMetrics | null = null;
+  lag1EwmaBlend: GpLag1EwmaBlend,
+  ensembleWeights: GpEnsembleWeights,
+  twoStepConfig: GpTwoStepConfig,
+  forceStrategy?: SkaterGpStrategyType,
+): {
+  strategy: SkaterGpStrategyType;
+  metrics: ModelMetrics;
+  valMetrics: ModelMetrics;
+  valClassAccuracy: number;
+  holdoutClassAccuracy: number;
+} {
+  const valY = val.map((ex) => ex.targetSeason.gamesPlayed);
+  const candidates = forceStrategy ? [forceStrategy] : SKATER_GP_CANDIDATES;
+  let best: SkaterGpStrategyType = candidates[0];
+  let bestValMetrics: ModelMetrics | null = null;
+  let bestValScore = -Infinity;
 
-  for (const strategy of SKATER_GP_CANDIDATES) {
-    const preds = test.map((ex) => {
+  for (const strategy of candidates) {
+    const preds = val.map((ex) => {
       const prior = priorHistoryForExample(historyMap, ex);
-      const injuryGp = injuryGpFromHistory(prior);
-      const mlGp = predictRidge(gpModel, ex.features);
-      return applySkaterGpStrategy(strategy, injuryGp, mlGp);
+      return predictSkaterGpForStrategy(
+        ex,
+        prior,
+        strategy,
+        gpModel,
+        lag1EwmaBlend,
+        ensembleWeights,
+        twoStepConfig,
+      );
     });
-    const metrics = evaluateRegression(testY, preds);
-    if (bestMetrics === null || metrics.r2 > bestMetrics.r2) {
-      bestMetrics = metrics;
+    const r2 = evaluateRegression(valY, preds).r2;
+    const acc = within10Accuracy(valY, preds);
+    const score = acc * 0.65 + r2 * 0.35;
+    if (bestValMetrics === null || score > bestValScore) {
+      bestValScore = score;
+      bestValMetrics = { ...evaluateRegression(valY, preds), r2 };
       best = strategy;
     }
   }
 
-  return { strategy: best, metrics: bestMetrics! };
+  const testY = test.map((ex) => ex.targetSeason.gamesPlayed);
+  const holdoutPreds = test.map((ex) => {
+    const prior = priorHistoryForExample(historyMap, ex);
+    return predictSkaterGpForStrategy(
+      ex,
+      prior,
+      best,
+      gpModel,
+      lag1EwmaBlend,
+      ensembleWeights,
+      twoStepConfig,
+    );
+  });
+
+  const valPreds = val.map((ex) => {
+    const prior = priorHistoryForExample(historyMap, ex);
+    return predictSkaterGpForStrategy(
+      ex,
+      prior,
+      best,
+      gpModel,
+      lag1EwmaBlend,
+      ensembleWeights,
+      twoStepConfig,
+    );
+  });
+
+  return {
+    strategy: best,
+    metrics: evaluateRegression(testY, holdoutPreds),
+    valMetrics: bestValMetrics!,
+    valClassAccuracy: classificationAccuracy(valY, valPreds, twoStepConfig),
+    holdoutClassAccuracy: classificationAccuracy(testY, holdoutPreds, twoStepConfig),
+  };
 }
 
 function selectGoalieGpStrategy(
+  val: TrainingExample[],
   test: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
   gpModel: RidgeModel,
-): { strategy: GoalieGpStrategyType; metrics: ModelMetrics } {
-  const testY = test.map((ex) => ex.targetSeason.gamesPlayed);
-  let best: GoalieGpStrategyType = GOALIE_GP_CANDIDATES[0];
-  let bestMetrics: ModelMetrics | null = null;
+  lag1EwmaBlend: GpLag1EwmaBlend,
+  ensembleWeights: GpEnsembleWeights,
+  twoStepConfig: GpTwoStepConfig,
+  forceStrategy?: GoalieGpStrategyType,
+): {
+  strategy: GoalieGpStrategyType;
+  metrics: ModelMetrics;
+  valMetrics: ModelMetrics;
+  valClassAccuracy: number;
+  holdoutClassAccuracy: number;
+} {
+  const valY = val.map((ex) => ex.targetSeason.gamesPlayed);
+  const candidates = forceStrategy ? [forceStrategy] : GOALIE_GP_CANDIDATES;
+  let best: GoalieGpStrategyType = candidates[0];
+  let bestValMetrics: ModelMetrics | null = null;
+  let bestValScore = -Infinity;
 
-  for (const strategy of GOALIE_GP_CANDIDATES) {
-    const preds = test.map((ex) => {
+  for (const strategy of candidates) {
+    const preds = val.map((ex) => {
       const prior = priorHistoryForExample(historyMap, ex);
-      if (strategy === "ml_only") {
-        return Math.max(
-          10,
-          Math.min(FULL_SEASON, Math.round(predictRidge(gpModel, ex.features))),
-        );
-      }
-      if (strategy === "fixed_role") {
-        return goalieGpFixedFromHistory(prior);
-      }
-      return goalieGpTrendFromHistory(prior, ex.targetSeason);
+      return predictGoalieGpForStrategy(
+        ex,
+        prior,
+        strategy,
+        gpModel,
+        lag1EwmaBlend,
+        ensembleWeights,
+        twoStepConfig,
+      );
     });
-    const metrics = evaluateRegression(testY, preds);
-    if (bestMetrics === null || metrics.r2 > bestMetrics.r2) {
-      bestMetrics = metrics;
+    const metrics = evaluateRegression(valY, preds);
+    const acc = within10Accuracy(valY, preds);
+    const score = acc * 0.65 + metrics.r2 * 0.35;
+    if (bestValMetrics === null || score > bestValScore) {
+      bestValScore = score;
+      bestValMetrics = metrics;
       best = strategy;
     }
   }
 
-  return { strategy: best, metrics: bestMetrics! };
+  const testY = test.map((ex) => ex.targetSeason.gamesPlayed);
+  const holdoutPreds = test.map((ex) => {
+    const prior = priorHistoryForExample(historyMap, ex);
+    return predictGoalieGpForStrategy(
+      ex,
+      prior,
+      best,
+      gpModel,
+      lag1EwmaBlend,
+      ensembleWeights,
+      twoStepConfig,
+    );
+  });
+
+  const valPreds = val.map((ex) => {
+    const prior = priorHistoryForExample(historyMap, ex);
+    return predictGoalieGpForStrategy(
+      ex,
+      prior,
+      best,
+      gpModel,
+      lag1EwmaBlend,
+      ensembleWeights,
+      twoStepConfig,
+    );
+  });
+
+  return {
+    strategy: best,
+    metrics: evaluateRegression(testY, holdoutPreds),
+    valMetrics: bestValMetrics!,
+    valClassAccuracy: classificationAccuracy(valY, valPreds, twoStepConfig),
+    holdoutClassAccuracy: classificationAccuracy(testY, holdoutPreds, twoStepConfig),
+  };
 }
 
 function trainSkaterTarget(
@@ -752,13 +1097,85 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     false,
   );
 
-  const skaterGpHoldout = splitExamples(skaterGpExamples).test;
-  const { strategy: skaterGpStrategy, metrics: skaterGpMetrics } =
-    selectSkaterGpStrategy(skaterGpHoldout, skaterHistoryMap, skaterGpModel);
+  const skaterGpSplit = splitExamples(skaterGpExamples);
+  const skaterGpLag1EwmaBlend = tuneLag1EwmaBlend(
+    skaterGpSplit.val,
+    skaterHistoryMap,
+    false,
+  );
+  const skaterGpEnsembleWeights = tuneGpEnsemble(
+    skaterGpSplit.val,
+    skaterHistoryMap,
+    skaterGpModel,
+    false,
+  );
+  const skaterGpTwoStepConfig = tuneTwoStepConfig(
+    skaterGpSplit.val,
+    skaterHistoryMap,
+    skaterGpModel,
+    false,
+    skaterGpEnsembleWeights,
+    injuryGpFromHistory,
+  );
+  const {
+    strategy: skaterGpStrategy,
+    metrics: skaterGpMetrics,
+    valMetrics: skaterGpValMetrics,
+    valClassAccuracy: skaterGpValClassAcc,
+    holdoutClassAccuracy: skaterGpHoldoutClassAcc,
+  } = selectSkaterGpStrategy(
+    skaterGpSplit.val,
+    skaterGpSplit.test,
+    skaterHistoryMap,
+    skaterGpModel,
+    skaterGpLag1EwmaBlend,
+    skaterGpEnsembleWeights,
+    skaterGpTwoStepConfig,
+    "two_step_full_season",
+  );
 
-  const goalieGpHoldout = splitExamples(goalieGpExamples).test;
-  const { strategy: goalieGpStrategy, metrics: goalieGpMetrics } =
-    selectGoalieGpStrategy(goalieGpHoldout, goalieHistoryMap, goalieGpModel);
+  const goalieGpSplit = splitExamples(goalieGpExamples);
+  const goalieGpLag1EwmaBlend = tuneLag1EwmaBlend(
+    goalieGpSplit.val,
+    goalieHistoryMap,
+    true,
+  );
+  const goalieGpEnsembleWeights = tuneGpEnsemble(
+    goalieGpSplit.val,
+    goalieHistoryMap,
+    goalieGpModel,
+    true,
+  );
+  const goalieGpTwoStepConfig = tuneTwoStepConfig(
+    goalieGpSplit.val,
+    goalieHistoryMap,
+    goalieGpModel,
+    true,
+    goalieGpEnsembleWeights,
+    (prior) => {
+      const last = prior.at(-1);
+      return goalieGpTrendFromHistory(
+        prior,
+        last ?? ({ age: 28 } as PlayerSeasonRow),
+      );
+    },
+  );
+  const {
+    strategy: goalieGpStrategy,
+    metrics: goalieGpMetrics,
+    valMetrics: goalieGpValMetrics,
+    valClassAccuracy: goalieGpValClassAcc,
+    holdoutClassAccuracy: goalieGpHoldoutClassAcc,
+  } = selectGoalieGpStrategy(
+    goalieGpSplit.val,
+    goalieGpSplit.test,
+    goalieHistoryMap,
+    goalieGpModel,
+    goalieGpLag1EwmaBlend,
+    goalieGpEnsembleWeights,
+    goalieGpTwoStepConfig,
+    "two_step_full_season",
+  );
 
   const goalieModels: RidgeModel[] = [];
   for (const target of GOALIE_ML_TARGETS) {
@@ -777,12 +1194,18 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     skaterModels,
     skaterGpModel,
     skaterGpStrategy,
+    skaterGpLag1EwmaBlend,
+    skaterGpEnsembleWeights,
+    skaterGpTwoStepConfig,
     goalieModels,
     goalieGpModel,
     goalieGpStrategy,
+    goalieGpLag1EwmaBlend,
+    goalieGpEnsembleWeights,
+    goalieGpTwoStepConfig,
     goalieModelsEvalOnly: true,
     validationScheme:
-      "rolling: train<2024-25, tune blend+λ on 2024-25, per-stat champion on 2025-26 holdout",
+      "rolling: train<2024-25, tune blend+λ on 2024-25, per-stat champion on 2025-26 holdout; GP uses two-step full-season classifier",
     metrics: {
       skater: skaterMetrics,
       goalie: goalieMetrics,
@@ -792,25 +1215,58 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     championByTarget,
     skaterGpMlHoldout: skaterGpMlMetrics,
     goalieGpMlHoldout: goalieGpMlMetrics,
+    skaterGpValMetrics,
+    goalieGpValMetrics,
+    skaterGpValClassAcc,
+    skaterGpHoldoutClassAcc,
+    goalieGpValClassAcc,
+    goalieGpHoldoutClassAcc,
   } as MlModelBundle & {
     championByTarget: Record<string, string>;
     skaterGpMlHoldout: ModelMetrics;
     goalieGpMlHoldout: ModelMetrics;
+    skaterGpValMetrics: ModelMetrics;
+    goalieGpValMetrics: ModelMetrics;
+    skaterGpValClassAcc: number;
+    skaterGpHoldoutClassAcc: number;
+    goalieGpValClassAcc: number;
+    goalieGpHoldoutClassAcc: number;
   };
 }
 
 export function saveMlModels(bundle: MlModelBundle): void {
   const dir = join(process.cwd(), "src", "data", "ml");
   mkdirSync(dir, { recursive: true });
-  const { championByTarget, skaterGpMlHoldout, goalieGpMlHoldout, ...toSave } =
+  const {
+    championByTarget,
+    skaterGpMlHoldout,
+    goalieGpMlHoldout,
+    skaterGpValMetrics,
+    goalieGpValMetrics,
+    skaterGpValClassAcc,
+    skaterGpHoldoutClassAcc,
+    goalieGpValClassAcc,
+    goalieGpHoldoutClassAcc,
+    ...toSave
+  } =
     bundle as MlModelBundle & {
       championByTarget?: Record<string, string>;
       skaterGpMlHoldout?: ModelMetrics;
       goalieGpMlHoldout?: ModelMetrics;
+      skaterGpValClassAcc?: number;
+      skaterGpHoldoutClassAcc?: number;
+      goalieGpValClassAcc?: number;
+      goalieGpHoldoutClassAcc?: number;
     };
   void championByTarget;
+  void skaterGpValMetrics;
+  void goalieGpValMetrics;
   void skaterGpMlHoldout;
   void goalieGpMlHoldout;
+  void skaterGpValClassAcc;
+  void skaterGpHoldoutClassAcc;
+  void goalieGpValClassAcc;
+  void goalieGpHoldoutClassAcc;
   writeFileSync(MODEL_PATH, JSON.stringify(toSave, null, 2));
 }
 
@@ -840,13 +1296,31 @@ export function printMetrics(bundle: MlModelBundle): void {
       `Goalie ${target}: R²=${m.r2.toFixed(3)} MAE=${m.mae.toFixed(3)} RMSE=${m.rmse.toFixed(3)} (n=${m.samples}) [ridge eval only, not production]`,
     );
   }
+  const ext = bundle as MlModelBundle & {
+    goalieGpValMetrics?: ModelMetrics;
+    skaterGpValMetrics?: ModelMetrics;
+    goalieGpValClassAcc?: number;
+    goalieGpHoldoutClassAcc?: number;
+    skaterGpValClassAcc?: number;
+    skaterGpHoldoutClassAcc?: number;
+  };
+  const goalieClassNote =
+    bundle.goalieGpStrategy === "two_step_full_season" &&
+    ext.goalieGpHoldoutClassAcc != null
+      ? ` classAcc=${(ext.goalieGpHoldoutClassAcc * 100).toFixed(1)}% val=${((ext.goalieGpValClassAcc ?? 0) * 100).toFixed(1)}%`
+      : "";
   console.log(
-    `Goalie GP: R²=${bundle.metrics.goalieGp.r2.toFixed(3)} MAE=${bundle.metrics.goalieGp.mae.toFixed(1)} strategy=${bundle.goalieGpStrategy ?? "trend_based"} (n=${bundle.metrics.goalieGp.samples})`,
+    `Goalie GP: holdout R²=${bundle.metrics.goalieGp.r2.toFixed(3)} val R²=${ext.goalieGpValMetrics?.r2.toFixed(3) ?? "?"} MAE=${bundle.metrics.goalieGp.mae.toFixed(1)} strategy=${bundle.goalieGpStrategy ?? "ensemble"}${goalieClassNote} (n=${bundle.metrics.goalieGp.samples})`,
   );
   const sg = bundle.metrics.skaterGp;
   if (sg) {
+    const skaterClassNote =
+      bundle.skaterGpStrategy === "two_step_full_season" &&
+      ext.skaterGpHoldoutClassAcc != null
+        ? ` classAcc=${(ext.skaterGpHoldoutClassAcc * 100).toFixed(1)}% val=${((ext.skaterGpValClassAcc ?? 0) * 100).toFixed(1)}%`
+        : "";
     console.log(
-      `Skater GP: R²=${sg.r2.toFixed(3)} MAE=${sg.mae.toFixed(1)} strategy=${bundle.skaterGpStrategy ?? "blend_45_55"} (n=${sg.samples})`,
+      `Skater GP: holdout R²=${sg.r2.toFixed(3)} val R²=${ext.skaterGpValMetrics?.r2.toFixed(3) ?? "?"} MAE=${sg.mae.toFixed(1)} strategy=${bundle.skaterGpStrategy ?? "ensemble"}${skaterClassNote} (n=${sg.samples})`,
     );
   }
 }

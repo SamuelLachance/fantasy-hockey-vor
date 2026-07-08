@@ -430,6 +430,7 @@ function buildLagFeatures(
   includePosition: boolean,
   targetSeason?: PlayerSeasonRow,
   skaterTarget?: SkaterMlTarget,
+  gpOnly = false,
 ): { features: number[]; names: string[] } {
   const gpLags = lagValues(history, "gamesPlayed", false);
   const features: number[] = [...gpLags, ewma(gpLags), trend(gpLags)];
@@ -470,7 +471,7 @@ function buildLagFeatures(
   features.push(...ctxLags.features);
   names.push(...ctxLags.names);
 
-  if (includePosition) {
+  if (includePosition && !gpOnly) {
     const aux = skaterTarget ? targetAuxStats(skaterTarget) : SKATER_AUX_LAG_STATS;
     appendStatLagFeatures(history, aux, true, features, names);
     if (skaterTarget) {
@@ -640,6 +641,8 @@ export function buildSkaterGpExamples(rows: PlayerSeasonRow[]): TrainingExample[
         false,
         true,
         target,
+        undefined,
+        true,
       );
       examples.push({
         playerId: target.playerId,
@@ -786,6 +789,8 @@ export function buildSkaterGpInferenceFeatures(
     false,
     true,
     projectionRow,
+    undefined,
+    true,
   );
   return { features, featureNames: names };
 }

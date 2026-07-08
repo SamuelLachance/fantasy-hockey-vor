@@ -1,5 +1,16 @@
 import type { PlayerProfile } from "./profile-types";
-import type { GoalieGpStrategyType, SkaterGpStrategyType } from "./ml/types";
+import type {
+  GoalieGpStrategyType,
+  GpLag1EwmaBlend,
+  GpTwoStepConfig,
+  SkaterGpStrategyType,
+} from "./ml/types";
+import {
+  DEFAULT_GP_LAG1_EWMA,
+  injuryGpFromProfile,
+  predictGoalieGpFromStrategy,
+  predictSkaterGpFromStrategy,
+} from "./ml/gp-predict";
 
 const FULL_SEASON = 82;
 export const GOALIE_STARTER_GP = 60;
@@ -108,45 +119,23 @@ export function projectedGoalieGamesTrend(
   return Math.max(10, Math.min(FULL_SEASON, Math.round(gp)));
 }
 
-/** Injury-informed skater GP with optional ML ridge blend. */
+/** Skater GP from champion strategy (persistence / injury / ML). */
 export function projectedSkaterGames(
   profile: PlayerProfile,
   mlGp?: number | null,
-  strategy: SkaterGpStrategyType = "blend_45_55",
+  strategy: SkaterGpStrategyType = "ensemble",
+  lag1EwmaBlend: GpLag1EwmaBlend = DEFAULT_GP_LAG1_EWMA,
+  ensembleWeights?: import("./ml/types").GpEnsembleWeights,
+  twoStepConfig?: GpTwoStepConfig,
 ): number {
-  const injury = profile.injury;
-  const baseGp =
-    injury.avgGamesPlayedLast3 > 0
-      ? injury.avgGamesPlayedLast3
-      : injury.gamesPlayedLastSeason > 0
-        ? injury.gamesPlayedLastSeason
-        : FULL_SEASON;
-
-  let injuryGp = Math.round(baseGp * (0.82 + 0.18 * injury.durabilityScore));
-
-  if (injury.trend === "injury_prone") {
-    injuryGp = Math.round(injuryGp * 0.92);
-  } else if (injury.trend === "healthy" && injury.durabilityScore >= 0.9) {
-    injuryGp = Math.round(injuryGp * 1.02);
-  }
-
-  injuryGp = Math.max(10, Math.min(FULL_SEASON, injuryGp));
-
-  if (strategy === "injury_only" || mlGp == null || mlGp <= 0) {
-    return injuryGp;
-  }
-  if (strategy === "ml_only") {
-    return Math.max(10, Math.min(FULL_SEASON, Math.round(mlGp)));
-  }
-  if (strategy === "blend_55_45") {
-    return Math.max(
-      10,
-      Math.min(FULL_SEASON, Math.round(injuryGp * 0.55 + mlGp * 0.45)),
-    );
-  }
-  return Math.max(
-    10,
-    Math.min(FULL_SEASON, Math.round(injuryGp * 0.45 + mlGp * 0.55)),
+  return predictSkaterGpFromStrategy(
+    strategy,
+    profile,
+    mlGp,
+    lag1EwmaBlend,
+    injuryGpFromProfile(profile),
+    ensembleWeights,
+    twoStepConfig,
   );
 }
 
@@ -154,15 +143,21 @@ export function projectedGoalieGamesWithStrategy(
   profile: PlayerProfile,
   roleMap: Map<number, GoalieRole> | undefined,
   mlGp: number | null | undefined,
-  strategy: GoalieGpStrategyType = "trend_based",
+  strategy: GoalieGpStrategyType = "ensemble",
+  lag1EwmaBlend: GpLag1EwmaBlend = DEFAULT_GP_LAG1_EWMA,
+  ensembleWeights?: import("./ml/types").GpEnsembleWeights,
+  twoStepConfig?: GpTwoStepConfig,
 ): number {
-  if (strategy === "ml_only" && mlGp != null && mlGp > 0) {
-    return Math.max(10, Math.min(FULL_SEASON, Math.round(mlGp)));
-  }
-  if (strategy === "fixed_role") {
-    return projectedGoalieGames(profile, roleMap);
-  }
-  return projectedGoalieGamesTrend(profile, roleMap);
+  return predictGoalieGpFromStrategy(
+    strategy,
+    profile,
+    mlGp,
+    lag1EwmaBlend,
+    projectedGoalieGamesTrend(profile, roleMap),
+    projectedGoalieGames(profile, roleMap),
+    ensembleWeights,
+    twoStepConfig,
+  );
 }
 
 /** Skaters use injury/ML GP; goalies use role/trend baselines. */
@@ -172,7 +167,13 @@ export function projectedGamesFromProfile(
   skaterMlGp?: number | null,
   options?: {
     skaterGpStrategy?: SkaterGpStrategyType;
+    skaterGpLag1EwmaBlend?: GpLag1EwmaBlend;
+    skaterGpEnsembleWeights?: import("./ml/types").GpEnsembleWeights;
+    skaterGpTwoStepConfig?: GpTwoStepConfig;
     goalieGpStrategy?: GoalieGpStrategyType;
+    goalieGpLag1EwmaBlend?: GpLag1EwmaBlend;
+    goalieGpEnsembleWeights?: import("./ml/types").GpEnsembleWeights;
+    goalieGpTwoStepConfig?: GpTwoStepConfig;
     goalieMlGp?: number | null;
   },
 ): number {
@@ -181,13 +182,19 @@ export function projectedGamesFromProfile(
       profile,
       goalieRoleMap,
       options?.goalieMlGp,
-      options?.goalieGpStrategy ?? "trend_based",
+      options?.goalieGpStrategy ?? "ensemble",
+      options?.goalieGpLag1EwmaBlend ?? DEFAULT_GP_LAG1_EWMA,
+      options?.goalieGpEnsembleWeights,
+      options?.goalieGpTwoStepConfig,
     );
   }
   return projectedSkaterGames(
     profile,
     skaterMlGp,
-    options?.skaterGpStrategy ?? "blend_45_55",
+    options?.skaterGpStrategy ?? "ensemble",
+    options?.skaterGpLag1EwmaBlend ?? DEFAULT_GP_LAG1_EWMA,
+    options?.skaterGpEnsembleWeights,
+    options?.skaterGpTwoStepConfig,
   );
 }
 
