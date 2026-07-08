@@ -146,9 +146,6 @@ export function predictRidge(model: RidgeModel, features: number[]): number {
 
 const SKATER_LAMBDA_GRID = [5, 10, 25, 50, 100, 200, 400, 600, 800, 1200];
 
-const LOW_BLEND_ML_TARGETS = new Set(["penaltyMinutes", "hits"]);
-const MIN_EWMA_LAG1_SHARE = 0.55;
-
 export function selectLambda(
   trainX: number[][],
   trainY: number[],
@@ -216,38 +213,12 @@ export function applyBlendWeights(
   });
 }
 
-function normalizeBlend(weights: BlendWeights): BlendWeights {
-  const sum = weights.ml + weights.ewma + weights.lag1;
-  if (sum <= 0) return { ml: 1, ewma: 0, lag1: 0 };
-  return {
-    ml: weights.ml / sum,
-    ewma: weights.ewma / sum,
-    lag1: weights.lag1 / sum,
-  };
-}
-
-function enforceMinEwmaLag1Share(weights: BlendWeights, target: string): BlendWeights {
-  if (!LOW_BLEND_ML_TARGETS.has(target)) return weights;
-  const historyShare = weights.ewma + weights.lag1;
-  if (historyShare >= MIN_EWMA_LAG1_SHARE) return weights;
-
-  const deficit = MIN_EWMA_LAG1_SHARE - historyShare;
-  const newMl = Math.max(0, weights.ml - deficit);
-  const cut = weights.ml - newMl;
-  const histTotal = Math.max(weights.ewma + weights.lag1, 1e-6);
-  return normalizeBlend({
-    ml: newMl,
-    ewma: weights.ewma + cut * (weights.ewma / histTotal || 0.65),
-    lag1: weights.lag1 + cut * (weights.lag1 / histTotal || 0.35),
-  });
-}
-
 export function selectBlendWeights(
   valY: number[],
   mlPreds: number[],
   ewmaPreds: number[],
   lag1Preds: number[],
-  target = "",
+  _target = "",
 ): BlendWeights {
   if (valY.length === 0) return { ml: 0.15, ewma: 0.7, lag1: 0.15 };
 
@@ -266,7 +237,7 @@ export function selectBlendWeights(
       }
     }
   }
-  return enforceMinEwmaLag1Share(best, target);
+  return best;
 }
 
 /** @deprecated use selectBlendWeights */

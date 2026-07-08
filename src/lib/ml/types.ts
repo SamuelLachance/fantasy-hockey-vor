@@ -21,6 +21,29 @@ export const GOALIE_ML_TARGETS = [
 export type SkaterMlTarget = (typeof SKATER_ML_TARGETS)[number];
 export type GoalieMlTarget = (typeof GOALIE_ML_TARGETS)[number];
 
+export type ProductionStrategyType =
+  | "ml_only"
+  | "ewma_only"
+  | "lag1_only"
+  | "tuned_blend"
+  | "contextual_only"
+  | "ml_contextual_ensemble";
+
+export interface ProductionStrategy {
+  type: ProductionStrategyType;
+  blendWeights?: { ml: number; ewma: number; lag1: number };
+  /** ML share when type is ml_contextual_ensemble. */
+  mlContextualWeight?: number;
+}
+
+export type SkaterGpStrategyType =
+  | "injury_only"
+  | "ml_only"
+  | "blend_45_55"
+  | "blend_55_45";
+
+export type GoalieGpStrategyType = "fixed_role" | "trend_based" | "ml_only";
+
 /** Non-target stats included as lag features in every skater model. */
 export const SKATER_AUX_LAG_STATS = [
   "toiPerGame",
@@ -215,6 +238,7 @@ export interface RidgeModel {
   logTarget?: boolean;
   logEps?: number;
   holdoutR2?: number;
+  productionStrategy?: ProductionStrategy;
 }
 
 export interface MlModelBundle {
@@ -223,8 +247,11 @@ export interface MlModelBundle {
   minSeasonGp: number;
   skaterModels: RidgeModel[];
   skaterGpModel?: RidgeModel;
+  skaterGpStrategy?: SkaterGpStrategyType;
   goalieModels: RidgeModel[];
   goalieGpModel: RidgeModel;
+  goalieGpStrategy?: GoalieGpStrategyType;
+  goalieModelsEvalOnly?: boolean;
   validationScheme?: string;
   metrics: {
     skater: Record<string, ModelMetrics>;

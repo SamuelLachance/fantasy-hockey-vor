@@ -5,11 +5,13 @@ import {
 } from "../contextual-projections";
 import {
   anchorSkaterProjectionToHistory,
+  clampGoalieProjection,
   clampSkaterProjection,
 } from "../projection-sanity";
 import { projectedGamesFromProfile, type GoalieRole } from "../projection-gp";
 import type { GoalieProjection, SkaterProjection } from "../types";
 import {
+  buildGoalieGpInferenceFeatures,
   buildSkaterGpInferenceFeatures,
   buildTargetInferenceFeatures,
   extractEwmaFeature,
@@ -21,7 +23,7 @@ import {
   profileToSeasonRows,
 } from "./inference-context";
 import { applyBlendWeights, predictRidge } from "./ridge";
-import type { MlModelBundle, PlayerSeasonRow, RidgeModel } from "./types";
+import type { MlModelBundle, PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
 import { SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
 
@@ -40,45 +42,6 @@ function ewmaPerGameRate(
     const rate = row.gamesPlayed > 0 ? stat(row) / row.gamesPlayed : 0;
     return sum + rate * (weights[i] / totalW);
   }, 0);
-}
-
-function careerRate(profile: PlayerProfile, field: string): number {
-  const gp = profile.careerTotals.gamesPlayed ?? 0;
-  if (gp < 5) return 0;
-  return Number(profile.careerTotals[field] ?? 0) / gp;
-}
-
-function anchorPerGameRate(
-  target: string,
-  ewma: number,
-  ml: number,
-  profile: PlayerProfile,
-): number {
-  const career = careerRate(
-    profile,
-    target === "powerplayPoints"
-      ? "powerPlayPoints"
-      : target === "penaltyMinutes"
-        ? "pim"
-        : target,
-  );
-
-  if (ewma > 0) {
-    return Math.max(0, ewma * 0.82 + ml * 0.18);
-  }
-
-  if (career > 0) {
-    return Math.min(ml, career * 1.2);
-  }
-
-  if (target === "goals") {
-    return profile.position === "D" ? 0.03 : 0.08;
-  }
-  if (target === "powerplayPoints") {
-    return 0;
-  }
-
-  return Math.min(ml, ewma);
 }
 
 function rowStat(row: PlayerSeasonRow, target: string): number {
@@ -123,6 +86,92 @@ function contextualPerGameRates(
   };
 }
 
+function applyProductionStrategy(
+  strategy: ProductionStrategy,
+  ml: number,
+  ewma: number,
+  lag1: number,
+  contextual: number,
+): number {
+  switch (strategy.type) {
+    case "ml_only":
+      return Math.max(0, ml);
+    case "ewma_only":
+      return Math.max(0, ewma > 0 ? ewma : lag1);
+    case "lag1_only":
+      return Math.max(0, lag1 > 0 ? lag1 : ewma);
+    case "tuned_blend": {
+      const w = strategy.blendWeights ?? { ml: 0.15, ewma: 0.7, lag1: 0.15 };
+      const [blended] = applyBlendWeights([ml], [ewma], [lag1], w);
+      return blended;
+    }
+    case "contextual_only":
+      return Math.max(0, contextual);
+    case "ml_contextual_ensemble": {
+      const w = strategy.blendWeights ?? { ml: 0.15, ewma: 0.7, lag1: 0.15 };
+      const [blended] = applyBlendWeights([ml], [ewma], [lag1], w);
+      const mlShare = strategy.mlContextualWeight ?? 0.65;
+      return Math.max(0, blended * mlShare + contextual * (1 - mlShare));
+    }
+    default:
+      return Math.max(0, ml);
+  }
+}
+
+function predictRateForTarget(
+  profile: PlayerProfile,
+  models: MlModelBundle,
+  target: string,
+  history: PlayerSeasonRow[],
+  targetRow: PlayerSeasonRow,
+  contextualRates: Record<string, number> | null,
+): number {
+  const model = resolveSkaterModel(models, target, profile.position);
+  if (!model) return 0;
+
+  const { features, featureNames } = buildTargetInferenceFeatures(
+    history,
+    target,
+    false,
+    targetRow,
+  );
+  const ml = Math.max(0, predictRidge(model, features));
+  const ewma = extractEwmaFeature(featureNames, features, target);
+  const lag1 = extractLag1Feature(featureNames, features, target);
+  const historyEwma = ewmaPerGameRate(history, (r) => rowStat(r, target));
+  const ewmaRate = ewma > 0 ? ewma : historyEwma;
+  const ctxRate = contextualRates?.[target] ?? ewmaRate;
+
+  const strategy = model.productionStrategy ?? {
+    type: "tuned_blend" as const,
+    blendWeights: model.blendWeights ?? {
+      ml: 1 - (model.ewmaBlendWeight ?? 0.85),
+      ewma: model.ewmaBlendWeight ?? 0.85,
+      lag1: 0,
+    },
+  };
+
+  if (strategy.type === "ml_contextual_ensemble" && contextualRates) {
+    const mlShare =
+      strategy.mlContextualWeight ?? mlWeightForTarget(models, target);
+    const w = strategy.blendWeights ?? model.blendWeights;
+    let mlRate: number;
+    if (w) {
+      const [blended] = applyBlendWeights([ml], [ewmaRate], [lag1], w);
+      mlRate = blended;
+    } else {
+      mlRate = ewmaRate > 0 ? ewmaRate * 0.85 + ml * 0.15 : ml;
+    }
+    return mlRate * mlShare + ctxRate * (1 - mlShare);
+  }
+
+  if (strategy.type === "contextual_only" && contextualRates) {
+    return ctxRate;
+  }
+
+  return applyProductionStrategy(strategy, ml, ewmaRate, lag1, ctxRate);
+}
+
 function predictSkaterGp(
   profile: PlayerProfile,
   models: MlModelBundle,
@@ -135,6 +184,19 @@ function predictSkaterGp(
   return Math.max(10, Math.min(82, Math.round(gp)));
 }
 
+function predictGoalieGp(
+  profile: PlayerProfile,
+  models: MlModelBundle,
+  history: PlayerSeasonRow[],
+  targetRow: PlayerSeasonRow,
+): number | null {
+  if (!models.goalieGpModel) return null;
+  const goalieHistory = history.filter((r) => r.isGoalie);
+  const { features } = buildGoalieGpInferenceFeatures(goalieHistory, targetRow);
+  const gp = predictRidge(models.goalieGpModel, features);
+  return Math.max(10, Math.min(82, Math.round(gp)));
+}
+
 export function projectSkaterWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
@@ -144,49 +206,32 @@ export function projectSkaterWithMl(
   const history = profileToSeasonRows(profile, caches).filter((r) => !r.isGoalie);
   const targetRow = buildProjectionTargetRow(profile, caches);
   const mlGp = predictSkaterGp(profile, models, history, targetRow);
-  const gamesPlayed = projectedGamesFromProfile(profile, undefined, mlGp);
+  const gamesPlayed = projectedGamesFromProfile(profile, undefined, mlGp, {
+    skaterGpStrategy: models.skaterGpStrategy ?? "blend_45_55",
+  });
 
   const contextualRates = blendContextual
     ? contextualPerGameRates(profile)
     : null;
 
   const rates: Record<string, number> = {};
+  const champions: string[] = [];
   for (const target of SKATER_ML_TARGETS) {
-    const model = resolveSkaterModel(models, target, profile.position);
-    if (!model) continue;
-    const { features, featureNames } = buildTargetInferenceFeatures(
-      history,
-      target,
-      false,
-      targetRow,
-    );
-    const ml = Math.max(0, predictRidge(model, features));
-    const ewma = extractEwmaFeature(featureNames, features, target);
-    const lag1 = extractLag1Feature(featureNames, features, target);
-    const historyEwma = ewmaPerGameRate(history, (r) => rowStat(r, target));
-    const ewmaRate = ewma > 0 ? ewma : historyEwma;
-
-    let mlRate: number;
-    if (model.blendWeights) {
-      const [blended] = applyBlendWeights([ml], [ewmaRate], [lag1], model.blendWeights);
-      mlRate = blended;
-    } else {
-      const blendW = model.ewmaBlendWeight ?? 0.85;
-      if (ewmaRate > 0) {
-        mlRate = Math.max(0, ewmaRate * blendW + ml * (1 - blendW));
-      } else {
-        mlRate = anchorPerGameRate(target, historyEwma, ml, profile);
-      }
-    }
-
-    if (contextualRates && (target !== "faceoffWins" || profile.position === "C")) {
-      const ctxRate = contextualRates[target] ?? mlRate;
-      const w = blendContextual ? mlWeightForTarget(models, target) : 1;
-      rates[target] = mlRate * w + ctxRate * (1 - w);
-    } else if (target === "faceoffWins" && profile.position !== "C") {
+    if (target === "faceoffWins" && profile.position !== "C") {
       rates[target] = 0;
-    } else {
-      rates[target] = mlRate;
+      continue;
+    }
+    const model = resolveSkaterModel(models, target, profile.position);
+    rates[target] = predictRateForTarget(
+      profile,
+      models,
+      target,
+      history,
+      targetRow,
+      contextualRates,
+    );
+    if (model?.productionStrategy) {
+      champions.push(`${target}:${model.productionStrategy.type}`);
     }
   }
 
@@ -207,24 +252,53 @@ export function projectSkaterWithMl(
 
   const projection = anchorSkaterProjectionToHistory(profile, raw, gamesPlayed);
 
-  const gpNote = mlGp != null ? `injury+ML GP (${mlGp})` : "injury-profile GP";
+  const gpStrategy = models.skaterGpStrategy ?? "blend_45_55";
+  const gpNote =
+    gpStrategy === "injury_only"
+      ? "injury-profile GP"
+      : gpStrategy === "ml_only"
+        ? `ML GP (${mlGp})`
+        : `injury+ML GP (${gpStrategy}, ml=${mlGp})`;
 
   return {
     projection,
     gamesPlayed,
-    reasoning: `ML+contextual ensemble (holdout-R² weights) + ${gpNote}; EB-anchored PIM/hits/blocks`,
+    reasoning: `Per-stat champion strategies + ${gpNote}; EB-anchored PIM/hits/blocks`,
   };
 }
 
 export function projectGoalieWithMl(
   profile: PlayerProfile,
-  _models: MlModelBundle,
+  models: MlModelBundle,
   goalieRoleMap?: Map<number, GoalieRole>,
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
+  const caches = loadContextCaches();
+  const history = profileToSeasonRows(profile, caches);
+  const targetRow = buildProjectionTargetRow(profile, caches);
+  const mlGp = predictGoalieGp(profile, models, history, targetRow);
   const result = projectGoalieFromProfile(profile, goalieRoleMap);
+  const gamesPlayed = projectedGamesFromProfile(profile, goalieRoleMap, null, {
+    goalieGpStrategy: models.goalieGpStrategy ?? "trend_based",
+    goalieMlGp: mlGp,
+  });
+
+  const oldGp = Math.max(1, result.gamesPlayed);
+  const scale = gamesPlayed / oldGp;
+  const projection = clampGoalieProjection(
+    {
+      wins: Math.round(result.projection.wins * scale),
+      shutouts: Math.round(result.projection.shutouts * scale),
+      saves: Math.round(result.projection.saves * scale),
+      savePct: result.projection.savePct,
+    },
+    gamesPlayed,
+  );
+
+  const gpStrategy = models.goalieGpStrategy ?? "trend_based";
   return {
-    ...result,
-    reasoning: `Goalie MoneyPuck GSAx + team SV% environment (ridge ML not used); ${result.reasoning}`,
+    projection,
+    gamesPlayed,
+    reasoning: `Goalie MoneyPuck GSAx + team SV% environment; GP=${gamesPlayed} (${gpStrategy})`,
   };
 }
 

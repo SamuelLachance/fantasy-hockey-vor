@@ -1,4 +1,5 @@
 import type { PlayerProfile } from "./profile-types";
+import type { GoalieGpStrategyType, SkaterGpStrategyType } from "./ml/types";
 
 const FULL_SEASON = 82;
 export const GOALIE_STARTER_GP = 60;
@@ -70,10 +71,48 @@ export function projectedGoalieGames(
   return lastSeasonGp >= 35 ? GOALIE_STARTER_GP : GOALIE_BACKUP_GP;
 }
 
+function goalieAgeMult(age: number): number {
+  if (age >= 37) return 0.82;
+  if (age >= 34) return 0.9;
+  if (age <= 25) return 1.03;
+  return 1;
+}
+
+/** Trend-based goalie GP from last-season workload, role, age, and durability. */
+export function projectedGoalieGamesTrend(
+  profile: PlayerProfile,
+  roleMap?: Map<number, GoalieRole>,
+): number {
+  const role = goalieRoleLabel(profile, roleMap);
+  const lastGp = lastSeasonGoalieGp(profile);
+  const age = profile.bio.age;
+  const durability = profile.injury.durabilityScore;
+
+  let gp = lastGp * goalieAgeMult(age) * (0.85 + 0.15 * durability);
+
+  if (profile.injury.trend === "injury_prone") {
+    gp *= 0.94;
+  } else if (profile.injury.trend === "healthy" && durability >= 0.9) {
+    gp *= 1.02;
+  }
+
+  if (role === "starter") {
+    const starterFloor = Math.max(55, Math.min(60, lastGp * 0.92));
+    const starterCeil = Math.min(65, Math.max(62, lastGp * 1.05));
+    gp = Math.max(starterFloor, Math.min(starterCeil, gp));
+  } else {
+    const backupShare = lastGp > 0 ? Math.min(0.42, 22 / Math.max(lastGp, 35)) : 0.32;
+    gp = Math.max(15, Math.min(28, lastGp * backupShare + 8));
+  }
+
+  return Math.max(10, Math.min(FULL_SEASON, Math.round(gp)));
+}
+
 /** Injury-informed skater GP with optional ML ridge blend. */
 export function projectedSkaterGames(
   profile: PlayerProfile,
   mlGp?: number | null,
+  strategy: SkaterGpStrategyType = "blend_45_55",
 ): number {
   const injury = profile.injury;
   const baseGp =
@@ -83,31 +122,73 @@ export function projectedSkaterGames(
         ? injury.gamesPlayedLastSeason
         : FULL_SEASON;
 
-  let gp = Math.round(baseGp * (0.82 + 0.18 * injury.durabilityScore));
+  let injuryGp = Math.round(baseGp * (0.82 + 0.18 * injury.durabilityScore));
 
   if (injury.trend === "injury_prone") {
-    gp = Math.round(gp * 0.92);
+    injuryGp = Math.round(injuryGp * 0.92);
   } else if (injury.trend === "healthy" && injury.durabilityScore >= 0.9) {
-    gp = Math.round(gp * 1.02);
+    injuryGp = Math.round(injuryGp * 1.02);
   }
 
-  if (mlGp != null && mlGp > 0) {
-    gp = Math.round(gp * 0.45 + mlGp * 0.55);
-  }
+  injuryGp = Math.max(10, Math.min(FULL_SEASON, injuryGp));
 
-  return Math.max(10, Math.min(FULL_SEASON, gp));
+  if (strategy === "injury_only" || mlGp == null || mlGp <= 0) {
+    return injuryGp;
+  }
+  if (strategy === "ml_only") {
+    return Math.max(10, Math.min(FULL_SEASON, Math.round(mlGp)));
+  }
+  if (strategy === "blend_55_45") {
+    return Math.max(
+      10,
+      Math.min(FULL_SEASON, Math.round(injuryGp * 0.55 + mlGp * 0.45)),
+    );
+  }
+  return Math.max(
+    10,
+    Math.min(FULL_SEASON, Math.round(injuryGp * 0.45 + mlGp * 0.55)),
+  );
 }
 
-/** Skaters use injury/ML GP; goalies use fixed starter/backup baselines. */
+export function projectedGoalieGamesWithStrategy(
+  profile: PlayerProfile,
+  roleMap: Map<number, GoalieRole> | undefined,
+  mlGp: number | null | undefined,
+  strategy: GoalieGpStrategyType = "trend_based",
+): number {
+  if (strategy === "ml_only" && mlGp != null && mlGp > 0) {
+    return Math.max(10, Math.min(FULL_SEASON, Math.round(mlGp)));
+  }
+  if (strategy === "fixed_role") {
+    return projectedGoalieGames(profile, roleMap);
+  }
+  return projectedGoalieGamesTrend(profile, roleMap);
+}
+
+/** Skaters use injury/ML GP; goalies use role/trend baselines. */
 export function projectedGamesFromProfile(
   profile: PlayerProfile,
   goalieRoleMap?: Map<number, GoalieRole>,
   skaterMlGp?: number | null,
+  options?: {
+    skaterGpStrategy?: SkaterGpStrategyType;
+    goalieGpStrategy?: GoalieGpStrategyType;
+    goalieMlGp?: number | null;
+  },
 ): number {
   if (profile.isGoalie) {
-    return projectedGoalieGames(profile, goalieRoleMap);
+    return projectedGoalieGamesWithStrategy(
+      profile,
+      goalieRoleMap,
+      options?.goalieMlGp,
+      options?.goalieGpStrategy ?? "trend_based",
+    );
   }
-  return projectedSkaterGames(profile, skaterMlGp);
+  return projectedSkaterGames(
+    profile,
+    skaterMlGp,
+    options?.skaterGpStrategy ?? "blend_45_55",
+  );
 }
 
 export function goalieRoleLabel(
