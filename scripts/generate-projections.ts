@@ -209,7 +209,10 @@ async function main() {
   const withYahooPositions = raw.map((player) =>
     applyYahooPositionsToPlayer(player, yahooPositions),
   );
-  const ranked = applyVor(withYahooPositions, DEFAULT_LEAGUE);
+  const { players: ranked, categoryWeights } = applyVor(
+    withYahooPositions,
+    DEFAULT_LEAGUE,
+  );
 
   const issues = findProjectionIssues(ranked);
   if (issues.length > 0) {
@@ -255,6 +258,7 @@ async function main() {
         return [pos, replacement?.fantasyValue ?? 0];
       }),
     ),
+    categoryWeights,
     players: ranked,
   };
 

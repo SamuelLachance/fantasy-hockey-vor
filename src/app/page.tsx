@@ -16,7 +16,7 @@ export default function HomePage() {
       />
 
       <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
-        <TopPlayers players={data.players} />
+        <TopPlayers players={data.players} categoryWeights={data.categoryWeights} />
         <RankingsTable players={data.players} />
       </div>
 

@@ -1,5 +1,10 @@
 import { DEFAULT_LEAGUE, replacementRank } from "./league";
 import {
+  categoryWeight,
+  computeCategoryDifficultyWeights,
+  type CategoryDifficultyWeights,
+} from "./stat-difficulty";
+import {
   GOALIE_CATEGORIES,
   SKATER_CATEGORIES,
   type Category,
@@ -82,12 +87,21 @@ export function computeCategoryZScores(
 export function fantasyValueFromZScores(
   zScores: Partial<Record<Category, number>>,
   isGoalie: boolean,
+  difficultyWeights?: CategoryDifficultyWeights,
 ): number {
   const categories = isGoalie ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
   return categories.reduce((sum, cat) => {
     const z = zScores[cat] ?? 0;
-    return sum + (Number.isFinite(z) ? z : 0);
+    const w = difficultyWeights
+      ? categoryWeight(difficultyWeights, cat, isGoalie)
+      : 1;
+    return sum + (Number.isFinite(z) ? z * w : 0);
   }, 0);
+}
+
+export interface VorResult {
+  players: PlayerProjection[];
+  categoryWeights: CategoryDifficultyWeights;
 }
 
 export function computeReplacementLevels(
@@ -140,7 +154,8 @@ export function applyVor(
     "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
   >[],
   league: LeagueSettings = DEFAULT_LEAGUE,
-): PlayerProjection[] {
+): VorResult {
+  const categoryWeights = computeCategoryDifficultyWeights(players, league);
   const zScores = computeCategoryZScores(players);
 
   const withValues = players.map((player) => {
@@ -148,6 +163,7 @@ export function applyVor(
     const fantasyValue = fantasyValueFromZScores(
       categoryZScores,
       player.isGoalie,
+      categoryWeights,
     );
     return { ...player, categoryZScores, fantasyValue, vor: 0 };
   });
@@ -178,13 +194,16 @@ export function applyVor(
 
   const positionCounters: Partial<Record<Position, number>> = {};
 
-  return sorted.map((player, index) => {
-    const posCount = (positionCounters[player.position] ?? 0) + 1;
-    positionCounters[player.position] = posCount;
-    return {
-      ...player,
-      rank: index + 1,
-      positionRank: posCount,
-    };
-  });
+  return {
+    players: sorted.map((player, index) => {
+      const posCount = (positionCounters[player.position] ?? 0) + 1;
+      positionCounters[player.position] = posCount;
+      return {
+        ...player,
+        rank: index + 1,
+        positionRank: posCount,
+      };
+    }),
+    categoryWeights,
+  };
 }

@@ -97,6 +97,8 @@ export interface ProjectionsDataset {
   season: string;
   league: LeagueSettings;
   replacementLevels: Partial<Record<Position, number>>;
+  /** Per-category scarcity weights used in weighted fantasy value / VOR. */
+  categoryWeights?: import("./stat-difficulty").CategoryDifficultyWeights;
   projectionEngine: string;
   positionSource?: "yahoo-fantasy" | "nhl-fallback";
   yahooPositionsFetchedAt?: string;
