@@ -202,9 +202,18 @@ async function main() {
     );
   }
 
-  const raw = profiles.map((p) => buildFromProfile(p, aiCache, mlModels, goalieRoleMap));
   const yahooPositions = loadYahooPositions();
   console.log(yahooPositionsSummary(yahooPositions));
+
+  const profilesWithPositions = profiles.map((profile) => {
+    const mapped = applyYahooPositionsToPlayer(profile, yahooPositions);
+    const { positionSource: _, ...rest } = mapped;
+    return rest;
+  });
+
+  const raw = profilesWithPositions.map((p) =>
+    buildFromProfile(p, aiCache, mlModels, goalieRoleMap),
+  );
 
   const withYahooPositions = raw.map((player) =>
     applyYahooPositionsToPlayer(player, yahooPositions),

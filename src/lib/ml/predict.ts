@@ -9,6 +9,7 @@ import {
   clampSkaterProjection,
 } from "../projection-sanity";
 import { projectedGamesFromProfile, type GoalieRole } from "../projection-gp";
+import { isCenterEligible } from "../yahoo-positions";
 import type { GoalieProjection, SkaterProjection } from "../types";
 import {
   buildGoalieGpInferenceFeatures,
@@ -217,7 +218,7 @@ export function projectSkaterWithMl(
   const rates: Record<string, number> = {};
   const champions: string[] = [];
   for (const target of SKATER_ML_TARGETS) {
-    if (target === "faceoffWins" && profile.position !== "C") {
+    if (target === "faceoffWins" && !isCenterEligible(profile)) {
       rates[target] = 0;
       continue;
     }

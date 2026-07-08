@@ -13,6 +13,7 @@ import {
 } from "./projection-sanity";
 import { rookieSkaterProjection } from "./projections";
 import type { GoalieProjection, Position, SkaterProjection } from "./types";
+import { isCenterEligible } from "./yahoo-positions";
 import {
   GOALIE_BACKUP_GP,
   GOALIE_STARTER_GP,
@@ -125,7 +126,11 @@ function applySkaterRates(
       faceoffWins: Math.round(
         rates.faceoffWins *
           gamesPlayed *
-          (profile.position === "C" ? 1.05 : profile.position === "D" ? 0 : 0.3),
+          (isCenterEligible(profile)
+            ? 1.05
+            : profile.position === "D"
+              ? 0
+              : 0.3),
       ),
     },
     gamesPlayed,

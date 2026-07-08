@@ -33,6 +33,14 @@ export function getYahooPositionsForPlayer(
   return { position, positions, source: "yahoo" };
 }
 
+/** Fantasy faceoff eligibility: any C slot on the roster card, not just listed primary. */
+export function isCenterEligible(player: {
+  position: Position;
+  positions: Position[];
+}): boolean {
+  return player.positions.includes("C") || player.position === "C";
+}
+
 export function applyYahooPositionsToPlayer<
   T extends { id: number; position: Position; positions: Position[] },
 >(player: T, dataset: YahooPositionsDataset | null): T & { positionSource: "yahoo" | "nhl" } {
