@@ -298,16 +298,49 @@ export function projectGoalieFromProfile(
   }
 
   const skillWinMult = goalieSkillWinMultiplier(skill);
-  let winRate = skill.winRate > 0 ? skill.winRate : LEAGUE_GOALIE_RATES.winRate;
+  const ewmaWinRate = weightedPerGameRate(seasons, (s) => finite(s.stats.wins));
+  const ewmaShutoutRate = weightedPerGameRate(seasons, (s) => finite(s.stats.shutouts));
+
+  let winRate =
+    ewmaWinRate > 0
+      ? ewmaWinRate
+      : skill.winRate > 0
+        ? skill.winRate
+        : LEAGUE_GOALIE_RATES.winRate;
   let shutoutRate =
-    skill.shutoutRate > 0 ? skill.shutoutRate : LEAGUE_GOALIE_RATES.shutoutRate;
+    ewmaShutoutRate > 0
+      ? ewmaShutoutRate
+      : skill.shutoutRate > 0
+        ? skill.shutoutRate
+        : LEAGUE_GOALIE_RATES.shutoutRate;
+  if (skill.gsaxPerGame > 0) {
+    shutoutRate *= Math.min(1.2, 1 + skill.gsaxPerGame * 0.08);
+  } else if (skill.gsaxPerGame < 0) {
+    shutoutRate *= Math.max(0.8, 1 + skill.gsaxPerGame * 0.06);
+  }
 
   winRate = Math.min(
     MAX_GOALIE_WIN_RATE,
     winRate * ageMult * teamBoost * skillWinMult,
   );
+  shutoutRate *= ageMult;
 
-  const { saves: projectedSaves, savePct } = projectGoalieSaveStats(skill, gamesPlayed);
+  const { saves: projectedSaves, savePct: rawSavePct } = projectGoalieSaveStats(
+    skill,
+    gamesPlayed,
+  );
+  const ewmaSv = weightedPerGameRate(seasons, (s) =>
+    normalizeSavePct(s.stats.savePct),
+  );
+  const savePct =
+    ewmaSv > 0
+      ? Math.round((ewmaSv * 0.55 + rawSavePct * 0.45) * 10000) / 10000
+      : Math.round(rawSavePct * 10000) / 10000;
+  const ewmaSaves = weightedPerGameRate(seasons, (s) => finite(s.stats.saves));
+  const saves =
+    ewmaSaves > 0
+      ? Math.round(ewmaSaves * gamesPlayed * 0.6 + projectedSaves * 0.4)
+      : projectedSaves;
 
   const projection = clampGoalieProjection(
     {

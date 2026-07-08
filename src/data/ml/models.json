@@ -1,5 +1,5 @@
 {
-  "trainedAt": "2026-07-08T18:42:25.799Z",
+  "trainedAt": "2026-07-08T19:45:34.545Z",
   "featureLags": 3,
   "minSeasonGp": 10,
   "skaterModels": [
@@ -729,9 +729,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "all",
-      "holdoutR2": 0.7385249839664887,
+      "holdoutR2": 0.7379643505351132,
       "productionStrategy": {
         "type": "ml_only"
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.2,
+          "ewma": 0.8,
+          "lag1": 0
+        }
       }
     },
     {
@@ -1420,9 +1428,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "all",
-      "holdoutR2": 0.7675706378812265,
+      "holdoutR2": 0.7627278021378237,
       "productionStrategy": {
         "type": "ml_only"
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.2,
+          "ewma": 0.8,
+          "lag1": 0
+        }
       }
     },
     {
@@ -2071,9 +2087,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "all",
-      "holdoutR2": 0.8161636225124815,
+      "holdoutR2": 0.8149152259860178,
       "productionStrategy": {
         "type": "ml_only"
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.4,
+          "ewma": 0.6,
+          "lag1": 0
+        }
       }
     },
     {
@@ -2638,18 +2662,18 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "D",
-      "holdoutR2": 0.36631609230172235,
+      "holdoutR2": 0.3637678655471397,
       "productionStrategy": {
         "type": "ml_only"
       },
       "lowHistoryStrategy": {
         "type": "ml_contextual_ensemble",
         "blendWeights": {
-          "ml": 1,
-          "ewma": 0,
+          "ml": 0.4,
+          "ewma": 0.6,
           "lag1": 0
         },
-        "mlContextualWeight": 0.5
+        "mlContextualWeight": 0.2
       }
     },
     {
@@ -3214,23 +3238,24 @@
       },
       "ewmaBlendWeight": 0.2,
       "positionGroup": "F",
-      "holdoutR2": 0.4422035487534324,
+      "holdoutR2": 0.38848859347304265,
       "productionStrategy": {
-        "type": "tuned_blend",
-        "blendWeights": {
-          "ml": 0.8,
-          "ewma": 0.2,
-          "lag1": 0
-        }
-      },
-      "lowHistoryStrategy": {
         "type": "ml_contextual_ensemble",
         "blendWeights": {
           "ml": 0.8,
           "ewma": 0.2,
           "lag1": 0
         },
-        "mlContextualWeight": 0.5
+        "mlContextualWeight": 0.4494240115433814
+      },
+      "lowHistoryStrategy": {
+        "type": "ml_contextual_ensemble",
+        "blendWeights": {
+          "ml": 0.4,
+          "ewma": 0.6,
+          "lag1": 0
+        },
+        "mlContextualWeight": 0.2
       }
     },
     {
@@ -3755,9 +3780,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "D",
-      "holdoutR2": 0.6820356722909684,
+      "holdoutR2": 0.6865338711394291,
       "productionStrategy": {
         "type": "ml_only"
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.2,
+          "ewma": 0.6,
+          "lag1": 0.2
+        }
       }
     },
     {
@@ -4282,9 +4315,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "F",
-      "holdoutR2": 0.6969674182617993,
+      "holdoutR2": 0.6933908373124027,
       "productionStrategy": {
         "type": "ml_only"
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.2,
+          "ewma": 0.7,
+          "lag1": 0.1
+        }
       }
     },
     {
@@ -4869,9 +4910,12 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "all",
-      "holdoutR2": 0.7843155173664714,
+      "holdoutR2": 0.7838943543900903,
       "productionStrategy": {
         "type": "ml_only"
+      },
+      "lowHistoryStrategy": {
+        "type": "ewma_only"
       }
     },
     {
@@ -5444,24 +5488,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "D",
-      "holdoutR2": 0.6034165745218804,
+      "holdoutR2": 0.5790642946110505,
       "productionStrategy": {
-        "type": "ml_contextual_ensemble",
-        "blendWeights": {
-          "ml": 1,
-          "ewma": 0,
-          "lag1": 0
-        },
-        "mlContextualWeight": 0.5160615212366583
+        "type": "ml_only"
       },
       "lowHistoryStrategy": {
-        "type": "ml_contextual_ensemble",
+        "type": "tuned_blend",
         "blendWeights": {
-          "ml": 1,
-          "ewma": 0,
+          "ml": 0.2,
+          "ewma": 0.8,
           "lag1": 0
-        },
-        "mlContextualWeight": 0.1
+        }
       }
     },
     {
@@ -6034,9 +6071,22 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "F",
-      "holdoutR2": 0.54608962116994,
+      "holdoutR2": 0.5361867064095587,
       "productionStrategy": {
-        "type": "ml_only"
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.9,
+          "ewma": 0,
+          "lag1": 0.1
+        }
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.2,
+          "ewma": 0.6,
+          "lag1": 0.2
+        }
       }
     },
     {
@@ -6517,12 +6567,20 @@
       },
       "ewmaBlendWeight": 0.3,
       "positionGroup": "all",
-      "holdoutR2": 0.8633247646970569,
+      "holdoutR2": 0.8629556296696363,
       "productionStrategy": {
         "type": "tuned_blend",
         "blendWeights": {
           "ml": 0.7,
           "ewma": 0.3,
+          "lag1": 0
+        }
+      },
+      "lowHistoryStrategy": {
+        "type": "tuned_blend",
+        "blendWeights": {
+          "ml": 0.4,
+          "ewma": 0.6,
           "lag1": 0
         }
       }
@@ -8510,59 +8568,59 @@
     "skater": {
       "goals": {
         "samples": 582,
-        "mae": 0.05166475944542897,
-        "rmse": 0.0680429835926707,
+        "mae": 0.05147175688247702,
+        "rmse": 0.06811589064480265,
         "mape": 0.0059438701000099235,
-        "r2": 0.7385249839664887
+        "r2": 0.7379643505351132
       },
       "assists": {
         "samples": 582,
-        "mae": 0.06971112492348194,
-        "rmse": 0.09133637880345527,
-        "mape": 0.022522504078832568,
-        "r2": 0.7675706378812265
+        "mae": 0.07034394980158894,
+        "rmse": 0.09228300344479935,
+        "mape": 0.022594148313469002,
+        "r2": 0.7627278021378237
       },
       "shots": {
         "samples": 582,
-        "mae": 0.24326223668974176,
-        "rmse": 0.3086323006900036,
-        "mape": 0.1808184480774293,
-        "r2": 0.8161636225124815
+        "mae": 0.24337080198747124,
+        "rmse": 0.3096784581279481,
+        "mape": 0.18005065082771377,
+        "r2": 0.8149152259860178
       },
       "blocks": {
         "samples": 582,
-        "mae": 0.17561771251996466,
-        "rmse": 0.2728444848554047,
-        "mape": 0.12182545986807918,
-        "r2": 0.7559642048412233
+        "mae": 0.1811664853159189,
+        "rmse": 0.278023189209345,
+        "mape": 0.12249126555448399,
+        "r2": 0.7466124830049217
       },
       "hits": {
         "samples": 582,
-        "mae": 0.31126908380106494,
-        "rmse": 0.46604218626911625,
-        "mape": 0.188493171244348,
-        "r2": 0.7549690465672072
+        "mae": 0.31477044700459167,
+        "rmse": 0.4725391028126414,
+        "mape": 0.19151804724286178,
+        "r2": 0.7480896607254807
       },
       "powerplayPoints": {
         "samples": 582,
-        "mae": 0.039664388136959404,
-        "rmse": 0.05961986570053199,
+        "mae": 0.03923492517195663,
+        "rmse": 0.05967804659963577,
         "mape": 0.003360153755580434,
-        "r2": 0.7843155173664714
+        "r2": 0.7838943543900903
       },
       "penaltyMinutes": {
         "samples": 582,
-        "mae": 0.14934431146064406,
-        "rmse": 0.21384139863324358,
-        "mape": 0.08854525400013166,
-        "r2": 0.6244404724484693
+        "mae": 0.1507769420523829,
+        "rmse": 0.22033613401729077,
+        "mape": 0.08716237452339674,
+        "r2": 0.6012812476091737
       },
       "faceoffWins": {
         "samples": 582,
-        "mae": 0.42234553690455096,
-        "rmse": 1.018559021252064,
-        "mape": 0.15101218603661232,
-        "r2": 0.8633247646970569
+        "mae": 0.42302002362005925,
+        "rmse": 1.019933565390504,
+        "mape": 0.15117203721538172,
+        "r2": 0.8629556296696363
       }
     },
     "goalie": {

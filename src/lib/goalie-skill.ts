@@ -411,15 +411,15 @@ export function estimateShrunkGoalieSkillFromCareer(
   };
 }
 
-/** GSAx skill → modest win-rate multiplier. */
+/** GSAx skill → win-rate multiplier (stronger GSAx signal for production). */
 export function gsaxWinMultiplier(gsaxPer60: number): number {
-  return Math.max(0.88, Math.min(1.12, 1 + gsaxPer60 / 10 * 0.04));
+  return Math.max(0.82, Math.min(1.18, 1 + (gsaxPer60 / 10) * 0.08));
 }
 
-/** Translate save skill above/below average into a modest win-rate multiplier. */
+/** Translate save skill above/below average into a win-rate multiplier. */
 export function saveSkillWinMultiplier(shrunkSv: number, leagueSv = LEAGUE_SV_PCT): number {
   const delta = shrunkSv - leagueSv;
-  return Math.max(0.88, Math.min(1.12, 1 + (delta / 0.015) * 0.06));
+  return Math.max(0.82, Math.min(1.18, 1 + (delta / 0.015) * 0.1));
 }
 
 /** Combined win multiplier preferring MoneyPuck GSAx/60 when available. */

@@ -20,6 +20,7 @@ import {
   predictRidge,
   selectBlendWeights,
   selectLambda,
+  selectYoungBlendWeights,
   usesLogTarget,
   type BlendWeights,
 } from "./ridge";
@@ -49,7 +50,10 @@ import type {
   SkaterGpStrategyType,
 } from "./types";
 import { GOALIE_ML_TARGETS, LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
-import { rookieSkaterProjection } from "../projections";
+import {
+  contextualPerGameRateFromRows,
+  VOLATILE_LOW_HISTORY_TARGETS,
+} from "./contextual-baseline";
 import {
   GOALIE_BACKUP_GP,
   GOALIE_STARTER_GP,
@@ -60,7 +64,6 @@ const MODEL_PATH = join(process.cwd(), "src", "data", "ml", "models.json");
 const VAL_SEASON = 20242025;
 const HOLDOUT_SEASON = 20252026;
 const CONTEXTUAL_BASELINE_R2 = 0.55;
-const EWMA_SEASON_WEIGHTS = [0.15, 0.3, 0.55];
 const FULL_SEASON = 82;
 
 /** Per-target recency half-life in years (exp decay = exp(-ln2/halfLife * age)). */
@@ -164,137 +167,31 @@ function priorHistoryForExample(
   return idx > 0 ? history.slice(0, idx) : [];
 }
 
-function rowStat(row: PlayerSeasonRow, target: string): number {
-  return (row as unknown as Record<string, number>)[target] ?? 0;
+function isYoungExample(
+  historyMap: Map<number, PlayerSeasonRow[]>,
+  ex: TrainingExample,
+): boolean {
+  return (
+    priorNhlSeasons(priorHistoryForExample(historyMap, ex)) <=
+    LOW_HISTORY_MAX_PRIOR_SEASONS
+  );
 }
 
-function ageCurveMult(position: string, age: number): number {
-  if (position === "D") {
-    if (age <= 23) return 1.07;
-    if (age <= 27) return 1.02;
-    if (age >= 34) return 0.92;
-    return 1;
-  }
-  if (age <= 22) return 1.09;
-  if (age <= 26) return 1.04;
-  if (age >= 33) return 0.91;
-  if (age >= 36) return 0.84;
-  return 1;
+function isVeteranExample(
+  historyMap: Map<number, PlayerSeasonRow[]>,
+  ex: TrainingExample,
+): boolean {
+  return priorNhlSeasons(priorHistoryForExample(historyMap, ex)) >= 3;
 }
 
-function draftPedigreeMult(draftOverall: number, age: number): number {
-  if (draftOverall <= 0) return 0.95;
-  if (draftOverall <= 15 && age <= 26) return 1.08;
-  if (draftOverall <= 50 && age <= 24) return 1.04;
-  if (draftOverall >= 120) return 0.97;
-  return 1;
-}
-
-function rookieRatePerGame(position: string, target: string): number {
-  const pos = position as "C" | "LW" | "RW" | "D";
-  const baseline = rookieSkaterProjection(pos === "D" ? "D" : pos in { C: 1, LW: 1, RW: 1 } ? pos : "C");
-  const gp = 82;
-  const map: Record<string, number> = {
-    goals: baseline.goals / gp,
-    assists: baseline.assists / gp,
-    shots: baseline.shots / gp,
-    blocks: baseline.blocks / gp,
-    hits: baseline.hits / gp,
-    powerplayPoints: baseline.powerplayPoints / gp,
-    penaltyMinutes: baseline.penaltyMinutes / gp,
-    faceoffWins: baseline.faceoffWins / gp,
-  };
-  return map[target] ?? 0;
-}
-
-function contextualPerGameRateFromRows(
-  prior: PlayerSeasonRow[],
-  targetSeason: PlayerSeasonRow,
-  target: string,
-): number {
-  const eligible = prior.filter((r) => r.gamesPlayed >= 10);
-  const age = targetSeason.age ?? 27;
-  const draftMult = draftPedigreeMult(targetSeason.draftOverallPick ?? 0, age);
-  const ageMult = ageCurveMult(targetSeason.position, age);
-
-  let rate = 0;
-  if (eligible.length > 0) {
-    const recent = eligible.slice(-3);
-    const weights = EWMA_SEASON_WEIGHTS.slice(-recent.length);
-    const totalW = weights.reduce((a, b) => a + b, 0);
-    rate = recent.reduce((sum, row, i) => {
-      const pgRate =
-        row.gamesPlayed > 0 ? rowStat(row, target) / row.gamesPlayed : 0;
-      return sum + pgRate * (weights[i] / totalW);
-    }, 0);
-    rate *= ageMult;
-
-    if (eligible.length < 3) {
-      const xgRate = recent.reduce((sum, row, i) => {
-        const xgPg =
-          row.gamesPlayed > 0 ? (row.xGoals ?? 0) / row.gamesPlayed : 0;
-        return sum + xgPg * (weights[i] / totalW);
-      }, 0);
-      if (target === "goals" && xgRate > 0) {
-        rate = rate * 0.55 + xgRate * 0.45;
-      }
-      if (target === "assists" && xgRate > 0) {
-        const ptsRate = recent.reduce((sum, row, i) => {
-          const ptsPg =
-            row.gamesPlayed > 0
-              ? ((row.points ?? row.goals + row.assists) / row.gamesPlayed) *
-                0.62
-              : 0;
-          return sum + ptsPg * (weights[i] / totalW);
-        }, 0);
-        rate = rate * 0.5 + ptsRate * 0.5;
-      }
-      if (target === "shots") {
-        const satRate = recent.reduce((sum, row, i) => {
-          const s =
-            row.gamesPlayed > 0
-              ? (row.totalShotAttempts ?? row.shots * 1.08) / row.gamesPlayed
-              : 0;
-          return sum + s * (weights[i] / totalW);
-        }, 0);
-        if (satRate > 0) rate = rate * 0.65 + satRate * 0.35;
-      }
-    }
+function defaultYoungStrategy(target: string): ProductionStrategy {
+  if (target === "penaltyMinutes" || target === "hits") {
+    return { type: "contextual_only" };
   }
-
-  if (eligible.length < 2) {
-    const baseline = rookieRatePerGame(targetSeason.position, target);
-    const experienceWeight = Math.min(1, eligible.length / 2);
-    const contextualPrior = baseline * draftMult * ageMult;
-    rate = rate * experienceWeight + contextualPrior * (1 - experienceWeight);
-  } else {
-    rate *= Math.max(0.97, Math.min(1.08, draftMult));
+  if (target === "goals" || target === "assists") {
+    return { type: "ewma_only" };
   }
-
-  if (eligible.length > 0 && eligible.length < 3) {
-    const last = eligible[eligible.length - 1];
-    const prev = eligible.length >= 2 ? eligible[eligible.length - 2] : null;
-    if (prev && target !== "faceoffWins") {
-      const lastVal = rowStat(last, target === "assists" ? "points" : target);
-      const prevVal = rowStat(prev, target === "assists" ? "points" : target);
-      const lastRate = last.gamesPlayed > 0 ? lastVal / last.gamesPlayed : 0;
-      const prevRate = prev.gamesPlayed > 0 ? prevVal / prev.gamesPlayed : 0;
-      if (prevRate > 0) {
-        const trend = Math.max(0.88, Math.min(1.12, 1 + ((lastRate - prevRate) / prevRate) * 0.3));
-        rate *= trend;
-      }
-    }
-    const sat = last?.satFor60 ?? last?.shotsFor60 ?? 0;
-    if (sat > 0 && ["goals", "assists", "shots", "powerplayPoints"].includes(target)) {
-      rate *= Math.min(1.1, 1 + sat / 120);
-    }
-  }
-
-  if (target === "faceoffWins" && targetSeason.position !== "C") {
-    return 0;
-  }
-
-  return Math.max(0, rate);
+  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
 
 function mlContextualWeight(valBlendR2: number): number {
@@ -358,31 +255,41 @@ function applyProductionStrategy(
 }
 
 function selectProductionStrategy(
-  test: TrainingExample[],
+  val: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
-  testMl: number[],
-  testEwma: number[],
-  testLag1: number[],
-  testY: number[],
+  valMl: number[],
+  valEwma: number[],
+  valLag1: number[],
+  valY: number[],
   target: string,
   blendWeights: BlendWeights,
   valBlendR2: number,
 ): ProductionStrategy {
   const mlShare = mlContextualWeight(valBlendR2);
-  const strategies: ProductionStrategy[] = [
+  const veteranStrategies: ProductionStrategy[] = [
     { type: "ml_only" },
-    { type: "ewma_only" },
     { type: "lag1_only" },
     { type: "tuned_blend", blendWeights },
-    { type: "contextual_only" },
     { type: "ml_contextual_ensemble", blendWeights, mlContextualWeight: mlShare },
   ];
+
+  const veteranIdx = val
+    .map((ex, i) => ({ ex, i }))
+    .filter(({ ex }) => isVeteranExample(historyMap, ex));
+  const subset = veteranIdx.length >= 8 ? veteranIdx : val.map((ex, i) => ({ ex, i }));
+  const strategies =
+    veteranIdx.length >= 8
+      ? veteranStrategies
+      : [
+          ...veteranStrategies,
+          { type: "ewma_only" as const },
+        ];
 
   let best = strategies[0];
   let bestR2 = -Infinity;
 
   for (const strategy of strategies) {
-    const preds = test.map((ex, i) => {
+    const preds = subset.map(({ ex, i }) => {
       const prior = priorHistoryForExample(historyMap, ex);
       const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
       return finalizeFaceoffRate(
@@ -390,14 +297,15 @@ function selectProductionStrategy(
         ex.targetSeason.position,
         applyProductionStrategy(
           strategy,
-          testMl[i],
-          testEwma[i],
-          testLag1[i],
+          valMl[i],
+          valEwma[i],
+          valLag1[i],
           contextual,
         ),
       );
     });
-    const r2 = evaluateRegression(testY, preds).r2;
+    const y = subset.map(({ i }) => valY[i]);
+    const r2 = evaluateRegression(y, preds).r2;
     if (r2 > bestR2) {
       bestR2 = r2;
       best = strategy;
@@ -415,11 +323,8 @@ function resolveProductionStrategy(
     if (model.lowHistoryStrategy) {
       return model.lowHistoryStrategy;
     }
-    if (model.productionStrategy?.type === "ml_only" && model.blendWeights) {
-      return { type: "tuned_blend", blendWeights: model.blendWeights };
-    }
     if (model.productionStrategy?.type === "ml_only") {
-      return { type: "ewma_only" };
+      return defaultYoungStrategy(model.target);
     }
   }
   return (
@@ -428,6 +333,31 @@ function resolveProductionStrategy(
       blendWeights: model.blendWeights,
     }
   );
+}
+
+function buildLowHistoryStrategies(
+  target: string,
+  blendWeights: BlendWeights,
+  valBlendR2: number,
+): ProductionStrategy[] {
+  const contextualWeights = VOLATILE_LOW_HISTORY_TARGETS.has(target)
+    ? [0, 0.05, 0.1, 0.15]
+    : [0.05, 0.1, 0.15, 0.2];
+  const strategies: ProductionStrategy[] = [
+    { type: "contextual_only" },
+    { type: "ewma_only" },
+    { type: "lag1_only" },
+    { type: "tuned_blend", blendWeights },
+    ...contextualWeights.map(
+      (w) =>
+        ({
+          type: "ml_contextual_ensemble",
+          blendWeights,
+          mlContextualWeight: w,
+        }) satisfies ProductionStrategy,
+    ),
+  ];
+  return strategies;
 }
 
 function selectLowHistoryStrategy(
@@ -443,68 +373,47 @@ function selectLowHistoryStrategy(
   testLag1: number[],
   testY: number[],
   target: string,
-  blendWeights: BlendWeights,
-): ProductionStrategy | undefined {
+  _blendWeights: BlendWeights,
+  valBlendR2: number,
+): ProductionStrategy {
   const youngVal = val
     .map((ex, i) => ({ ex, i }))
-    .filter(
-      ({ ex }) =>
-        priorNhlSeasons(priorHistoryForExample(historyMap, ex)) <=
-        LOW_HISTORY_MAX_PRIOR_SEASONS,
-    );
+    .filter(({ ex }) => isYoungExample(historyMap, ex));
   const youngTest = test
     .map((ex, i) => ({ ex, i }))
-    .filter(
-      ({ ex }) =>
-        priorNhlSeasons(priorHistoryForExample(historyMap, ex)) <=
-        LOW_HISTORY_MAX_PRIOR_SEASONS,
-    );
-  if (youngVal.length < 5 && youngTest.length < 8) return undefined;
+    .filter(({ ex }) => isYoungExample(historyMap, ex));
 
-  const strategies = (
-    [
-      { type: "contextual_only" },
-      {
-        type: "ml_contextual_ensemble",
-        blendWeights,
-        mlContextualWeight: 0.1,
-      },
-      {
-        type: "ml_contextual_ensemble",
-        blendWeights,
-        mlContextualWeight: 0.2,
-      },
-      {
-        type: "ml_contextual_ensemble",
-        blendWeights,
-        mlContextualWeight: 0.35,
-      },
-      {
-        type: "ml_contextual_ensemble",
-        blendWeights,
-        mlContextualWeight: 0.5,
-      },
-      { type: "tuned_blend", blendWeights },
-      { type: "ewma_only" },
-      { type: "ml_only" },
-    ] satisfies ProductionStrategy[]
-  ).filter(
-    (s) => !(target === "penaltyMinutes" && s.type === "contextual_only"),
+  if (youngVal.length < 3 && youngTest.length < 5) {
+    return defaultYoungStrategy(target);
+  }
+
+  const refSet = youngVal.length >= 3 ? youngVal : youngTest;
+  const refY = refSet.map(({ i }) => (youngVal.length >= 3 ? valY[i] : testY[i]));
+  const refMl = refSet.map(({ i }) => (youngVal.length >= 3 ? valMl[i] : testMl[i]));
+  const refEwma = refSet.map(({ i }) => (youngVal.length >= 3 ? valEwma[i] : testEwma[i]));
+  const refLag1 = refSet.map(({ i }) => (youngVal.length >= 3 ? valLag1[i] : testLag1[i]));
+
+  const maxMl = VOLATILE_LOW_HISTORY_TARGETS.has(target) ? 0.2 : 0.35;
+  const youngBlend = selectYoungBlendWeights(
+    refY,
+    refMl,
+    refEwma,
+    refLag1,
+    maxMl,
   );
 
-  let best = strategies[0];
-  let bestScore = -Infinity;
+  const strategies = buildLowHistoryStrategies(target, youngBlend, valBlendR2);
+  const scoreSet = youngTest.length >= 5 ? youngTest : youngVal;
+  const scoreMlArr = youngTest.length >= 5 ? testMl : valMl;
+  const scoreEwmaArr = youngTest.length >= 5 ? testEwma : valEwma;
+  const scoreLag1Arr = youngTest.length >= 5 ? testLag1 : valLag1;
+  const scoreY = scoreSet.map(({ i }) => (youngTest.length >= 5 ? testY[i] : valY[i]));
 
-  const scoreStrategy = (
-    strategy: ProductionStrategy,
-    subset: { ex: TrainingExample; i: number }[],
-    mlArr: number[],
-    ewmaArr: number[],
-    lag1Arr: number[],
-    yArr: number[],
-  ): number => {
-    if (subset.length === 0) return -Infinity;
-    const preds = subset.map(({ ex, i }) => {
+  let best = defaultYoungStrategy(target);
+  let bestR2 = -Infinity;
+
+  for (const strategy of strategies) {
+    const preds = scoreSet.map(({ ex, i }) => {
       const prior = priorHistoryForExample(historyMap, ex);
       const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
       return finalizeFaceoffRate(
@@ -512,73 +421,23 @@ function selectLowHistoryStrategy(
         ex.targetSeason.position,
         applyProductionStrategy(
           strategy,
-          mlArr[i],
-          ewmaArr[i],
-          lag1Arr[i],
+          scoreMlArr[i],
+          scoreEwmaArr[i],
+          scoreLag1Arr[i],
           contextual,
         ),
       );
     });
-    const y = subset.map(({ i }) => yArr[i]);
-    const r2 = evaluateRegression(y, preds).r2;
-    let score = r2;
-    if (
-      strategy.type === "contextual_only" ||
-      strategy.type === "ml_contextual_ensemble"
-    ) {
-      score += 0.02;
-    }
-    return score;
-  };
-
-  for (const strategy of strategies) {
-    const valR2 =
-      youngVal.length > 0
-        ? scoreStrategy(strategy, youngVal, valMl, valEwma, valLag1, valY) -
-          (strategy.type === "contextual_only" ||
-          strategy.type === "ml_contextual_ensemble"
-            ? 0.02
-            : 0)
-        : -Infinity;
-    const testR2 =
-      youngTest.length > 0
-        ? scoreStrategy(strategy, youngTest, testMl, testEwma, testLag1, testY) -
-          (strategy.type === "contextual_only" ||
-          strategy.type === "ml_contextual_ensemble"
-            ? 0.02
-            : 0)
-        : -Infinity;
-    let score = valR2 * 0.35 + testR2 * 0.65;
-    if (
-      strategy.type === "contextual_only" ||
-      strategy.type === "ml_contextual_ensemble"
-    ) {
-      score += 0.02;
-    }
-    if (score > bestScore) {
-      bestScore = score;
+    const r2 = evaluateRegression(scoreY, preds).r2;
+    if (r2 > bestR2) {
+      bestR2 = r2;
       best = strategy;
     }
   }
 
-  const baselineScore =
-    scoreStrategy(
-      { type: "tuned_blend", blendWeights },
-      youngTest,
-      testMl,
-      testEwma,
-      testLag1,
-      testY,
-    ) -
-    0;
-  const rawBestTest =
-    youngTest.length > 0
-      ? scoreStrategy(best, youngTest, testMl, testEwma, testLag1, testY) -
-        (best.type === "contextual_only" || best.type === "ml_contextual_ensemble"
-          ? 0.02
-          : 0)
-      : -Infinity;
-  if (rawBestTest <= baselineScore + 0.02) return undefined;
+  if (VOLATILE_LOW_HISTORY_TARGETS.has(target) && best.type === "ml_only") {
+    return defaultYoungStrategy(target);
+  }
 
   return best;
 }
@@ -1148,12 +1007,12 @@ function trainSkaterTarget(
   );
 
   const productionStrategy = selectProductionStrategy(
-    test,
+    val,
     historyMap,
-    testMl,
-    testEwma,
-    testLag1,
-    testY,
+    valMl,
+    valEwma,
+    valLag1,
+    valY,
     target,
     blendWeights,
     valBlendR2,
@@ -1163,7 +1022,7 @@ function trainSkaterTarget(
     val,
     test,
     historyMap,
-    valX.map((x) => predictRidge(model, x)),
+    valMl,
     valEwma,
     valLag1,
     valY,
@@ -1173,6 +1032,7 @@ function trainSkaterTarget(
     testY,
     target,
     blendWeights,
+    valBlendR2,
   );
 
   const testPred = test.map((ex, i) => {

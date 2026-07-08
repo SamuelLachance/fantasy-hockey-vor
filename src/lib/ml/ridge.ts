@@ -240,6 +240,35 @@ export function selectBlendWeights(
   return best;
 }
 
+/** Tune blend on low-history validation rows with a capped ML share. */
+export function selectYoungBlendWeights(
+  valY: number[],
+  mlPreds: number[],
+  ewmaPreds: number[],
+  lag1Preds: number[],
+  maxMl = 0.35,
+): BlendWeights {
+  if (valY.length === 0) return { ml: 0.1, ewma: 0.65, lag1: 0.25 };
+
+  const mlCap = Math.max(0, Math.min(10, Math.round(maxMl * 10)));
+  let best: BlendWeights = { ml: 0, ewma: 0.7, lag1: 0.3 };
+  let bestR2 = -Infinity;
+
+  for (let wm = 0; wm <= mlCap; wm++) {
+    for (let we = 0; we <= 10 - wm; we++) {
+      const wl = 10 - wm - we;
+      const weights: BlendWeights = { ml: wm / 10, ewma: we / 10, lag1: wl / 10 };
+      const preds = applyBlendWeights(mlPreds, ewmaPreds, lag1Preds, weights);
+      const r2 = evaluateRegression(valY, preds).r2;
+      if (r2 > bestR2) {
+        bestR2 = r2;
+        best = weights;
+      }
+    }
+  }
+  return best;
+}
+
 /** @deprecated use selectBlendWeights */
 export function selectEwmaBlendWeight(
   valY: number[],

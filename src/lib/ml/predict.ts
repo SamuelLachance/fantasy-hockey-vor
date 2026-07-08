@@ -88,6 +88,16 @@ function contextualPerGameRates(
   };
 }
 
+function defaultYoungStrategy(target: string): ProductionStrategy {
+  if (target === "penaltyMinutes" || target === "hits") {
+    return { type: "contextual_only" };
+  }
+  if (target === "goals" || target === "assists") {
+    return { type: "ewma_only" };
+  }
+  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
+}
+
 function resolveProductionStrategy(
   model: RidgeModel,
   prior: PlayerSeasonRow[],
@@ -96,11 +106,8 @@ function resolveProductionStrategy(
     if (model.lowHistoryStrategy) {
       return model.lowHistoryStrategy;
     }
-    if (model.productionStrategy?.type === "ml_only" && model.blendWeights) {
-      return { type: "tuned_blend", blendWeights: model.blendWeights };
-    }
     if (model.productionStrategy?.type === "ml_only") {
-      return { type: "ewma_only" };
+      return defaultYoungStrategy(model.target);
     }
   }
   return (

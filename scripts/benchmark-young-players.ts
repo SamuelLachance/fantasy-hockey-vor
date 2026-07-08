@@ -8,11 +8,12 @@ import {
   buildSkaterTrainingExamplesForTarget,
   extractEwmaFeature,
   extractLag1Feature,
+  priorNhlSeasons,
   skaterTargetValue,
   type TrainingExample,
 } from "../src/lib/ml/features";
+import { contextualPerGameRateFromRows } from "../src/lib/ml/contextual-baseline";
 import { applyBlendWeights, evaluateRegression, predictRidge } from "../src/lib/ml/ridge";
-import { ML_MIN_SEASON_GP } from "../src/lib/nhl-api";
 import type {
   MlDataset,
   PlayerSeasonRow,
@@ -24,7 +25,6 @@ import { loadMlModels } from "../src/lib/ml/train";
 
 const HOLDOUT_SEASON = 20252026;
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
-const EWMA_SEASON_WEIGHTS = [0.15, 0.3, 0.55];
 
 function buildPlayerHistoryMap(rows: PlayerSeasonRow[]): Map<number, PlayerSeasonRow[]> {
   const byPlayer = new Map<number, PlayerSeasonRow[]>();
@@ -48,45 +48,14 @@ function priorHistoryForExample(
   return idx > 0 ? history.slice(0, idx) : [];
 }
 
-function priorNhlSeasons(prior: PlayerSeasonRow[]): number {
-  return prior.filter((r) => r.gamesPlayed >= ML_MIN_SEASON_GP).length;
-}
-
-function rowStat(row: PlayerSeasonRow, target: string): number {
-  return (row as unknown as Record<string, number>)[target] ?? 0;
-}
-
-function ageCurveMult(position: string, age: number): number {
-  if (position === "D") {
-    if (age <= 23) return 1.07;
-    if (age <= 27) return 1.02;
-    if (age >= 34) return 0.92;
-    return 1;
+function defaultYoungStrategy(target: string): ProductionStrategy {
+  if (target === "penaltyMinutes" || target === "hits") {
+    return { type: "contextual_only" };
   }
-  if (age <= 22) return 1.09;
-  if (age <= 26) return 1.04;
-  if (age >= 33) return 0.91;
-  if (age >= 36) return 0.84;
-  return 1;
-}
-
-function contextualPerGameRateFromRows(
-  prior: PlayerSeasonRow[],
-  targetSeason: PlayerSeasonRow,
-  target: string,
-): number {
-  const eligible = prior.filter((r) => r.gamesPlayed >= 10);
-  if (eligible.length === 0) return 0;
-  const recent = eligible.slice(-3);
-  const weights = EWMA_SEASON_WEIGHTS.slice(-recent.length);
-  const totalW = weights.reduce((a, b) => a + b, 0);
-  let rate = recent.reduce((sum, row, i) => {
-    const pgRate = row.gamesPlayed > 0 ? rowStat(row, target) / row.gamesPlayed : 0;
-    return sum + pgRate * (weights[i] / totalW);
-  }, 0);
-  rate *= ageCurveMult(targetSeason.position, targetSeason.age ?? 27);
-  if (target === "faceoffWins" && targetSeason.position !== "C") return 0;
-  return Math.max(0, rate);
+  if (target === "goals" || target === "assists") {
+    return { type: "ewma_only" };
+  }
+  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
 
 function applyProductionStrategy(
@@ -126,11 +95,8 @@ function resolveStrategy(model: RidgeModel, prior: PlayerSeasonRow[]): Productio
     if (model.lowHistoryStrategy) {
       return model.lowHistoryStrategy;
     }
-    if (model.productionStrategy?.type === "ml_only" && model.blendWeights) {
-      return { type: "tuned_blend", blendWeights: model.blendWeights };
-    }
     if (model.productionStrategy?.type === "ml_only") {
-      return { type: "ewma_only" };
+      return defaultYoungStrategy(model.target);
     }
   }
   return (
