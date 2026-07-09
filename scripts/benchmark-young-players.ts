@@ -12,7 +12,7 @@ import {
   skaterTargetValue,
   type TrainingExample,
 } from "../src/lib/ml/features";
-import { contextualPerGameRateFromRows } from "../src/lib/ml/contextual-baseline";
+import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "../src/lib/ml/contextual-baseline";
 import { applyBlendWeights, evaluateRegression, predictRidge } from "../src/lib/ml/ridge";
 import type {
   MlDataset,
@@ -52,8 +52,11 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
   if (target === "penaltyMinutes" || target === "hits") {
     return { type: "contextual_only" };
   }
-  if (target === "goals" || target === "assists") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
+  if (target === "goals") {
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
+  }
+  if (target === "assists") {
+    return { type: "ewma_only" };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
@@ -120,6 +123,7 @@ function predictWithModel(
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
   const strategy = resolveStrategy(model, prior);
   let rate = applyProductionStrategy(strategy, ml, ewma, lag1, contextual);
+  rate = anchorYoungScoringRate(target, priorNhlSeasons(prior), rate, contextual);
   if (target === "faceoffWins" && ex.targetSeason.position !== "C") rate = 0;
   return rate;
 }

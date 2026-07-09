@@ -28,7 +28,7 @@ import { applyBlendWeights, predictRidge } from "./ridge";
 import type { MlModelBundle, PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
 import { LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
-import { contextualPerGameRateFromRows } from "./contextual-baseline";
+import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "./contextual-baseline";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 const CONTEXTUAL_BASELINE_R2 = 0.55;
@@ -107,8 +107,11 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
   if (target === "penaltyMinutes" || target === "hits") {
     return { type: "contextual_only" };
   }
-  if (target === "goals" || target === "assists") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
+  if (target === "goals") {
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
+  }
+  if (target === "assists") {
+    return { type: "ewma_only" };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
@@ -194,6 +197,7 @@ function predictRateForTarget(
   const ctxRate = contextualRates?.[target] ?? ewmaRate;
 
   const strategy = resolveProductionStrategy(model, history);
+  const priorSeasons = priorNhlSeasons(history);
 
   if (strategy.type === "ml_contextual_ensemble" && contextualRates) {
     const mlShare =
@@ -206,14 +210,16 @@ function predictRateForTarget(
     } else {
       mlRate = ewmaRate > 0 ? ewmaRate * 0.85 + ml * 0.15 : ml;
     }
-    return mlRate * mlShare + ctxRate * (1 - mlShare);
+    const rate = mlRate * mlShare + ctxRate * (1 - mlShare);
+    return anchorYoungScoringRate(target, priorSeasons, rate, ctxRate);
   }
 
   if (strategy.type === "contextual_only" && contextualRates) {
     return ctxRate;
   }
 
-  return applyProductionStrategy(strategy, ml, ewmaRate, lag1, ctxRate);
+  const rate = applyProductionStrategy(strategy, ml, ewmaRate, lag1, ctxRate);
+  return anchorYoungScoringRate(target, priorSeasons, rate, ctxRate);
 }
 
 function predictSkaterGp(

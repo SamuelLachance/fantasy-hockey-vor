@@ -51,6 +51,7 @@ import type {
 } from "./types";
 import { GOALIE_ML_TARGETS, LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
 import {
+  anchorYoungScoringRate,
   contextualPerGameRateFromRows,
   VOLATILE_LOW_HISTORY_TARGETS,
 } from "./contextual-baseline";
@@ -193,8 +194,11 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
   if (target === "penaltyMinutes" || target === "hits") {
     return { type: "contextual_only" };
   }
-  if (target === "goals" || target === "assists") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
+  if (target === "goals") {
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
+  }
+  if (target === "assists") {
+    return { type: "ewma_only" };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
@@ -343,27 +347,37 @@ function resolveProductionStrategy(
 function buildLowHistoryStrategies(
   target: string,
   blendWeights: BlendWeights,
-  valBlendR2: number,
+  _valBlendR2: number,
 ): ProductionStrategy[] {
-  const isScoring = target === "goals" || target === "assists";
+  const isGoals = target === "goals";
   const contextualWeights = VOLATILE_LOW_HISTORY_TARGETS.has(target)
-    ? isScoring
-      ? [0, 0.03, 0.05, 0.08, 0.12]
+    ? isGoals
+      ? [0, 0.03, 0.05, 0.08, 0.12, 0.15]
       : [0, 0.05, 0.1, 0.15]
     : [0.05, 0.1, 0.15, 0.2];
+  const contextualEnsemble = contextualWeights.map(
+    (w) =>
+      ({
+        type: "ml_contextual_ensemble",
+        blendWeights,
+        mlContextualWeight: w,
+      }) satisfies ProductionStrategy,
+  );
+  if (isGoals) {
+    return [
+      { type: "contextual_only" },
+      { type: "ewma_only" },
+      { type: "lag1_only" },
+      { type: "tuned_blend", blendWeights },
+      ...contextualEnsemble,
+    ];
+  }
   const strategies: ProductionStrategy[] = [
     { type: "contextual_only" },
     { type: "ewma_only" },
     { type: "lag1_only" },
     { type: "tuned_blend", blendWeights },
-    ...contextualWeights.map(
-      (w) =>
-        ({
-          type: "ml_contextual_ensemble",
-          blendWeights,
-          mlContextualWeight: w,
-        }) satisfies ProductionStrategy,
-    ),
+    ...contextualEnsemble,
   ];
   return strategies;
 }
@@ -427,11 +441,16 @@ function selectLowHistoryStrategy(
       return finalizeFaceoffRate(
         target,
         ex.targetSeason.position,
-        applyProductionStrategy(
-          strategy,
-          scoreMlArr[i],
-          scoreEwmaArr[i],
-          scoreLag1Arr[i],
+        anchorYoungScoringRate(
+          target,
+          priorNhlSeasons(prior),
+          applyProductionStrategy(
+            strategy,
+            scoreMlArr[i],
+            scoreEwmaArr[i],
+            scoreLag1Arr[i],
+            contextual,
+          ),
           contextual,
         ),
       );
@@ -462,7 +481,13 @@ function predictWithStrategy(
   const prior = priorHistoryForExample(historyMap, ex);
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
   const strategy = resolveProductionStrategy(model, prior);
-  return applyProductionStrategy(strategy, ml, ewma, lag1, contextual);
+  const rate = applyProductionStrategy(strategy, ml, ewma, lag1, contextual);
+  return anchorYoungScoringRate(
+    target,
+    priorNhlSeasons(prior),
+    rate,
+    contextual,
+  );
 }
 
 function injuryGpFromHistory(prior: PlayerSeasonRow[]): number {

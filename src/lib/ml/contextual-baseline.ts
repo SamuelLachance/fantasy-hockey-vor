@@ -290,23 +290,10 @@ export function contextualPerGameRateFromRows(
     if (target === "assists") {
       const ppPts60 = last?.ppPointsPer60 ?? 0;
       const ppToi = last?.ppToiPerGame ?? targetSeason.ppToiPerGame ?? 0;
-      if (ppPts60 > 0 && ppToi > 0) {
-        const ppAssistRate = (ppPts60 * ppToi) / 60 * 0.58;
-        rate = rate * 0.6 + ppAssistRate * 0.4;
+      if (ppPts60 > 0 && ppToi > 0 && eligible.length < 2) {
+        const ppAssistRate = ((ppPts60 * ppToi) / 60) * 0.55;
+        rate = rate * 0.75 + ppAssistRate * 0.25;
       }
-      const evPts =
-        last && last.gamesPlayed > 0
-          ? (last.evPoints ?? last.points ?? 0) / last.gamesPlayed
-          : 0;
-      if (evPts > 0 && eligible.length < 2) {
-        const evAssistRate = evPts * 0.58;
-        rate = rate * 0.5 + evAssistRate * 0.5;
-      }
-      const teamGf = targetSeason.teamGoalsForPerGame ?? LEAGUE_TEAM_GF_PG;
-      rate *= Math.max(
-        0.88,
-        Math.min(1.15, 1 + ((teamGf - LEAGUE_TEAM_GF_PG) / LEAGUE_TEAM_GF_PG) * 0.28),
-      );
     }
   }
 
@@ -325,4 +312,15 @@ export function contextualPerGameRateFromRows(
   }
 
   return Math.max(0, rate);
+}
+
+/** Blend cohort/usage contextual anchor into young scoring rates at inference. */
+export function anchorYoungScoringRate(
+  target: string,
+  priorSeasons: number,
+  rate: number,
+  contextual: number,
+): number {
+  if (priorSeasons > 2 || target !== "goals") return rate;
+  return rate * 0.92 + contextual * 0.08;
 }

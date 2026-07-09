@@ -17,7 +17,7 @@ import {
 import {
   projectGoalieRatesFromRows,
 } from "../src/lib/ml/goalie-production-eval";
-import { contextualPerGameRateFromRows } from "../src/lib/ml/contextual-baseline";
+import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "../src/lib/ml/contextual-baseline";
 import { predictTwoStepGpFromExample } from "../src/lib/ml/gp-two-step";
 import { applyBlendWeights, evaluateRegression, predictRidge } from "../src/lib/ml/ridge";
 import type {
@@ -84,8 +84,11 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
   if (target === "penaltyMinutes" || target === "hits") {
     return { type: "contextual_only" };
   }
-  if (target === "goals" || target === "assists") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
+  if (target === "goals") {
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
+  }
+  if (target === "assists") {
+    return { type: "ewma_only" };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
@@ -150,6 +153,7 @@ function predictSkaterRate(
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
   const strategy = resolveStrategy(model, prior);
   let rate = applyStrategy(strategy, ml, ewma, lag1, contextual);
+  rate = anchorYoungScoringRate(target, priorNhlSeasons(prior), rate, contextual);
   if (target === "faceoffWins" && ex.targetSeason.position !== "C") rate = 0;
   return rate;
 }

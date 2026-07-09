@@ -1,5 +1,5 @@
 {
-  "trainedAt": "2026-07-09T13:28:58.251Z",
+  "trainedAt": "2026-07-09T13:42:59.920Z",
   "featureLags": 3,
   "minSeasonGp": 10,
   "skaterModels": [
@@ -1452,18 +1452,17 @@
       },
       "ewmaBlendWeight": 0,
       "positionGroup": "all",
-      "holdoutR2": 0.767742266734435,
+      "holdoutR2": 0.7631021324826233,
       "productionStrategy": {
         "type": "ml_only"
       },
       "lowHistoryStrategy": {
-        "type": "ml_contextual_ensemble",
+        "type": "tuned_blend",
         "blendWeights": {
           "ml": 0.2,
           "ewma": 0.8,
           "lag1": 0
-        },
-        "mlContextualWeight": 0.15
+        }
       }
     },
     {
@@ -8780,10 +8779,10 @@
       },
       "assists": {
         "samples": 582,
-        "mae": 0.07021465363380734,
-        "rmse": 0.09130265059306725,
-        "mape": 0.022312560105118097,
-        "r2": 0.767742266734435
+        "mae": 0.07027958138685479,
+        "rmse": 0.0922101799867517,
+        "mape": 0.02258415991823499,
+        "r2": 0.7631021324826233
       },
       "shots": {
         "samples": 582,
