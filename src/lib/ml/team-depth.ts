@@ -86,6 +86,26 @@ function skaterStrengthFromProfile(profile: PlayerProfile): number {
   return 0.35;
 }
 
+function goalieStrengthFromPrior(prior: PlayerSeasonRow[]): number {
+  const last = prior.filter((r) => r.isGoalie && r.gamesPlayed >= 5).at(-1);
+  if (!last) return 0.35;
+  const sv = last.savePct > 1 ? last.savePct / 100 : last.savePct;
+  const winRate = last.wins / Math.max(1, last.gamesPlayed);
+  const gpShare = last.gamesPlayed / 82;
+  return sv * 0.5 + winRate * 0.25 + gpShare * 0.25;
+}
+
+function goalieStrengthFromProfile(profile: PlayerProfile): number {
+  const seasons = profile.teamHistory.filter((s) => s.isGoalie && s.gamesPlayed >= 5);
+  const last = seasons.at(-1);
+  if (!last) return 0.35;
+  const sv =
+    last.stats.savePct > 1 ? last.stats.savePct / 100 : (last.stats.savePct ?? 0.905);
+  const winRate = (last.stats.wins ?? 0) / last.gamesPlayed;
+  const gpShare = last.gamesPlayed / 82;
+  return sv * 0.5 + winRate * 0.25 + gpShare * 0.25;
+}
+
 function assignDepthRanks(
   list: { playerId: number; strength: number; veteran: boolean }[],
 ): Map<number, TeamDepthContext> {
@@ -158,6 +178,37 @@ export function buildTeamDepthFromRows(
       result.set(playerId, ctx);
     }
   }
+
+  const refGoalies = rows.filter(
+    (r) => r.isGoalie && r.seasonId === refSeason && r.gamesPlayed >= 5,
+  );
+  const byTeamG = new Map<
+    string,
+    { playerId: number; strength: number; veteran: boolean }[]
+  >();
+  const goalieSeen = new Set<number>();
+  for (const row of refGoalies) {
+    if (goalieSeen.has(row.playerId)) continue;
+    goalieSeen.add(row.playerId);
+    const team = primaryTeam(row.team);
+    const key = `${team}:G`;
+    const prior =
+      historyMap.get(row.playerId)?.filter((r) => r.seasonId < targetSeasonId) ??
+      [];
+    const list = byTeamG.get(key) ?? [];
+    list.push({
+      playerId: row.playerId,
+      strength: goalieStrengthFromPrior(prior),
+      veteran: prior.filter((r) => r.isGoalie && r.gamesPlayed >= 10).length >= 3,
+    });
+    byTeamG.set(key, list);
+  }
+  for (const list of byTeamG.values()) {
+    for (const [playerId, ctx] of assignDepthRanks(list)) {
+      result.set(playerId, ctx);
+    }
+  }
+
   return result;
 }
 
@@ -193,6 +244,32 @@ export function buildTeamDepthFromProfiles(
       result.set(playerId, ctx);
     }
   }
+
+  const goalies = profiles.filter((p) => p.isGoalie && p.isActive);
+  const byTeamG = new Map<
+    string,
+    { playerId: number; strength: number; veteran: boolean }[]
+  >();
+  for (const profile of goalies) {
+    const team = primaryTeam(profile.team);
+    const key = `${team}:G`;
+    const nhlSeasons = profile.teamHistory.filter(
+      (s) => s.isGoalie && s.gamesPlayed >= 10,
+    ).length;
+    const list = byTeamG.get(key) ?? [];
+    list.push({
+      playerId: profile.id,
+      strength: goalieStrengthFromProfile(profile),
+      veteran: nhlSeasons >= 3,
+    });
+    byTeamG.set(key, list);
+  }
+  for (const list of byTeamG.values()) {
+    for (const [playerId, ctx] of assignDepthRanks(list)) {
+      result.set(playerId, ctx);
+    }
+  }
+
   return result;
 }
 

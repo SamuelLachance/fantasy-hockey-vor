@@ -9,6 +9,10 @@ import {
   type MoneyPuckGoalieSeason,
 } from "./moneypuck-goalies";
 
+/** Final clamp bounds — applied once in clampGoalieProjection, not during skill projection. */
+export const GOALIE_SV_PCT_MIN = 0.865;
+export const GOALIE_SV_PCT_MAX = 0.935;
+
 /** League-average even-strength save percentage baseline. */
 export const LEAGUE_SV_PCT = 0.905;
 
@@ -481,16 +485,15 @@ export function projectGoalieSaveStats(
     const projectedGsax = skill.gsaxPerGame * projectedGp;
     const projectedGa = Math.max(0, projectedXga - projectedGsax);
     const saves = Math.round(Math.max(0, projectedShots - projectedGa));
-    const savePct =
-      projectedShots > 0
-        ? Math.max(0.875, Math.min(0.93, saves / projectedShots))
-        : skill.savePct;
+    const computedSv =
+      projectedShots > 0 ? saves / projectedShots : skill.savePct;
+    // Anchor save% to EB-shrunk skill — raw GSAx ratio alone collapses to the floor.
+    const savePct = computedSv * 0.35 + skill.savePct * 0.65;
     return { saves, savePct };
   }
 
-  const savePct = Math.max(0.875, Math.min(0.93, skill.savePct));
   return {
-    saves: Math.round(savePct * projectedShots),
-    savePct,
+    saves: Math.round(skill.savePct * projectedShots),
+    savePct: skill.savePct,
   };
 }

@@ -66,6 +66,7 @@ import {
   GOALIE_STARTER_GP,
   type GoalieRole,
 } from "../projection-gp";
+import { evaluateGoalieProductionHoldout } from "./goalie-production-eval";
 
 const MODEL_PATH = join(process.cwd(), "src", "data", "ml", "models.json");
 const VAL_SEASON = 20242025;
@@ -1394,6 +1395,14 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     );
   }
 
+  const goalieProductionMetrics = evaluateGoalieProductionHoldout(
+    goalieGpSplit.test,
+    goalieHistoryMap,
+    goalieGpModel,
+    goalieGpTwoStepConfig,
+    goalieGpTrendFromHistory,
+  );
+
   return {
     trainedAt: new Date().toISOString(),
     featureLags: 3,
@@ -1416,6 +1425,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     metrics: {
       skater: skaterMetrics,
       goalie: goalieMetrics,
+      goalieProduction: goalieProductionMetrics,
       goalieGp: goalieGpMetrics,
       skaterGp: skaterGpMetrics,
     },
@@ -1505,6 +1515,14 @@ export function printMetrics(bundle: MlModelBundle): void {
     console.log(
       `Goalie ${target}: R²=${m.r2.toFixed(3)} MAE=${m.mae.toFixed(3)} RMSE=${m.rmse.toFixed(3)} (n=${m.samples}) [ridge eval only, not production]`,
     );
+  }
+  if (bundle.metrics.goalieProduction) {
+    console.log("\nGoalie production path (GSAx + two-step GP, holdout):");
+    for (const [target, m] of Object.entries(bundle.metrics.goalieProduction)) {
+      console.log(
+        `  ${target}: R²=${m.r2.toFixed(3)} MAE=${m.mae.toFixed(3)} (n=${m.samples})`,
+      );
+    }
   }
   const ext = bundle as MlModelBundle & {
     goalieGpValMetrics?: ModelMetrics;

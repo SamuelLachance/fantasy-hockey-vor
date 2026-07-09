@@ -72,6 +72,22 @@ function weightedPerGameRate(
   }, 0);
 }
 
+/** EWMA of season values that are already rates (e.g. save%), not season totals. */
+function weightedSeasonAverage(
+  seasons: SeasonHistory[],
+  rateFn: (season: SeasonHistory) => number,
+): number {
+  const eligible = seasons.filter((s) => s.gamesPlayed >= MIN_SEASON_GP);
+  if (eligible.length === 0) return 0;
+  const recent = eligible.slice(-3);
+  const weights = SEASON_WEIGHTS.slice(-recent.length);
+  const totalWeight = weights.reduce((a, b) => a + b, 0);
+  return recent.reduce(
+    (sum, season, i) => sum + rateFn(season) * (weights[i] / totalWeight),
+    0,
+  );
+}
+
 const MAX_GOALIE_WIN_RATE = 0.62;
 
 function careerSkaterRates(profile: PlayerProfile) {
@@ -341,7 +357,7 @@ export function projectGoalieFromProfile(
     skill,
     gamesPlayed,
   );
-  const ewmaSv = weightedPerGameRate(seasons, (s) =>
+  const ewmaSv = weightedSeasonAverage(seasons, (s) =>
     normalizeSavePct(s.stats.savePct),
   );
   const savePct =
@@ -358,7 +374,7 @@ export function projectGoalieFromProfile(
     {
       wins: Math.round(winRate * gamesPlayed),
       shutouts: Math.round(shutoutRate * gamesPlayed * ageMult),
-      saves: projectedSaves,
+      saves,
       savePct: Math.round(savePct * 10000) / 10000,
     },
     gamesPlayed,

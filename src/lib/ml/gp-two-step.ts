@@ -166,19 +166,20 @@ export function predictTwoStepGpFromExample(
   return predictTwoStepGpFromSignals(signals, mlGp, injuryGp, config, isGoalie);
 }
 
-/** Mirrors predictTwoStepGpFromExample so inference matches training. */
+/** Mirrors predictTwoStepGpFromExample — pass trendGp for goalies (same as training). */
 export function predictTwoStepGpFromProfile(
   profile: PlayerProfile,
   mlGp: number | null | undefined,
   config: GpTwoStepConfig,
   isGoalie: boolean,
+  injuryGp?: number,
 ): number {
   const signals = gpSignalsFromProfile(profile, isGoalie);
-  const injuryGp = isGoalie
-    ? signals.lag1
+  const injury = isGoalie
+    ? (injuryGp ?? signals.lag1)
     : injuryGpFromProfile(profile);
   const ml = mlGp != null && mlGp > 0 ? mlGp : signals.lag1;
-  return predictTwoStepGpFromSignals(signals, ml, injuryGp, config, isGoalie);
+  return predictTwoStepGpFromSignals(signals, ml, injury, config, isGoalie);
 }
 
 export function fullSeasonLabel(actualGp: number, config: GpTwoStepConfig): boolean {
@@ -229,7 +230,7 @@ export function tuneTwoStepConfig(
   const lag1Grid = isGoalie
     ? [22, 26, 28, 30, 32, 34, 36, 38, 40]
     : [52, 55, 58, 60, 62, 64, 66, 68];
-  const ewmaGrid = isGoalie ? [0, 28, 32, 36] : [0, 52, 55, 58, 60];
+  const ewmaGrid = isGoalie ? [0, 24, 28, 32] : [0, 52, 55, 58, 60];
   const durGrid = [0.5, 0.6, 0.7, 0.8];
   const gpGrid = isGoalie ? [52, 55, 58, 60, 62] : [74, 76, 78, 80, 82];
 

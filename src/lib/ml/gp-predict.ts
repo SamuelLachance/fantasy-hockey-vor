@@ -211,7 +211,7 @@ export function predictGoalieGpFromStrategy(
   twoStepConfig?: GpTwoStepConfig,
 ): number {
   if (strategy === "two_step_full_season" && twoStepConfig) {
-    return predictTwoStepGpFromProfile(profile, mlGp, twoStepConfig, true);
+    return predictTwoStepGpFromProfile(profile, mlGp, twoStepConfig, true, trendGp);
   }
   if (strategy === "ensemble" && ensembleWeights) {
     return ensembleGpFromProfile(profile, true, mlGp, ensembleWeights);

@@ -305,6 +305,8 @@ export interface MlModelBundle {
   metrics: {
     skater: Record<string, ModelMetrics>;
     goalie: Record<string, ModelMetrics>;
+    /** GSAx production path holdout (what ships on the site). */
+    goalieProduction?: Record<string, ModelMetrics>;
     goalieGp: ModelMetrics;
     skaterGp?: ModelMetrics;
   };

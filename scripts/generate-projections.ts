@@ -211,7 +211,7 @@ async function main() {
     console.log(`Using AI projections for ${aiCount} cached players`);
   } else if (mlModels) {
     console.log(
-      `Using trained ML time-series models (${mlModels.skaterModels.length} skater + ${mlModels.goalieModels.length} goalie targets, trained ${mlModels.trainedAt})`,
+      `Using ML models (${mlModels.skaterModels.length} skater stat models; goalie stats via GSAx production path + two-step GP, trained ${mlModels.trainedAt})`,
     );
   } else {
     console.log(
