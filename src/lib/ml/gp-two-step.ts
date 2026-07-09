@@ -1,6 +1,6 @@
 import type { PlayerProfile } from "../profile-types";
 import type { TrainingExample } from "./features";
-import { predictRidge } from "./ridge";
+import { predictStatModel } from "./model-predict";
 import {
   clampGp,
   durabilityFromGpHistory,
@@ -12,7 +12,7 @@ import type {
   GpEnsembleWeights,
   GpTwoStepConfig,
   PlayerSeasonRow,
-  RidgeModel,
+  StatModel,
 } from "./types";
 
 const FULL_SEASON = 82;
@@ -156,13 +156,13 @@ export function predictTwoStepGpFromSignals(
 export function predictTwoStepGpFromExample(
   ex: TrainingExample,
   prior: PlayerSeasonRow[],
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   config: GpTwoStepConfig,
   isGoalie: boolean,
   injuryGp: number,
 ): number {
   const signals = gpSignalsFromExample(ex, prior);
-  const mlGp = predictRidge(gpModel, ex.features);
+  const mlGp = predictStatModel(gpModel, ex.features);
   return predictTwoStepGpFromSignals(signals, mlGp, injuryGp, config, isGoalie);
 }
 
@@ -213,7 +213,7 @@ export function within10Accuracy(yTrue: number[], yPred: number[]): number {
 export function tuneTwoStepConfig(
   examples: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   isGoalie: boolean,
   partialWeights: GpEnsembleWeights,
   injuryGpFn: (prior: PlayerSeasonRow[]) => number,

@@ -8,14 +8,8 @@ import {
 import { ML_MIN_SEASON_GP } from "../nhl-api";
 import type { SeasonHistory } from "../profile-types";
 import type { TrainingExample } from "./features";
-import { predictTwoStepGpFromExample } from "./gp-two-step";
 import { evaluateRegression } from "./ridge";
-import type {
-  GpTwoStepConfig,
-  ModelMetrics,
-  PlayerSeasonRow,
-  RidgeModel,
-} from "./types";
+import type { ModelMetrics, PlayerSeasonRow } from "./types";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 const LEAGUE_WIN_RATE = 0.45;
@@ -190,9 +184,7 @@ function priorHistoryForExample(
 export function evaluateGoalieProductionHoldout(
   holdout: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
-  gpModel: RidgeModel,
-  twoStepConfig: GpTwoStepConfig,
-  injuryGpFn: (prior: PlayerSeasonRow[], target: PlayerSeasonRow) => number,
+  gpFn: (ex: TrainingExample, prior: PlayerSeasonRow[]) => number,
 ): Record<string, ModelMetrics> {
   const stats = ["wins", "shutouts", "saves", "savePct"] as const;
   const result: Record<string, ModelMetrics> = {};
@@ -207,14 +199,7 @@ export function evaluateGoalieProductionHoldout(
     });
     const preds = holdout.map((ex) => {
       const prior = priorHistoryForExample(historyMap, ex);
-      const gp = predictTwoStepGpFromExample(
-        ex,
-        prior,
-        gpModel,
-        twoStepConfig,
-        true,
-        injuryGpFn(prior, ex.targetSeason),
-      );
+      const gp = gpFn(ex, prior);
       return projectGoalieRatesFromRows(prior, ex.targetSeason, gp)[stat];
     });
     result[stat] = evaluateRegression(y, preds);

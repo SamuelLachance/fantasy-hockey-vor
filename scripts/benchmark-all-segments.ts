@@ -19,13 +19,14 @@ import {
 } from "../src/lib/ml/goalie-production-eval";
 import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "../src/lib/ml/contextual-baseline";
 import { predictTwoStepGpFromExample } from "../src/lib/ml/gp-two-step";
-import { applyBlendWeights, evaluateRegression, predictRidge } from "../src/lib/ml/ridge";
+import { predictStatModel } from "../src/lib/ml/model-predict";
+import { applyBlendWeights, evaluateRegression } from "../src/lib/ml/ridge";
 import type {
   MlDataset,
   MlModelBundle,
   PlayerSeasonRow,
   ProductionStrategy,
-  RidgeModel,
+  StatModel,
 } from "../src/lib/ml/types";
 import {
   GOALIE_ML_TARGETS,
@@ -122,11 +123,11 @@ function applyStrategy(
 
 function predictSkaterRate(
   ex: TrainingExample,
-  model: RidgeModel,
+  model: StatModel,
   target: string,
   historyMap: Map<number, PlayerSeasonRow[]>,
 ): number {
-  const ml = predictRidge(model, ex.features);
+  const ml = predictStatModel(model, ex.features);
   const ewma = extractEwmaFeature(ex.featureNames, ex.features, target);
   const lag1 = extractLag1Feature(ex.featureNames, ex.features, target);
   const prior = priorHistory(historyMap, ex);
@@ -142,10 +143,10 @@ function predictSkaterRate(
 }
 
 function resolveSkaterModel(
-  models: RidgeModel[],
+  models: StatModel[],
   target: string,
   position: string,
-): RidgeModel | undefined {
+): StatModel | undefined {
   const group = position === "D" ? "D" : "F";
   const candidates = models.filter((m) => m.target === target);
   return (

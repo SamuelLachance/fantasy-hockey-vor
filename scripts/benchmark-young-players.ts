@@ -17,12 +17,13 @@ import {
   applyBlocksRoleFilter,
   resolveProductionStrategy,
 } from "../src/lib/ml/young-strategy";
-import { applyBlendWeights, evaluateRegression, predictRidge } from "../src/lib/ml/ridge";
+import { predictStatModel } from "../src/lib/ml/model-predict";
+import { applyBlendWeights, evaluateRegression } from "../src/lib/ml/ridge";
 import type {
   MlDataset,
   PlayerSeasonRow,
   ProductionStrategy,
-  RidgeModel,
+  StatModel,
 } from "../src/lib/ml/types";
 import { LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "../src/lib/ml/types";
 import { loadMlModels } from "../src/lib/ml/train";
@@ -91,11 +92,11 @@ function applyProductionStrategy(
 
 function predictWithModel(
   ex: TrainingExample,
-  model: RidgeModel,
+  model: StatModel,
   target: string,
   historyMap: Map<number, PlayerSeasonRow[]>,
 ): number {
-  const ml = predictRidge(model, ex.features);
+  const ml = predictStatModel(model, ex.features);
   const ewma = extractEwmaFeature(ex.featureNames, ex.features, target);
   const lag1 = extractLag1Feature(ex.featureNames, ex.features, target);
   const prior = priorHistoryForExample(historyMap, ex);

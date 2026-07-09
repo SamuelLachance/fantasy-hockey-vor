@@ -1,4 +1,5 @@
 import type { PlayerProfile } from "../profile-types";
+import { allocateGoalieGpFromProfiles } from "./goalie-team-allocator";
 import type {
   GoalieGpStrategyType,
   GpEnsembleWeights,
@@ -240,7 +241,11 @@ export function predictGoalieGpFromStrategy(
   fixedGp: number,
   ensembleWeights?: GpEnsembleWeights,
   twoStepConfig?: GpTwoStepConfig,
+  teamGoalies?: PlayerProfile[],
 ): number {
+  if (strategy === "team_allocation" && teamGoalies) {
+    return allocateGoalieGpFromProfiles(profile, teamGoalies);
+  }
   if (strategy === "two_step_full_season" && twoStepConfig) {
     return predictTwoStepGpFromProfile(profile, mlGp, twoStepConfig, true, trendGp);
   }

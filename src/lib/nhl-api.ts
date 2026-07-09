@@ -108,6 +108,7 @@ export interface PlayerLanding {
   };
   awards?: Array<{ trophy?: { default: string } }>;
   last5Games?: Record<string, number>[];
+  seasonTotals?: Array<Record<string, unknown>>;
 }
 
 export interface TeamStanding {

@@ -152,6 +152,7 @@ export function projectedGoalieGamesWithStrategy(
   lag1EwmaBlend: GpLag1EwmaBlend = DEFAULT_GP_LAG1_EWMA,
   ensembleWeights?: import("./ml/types").GpEnsembleWeights,
   twoStepConfig?: GpTwoStepConfig,
+  teamGoalies?: PlayerProfile[],
 ): number {
   return predictGoalieGpFromStrategy(
     strategy,
@@ -162,6 +163,7 @@ export function projectedGoalieGamesWithStrategy(
     projectedGoalieGames(profile, roleMap),
     ensembleWeights,
     twoStepConfig,
+    teamGoalies,
   );
 }
 
@@ -180,6 +182,7 @@ export function projectedGamesFromProfile(
     goalieGpEnsembleWeights?: import("./ml/types").GpEnsembleWeights;
     goalieGpTwoStepConfig?: GpTwoStepConfig;
     goalieMlGp?: number | null;
+    teamGoalies?: PlayerProfile[];
   },
 ): number {
   if (profile.isGoalie) {
@@ -191,6 +194,7 @@ export function projectedGamesFromProfile(
       options?.goalieGpLag1EwmaBlend ?? DEFAULT_GP_LAG1_EWMA,
       options?.goalieGpEnsembleWeights,
       options?.goalieGpTwoStepConfig,
+      options?.teamGoalies,
     );
   }
   return projectedSkaterGames(

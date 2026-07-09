@@ -4,6 +4,7 @@ import {
   lookupTeamDepth,
   type TeamDepthContext,
 } from "./team-depth";
+import { lookupProspectRates } from "../prospect-stats";
 import type { PlayerSeasonRow } from "./types";
 
 export const EWMA_SEASON_WEIGHTS = [0.15, 0.3, 0.55];
@@ -189,6 +190,22 @@ export function contextualPerGameRateFromRows(
               ? 2.4
               : 1.4;
     rate = empiricalBayesShrink(rate, contextualPrior, eligible.length, priorStrength);
+  }
+
+  if (eligible.length < 3) {
+    const prospect = lookupProspectRates(targetSeason.playerId);
+    if (prospect) {
+      const w = eligible.length === 0 ? 0.5 : eligible.length === 1 ? 0.35 : 0.2;
+      if (target === "goals") {
+        rate = rate * (1 - w) + prospect.goalsPerGame * w;
+      } else if (target === "assists") {
+        rate = rate * (1 - w) + prospect.assistsPerGame * w;
+      } else if (target === "shots") {
+        rate = rate * (1 - w) + prospect.shotsPerGame * w;
+      } else if (target === "penaltyMinutes") {
+        rate = rate * (1 - w * 0.6) + prospect.pimPerGame * w * 0.6;
+      }
+    }
   }
 
   if (target === "penaltyMinutes") {

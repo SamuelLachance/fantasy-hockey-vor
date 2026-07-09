@@ -22,6 +22,7 @@ import {
   selectBlendWeights,
   selectLambda,
   selectYoungBlendWeights,
+  transformTarget,
   usesLogTarget,
   type BlendWeights,
 } from "./ridge";
@@ -49,8 +50,9 @@ import type {
   ProductionStrategy,
   RidgeModel,
   SkaterGpStrategyType,
+  StatModel,
 } from "./types";
-import { GOALIE_ML_TARGETS, LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
+import { GOALIE_ML_TARGETS, isGbmModel, LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
 import {
   anchorYoungScoringRate,
   contextualPerGameRateFromRows,
@@ -69,6 +71,13 @@ import {
   type GoalieRole,
 } from "../projection-gp";
 import { evaluateGoalieProductionHoldout } from "./goalie-production-eval";
+import { fitGbm, evaluateGbmRegression } from "./gbm";
+import { championSelectionScore, gpSelectionScore, spearmanCorrelation } from "./metrics";
+import { predictStatModel } from "./model-predict";
+import {
+  clearGoalieAllocationCache,
+  goalieGpFromTeamAllocation,
+} from "./goalie-team-allocator";
 import {
   applyBlocksRoleFilter,
   defaultYoungStrategy,
@@ -102,6 +111,9 @@ const POSITION_SPLIT_TARGETS = new Set([
   "penaltyMinutes",
 ]);
 
+/** Per-stat models trained with gradient boosting instead of ridge. */
+const GBM_TARGETS = new Set(["penaltyMinutes"]);
+
 const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
   "two_step_full_season",
   "ensemble",
@@ -115,6 +127,7 @@ const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
 ];
 
 const GOALIE_GP_CANDIDATES: GoalieGpStrategyType[] = [
+  "team_allocation",
   "two_step_full_season",
   "ensemble",
   "lag1_only",
@@ -320,9 +333,10 @@ function selectProductionStrategy(
       );
     });
     const y = subset.map(({ i }) => valY[i]);
-    const r2 = evaluateRegression(y, preds).r2;
-    if (r2 > bestR2) {
-      bestR2 = r2;
+    const metrics = evaluateRegression(y, preds);
+    const score = championSelectionScore(y, preds, metrics.r2);
+    if (score > bestR2) {
+      bestR2 = score;
       best = strategy;
     }
   }
@@ -461,8 +475,9 @@ function selectLowHistoryStrategy(
       );
     });
     const r2 = evaluateRegression(scoreY, preds).r2;
-    if (r2 > bestR2) {
-      bestR2 = r2;
+    const score = championSelectionScore(scoreY, preds, r2);
+    if (score > bestR2) {
+      bestR2 = score;
       best = strategy;
     }
   }
@@ -476,11 +491,11 @@ function selectLowHistoryStrategy(
 
 function predictWithStrategy(
   ex: TrainingExample,
-  model: RidgeModel,
+  model: StatModel,
   target: string,
   historyMap: Map<number, PlayerSeasonRow[]>,
 ): number {
-  const ml = predictRidge(model, ex.features);
+  const ml = predictStatModel(model, ex.features);
   const ewma = extractEwmaFeature(ex.featureNames, ex.features, target);
   const lag1 = extractLag1Feature(ex.featureNames, ex.features, target);
   const prior = priorHistoryForExample(historyMap, ex);
@@ -583,7 +598,7 @@ function within10Accuracy(yTrue: number[], yPred: number[]): number {
 function tuneGpEnsemble(
   examples: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   isGoalie: boolean,
 ): GpEnsembleWeights {
   if (examples.length === 0) {
@@ -629,13 +644,13 @@ function tuneGpEnsemble(
 function predictGpEnsembleFromExample(
   ex: TrainingExample,
   prior: PlayerSeasonRow[],
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   weights: GpEnsembleWeights,
   isGoalie: boolean,
 ): number {
   const lag1 = extractLag1Gp(ex.featureNames, ex.features);
   const ewma = extractEwmaGp(ex.featureNames, ex.features);
-  const ml = predictRidge(gpModel, ex.features);
+  const ml = predictStatModel(gpModel, ex.features);
   const injury = isGoalie
     ? goalieGpTrendFromHistory(prior, ex.targetSeason)
     : injuryGpFromHistory(prior);
@@ -705,7 +720,7 @@ function predictSkaterGpForStrategy(
   ex: TrainingExample,
   prior: PlayerSeasonRow[],
   strategy: SkaterGpStrategyType,
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   lag1EwmaBlend: GpLag1EwmaBlend,
   ensembleWeights: GpEnsembleWeights,
   twoStepConfig: GpTwoStepConfig,
@@ -730,7 +745,7 @@ function predictSkaterGpForStrategy(
     );
   }
   const injuryGp = injuryGpFromHistory(prior);
-  const mlGp = predictRidge(gpModel, ex.features);
+  const mlGp = predictStatModel(gpModel, ex.features);
   switch (strategy) {
     case "lag1_only":
       return persistenceGpFromExample(ex, prior, { lag1: 1, ewma: 0 }, false);
@@ -747,11 +762,29 @@ function predictGoalieGpForStrategy(
   ex: TrainingExample,
   prior: PlayerSeasonRow[],
   strategy: GoalieGpStrategyType,
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   lag1EwmaBlend: GpLag1EwmaBlend,
   ensembleWeights: GpEnsembleWeights,
   twoStepConfig: GpTwoStepConfig,
+  datasetRows?: PlayerSeasonRow[],
+  historyMap?: Map<number, PlayerSeasonRow[]>,
+  depthBySeason?: Map<number, Map<number, TeamDepthContext>>,
 ): number {
+  if (
+    strategy === "team_allocation" &&
+    datasetRows &&
+    historyMap &&
+    depthBySeason
+  ) {
+    const depth = depthBySeason.get(ex.seasonId) ?? new Map();
+    return goalieGpFromTeamAllocation(
+      ex,
+      prior,
+      datasetRows,
+      historyMap,
+      depth,
+    );
+  }
   if (strategy === "two_step_full_season") {
     return predictTwoStepGpFromExample(
       ex,
@@ -771,7 +804,7 @@ function predictGoalieGpForStrategy(
       true,
     );
   }
-  const mlGp = predictRidge(gpModel, ex.features);
+  const mlGp = predictStatModel(gpModel, ex.features);
   switch (strategy) {
     case "lag1_only":
       return persistenceGpFromExample(ex, prior, { lag1: 1, ewma: 0 }, true);
@@ -811,7 +844,7 @@ function selectSkaterGpStrategy(
   val: TrainingExample[],
   test: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   lag1EwmaBlend: GpLag1EwmaBlend,
   ensembleWeights: GpEnsembleWeights,
   twoStepConfig: GpTwoStepConfig,
@@ -842,12 +875,11 @@ function selectSkaterGpStrategy(
         twoStepConfig,
       );
     });
-    const r2 = evaluateRegression(valY, preds).r2;
-    const acc = within10Accuracy(valY, preds);
-    const score = acc * 0.65 + r2 * 0.35;
+    const metrics = evaluateRegression(valY, preds);
+    const score = gpSelectionScore(valY, preds, metrics.r2);
     if (bestValMetrics === null || score > bestValScore) {
       bestValScore = score;
-      bestValMetrics = { ...evaluateRegression(valY, preds), r2 };
+      bestValMetrics = metrics;
       best = strategy;
     }
   }
@@ -892,11 +924,13 @@ function selectGoalieGpStrategy(
   val: TrainingExample[],
   test: TrainingExample[],
   historyMap: Map<number, PlayerSeasonRow[]>,
-  gpModel: RidgeModel,
+  gpModel: StatModel,
   lag1EwmaBlend: GpLag1EwmaBlend,
   ensembleWeights: GpEnsembleWeights,
   twoStepConfig: GpTwoStepConfig,
   forceStrategy?: GoalieGpStrategyType,
+  datasetRows?: PlayerSeasonRow[],
+  depthBySeason?: Map<number, Map<number, TeamDepthContext>>,
 ): {
   strategy: GoalieGpStrategyType;
   metrics: ModelMetrics;
@@ -911,6 +945,7 @@ function selectGoalieGpStrategy(
   let bestValScore = -Infinity;
 
   for (const strategy of candidates) {
+    clearGoalieAllocationCache();
     const preds = val.map((ex) => {
       const prior = priorHistoryForExample(historyMap, ex);
       return predictGoalieGpForStrategy(
@@ -921,11 +956,13 @@ function selectGoalieGpStrategy(
         lag1EwmaBlend,
         ensembleWeights,
         twoStepConfig,
+        datasetRows,
+        historyMap,
+        depthBySeason,
       );
     });
     const metrics = evaluateRegression(valY, preds);
-    const acc = within10Accuracy(valY, preds);
-    const score = acc * 0.65 + metrics.r2 * 0.35;
+    const score = gpSelectionScore(valY, preds, metrics.r2);
     if (bestValMetrics === null || score > bestValScore) {
       bestValScore = score;
       bestValMetrics = metrics;
@@ -934,6 +971,7 @@ function selectGoalieGpStrategy(
   }
 
   const testY = test.map((ex) => ex.targetSeason.gamesPlayed);
+  clearGoalieAllocationCache();
   const holdoutPreds = test.map((ex) => {
     const prior = priorHistoryForExample(historyMap, ex);
     return predictGoalieGpForStrategy(
@@ -944,6 +982,9 @@ function selectGoalieGpStrategy(
       lag1EwmaBlend,
       ensembleWeights,
       twoStepConfig,
+      datasetRows,
+      historyMap,
+      depthBySeason,
     );
   });
 
@@ -957,6 +998,9 @@ function selectGoalieGpStrategy(
       lag1EwmaBlend,
       ensembleWeights,
       twoStepConfig,
+      datasetRows,
+      historyMap,
+      depthBySeason,
     );
   });
 
@@ -974,13 +1018,14 @@ function trainSkaterTarget(
   target: string,
   positionGroup: "all" | "D" | "F" = "all",
   historyMap: Map<number, PlayerSeasonRow[]>,
-): { model: RidgeModel; holdoutMetrics: ReturnType<typeof evaluateRegression> | null } {
+): { model: StatModel; holdoutMetrics: ReturnType<typeof evaluateRegression> | null } {
   const filtered = filterExamplesForTarget(examples, target, positionGroup);
 
   if (filtered.length < 50) {
-    return { model: null as unknown as RidgeModel, holdoutMetrics: null };
+    return { model: null as unknown as StatModel, holdoutMetrics: null };
   }
-  const logTarget = usesLogTarget(target);
+  const useGbm = GBM_TARGETS.has(target);
+  const logTarget = !useGbm && usesLogTarget(target);
   const { train, val, test } = splitExamples(filtered);
   const featureNames = train[0]?.featureNames ?? filtered[0]?.featureNames ?? [];
 
@@ -997,38 +1042,58 @@ function trainSkaterTarget(
     extractLag1Feature(ex.featureNames, ex.features, target),
   );
 
-  const lambda = selectLambda(
-    trainX,
-    trainY,
-    valX,
-    valY,
-    featureNames,
-    target,
-    false,
-    trainW,
-    valEwma,
-    valLag1,
-    logTarget,
-  );
-
   const fitTrain = [...train, ...val];
   const fitTrainX = fitTrain.map((ex) => ex.features);
   const fitTrainY = fitTrain.map((ex) =>
     skaterTargetValue(ex, target as (typeof SKATER_ML_TARGETS)[number]),
   );
   const fitTrainW = exampleWeights(fitTrain, target);
-  const model = fitRidge(
-    fitTrainX,
-    fitTrainY,
-    featureNames,
-    target,
-    false,
-    lambda,
-    fitTrainW,
-    logTarget,
-  );
 
-  const valMl = valX.map((x) => predictRidge(model, x));
+  let lambda = 12;
+  let model: StatModel;
+  if (useGbm) {
+    const gbmOpts =
+      target === "penaltyMinutes"
+        ? { nEstimators: 50, learningRate: 0.08, minSamplesLeaf: 8 }
+        : { nEstimators: 45, learningRate: 0.08, minSamplesLeaf: 8 };
+    const yFit = fitTrainY.map((y) => transformTarget(y, logTarget));
+    model = fitGbm(
+      fitTrainX,
+      yFit,
+      featureNames,
+      target,
+      false,
+      fitTrainW,
+      gbmOpts,
+    );
+    if (logTarget) model.logTarget = true;
+  } else {
+    lambda = selectLambda(
+      trainX,
+      trainY,
+      valX,
+      valY,
+      featureNames,
+      target,
+      false,
+      trainW,
+      valEwma,
+      valLag1,
+      logTarget,
+    );
+    model = fitRidge(
+      fitTrainX,
+      fitTrainY,
+      featureNames,
+      target,
+      false,
+      lambda,
+      fitTrainW,
+      logTarget,
+    );
+  }
+
+  const valMl = valX.map((x) => predictStatModel(model, x));
   const blendWeights = selectBlendWeights(valY, valMl, valEwma, valLag1, target);
   const valBlended = applyBlendWeights(valMl, valEwma, valLag1, blendWeights);
   const valBlendR2 = evaluateRegression(valY, valBlended).r2;
@@ -1041,7 +1106,7 @@ function trainSkaterTarget(
       skaterTargetValue(ex, target as (typeof SKATER_ML_TARGETS)[number]),
     ),
   );
-  const testMl = testX.map((x) => predictRidge(model, x));
+  const testMl = testX.map((x) => predictStatModel(model, x));
   const testEwma = test.map((ex) =>
     extractEwmaFeature(ex.featureNames, ex.features, target),
   );
@@ -1082,7 +1147,7 @@ function trainSkaterTarget(
     const prior = priorHistoryForExample(historyMap, ex);
     const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
     const strategy = resolveProductionStrategy(
-      { target, productionStrategy, lowHistoryStrategy } as RidgeModel,
+      { target, productionStrategy, lowHistoryStrategy } as StatModel,
       prior,
     );
     return finalizeSkaterRate(
@@ -1100,22 +1165,42 @@ function trainSkaterTarget(
     );
   });
   const holdoutMetrics = evaluateRegression(testY, testPred);
+  holdoutMetrics.spearman = spearmanCorrelation(testY, testPred);
 
   const allX = filtered.map((ex) => ex.features);
   const allY = filtered.map((ex) =>
     skaterTargetValue(ex, target as (typeof SKATER_ML_TARGETS)[number]),
   );
   const allW = exampleWeights(filtered, target);
-  const productionModel = fitRidge(
-    allX,
-    allY,
-    featureNames,
-    target,
-    false,
-    lambda,
-    allW,
-    logTarget,
-  );
+  let productionModel: StatModel;
+  if (useGbm) {
+    const gbmOpts =
+      target === "penaltyMinutes"
+        ? { nEstimators: 50, learningRate: 0.08, minSamplesLeaf: 8 }
+        : { nEstimators: 45, learningRate: 0.08, minSamplesLeaf: 8 };
+    const yFit = allY.map((y) => transformTarget(y, logTarget));
+    productionModel = fitGbm(
+      allX,
+      yFit,
+      featureNames,
+      target,
+      false,
+      allW,
+      gbmOpts,
+    );
+    if (logTarget) productionModel.logTarget = true;
+  } else {
+    productionModel = fitRidge(
+      allX,
+      allY,
+      featureNames,
+      target,
+      false,
+      lambda,
+      allW,
+      logTarget,
+    );
+  }
   productionModel.blendWeights = blendWeights;
   productionModel.ewmaBlendWeight = blendWeights.ewma;
   productionModel.positionGroup = positionGroup;
@@ -1155,7 +1240,7 @@ function trainPositionSplitTarget(
   examples: TrainingExample[],
   target: string,
   historyMap: Map<number, PlayerSeasonRow[]>,
-): { models: RidgeModel[]; metrics: ReturnType<typeof evaluateRegression> } {
+): { models: StatModel[]; metrics: ReturnType<typeof evaluateRegression> } {
   const dResult = trainSkaterTarget(examples, target, "D", historyMap);
   const fResult = trainSkaterTarget(examples, target, "F", historyMap);
   const dTest = splitExamples(
@@ -1184,50 +1269,33 @@ function trainPositionSplitTarget(
 function trainGpModel(
   examples: TrainingExample[],
   isGoalie: boolean,
-): { model: RidgeModel; metrics: ReturnType<typeof evaluateRegression> } {
+): { model: StatModel; metrics: ReturnType<typeof evaluateRegression> } {
   const { train, val, test } = splitExamples(examples);
   const target = "gamesPlayed";
   const featureNames = train[0]?.featureNames ?? examples[0]?.featureNames ?? [];
-  const trainX = train.map((ex) => ex.features);
-  const trainY = train.map((ex) => ex.targetSeason.gamesPlayed);
-  const trainW = exampleWeights(train, target);
-  const valX = val.map((ex) => ex.features);
-  const valY = val.map((ex) => ex.targetSeason.gamesPlayed);
-
-  const lambda = selectLambda(
-    trainX,
-    trainY,
-    valX,
-    valY,
-    featureNames,
-    target,
-    isGoalie,
-    trainW,
-  );
-
   const fitTrain = [...train, ...val];
-  const evalModel = fitRidge(
-    fitTrain.map((ex) => ex.features),
-    fitTrain.map((ex) => ex.targetSeason.gamesPlayed),
-    featureNames,
-    target,
-    isGoalie,
-    lambda,
-    exampleWeights(fitTrain, target),
-  );
+  const fitX = fitTrain.map((ex) => ex.features);
+  const fitY = fitTrain.map((ex) => ex.targetSeason.gamesPlayed);
+  const fitW = exampleWeights(fitTrain, target);
+
+  const evalModel = fitGbm(fitX, fitY, featureNames, target, isGoalie, fitW, {
+    nEstimators: isGoalie ? 45 : 65,
+    learningRate: 0.08,
+  });
 
   const testY = test.map((ex) => ex.targetSeason.gamesPlayed);
-  const testPred = test.map((ex) => predictRidge(evalModel, ex.features));
+  const testPred = test.map((ex) => predictStatModel(evalModel, ex.features));
   const metrics = evaluateRegression(testY, testPred);
+  metrics.spearman = spearmanCorrelation(testY, testPred);
 
-  const productionModel = fitRidge(
+  const productionModel = fitGbm(
     examples.map((ex) => ex.features),
     examples.map((ex) => ex.targetSeason.gamesPlayed),
     featureNames,
     target,
     isGoalie,
-    lambda,
     exampleWeights(examples, target),
+    { nEstimators: isGoalie ? 45 : 65, learningRate: 0.08 },
   );
   productionModel.holdoutR2 = metrics.r2;
 
@@ -1251,7 +1319,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
   const skaterGpExamples = buildSkaterGpExamples(dataset.rows);
 
   const skaterMetrics: MlModelBundle["metrics"]["skater"] = {};
-  const skaterModels: RidgeModel[] = [];
+  const skaterModels: StatModel[] = [];
   const championByTarget: Record<string, string> = {};
 
   for (const target of SKATER_ML_TARGETS) {
@@ -1374,8 +1442,8 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
       );
     },
   );
-  const {
-    strategy: goalieGpStrategy,
+  let {
+    strategy: _selectedGoalieGpStrategy,
     metrics: goalieGpMetrics,
     valMetrics: goalieGpValMetrics,
     valClassAccuracy: goalieGpValClassAcc,
@@ -1388,7 +1456,32 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     goalieGpLag1EwmaBlend,
     goalieGpEnsembleWeights,
     goalieGpTwoStepConfig,
+    undefined,
+    dataset.rows,
+    depthBySeason,
   );
+  const goalieGpStrategy: GoalieGpStrategyType = "team_allocation";
+  if (_selectedGoalieGpStrategy !== goalieGpStrategy) {
+    const testY = goalieGpSplit.test.map((ex) => ex.targetSeason.gamesPlayed);
+    clearGoalieAllocationCache();
+    const teamAllocPreds = goalieGpSplit.test.map((ex) => {
+      const prior = priorHistoryForExample(goalieHistoryMap, ex);
+      return predictGoalieGpForStrategy(
+        ex,
+        prior,
+        goalieGpStrategy,
+        goalieGpModel,
+        goalieGpLag1EwmaBlend,
+        goalieGpEnsembleWeights,
+        goalieGpTwoStepConfig,
+        dataset.rows,
+        goalieHistoryMap,
+        depthBySeason,
+      );
+    });
+    goalieGpMetrics = evaluateRegression(testY, teamAllocPreds);
+    goalieGpMetrics.spearman = spearmanCorrelation(testY, teamAllocPreds);
+  }
 
   const goalieModels: RidgeModel[] = [];
   for (const target of GOALIE_ML_TARGETS) {
@@ -1400,12 +1493,23 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     );
   }
 
+  clearGoalieAllocationCache();
   const goalieProductionMetrics = evaluateGoalieProductionHoldout(
     goalieGpSplit.test,
     goalieHistoryMap,
-    goalieGpModel,
-    goalieGpTwoStepConfig,
-    goalieGpTrendFromHistory,
+    (ex, prior) =>
+      predictGoalieGpForStrategy(
+        ex,
+        prior,
+        goalieGpStrategy,
+        goalieGpModel,
+        goalieGpLag1EwmaBlend,
+        goalieGpEnsembleWeights,
+        goalieGpTwoStepConfig,
+        dataset.rows,
+        goalieHistoryMap,
+        depthBySeason,
+      ),
   );
 
   return {
@@ -1426,7 +1530,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     goalieGpTwoStepConfig,
     goalieModelsEvalOnly: true,
     validationScheme:
-      "rolling: train<2024-25, tune blend+λ on 2024-25, per-stat champion on 2025-26 holdout; GP uses two-step full-season classifier",
+      "rolling: train<2024-25, tune on 2024-25 (Spearman/rank-first champions), holdout 2025-26; GP via GBM + team goalie allocator; PIM GBM",
     metrics: {
       skater: skaterMetrics,
       goalie: goalieMetrics,
@@ -1510,10 +1614,18 @@ export function printMetrics(bundle: MlModelBundle): void {
       model?.productionStrategy,
       model?.lowHistoryStrategy,
     );
-    const logNote = model?.logTarget ? " log-target" : "";
+    const spearNote = m.spearman != null ? ` ρ=${m.spearman.toFixed(3)}` : "";
+    const backend =
+      model && isGbmModel(model)
+        ? "gbm"
+        : `ridge λ=${(model as RidgeModel)?.lambda ?? "?"}`;
+    const logNote =
+      model && !isGbmModel(model) && (model as RidgeModel).logTarget
+        ? " log-target"
+        : "";
     const posNote = POSITION_SPLIT_TARGETS.has(target) ? " [D+F]" : "";
     console.log(
-      `Skater ${target}${posNote}: R²=${m.r2.toFixed(3)} MAE=${m.mae.toFixed(3)} RMSE=${m.rmse.toFixed(3)} (n=${m.samples}) champion=${champion} λ=${model?.lambda ?? "?"}${logNote}`,
+      `Skater ${target}${posNote}: R²=${m.r2.toFixed(3)} MAE=${m.mae.toFixed(3)} RMSE=${m.rmse.toFixed(3)} (n=${m.samples})${spearNote} champion=${champion} ${backend}${logNote}`,
     );
   }
   for (const [target, m] of Object.entries(bundle.metrics.goalie)) {

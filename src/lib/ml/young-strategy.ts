@@ -1,5 +1,5 @@
 import { priorNhlSeasons } from "./features";
-import type { PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
+import type { PlayerSeasonRow, ProductionStrategy, StatModel } from "./types";
 import { LOW_HISTORY_MAX_PRIOR_SEASONS } from "./types";
 import {
   rookieRatePerGame,
@@ -54,7 +54,7 @@ export function tier1Strategy(target: string): ProductionStrategy {
 }
 
 export function resolveProductionStrategy(
-  model: RidgeModel,
+  model: StatModel,
   prior: PlayerSeasonRow[],
 ): ProductionStrategy {
   const n = priorNhlSeasons(prior);

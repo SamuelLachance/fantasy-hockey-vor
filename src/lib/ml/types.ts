@@ -53,6 +53,7 @@ export type SkaterGpStrategyType =
 export type GoalieGpStrategyType =
   | "two_step_full_season"
   | "ensemble"
+  | "team_allocation"
   | "lag1_only"
   | "ewma_only"
   | "lag1_ewma_blend"
@@ -288,14 +289,14 @@ export interface MlModelBundle {
   trainedAt: string;
   featureLags: number;
   minSeasonGp: number;
-  skaterModels: RidgeModel[];
-  skaterGpModel?: RidgeModel;
+  skaterModels: StatModel[];
+  skaterGpModel?: StatModel;
   skaterGpStrategy?: SkaterGpStrategyType;
   skaterGpLag1EwmaBlend?: GpLag1EwmaBlend;
   skaterGpEnsembleWeights?: GpEnsembleWeights;
   skaterGpTwoStepConfig?: GpTwoStepConfig;
   goalieModels: RidgeModel[];
-  goalieGpModel: RidgeModel;
+  goalieGpModel: StatModel;
   goalieGpStrategy?: GoalieGpStrategyType;
   goalieGpLag1EwmaBlend?: GpLag1EwmaBlend;
   goalieGpEnsembleWeights?: GpEnsembleWeights;
@@ -318,4 +319,35 @@ export interface ModelMetrics {
   rmse: number;
   mape: number;
   r2: number;
+  spearman?: number;
+}
+
+export interface GbmTree {
+  featureIndex: number;
+  threshold: number;
+  leftValue: number;
+  rightValue: number;
+}
+
+export interface GbmModel {
+  modelType: "gbm";
+  target: string;
+  isGoalie: boolean;
+  featureNames: string[];
+  initBias: number;
+  learningRate: number;
+  trees: GbmTree[];
+  holdoutR2?: number;
+  blendWeights?: { ml: number; ewma: number; lag1: number };
+  ewmaBlendWeight?: number;
+  positionGroup?: "all" | "D" | "F";
+  productionStrategy?: ProductionStrategy;
+  lowHistoryStrategy?: ProductionStrategy;
+  logTarget?: boolean;
+}
+
+export type StatModel = RidgeModel | GbmModel;
+
+export function isGbmModel(model: StatModel): model is GbmModel {
+  return (model as GbmModel).modelType === "gbm";
 }

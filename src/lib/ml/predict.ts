@@ -21,8 +21,14 @@ import {
   buildProjectionTargetRow,
   profileToSeasonRows,
 } from "./inference-context";
-import { applyBlendWeights, predictRidge } from "./ridge";
-import type { MlModelBundle, PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
+import { applyBlendWeights } from "./ridge";
+import { predictStatModel } from "./model-predict";
+import type {
+  MlModelBundle,
+  PlayerSeasonRow,
+  ProductionStrategy,
+  StatModel,
+} from "./types";
 import { SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
 import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "./contextual-baseline";
@@ -55,7 +61,7 @@ function resolveSkaterModel(
   models: MlModelBundle,
   target: string,
   position: PlayerProfile["position"],
-): RidgeModel | undefined {
+): StatModel | undefined {
   const group = position === "D" ? "D" : "F";
   const candidates = models.skaterModels.filter((m) => m.target === target);
   return (
@@ -125,7 +131,7 @@ function predictRateForTarget(
     false,
     targetRow,
   );
-  const ml = Math.max(0, predictRidge(model, features));
+  const ml = Math.max(0, predictStatModel(model, features));
   const ewma = extractEwmaFeature(featureNames, features, target);
   const lag1 = extractLag1Feature(featureNames, features, target);
   const historyEwma = ewmaPerGameRate(history, (r) => rowStat(r, target));
@@ -151,7 +157,7 @@ function predictSkaterGp(
 ): number | null {
   if (!models.skaterGpModel) return null;
   const { features } = buildSkaterGpInferenceFeatures(history, targetRow);
-  const gp = predictRidge(models.skaterGpModel, features);
+  const gp = predictStatModel(models.skaterGpModel, features);
   return Math.max(10, Math.min(82, Math.round(gp)));
 }
 
@@ -164,7 +170,7 @@ function predictGoalieGp(
   if (!models.goalieGpModel) return null;
   const goalieHistory = history.filter((r) => r.isGoalie);
   const { features } = buildGoalieGpInferenceFeatures(goalieHistory, targetRow);
-  const gp = predictRidge(models.goalieGpModel, features);
+  const gp = predictStatModel(models.goalieGpModel, features);
   return Math.max(10, Math.min(82, Math.round(gp)));
 }
 
@@ -245,6 +251,7 @@ export function projectGoalieWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
   goalieRoleMap?: Map<number, GoalieRole>,
+  teamGoalies?: PlayerProfile[],
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
   const caches = loadContextCaches();
   const history = profileToSeasonRows(profile, caches);
@@ -257,6 +264,7 @@ export function projectGoalieWithMl(
     goalieGpEnsembleWeights: models.goalieGpEnsembleWeights,
     goalieGpTwoStepConfig: models.goalieGpTwoStepConfig,
     goalieMlGp: mlGp,
+    teamGoalies,
   });
 
   const oldGp = Math.max(1, result.gamesPlayed);

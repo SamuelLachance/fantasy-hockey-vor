@@ -79,6 +79,7 @@ function buildFromProfile(
   aiCache: ReturnType<typeof loadAiCache>,
   mlModels: MlModelBundle | null,
   goalieRoleMap: ReturnType<typeof buildGoalieRoleMap>,
+  teamGoalies: PlayerProfile[],
 ): Omit<
   PlayerProjection,
   "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
@@ -147,7 +148,7 @@ function buildFromProfile(
 
   if (mlModels) {
     const ml = profile.isGoalie
-      ? projectGoalieWithMl(profile, mlModels, goalieRoleMap)
+      ? projectGoalieWithMl(profile, mlModels, goalieRoleMap, teamGoalies)
       : projectSkaterWithMl(profile, mlModels);
     return {
       id: profile.id,
@@ -230,8 +231,9 @@ async function main() {
 
   setInferenceTeamDepthCache(buildTeamDepthFromProfiles(profilesWithPositions));
 
+  const teamGoalies = profilesWithPositions.filter((p) => p.isGoalie);
   const raw = profilesWithPositions.map((p) =>
-    buildFromProfile(p, aiCache, mlModels, goalieRoleMap),
+    buildFromProfile(p, aiCache, mlModels, goalieRoleMap, teamGoalies),
   );
 
   const withYahooPositions = raw.map((player) =>
