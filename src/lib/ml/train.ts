@@ -55,6 +55,11 @@ import {
   VOLATILE_LOW_HISTORY_TARGETS,
 } from "./contextual-baseline";
 import {
+  buildTeamDepthFromRows,
+  setTrainingTeamDepthCache,
+  type TeamDepthContext,
+} from "./team-depth";
+import {
   GOALIE_BACKUP_GP,
   GOALIE_STARTER_GP,
   type GoalieRole,
@@ -189,7 +194,7 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
     return { type: "contextual_only" };
   }
   if (target === "goals" || target === "assists") {
-    return { type: "ewma_only" };
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
@@ -340,8 +345,11 @@ function buildLowHistoryStrategies(
   blendWeights: BlendWeights,
   valBlendR2: number,
 ): ProductionStrategy[] {
+  const isScoring = target === "goals" || target === "assists";
   const contextualWeights = VOLATILE_LOW_HISTORY_TARGETS.has(target)
-    ? [0, 0.05, 0.1, 0.15]
+    ? isScoring
+      ? [0, 0.03, 0.05, 0.08, 0.12]
+      : [0, 0.05, 0.1, 0.15]
     : [0.05, 0.1, 0.15, 0.2];
   const strategies: ProductionStrategy[] = [
     { type: "contextual_only" },
@@ -1192,6 +1200,16 @@ function trainGpModel(
 export function trainMlModels(dataset: MlDataset): MlModelBundle {
   const skaterHistoryMap = buildPlayerHistoryMap(dataset.rows, false);
   const goalieHistoryMap = buildPlayerHistoryMap(dataset.rows, true);
+
+  const depthBySeason = new Map<number, Map<number, TeamDepthContext>>();
+  for (const seasonId of dataset.seasonIds) {
+    depthBySeason.set(
+      seasonId,
+      buildTeamDepthFromRows(dataset.rows, skaterHistoryMap, seasonId),
+    );
+  }
+  setTrainingTeamDepthCache(depthBySeason);
+
   const goalieGpExamples = buildGoalieGpExamples(dataset.rows);
   const skaterGpExamples = buildSkaterGpExamples(dataset.rows);
 

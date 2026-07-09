@@ -28,6 +28,7 @@ import { applyBlendWeights, predictRidge } from "./ridge";
 import type { MlModelBundle, PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
 import { LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
+import { contextualPerGameRateFromRows } from "./contextual-baseline";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 const CONTEXTUAL_BASELINE_R2 = 0.55;
@@ -72,7 +73,21 @@ function mlWeightForTarget(models: MlModelBundle, target: string): number {
 
 function contextualPerGameRates(
   profile: PlayerProfile,
+  history: PlayerSeasonRow[],
+  targetRow: PlayerSeasonRow,
 ): Record<string, number> {
+  if (priorNhlSeasons(history) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
+    const rates: Record<string, number> = {};
+    for (const target of SKATER_ML_TARGETS) {
+      rates[target] = contextualPerGameRateFromRows(
+        history,
+        targetRow,
+        target,
+      );
+    }
+    return rates;
+  }
+
   const contextual = projectSkaterFromProfile(profile);
   const gp = Math.max(1, contextual.gamesPlayed);
   const p = contextual.projection;
@@ -93,7 +108,7 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
     return { type: "contextual_only" };
   }
   if (target === "goals" || target === "assists") {
-    return { type: "ewma_only" };
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
@@ -243,7 +258,7 @@ export function projectSkaterWithMl(
   });
 
   const contextualRates = blendContextual
-    ? contextualPerGameRates(profile)
+    ? contextualPerGameRates(profile, history, targetRow)
     : null;
 
   const rates: Record<string, number> = {};

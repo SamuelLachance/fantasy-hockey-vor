@@ -6,6 +6,7 @@ import {
   projectGoalieWithMl,
   projectSkaterWithMl,
 } from "../src/lib/ml/predict";
+import { setInferenceTeamDepthCache, buildTeamDepthFromProfiles } from "../src/lib/ml/team-depth";
 import type { MlModelBundle } from "../src/lib/ml/types";
 import {
   projectGoalieFromProfile,
@@ -210,6 +211,8 @@ async function main() {
     const { positionSource: _, ...rest } = mapped;
     return rest;
   });
+
+  setInferenceTeamDepthCache(buildTeamDepthFromProfiles(profilesWithPositions));
 
   const raw = profilesWithPositions.map((p) =>
     buildFromProfile(p, aiCache, mlModels, goalieRoleMap),

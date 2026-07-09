@@ -3,6 +3,7 @@ import {
   estimateShrunkGoalieSkill,
   estimateShrunkGoalieSkillFromCareer,
   goalieSkillWinMultiplier,
+  LEAGUE_GA_PER_GAME,
   LEAGUE_SV_PCT,
   projectGoalieSaveStats,
 } from "./goalie-skill";
@@ -265,8 +266,17 @@ export function projectGoalieFromProfile(
 
   const teamWinPct = profile.teamContext.pointsPct;
   const teamGaPerGame = profile.teamContext.goalsAgainstPerGame;
+  const teamGfPerGame = profile.teamContext.goalsForPerGame ?? 3.05;
   const ageMult = ageCurve("G", profile.bio.age);
   const teamBoost = 0.85 + teamWinPct * 0.3;
+  const defEnvBoost = Math.max(
+    0.9,
+    Math.min(1.1, 1 + (LEAGUE_GA_PER_GAME - teamGaPerGame) * 0.06),
+  );
+  const pythWinRate = Math.max(
+    0.35,
+    Math.min(0.65, 0.5 + (teamGfPerGame - teamGaPerGame) * 0.11),
+  );
 
   const eligibleGp = seasons
     .filter((s) => s.gamesPlayed >= MIN_SEASON_GP)
@@ -297,7 +307,7 @@ export function projectGoalieFromProfile(
     }
   }
 
-  const skillWinMult = goalieSkillWinMultiplier(skill);
+  const skillWinMult = goalieSkillWinMultiplier(skill, teamGaPerGame);
   const ewmaWinRate = weightedPerGameRate(seasons, (s) => finite(s.stats.wins));
   const ewmaShutoutRate = weightedPerGameRate(seasons, (s) => finite(s.stats.shutouts));
 
@@ -321,8 +331,10 @@ export function projectGoalieFromProfile(
 
   winRate = Math.min(
     MAX_GOALIE_WIN_RATE,
-    winRate * ageMult * teamBoost * skillWinMult,
+    winRate * ageMult * teamBoost * defEnvBoost * skillWinMult,
   );
+  winRate = winRate * 0.72 + pythWinRate * skillWinMult * 0.28;
+  winRate = Math.min(MAX_GOALIE_WIN_RATE, winRate);
   shutoutRate *= ageMult;
 
   const { saves: projectedSaves, savePct: rawSavePct } = projectGoalieSaveStats(

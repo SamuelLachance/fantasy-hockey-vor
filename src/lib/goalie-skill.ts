@@ -260,13 +260,15 @@ function estimateFromProxy(
     weightedGp > 0
       ? (weightedSa * teamAdjustedGoalRatePerShot(teamGoalsAgainstPerGame)) / weightedGp
       : 2.85;
+  const gsaxPer60 =
+    weightedSa > 0 ? (shrunkGsax / weightedSa) * 60 : gsaxPer60FromPerGame(gsaxPerGame, shotsPerGame);
 
   return {
     savePct: shrunkSv,
     gsaa: gsaaTotal,
     gsax: shrunkGsax,
     gsaxSource: "proxy",
-    gsaxPer60: 0,
+    gsaxPer60,
     gsaxPerGame,
     gsaaPer60: weightedSa > 0 ? (gsaaTotal / weightedSa) * 60 : 0,
     shotsPerGame,
@@ -413,7 +415,30 @@ export function estimateShrunkGoalieSkillFromCareer(
 
 /** GSAx skill → win-rate multiplier (stronger GSAx signal for production). */
 export function gsaxWinMultiplier(gsaxPer60: number): number {
-  return Math.max(0.82, Math.min(1.18, 1 + (gsaxPer60 / 10) * 0.08));
+  return Math.max(0.82, Math.min(1.18, 1 + (gsaxPer60 / 10) * 0.1));
+}
+
+/** Re-base GSAx/60 to projected team defensive environment. */
+export function teamAdjustedGsaxPer60(
+  gsaxPer60: number,
+  teamGoalsAgainstPerGame: number,
+  leagueGoalsAgainstPerGame = LEAGUE_GA_PER_GAME,
+): number {
+  if (gsaxPer60 === 0) return 0;
+  const teamFactor = Math.max(
+    0.88,
+    Math.min(1.12, leagueGoalsAgainstPerGame / teamGoalsAgainstPerGame),
+  );
+  return gsaxPer60 * teamFactor;
+}
+
+/** Derive GSAx/60 from per-game GSAx and shot volume. */
+export function gsaxPer60FromPerGame(
+  gsaxPerGame: number,
+  shotsPerGame: number,
+): number {
+  if (gsaxPerGame === 0 || shotsPerGame <= 0) return 0;
+  return (gsaxPerGame / shotsPerGame) * 60;
 }
 
 /** Translate save skill above/below average into a win-rate multiplier. */
@@ -422,12 +447,21 @@ export function saveSkillWinMultiplier(shrunkSv: number, leagueSv = LEAGUE_SV_PC
   return Math.max(0.82, Math.min(1.18, 1 + (delta / 0.015) * 0.1));
 }
 
-/** Combined win multiplier preferring MoneyPuck GSAx/60 when available. */
-export function goalieSkillWinMultiplier(skill: ShrunkGoalieSkill): number {
-  if (skill.gsaxSource === "moneypuck" && skill.gsaxPer60 !== 0) {
-    return gsaxWinMultiplier(skill.gsaxPer60);
+/** Combined win multiplier preferring team-adjusted MoneyPuck/proxy GSAx. */
+export function goalieSkillWinMultiplier(
+  skill: ShrunkGoalieSkill,
+  teamGoalsAgainstPerGame = LEAGUE_GA_PER_GAME,
+): number {
+  let gsaxPer60 = skill.gsaxPer60;
+  if (gsaxPer60 === 0 && skill.gsaxPerGame !== 0) {
+    gsaxPer60 = gsaxPer60FromPerGame(skill.gsaxPerGame, skill.shotsPerGame);
   }
-  return saveSkillWinMultiplier(skill.savePct);
+  if (gsaxPer60 !== 0) {
+    const adjusted = teamAdjustedGsaxPer60(gsaxPer60, teamGoalsAgainstPerGame);
+    return gsaxWinMultiplier(adjusted);
+  }
+  const teamSv = teamAdjustedExpectedSv(teamGoalsAgainstPerGame);
+  return saveSkillWinMultiplier(skill.savePct, teamSv);
 }
 
 /**

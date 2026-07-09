@@ -11,6 +11,7 @@ import {
 import { targetAuxStats } from "./target-aux-stats";
 import { targetCrossEwmaStats } from "./target-cross-stats";
 import { teamChangedFlag, yearsOnCurrentTeam } from "./team-style";
+import { lookupTeamDepth } from "./team-depth";
 
 const CONTEXT_LAG_FIELDS = [
   "teamElo",
@@ -95,6 +96,9 @@ export const STATIC_CONTEXT_FEATURE_NAMES = [
   "nhl_seasons_norm",
   "career_gp_norm",
   "is_young_low_sample",
+  "team_depth_rank_norm",
+  "veterans_ahead_norm",
+  "opportunity_score",
 ] as const;
 
 export function priorNhlSeasons(history: PlayerSeasonRow[]): number {
@@ -345,6 +349,7 @@ function buildStaticContextFeatures(
   const age = targetSeason.age ?? 0;
   const draftOverall = targetSeason.draftOverallPick ?? 0;
   const teamGf = targetSeason.teamGoalsForPerGame ?? 2.85;
+  const depth = lookupTeamDepth(targetSeason.seasonId, targetSeason.playerId);
   const features = [
     age,
     targetSeason.heightInches ?? 72,
@@ -374,6 +379,9 @@ function buildStaticContextFeatures(
     priorNhlSeasons(history) / 5,
     priorCareerGp(history) / 300,
     isYoungLowSample(history) ? 1 : 0,
+    depth ? depth.depthRank / Math.max(1, depth.positionDepth) : 0.5,
+    depth ? depth.veteransAhead / 5 : 0,
+    depth?.opportunityScore ?? 0.5,
   ];
   const names = [...STATIC_CONTEXT_FEATURE_NAMES];
   if (!includeTeamsInLag) {

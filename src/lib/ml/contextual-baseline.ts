@@ -1,4 +1,9 @@
 import { rookieSkaterProjection } from "../projections";
+import {
+  depthOpportunityMult,
+  lookupTeamDepth,
+  type TeamDepthContext,
+} from "./team-depth";
 import type { PlayerSeasonRow } from "./types";
 
 export const EWMA_SEASON_WEIGHTS = [0.15, 0.3, 0.55];
@@ -13,6 +18,12 @@ export const VOLATILE_LOW_HISTORY_TARGETS = new Set([
 
 const LEAGUE_TEAM_PIM_PG = 8.5;
 const LEAGUE_TEAM_HITS_PG = 22;
+const LEAGUE_TEAM_GF_PG = 3.05;
+const LEAGUE_F_TOI_PG = 16.5;
+const LEAGUE_D_TOI_PG = 21.5;
+const LEAGUE_PP_TOI_PG = 2.8;
+const LEAGUE_F_SHOTS_PG = 2.35;
+const LEAGUE_D_SHOTS_PG = 1.85;
 
 function rowStat(row: PlayerSeasonRow, target: string): number {
   return (row as unknown as Record<string, number>)[target] ?? 0;
@@ -76,7 +87,10 @@ export function contextualPerGameRateFromRows(
   prior: PlayerSeasonRow[],
   targetSeason: PlayerSeasonRow,
   target: string,
+  depth?: TeamDepthContext,
 ): number {
+  const depthCtx =
+    depth ?? lookupTeamDepth(targetSeason.seasonId, targetSeason.playerId);
   const eligible = prior.filter((r) => r.gamesPlayed >= 10);
   const age = targetSeason.age ?? 27;
   const draftMult = draftPedigreeMult(targetSeason.draftOverallPick ?? 0, age);
@@ -157,7 +171,23 @@ export function contextualPerGameRateFromRows(
 
   if (VOLATILE_LOW_HISTORY_TARGETS.has(target)) {
     const priorStrength =
-      eligible.length === 0 ? 2.8 : eligible.length === 1 ? 2.0 : 1.3;
+      target === "goals"
+        ? eligible.length === 0
+          ? 3.2
+          : eligible.length === 1
+            ? 2.4
+            : 1.6
+        : target === "assists"
+          ? eligible.length === 0
+            ? 2.6
+            : eligible.length === 1
+              ? 1.8
+              : 1.2
+          : eligible.length === 0
+            ? 2.8
+            : eligible.length === 1
+              ? 2.0
+              : 1.3;
     rate = empiricalBayesShrink(rate, contextualPrior, eligible.length, priorStrength);
   }
 
@@ -215,10 +245,83 @@ export function contextualPerGameRateFromRows(
     ) {
       rate *= Math.min(1.1, 1 + sat / 120);
     }
+
+    const toiBaseline = posGroup === "D" ? LEAGUE_D_TOI_PG : LEAGUE_F_TOI_PG;
+    const toi =
+      last?.toiPerGame ?? targetSeason.toiPerGame ?? 0;
+    if (toi > 0 && (target === "goals" || target === "assists")) {
+      const toiMult = Math.max(
+        0.82,
+        Math.min(1.18, 1 + ((toi - toiBaseline) / toiBaseline) * 0.4),
+      );
+      rate *= toiMult;
+    }
+
+    if (target === "goals") {
+      const ppToi = last?.ppToiPerGame ?? targetSeason.ppToiPerGame ?? 0;
+      if (ppToi > 0) {
+        rate *= Math.min(
+          1.14,
+          1 + ((ppToi - LEAGUE_PP_TOI_PG) / LEAGUE_PP_TOI_PG) * 0.28,
+        );
+      }
+      const shotsPg =
+        last && last.gamesPlayed > 0
+          ? (last.shots ?? 0) / last.gamesPlayed
+          : 0;
+      const shotsBaseline =
+        posGroup === "D" ? LEAGUE_D_SHOTS_PG : LEAGUE_F_SHOTS_PG;
+      if (shotsPg > 0) {
+        const shotGoalRate =
+          shotsPg * (posGroup === "D" ? 0.075 : 0.11);
+        if (eligible.length < 2) {
+          rate = rate * 0.55 + shotGoalRate * 0.45;
+        } else {
+          rate = rate * 0.75 + shotGoalRate * 0.25;
+        }
+      }
+      const teamGf = targetSeason.teamGoalsForPerGame ?? LEAGUE_TEAM_GF_PG;
+      rate *= Math.max(
+        0.9,
+        Math.min(1.12, 1 + ((teamGf - LEAGUE_TEAM_GF_PG) / LEAGUE_TEAM_GF_PG) * 0.22),
+      );
+    }
+
+    if (target === "assists") {
+      const ppPts60 = last?.ppPointsPer60 ?? 0;
+      const ppToi = last?.ppToiPerGame ?? targetSeason.ppToiPerGame ?? 0;
+      if (ppPts60 > 0 && ppToi > 0) {
+        const ppAssistRate = (ppPts60 * ppToi) / 60 * 0.58;
+        rate = rate * 0.6 + ppAssistRate * 0.4;
+      }
+      const evPts =
+        last && last.gamesPlayed > 0
+          ? (last.evPoints ?? last.points ?? 0) / last.gamesPlayed
+          : 0;
+      if (evPts > 0 && eligible.length < 2) {
+        const evAssistRate = evPts * 0.58;
+        rate = rate * 0.5 + evAssistRate * 0.5;
+      }
+      const teamGf = targetSeason.teamGoalsForPerGame ?? LEAGUE_TEAM_GF_PG;
+      rate *= Math.max(
+        0.88,
+        Math.min(1.15, 1 + ((teamGf - LEAGUE_TEAM_GF_PG) / LEAGUE_TEAM_GF_PG) * 0.28),
+      );
+    }
   }
 
   if (target === "faceoffWins" && targetSeason.position !== "C") {
     return 0;
+  }
+
+  const nhlSeasons = eligible.length;
+  if (nhlSeasons < 3) {
+    rate *= depthOpportunityMult(
+      depthCtx,
+      targetSeason.draftOverallPick ?? 0,
+      age,
+      target,
+    );
   }
 
   return Math.max(0, rate);

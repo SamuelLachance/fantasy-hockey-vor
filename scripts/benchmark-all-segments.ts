@@ -85,7 +85,7 @@ function defaultYoungStrategy(target: string): ProductionStrategy {
     return { type: "contextual_only" };
   }
   if (target === "goals" || target === "assists") {
-    return { type: "ewma_only" };
+    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.05 };
   }
   return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
 }
