@@ -49,12 +49,34 @@ export function formatStat(
   player: PlayerProjection,
   category: Category,
 ): string {
-  const value = (player.projection as unknown as Record<string, number>)[
-    category
-  ];
+  const value = projectionStatValue(player, category);
+  if (value == null) return "—";
   if (category === "savePct") return (value * 100).toFixed(1) + "%";
   if (category === "penaltyMinutes") return value.toFixed(0);
   return value.toLocaleString();
+}
+
+/** Raw projected value for a category, or null if not applicable. */
+export function projectionStatValue(
+  player: PlayerProjection,
+  category: Category,
+): number | null {
+  if (player.isGoalie) {
+    if (!(GOALIE_CATEGORIES as readonly string[]).includes(category)) {
+      return null;
+    }
+  } else if ((GOALIE_CATEGORIES as readonly string[]).includes(category)) {
+    return null;
+  } else if (
+    category === "faceoffWins" &&
+    player.position === "D"
+  ) {
+    return null;
+  }
+  const value = (player.projection as unknown as Record<string, number>)[
+    category
+  ];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export function playerCategories(

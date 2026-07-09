@@ -3,6 +3,7 @@ import {
   LEAGUE_SV_PCT,
 } from "../goalie-skill";
 import {
+  goalieLag1Rates,
   projectedGoalieGpLag1TeamNormFromRows,
   projectGoalieLag1Totals,
 } from "../goalie-projection";

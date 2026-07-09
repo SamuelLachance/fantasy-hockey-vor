@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Filter, X } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -9,15 +9,23 @@ import {
   type Position,
 } from "@/lib/types";
 import {
+  CATEGORY_FULL_LABELS,
   CATEGORY_LABELS,
   formatStat,
   playerCategories,
+  projectionStatValue,
   skaterCategoriesForFilter,
   vorColor,
 } from "@/lib/format";
 import { PositionBadges } from "./PositionBadge";
 
-type SortKey = "rank" | "vor" | "name" | "team" | "gamesPlayed";
+type CoreSortKey = "rank" | "vor" | "name" | "team" | "gamesPlayed";
+type SortKey = CoreSortKey | Category;
+
+type CoreRangeKey = "gamesPlayed" | "vor";
+type RangeKey = CoreRangeKey | Category;
+
+type StatRanges = Partial<Record<RangeKey, { min: string; max: string }>>;
 
 interface RankingsTableProps {
   players: PlayerProjection[];
@@ -53,7 +61,6 @@ function SortIcon({
 let detailsPromise: Promise<Record<string, PlayerDetails>> | null = null;
 
 function fetchPlayerDetails(): Promise<Record<string, PlayerDetails>> {
-  // Relative URL so it works under the GitHub Pages base path too.
   detailsPromise ??= fetch("player-details.json")
     .then((res) => (res.ok ? res.json() : {}))
     .catch(() => ({}));
@@ -67,19 +74,84 @@ function vorForFilter(player: PlayerProjection, filter: Position | "ALL"): numbe
   return player.vor;
 }
 
+function parseRangeValue(key: RangeKey, raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const v = Number(trimmed);
+  if (!Number.isFinite(v)) return undefined;
+  if (key === "savePct" && v > 1) return v / 100;
+  return v;
+}
+
+function coreValue(player: PlayerProjection, key: CoreRangeKey, position: Position | "ALL"): number {
+  if (key === "vor") return vorForFilter(player, position);
+  return player.gamesPlayed;
+}
+
+function passesRanges(
+  player: PlayerProjection,
+  ranges: StatRanges,
+  position: Position | "ALL",
+): boolean {
+  for (const [key, bounds] of Object.entries(ranges) as [RangeKey, { min: string; max: string }][]) {
+    if (!bounds?.min && !bounds?.max) continue;
+
+    const min = bounds.min ? parseRangeValue(key, bounds.min) : undefined;
+    const max = bounds.max ? parseRangeValue(key, bounds.max) : undefined;
+    if (min == null && max == null) continue;
+
+    let value: number | null;
+    if (key === "gamesPlayed" || key === "vor") {
+      value = coreValue(player, key, position);
+    } else {
+      value = projectionStatValue(player, key);
+    }
+    if (value == null) return false;
+    if (min != null && value < min) return false;
+    if (max != null && value > max) return false;
+  }
+  return true;
+}
+
+function rangeLabel(key: RangeKey): string {
+  if (key === "gamesPlayed") return "Games Played";
+  if (key === "vor") return "VOR";
+  return CATEGORY_FULL_LABELS[key];
+}
+
+function defaultSortDir(key: SortKey): "asc" | "desc" {
+  return key === "name" || key === "team" ? "asc" : "desc";
+}
+
 export function RankingsTable({ players }: RankingsTableProps) {
   const [query, setQuery] = useState("");
   const [position, setPosition] = useState<Position | "ALL">("ALL");
   const [sortKey, setSortKey] = useState<SortKey>("vor");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [statRanges, setStatRanges] = useState<StatRanges>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [details, setDetails] = useState<Record<string, PlayerDetails> | null>(
     null,
   );
 
-  // Reset pagination when the filter changes (render-time state adjustment).
-  const filterKey = `${position}|${query.trim().toLowerCase()}`;
+  const filterRangeKeys = useMemo((): RangeKey[] => {
+    const cats =
+      position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
+    return ["gamesPlayed", "vor", ...cats];
+  }, [position]);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    for (const key of filterRangeKeys) {
+      const b = statRanges[key];
+      if (b?.min?.trim() || b?.max?.trim()) n++;
+    }
+    return n;
+  }, [statRanges, filterRangeKeys]);
+
+  const filterKey = `${position}|${query.trim().toLowerCase()}|${JSON.stringify(statRanges)}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
@@ -114,14 +186,28 @@ export function RankingsTable({ players }: RankingsTableProps) {
       );
     }
 
+    list = list.filter((p) => passesRanges(p, statRanges, position));
+
     return [...list].sort((a, b) => {
-      if (sortKey === "vor" && position !== "ALL") {
-        const av = vorForFilter(a, position);
-        const bv = vorForFilter(b, position);
-        return sortDir === "asc" ? av - bv : bv - av;
+      let av: number | string;
+      let bv: number | string;
+
+      if (sortKey === "vor") {
+        av = vorForFilter(a, position);
+        bv = vorForFilter(b, position);
+      } else if (
+        sortKey === "rank" ||
+        sortKey === "name" ||
+        sortKey === "team" ||
+        sortKey === "gamesPlayed"
+      ) {
+        av = a[sortKey];
+        bv = b[sortKey];
+      } else {
+        av = projectionStatValue(a, sortKey) ?? -Infinity;
+        bv = projectionStatValue(b, sortKey) ?? -Infinity;
       }
-      const av = a[sortKey];
-      const bv = b[sortKey];
+
       if (typeof av === "string" && typeof bv === "string") {
         return sortDir === "asc"
           ? av.localeCompare(bv)
@@ -131,15 +217,26 @@ export function RankingsTable({ players }: RankingsTableProps) {
         ? Number(av) - Number(bv)
         : Number(bv) - Number(av);
     });
-  }, [players, query, position, sortKey, sortDir]);
+  }, [players, query, position, sortKey, sortDir, statRanges]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "name" || key === "team" ? "asc" : "desc");
+      setSortDir(defaultSortDir(key));
     }
+  }
+
+  function updateRange(key: RangeKey, field: "min" | "max", value: string) {
+    setStatRanges((prev) => ({
+      ...prev,
+      [key]: { min: "", max: "", ...prev[key], [field]: value },
+    }));
+  }
+
+  function clearStatFilters() {
+    setStatRanges({});
   }
 
   const tableCategories: readonly Category[] =
@@ -163,14 +260,87 @@ export function RankingsTable({ players }: RankingsTableProps) {
             </button>
           ))}
         </div>
-        <input
-          type="search"
-          placeholder="Search players or teams..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 sm:max-w-xs"
-        />
+        <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row">
+          <input
+            type="search"
+            placeholder="Search players or teams..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+              filtersOpen || activeFilterCount > 0
+                ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
+                : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+            }`}
+          >
+            <Filter className="h-4 w-4" />
+            Stats
+            {activeFilterCount > 0 && (
+              <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-bold text-slate-950">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
+
+      {filtersOpen && (
+        <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-lg">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold text-white">Filter by stats</h3>
+              <p className="text-xs text-slate-500">
+                Set min/max for any column. Save % accepts 91.5 or 0.915.
+              </p>
+            </div>
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={clearStatFilters}
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+                Clear all
+              </button>
+            )}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filterRangeKeys.map((key) => (
+              <div
+                key={key}
+                className="rounded-xl border border-white/5 bg-white/5 p-3"
+              >
+                <div className="mb-2 text-xs font-medium text-slate-300">
+                  {rangeLabel(key)}
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="Min"
+                    value={statRanges[key]?.min ?? ""}
+                    onChange={(e) => updateRange(key, "min", e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
+                  />
+                  <span className="text-slate-600">–</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="Max"
+                    value={statRanges[key]?.max ?? ""}
+                    onChange={(e) => updateRange(key, "max", e.target.value)}
+                    className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div className="overflow-x-auto">
@@ -220,7 +390,13 @@ export function RankingsTable({ players }: RankingsTableProps) {
                 </th>
                 {tableCategories.map((cat) => (
                   <th key={cat} className="px-3 py-3 text-center">
-                    {CATEGORY_LABELS[cat]}
+                    <button
+                      onClick={() => toggleSort(cat)}
+                      className="inline-flex w-full items-center justify-center gap-1 hover:text-white"
+                    >
+                      {CATEGORY_LABELS[cat]}
+                      <SortIcon column={cat} sortKey={sortKey} sortDir={sortDir} />
+                    </button>
                   </th>
                 ))}
               </tr>
@@ -267,9 +443,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                           key={cat}
                           className="px-3 py-3 text-center font-mono text-slate-300"
                         >
-                          {position !== "G" && player.isGoalie
-                            ? "—"
-                            : formatStat(player, cat)}
+                          {formatStat(player, cat)}
                         </td>
                       ))}
                     </tr>
@@ -380,7 +554,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
         Showing {Math.min(visibleCount, filtered.length).toLocaleString()} of{" "}
         {filtered.length.toLocaleString()} matching players (
         {players.length.toLocaleString()} total). Click a row for category
-        breakdown.
+        breakdown. Click column headers to sort.
       </p>
     </div>
   );
