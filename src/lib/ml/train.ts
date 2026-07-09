@@ -1442,13 +1442,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
       );
     },
   );
-  let {
-    strategy: _selectedGoalieGpStrategy,
-    metrics: goalieGpMetrics,
-    valMetrics: goalieGpValMetrics,
-    valClassAccuracy: goalieGpValClassAcc,
-    holdoutClassAccuracy: goalieGpHoldoutClassAcc,
-  } = selectGoalieGpStrategy(
+  const goalieGpSelection = selectGoalieGpStrategy(
     goalieGpSplit.val,
     goalieGpSplit.test,
     goalieHistoryMap,
@@ -1460,6 +1454,11 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     dataset.rows,
     depthBySeason,
   );
+  const _selectedGoalieGpStrategy = goalieGpSelection.strategy;
+  const goalieGpValMetrics = goalieGpSelection.valMetrics;
+  const goalieGpValClassAcc = goalieGpSelection.valClassAccuracy;
+  const goalieGpHoldoutClassAcc = goalieGpSelection.holdoutClassAccuracy;
+  let goalieGpMetrics = goalieGpSelection.metrics;
   const goalieGpStrategy: GoalieGpStrategyType = "team_allocation";
   if (_selectedGoalieGpStrategy !== goalieGpStrategy) {
     const testY = goalieGpSplit.test.map((ex) => ex.targetSeason.gamesPlayed);
