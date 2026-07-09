@@ -79,6 +79,9 @@ import {
   goalieGpFromTeamAllocation,
 } from "./goalie-team-allocator";
 import {
+  projectedGoalieGpLag1TeamNormFromRows,
+} from "../goalie-projection";
+import {
   applyBlocksRoleFilter,
   defaultYoungStrategy,
   resolveProductionStrategy,
@@ -127,6 +130,7 @@ const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
 ];
 
 const GOALIE_GP_CANDIDATES: GoalieGpStrategyType[] = [
+  "lag1_team_norm",
   "team_allocation",
   "two_step_full_season",
   "ensemble",
@@ -776,13 +780,21 @@ function predictGoalieGpForStrategy(
     historyMap &&
     depthBySeason
   ) {
-    const depth = depthBySeason.get(ex.seasonId) ?? new Map();
     return goalieGpFromTeamAllocation(
       ex,
       prior,
       datasetRows,
       historyMap,
-      depth,
+      depthBySeason.get(ex.seasonId) ?? new Map(),
+    );
+  }
+  if (strategy === "lag1_team_norm" && datasetRows && historyMap) {
+    return projectedGoalieGpLag1TeamNormFromRows(
+      ex.playerId,
+      ex.targetSeason.team,
+      ex.seasonId,
+      datasetRows,
+      historyMap,
     );
   }
   if (strategy === "two_step_full_season") {
@@ -1454,33 +1466,36 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     dataset.rows,
     depthBySeason,
   );
-  const _selectedGoalieGpStrategy = goalieGpSelection.strategy;
   const goalieGpValMetrics = goalieGpSelection.valMetrics;
   const goalieGpValClassAcc = goalieGpSelection.valClassAccuracy;
   const goalieGpHoldoutClassAcc = goalieGpSelection.holdoutClassAccuracy;
-  let goalieGpMetrics = goalieGpSelection.metrics;
-  const goalieGpStrategy: GoalieGpStrategyType = "team_allocation";
-  if (_selectedGoalieGpStrategy !== goalieGpStrategy) {
-    const testY = goalieGpSplit.test.map((ex) => ex.targetSeason.gamesPlayed);
-    clearGoalieAllocationCache();
-    const teamAllocPreds = goalieGpSplit.test.map((ex) => {
-      const prior = priorHistoryForExample(goalieHistoryMap, ex);
-      return predictGoalieGpForStrategy(
-        ex,
-        prior,
-        goalieGpStrategy,
-        goalieGpModel,
-        goalieGpLag1EwmaBlend,
-        goalieGpEnsembleWeights,
-        goalieGpTwoStepConfig,
-        dataset.rows,
-        goalieHistoryMap,
-        depthBySeason,
-      );
-    });
-    goalieGpMetrics = evaluateRegression(testY, teamAllocPreds);
-    goalieGpMetrics.spearman = spearmanCorrelation(testY, teamAllocPreds);
-  }
+
+  const goalieProductionMetrics = evaluateGoalieProductionHoldout(
+    goalieGpSplit.test,
+    goalieHistoryMap,
+    dataset.rows,
+  );
+  // Production ships lag1_team_norm (best validated GP path for full seasons).
+  const goalieGpStrategy: GoalieGpStrategyType = "lag1_team_norm";
+  const testY = goalieGpSplit.test.map((ex) => ex.targetSeason.gamesPlayed);
+  clearGoalieAllocationCache();
+  const prodGpPreds = goalieGpSplit.test.map((ex) => {
+    const prior = priorHistoryForExample(goalieHistoryMap, ex);
+    return predictGoalieGpForStrategy(
+      ex,
+      prior,
+      goalieGpStrategy,
+      goalieGpModel,
+      goalieGpLag1EwmaBlend,
+      goalieGpEnsembleWeights,
+      goalieGpTwoStepConfig,
+      dataset.rows,
+      goalieHistoryMap,
+      depthBySeason,
+    );
+  });
+  const goalieGpMetrics = evaluateRegression(testY, prodGpPreds);
+  goalieGpMetrics.spearman = spearmanCorrelation(testY, prodGpPreds);
 
   const goalieModels: RidgeModel[] = [];
   for (const target of GOALIE_ML_TARGETS) {
@@ -1491,25 +1506,6 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
       fitRidge(trainX, trainY, examples[0]?.featureNames ?? [], target, true, 12),
     );
   }
-
-  clearGoalieAllocationCache();
-  const goalieProductionMetrics = evaluateGoalieProductionHoldout(
-    goalieGpSplit.test,
-    goalieHistoryMap,
-    (ex, prior) =>
-      predictGoalieGpForStrategy(
-        ex,
-        prior,
-        goalieGpStrategy,
-        goalieGpModel,
-        goalieGpLag1EwmaBlend,
-        goalieGpEnsembleWeights,
-        goalieGpTwoStepConfig,
-        dataset.rows,
-        goalieHistoryMap,
-        depthBySeason,
-      ),
-  );
 
   return {
     trainedAt: new Date().toISOString(),
@@ -1529,7 +1525,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     goalieGpTwoStepConfig,
     goalieModelsEvalOnly: true,
     validationScheme:
-      "rolling: train<2024-25, tune on 2024-25 (Spearman/rank-first champions), holdout 2025-26; GP via GBM + team goalie allocator; PIM GBM",
+      "rolling: train<2024-25, tune on 2024-25, holdout 2025-26; goalies use lag1 team-normalized GP + persistence rates",
     metrics: {
       skater: skaterMetrics,
       goalie: goalieMetrics,
@@ -1633,7 +1629,7 @@ export function printMetrics(bundle: MlModelBundle): void {
     );
   }
   if (bundle.metrics.goalieProduction) {
-    console.log("\nGoalie production path (GSAx + two-step GP, holdout):");
+    console.log("\nGoalie production path (lag1 persistence + team-normalized GP, holdout):");
     for (const [target, m] of Object.entries(bundle.metrics.goalieProduction)) {
       console.log(
         `  ${target}: R²=${m.r2.toFixed(3)} MAE=${m.mae.toFixed(3)} (n=${m.samples})`,

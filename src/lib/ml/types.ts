@@ -54,6 +54,7 @@ export type GoalieGpStrategyType =
   | "two_step_full_season"
   | "ensemble"
   | "team_allocation"
+  | "lag1_team_norm"
   | "lag1_only"
   | "ewma_only"
   | "lag1_ewma_blend"

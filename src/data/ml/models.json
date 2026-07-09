@@ -1,5 +1,5 @@
 {
-  "trainedAt": "2026-07-09T18:38:07.106Z",
+  "trainedAt": "2026-07-09T19:22:42.314Z",
   "featureLags": 3,
   "minSeasonGp": 10,
   "skaterModels": [
@@ -10104,7 +10104,7 @@
     ],
     "holdoutR2": -1.381927972673658e+121
   },
-  "goalieGpStrategy": "team_allocation",
+  "goalieGpStrategy": "lag1_team_norm",
   "goalieGpLag1EwmaBlend": {
     "lag1": 0,
     "ewma": 1
@@ -10129,7 +10129,7 @@
     }
   },
   "goalieModelsEvalOnly": true,
-  "validationScheme": "rolling: train<2024-25, tune on 2024-25 (Spearman/rank-first champions), holdout 2025-26; GP via GBM + team goalie allocator; PIM/blocks GBM",
+  "validationScheme": "rolling: train<2024-25, tune on 2024-25, holdout 2025-26; goalies use lag1 team-normalized GP + persistence rates",
   "metrics": {
     "skater": {
       "goals": {
@@ -10225,40 +10225,47 @@
     "goalieProduction": {
       "wins": {
         "samples": 63,
-        "mae": 0.09210989892344172,
-        "rmse": 0.11407181286129996,
-        "mape": 0.0485752652171232,
-        "r2": -0.3800603301239569
+        "mae": 8.746031746031745,
+        "rmse": 10.708993401928105,
+        "mape": 0.541987928194993,
+        "r2": -0.2957907262747952
       },
       "shutouts": {
         "samples": 63,
-        "mae": 0.03024149304600653,
-        "rmse": 0.04104850193335285,
-        "mape": 0,
-        "r2": -0.7391653272810241
+        "mae": 1.3174603174603174,
+        "rmse": 1.7861904127153383,
+        "mape": 0.418745275888133,
+        "r2": -0.31961233847436477
       },
       "saves": {
         "samples": 63,
-        "mae": 1.954517759383651,
-        "rmse": 2.4712438575657227,
-        "mape": 0.08786205155352128,
-        "r2": -0.7946537792410329
+        "mae": 327.41269841269843,
+        "rmse": 409.5009157498918,
+        "mape": 0.4109070860749526,
+        "r2": -0.2889502956649723
       },
       "savePct": {
         "samples": 63,
-        "mae": 0.011788641875876582,
-        "rmse": 0.01498892531916518,
-        "mape": 0.013306649072176532,
-        "r2": -0.38801120279836576
+        "mae": 0.014159734510156268,
+        "rmse": 0.017324476169660062,
+        "mape": 0.01592482136167887,
+        "r2": -0.8542667199973433
+      },
+      "gamesPlayed": {
+        "samples": 63,
+        "mae": 13.047619047619047,
+        "rmse": 16.58743069745454,
+        "mape": 0.36407274736471207,
+        "r2": -0.327284616244756
       }
     },
     "goalieGp": {
       "samples": 63,
-      "mae": 12.571428571428571,
-      "rmse": 15.844482290299643,
-      "mape": 0.3526556466713994,
-      "r2": -0.21104958408486563,
-      "spearman": 0.45124087941628266
+      "mae": 13.047619047619047,
+      "rmse": 16.58743069745454,
+      "mape": 0.36407274736471207,
+      "r2": -0.327284616244756,
+      "spearman": 0.46574980798771126
     },
     "skaterGp": {
       "samples": 582,

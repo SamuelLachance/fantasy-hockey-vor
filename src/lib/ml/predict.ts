@@ -1,15 +1,15 @@
 import type { PlayerProfile } from "../profile-types";
-import { projectGoalieFromProfile } from "../contextual-projections";
+import {
+  projectGoalieLag1FromProfile,
+} from "../goalie-projection";
 import {
   anchorSkaterProjectionToHistory,
-  clampGoalieProjection,
   clampSkaterProjection,
 } from "../projection-sanity";
 import { projectedGamesFromProfile, type GoalieRole } from "../projection-gp";
 import { isCenterEligible } from "../yahoo-positions";
 import type { GoalieProjection, SkaterProjection } from "../types";
 import {
-  buildGoalieGpInferenceFeatures,
   buildSkaterGpInferenceFeatures,
   buildTargetInferenceFeatures,
   extractEwmaFeature,
@@ -161,19 +161,6 @@ function predictSkaterGp(
   return Math.max(10, Math.min(82, Math.round(gp)));
 }
 
-function predictGoalieGp(
-  profile: PlayerProfile,
-  models: MlModelBundle,
-  history: PlayerSeasonRow[],
-  targetRow: PlayerSeasonRow,
-): number | null {
-  if (!models.goalieGpModel) return null;
-  const goalieHistory = history.filter((r) => r.isGoalie);
-  const { features } = buildGoalieGpInferenceFeatures(goalieHistory, targetRow);
-  const gp = predictStatModel(models.goalieGpModel, features);
-  return Math.max(10, Math.min(82, Math.round(gp)));
-}
-
 export function projectSkaterWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
@@ -250,41 +237,11 @@ export function projectSkaterWithMl(
 export function projectGoalieWithMl(
   profile: PlayerProfile,
   models: MlModelBundle,
-  goalieRoleMap?: Map<number, GoalieRole>,
+  _goalieRoleMap?: Map<number, GoalieRole>,
   teamGoalies?: PlayerProfile[],
 ): { projection: GoalieProjection; gamesPlayed: number; reasoning: string } {
-  const caches = loadContextCaches();
-  const history = profileToSeasonRows(profile, caches);
-  const targetRow = buildProjectionTargetRow(profile, caches);
-  const mlGp = predictGoalieGp(profile, models, history, targetRow);
-  const result = projectGoalieFromProfile(profile, goalieRoleMap);
-  const gamesPlayed = projectedGamesFromProfile(profile, goalieRoleMap, null, {
-    goalieGpStrategy: models.goalieGpStrategy ?? "ensemble",
-    goalieGpLag1EwmaBlend: models.goalieGpLag1EwmaBlend,
-    goalieGpEnsembleWeights: models.goalieGpEnsembleWeights,
-    goalieGpTwoStepConfig: models.goalieGpTwoStepConfig,
-    goalieMlGp: mlGp,
-    teamGoalies,
-  });
-
-  const oldGp = Math.max(1, result.gamesPlayed);
-  const scale = gamesPlayed / oldGp;
-  const projection = clampGoalieProjection(
-    {
-      wins: Math.round(result.projection.wins * scale),
-      shutouts: Math.round(result.projection.shutouts * scale),
-      saves: Math.round(result.projection.saves * scale),
-      savePct: result.projection.savePct,
-    },
-    gamesPlayed,
-  );
-
-  const gpStrategy = models.goalieGpStrategy ?? "ensemble";
-  return {
-    projection,
-    gamesPlayed,
-    reasoning: `Goalie MoneyPuck GSAx + team SV% environment; GP=${gamesPlayed} (${gpStrategy})`,
-  };
+  void models;
+  return projectGoalieLag1FromProfile(profile, teamGoalies ?? [profile]);
 }
 
 export function getMlModels(): MlModelBundle | null {

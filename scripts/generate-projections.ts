@@ -212,7 +212,7 @@ async function main() {
     console.log(`Using AI projections for ${aiCount} cached players`);
   } else if (mlModels) {
     console.log(
-      `Using ML models (${mlModels.skaterModels.length} skater stat models; goalie stats via GSAx production path + two-step GP, trained ${mlModels.trainedAt})`,
+      `Using ML models (${mlModels.skaterModels.length} skater stat models; goalies via lag1 persistence + team-normalized GP, trained ${mlModels.trainedAt})`,
     );
   } else {
     console.log(
