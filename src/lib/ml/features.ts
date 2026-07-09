@@ -182,6 +182,88 @@ export const SKATER_GP_FEATURE_NAMES = GOALIE_GP_FEATURE_NAMES;
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 
+/** Team-context fields that are full-season outcomes — never use the target
+ * season's own values (leakage); replace with prior-season context. */
+const TEAM_CONTEXT_FIELDS = [
+  "teamGoalsForPerGame",
+  "teamGoalsAgainstPerGame",
+  "teamGoalDiffPerGame",
+  "teamLeagueRank",
+  "teamElo",
+  "teamPointPctg",
+  "teamHitsPerGame",
+  "teamPimPerGame",
+  "teamBlocksPerGame",
+  "teamPpGoalShare",
+  "teamPkGaPer60",
+] as const;
+
+const TEAM_CONTEXT_DEFAULTS: Record<(typeof TEAM_CONTEXT_FIELDS)[number], number> = {
+  teamGoalsForPerGame: 2.85,
+  teamGoalsAgainstPerGame: 2.85,
+  teamGoalDiffPerGame: 0,
+  teamLeagueRank: 16,
+  teamElo: 500,
+  teamPointPctg: 0.5,
+  teamHitsPerGame: 22,
+  teamPimPerGame: 8,
+  teamBlocksPerGame: 14,
+  teamPpGoalShare: 0.2,
+  teamPkGaPer60: 2.5,
+};
+
+type TeamContextSnapshot = Partial<Record<(typeof TEAM_CONTEXT_FIELDS)[number], number>>;
+
+const teamContextMapCache = new WeakMap<
+  PlayerSeasonRow[],
+  Map<string, TeamContextSnapshot>
+>();
+
+function primaryTeamOfRow(team: string): string {
+  return team.split(",")[0].trim().toUpperCase();
+}
+
+function buildTeamSeasonContextMap(
+  rows: PlayerSeasonRow[],
+): Map<string, TeamContextSnapshot> {
+  const cached = teamContextMapCache.get(rows);
+  if (cached) return cached;
+  const map = new Map<string, TeamContextSnapshot>();
+  for (const row of rows) {
+    const key = `${primaryTeamOfRow(row.team)}:${row.seasonId}`;
+    if (map.has(key)) continue;
+    const snapshot: TeamContextSnapshot = {};
+    for (const field of TEAM_CONTEXT_FIELDS) {
+      const value = (row as unknown as Record<string, number | undefined>)[field];
+      if (value !== undefined) snapshot[field] = value;
+    }
+    map.set(key, snapshot);
+  }
+  teamContextMapCache.set(rows, map);
+  return map;
+}
+
+/**
+ * Replace the target row's team-context fields with the same team's
+ * prior-season values — the only team context legitimately known before the
+ * season starts. Mirrors inference, where the target row carries the last
+ * completed season's standings.
+ */
+export function sanitizeTargetSeasonRow(
+  targetSeason: PlayerSeasonRow,
+  rows: PlayerSeasonRow[],
+): PlayerSeasonRow {
+  const map = buildTeamSeasonContextMap(rows);
+  const prevKey = `${primaryTeamOfRow(targetSeason.team)}:${targetSeason.seasonId - 10001}`;
+  const prev = map.get(prevKey);
+  const sanitized: PlayerSeasonRow = { ...targetSeason };
+  for (const field of TEAM_CONTEXT_FIELDS) {
+    (sanitized as unknown as Record<string, number>)[field] =
+      prev?.[field] ?? TEAM_CONTEXT_DEFAULTS[field];
+  }
+  return sanitized;
+}
+
 function perGame(total: number, gp: number): number {
   return gp > 0 ? total / gp : 0;
 }
@@ -543,8 +625,9 @@ export function buildSkaterTrainingExamplesForTarget(
   for (const history of byPlayer.values()) {
     history.sort((a, b) => a.seasonId - b.seasonId);
     for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
-      const targetSeason = history[i];
-      if (targetSeason.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const raw = history[i];
+      if (raw.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const targetSeason = sanitizeTargetSeasonRow(raw, rows);
       const prior = history.slice(0, i);
       const { features, names } = buildLagFeatures(
         prior,
@@ -587,8 +670,9 @@ export function buildGoalieTrainingExamplesForTarget(
   for (const history of byPlayer.values()) {
     history.sort((a, b) => a.seasonId - b.seasonId);
     for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
-      const targetSeason = history[i];
-      if (targetSeason.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const raw = history[i];
+      if (raw.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const targetSeason = sanitizeTargetSeasonRow(raw, rows);
       const prior = history.slice(0, i);
       const { features, names } = buildLagFeatures(
         prior,
@@ -627,8 +711,9 @@ export function buildGoalieGpExamples(rows: PlayerSeasonRow[]): TrainingExample[
   for (const history of byPlayer.values()) {
     history.sort((a, b) => a.seasonId - b.seasonId);
     for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
-      const target = history[i];
-      if (target.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const raw = history[i];
+      if (raw.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const target = sanitizeTargetSeasonRow(raw, rows);
       const prior = history.slice(0, i);
       const { features, names } = buildLagFeatures(
         prior,
@@ -661,8 +746,9 @@ export function buildSkaterGpExamples(rows: PlayerSeasonRow[]): TrainingExample[
   for (const history of byPlayer.values()) {
     history.sort((a, b) => a.seasonId - b.seasonId);
     for (let i = ML_FEATURE_LAGS; i < history.length; i++) {
-      const target = history[i];
-      if (target.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const raw = history[i];
+      if (raw.gamesPlayed < ML_MIN_SEASON_GP) continue;
+      const target = sanitizeTargetSeasonRow(raw, rows);
       const prior = history.slice(0, i);
       const { features, names } = buildLagFeatures(
         prior,

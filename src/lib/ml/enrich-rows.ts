@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../atomic-write";
 import { HISTORICAL_SEASON_IDS, seasonIdToLabel } from "../nhl-api";
 import type { MlContextCaches } from "./context-types";
 import {
@@ -32,8 +33,7 @@ export function loadContextCaches(): MlContextCaches | null {
 }
 
 export function saveContextCaches(caches: MlContextCaches): void {
-  mkdirSync(join(process.cwd(), "src", "data", "ml"), { recursive: true });
-  writeFileSync(CACHE_PATH, JSON.stringify(caches));
+  writeFileAtomic(CACHE_PATH, JSON.stringify(caches));
 }
 
 export async function buildContextCaches(

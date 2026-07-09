@@ -112,7 +112,12 @@ function assignDepthRanks(
   return result;
 }
 
-/** Depth entering `targetSeasonId` from roster + draft pedigree. */
+/**
+ * Depth entering `targetSeasonId`, built strictly from the previous season's
+ * roster — the target season's actual roster is future information during
+ * training. Players without a prior season (rookies) get no depth entry and
+ * fall back to neutral multipliers.
+ */
 export function buildTeamDepthFromRows(
   rows: PlayerSeasonRow[],
   historyMap: Map<number, PlayerSeasonRow[]>,
@@ -122,9 +127,6 @@ export function buildTeamDepthFromRows(
   const refRows = rows.filter(
     (r) => !r.isGoalie && r.seasonId === refSeason && r.gamesPlayed >= 10,
   );
-  const enteringRows = rows.filter(
-    (r) => !r.isGoalie && r.seasonId === targetSeasonId,
-  );
 
   const byTeamPos = new Map<
     string,
@@ -132,8 +134,8 @@ export function buildTeamDepthFromRows(
   >();
   const seen = new Set<number>();
 
-  const addPlayer = (row: PlayerSeasonRow) => {
-    if (seen.has(row.playerId)) return;
+  for (const row of refRows) {
+    if (seen.has(row.playerId)) continue;
     seen.add(row.playerId);
     const team = primaryTeam(row.team);
     const bucket = positionBucket(row.position);
@@ -148,10 +150,7 @@ export function buildTeamDepthFromRows(
       veteran: priorNhlSeasons(prior) >= 3,
     });
     byTeamPos.set(key, list);
-  };
-
-  for (const row of refRows) addPlayer(row);
-  for (const row of enteringRows) addPlayer(row);
+  }
 
   const result = new Map<number, TeamDepthContext>();
   for (const list of byTeamPos.values()) {

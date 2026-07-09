@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import {
   draftRecordToInfo,
   fetchPlayerLandingDraft,
@@ -62,7 +63,7 @@ async function main() {
     }
   }
 
-  writeFileSync(PROFILES_PATH, JSON.stringify(data, null, 2));
+  writeFileAtomic(PROFILES_PATH, JSON.stringify(data, null, 2));
   const withDraft = data.profiles.filter((p) => p.draft).length;
   console.log(
     `Draft refresh: ${updated} profiles updated (${fromLanding} landing, ${fromRegistry} registry)`,

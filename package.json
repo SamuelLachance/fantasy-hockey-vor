@@ -8,6 +8,8 @@
     "build:pages": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "check:data": "tsx scripts/check-players-data.ts",
     "collect": "tsx scripts/collect-profiles.ts",
     "ai-project": "tsx scripts/ai-project.ts",
     "ml:dataset": "tsx scripts/build-ml-dataset.ts",

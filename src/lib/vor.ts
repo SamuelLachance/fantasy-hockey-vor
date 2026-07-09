@@ -5,6 +5,7 @@ import {
   type CategoryDifficultyWeights,
 } from "./stat-difficulty";
 import {
+  DEFENSE_SKATER_CATEGORIES,
   GOALIE_CATEGORIES,
   SKATER_CATEGORIES,
   type Category,
@@ -52,13 +53,19 @@ export function computeCategoryZScores(
   const result = new Map<number, Partial<Record<Category, number>>>();
 
   for (const category of SKATER_CATEGORIES) {
-    const values = skaters.map((p) =>
+    // Defensemen aren't scored on faceoffs — keep them out of both the
+    // distribution and the scoring for that category.
+    const pool =
+      category === "faceoffWins"
+        ? skaters.filter((p) => p.position !== "D")
+        : skaters;
+    const values = pool.map((p) =>
       getStat(p.projection as SkaterProjection, category),
     );
     const avg = mean(values);
     const sd = stdDev(values);
 
-    for (const player of skaters) {
+    for (const player of pool) {
       const value = getStat(player.projection as SkaterProjection, category);
       const scores = result.get(player.id) ?? {};
       scores[category] = zScore(value, avg, sd);
@@ -88,8 +95,13 @@ export function fantasyValueFromZScores(
   zScores: Partial<Record<Category, number>>,
   isGoalie: boolean,
   difficultyWeights?: CategoryDifficultyWeights,
+  position?: Position,
 ): number {
-  const categories = isGoalie ? GOALIE_CATEGORIES : SKATER_CATEGORIES;
+  const categories: readonly Category[] = isGoalie
+    ? GOALIE_CATEGORIES
+    : position === "D"
+      ? DEFENSE_SKATER_CATEGORIES
+      : SKATER_CATEGORIES;
   return categories.reduce((sum, cat) => {
     const z = zScores[cat] ?? 0;
     const w = difficultyWeights
@@ -164,6 +176,7 @@ export function applyVor(
       categoryZScores,
       player.isGoalie,
       categoryWeights,
+      player.position,
     );
     return { ...player, categoryZScores, fantasyValue, vor: 0 };
   });

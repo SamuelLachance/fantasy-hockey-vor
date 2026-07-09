@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import {
   enrichAllRows,
   loadContextCaches,
@@ -24,7 +25,7 @@ async function main() {
   console.log(`Re-enriching ${dataset.rows.length} player-seasons with updated context...`);
   dataset.rows = enrichAllRows(dataset.rows, caches);
   dataset.builtAt = new Date().toISOString();
-  writeFileSync(DATA_PATH, JSON.stringify(dataset));
+  writeFileAtomic(DATA_PATH, JSON.stringify(dataset));
   console.log("Dataset re-enriched and saved.");
 }
 

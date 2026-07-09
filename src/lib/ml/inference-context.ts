@@ -67,10 +67,12 @@ function profileSeasonToRow(
     shutouts: s.stats.shutouts ?? 0,
     saves: s.stats.saves ?? 0,
     savePct: s.stats.savePct ?? 0.905,
-    teamGoalsForPerGame: profile.teamContext.goalsForPerGame,
-    teamGoalsAgainstPerGame: profile.teamContext.goalsAgainstPerGame,
-    teamGoalDiffPerGame:
-      profile.teamContext.goalsForPerGame - profile.teamContext.goalsAgainstPerGame,
+    // Neutral placeholders — per-season team context comes from the context
+    // cache in enrichPlayerSeasonRow. Stamping the CURRENT team context on
+    // historical rows would skew lag/EWMA context features.
+    teamGoalsForPerGame: 2.85,
+    teamGoalsAgainstPerGame: 2.85,
+    teamGoalDiffPerGame: 0,
   };
 }
 

@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { buildMlDataset } from "../src/lib/ml/season-collector";
 import type { MlDataset } from "../src/lib/ml/types";
 
@@ -24,8 +25,7 @@ async function main() {
     console.log(`  [${i}/${total}] season ${seasonId}`);
   });
 
-  mkdirSync(join(process.cwd(), "src", "data", "ml"), { recursive: true });
-  writeFileSync(DATA_PATH, JSON.stringify(dataset));
+  writeFileAtomic(DATA_PATH, JSON.stringify(dataset));
   console.log(
     `Wrote ${dataset.rows.length} player-season rows across ${dataset.seasonIds.length} seasons`,
   );

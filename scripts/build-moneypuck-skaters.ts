@@ -1,5 +1,5 @@
-import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { buildMoneyPuckSkaterRegistry } from "../src/lib/moneypuck-skaters";
 
 const OUT_PATH = join(process.cwd(), "src", "data", "moneypuck-skaters.json");
@@ -12,8 +12,7 @@ async function main() {
     `Building MoneyPuck skater registry (${MONEYPUCK_YEARS[0]}–${MONEYPUCK_YEARS.at(-1)} seasons)...`,
   );
   const registry = await buildMoneyPuckSkaterRegistry(MONEYPUCK_YEARS, console.log);
-  mkdirSync(join(process.cwd(), "src", "data"), { recursive: true });
-  writeFileSync(OUT_PATH, JSON.stringify(registry, null, 2));
+  writeFileAtomic(OUT_PATH, JSON.stringify(registry, null, 2));
   console.log(
     `Wrote ${Object.keys(registry.byKey).length} player-season rows to ${OUT_PATH}`,
   );

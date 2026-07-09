@@ -4,11 +4,21 @@ import type { Position } from "./types";
 import type { YahooPlayerRecord, YahooPositionsDataset } from "./yahoo-fantasy";
 
 const DATA_PATH = join(process.cwd(), "src", "data", "yahoo-positions.json");
+const STALE_WARN_MS = 30 * 24 * 60 * 60 * 1000;
 
 export function loadYahooPositions(): YahooPositionsDataset | null {
   if (!existsSync(DATA_PATH)) return null;
   try {
-    return JSON.parse(readFileSync(DATA_PATH, "utf8")) as YahooPositionsDataset;
+    const dataset = JSON.parse(
+      readFileSync(DATA_PATH, "utf8"),
+    ) as YahooPositionsDataset;
+    const age = Date.now() - new Date(dataset.fetchedAt).getTime();
+    if (Number.isFinite(age) && age > STALE_WARN_MS) {
+      console.warn(
+        `WARN: yahoo-positions.json is ${(age / (24 * 60 * 60 * 1000)).toFixed(0)} days old — run npm run yahoo:fetch to refresh position eligibility.`,
+      );
+    }
+    return dataset;
   } catch {
     return null;
   }

@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { ageFromBirthDate, parseBirthDate, seasonStartDate } from "../src/lib/age";
 import { fetchContractByNhlId } from "../src/lib/contracts";
 import { normalizeProfile } from "../src/lib/player-profile";
@@ -58,7 +59,7 @@ async function main() {
   });
 
   const normalized = data.profiles.map(normalizeProfile);
-  writeFileSync(
+  writeFileAtomic(
     PROFILES,
     JSON.stringify(
       {

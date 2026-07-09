@@ -1,5 +1,5 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { collectAllProfiles } from "../src/lib/player-profile";
 
 const OUT = join(process.cwd(), "src", "data", "player-profiles.json");
@@ -15,8 +15,7 @@ async function main() {
     }
   }, limit);
 
-  mkdirSync(join(process.cwd(), "src", "data"), { recursive: true });
-  writeFileSync(
+  writeFileAtomic(
     OUT,
     JSON.stringify(
       {

@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { applyMoneyPuckSkaterFields, loadMoneyPuckSkaterRegistrySync } from "../src/lib/moneypuck-skaters";
 import type { MlDataset } from "../src/lib/ml/types";
 
@@ -25,7 +26,7 @@ async function main() {
     return enriched;
   });
   dataset.builtAt = new Date().toISOString();
-  writeFileSync(DATA_PATH, JSON.stringify(dataset));
+  writeFileAtomic(DATA_PATH, JSON.stringify(dataset));
   console.log(
     `Applied MoneyPuck skater stats to ${matched} skater player-seasons (${dataset.rows.length} total rows).`,
   );

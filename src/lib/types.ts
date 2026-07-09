@@ -92,10 +92,20 @@ export interface LeagueSettings {
   season: string;
 }
 
+export interface DataManifest {
+  profilesCollectedAt: string | null;
+  modelsTrainedAt: string | null;
+  contextCacheBuiltAt: string | null;
+  yahooPositionsFetchedAt: string | null;
+  aiCacheGeneratedAt: string | null;
+}
+
 export interface ProjectionsDataset {
   generatedAt: string;
   season: string;
   league: LeagueSettings;
+  /** Provenance of upstream data artifacts. */
+  dataManifest?: DataManifest;
   replacementLevels: Partial<Record<Position, number>>;
   /** Per-category scarcity weights used in weighted fantasy value / VOR. */
   categoryWeights?: import("./stat-difficulty").CategoryDifficultyWeights;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
@@ -23,7 +23,42 @@ interface RankingsTableProps {
   players: PlayerProjection[];
 }
 
+interface PlayerDetails {
+  reasoning: string;
+  profileSummary: string;
+}
+
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
+const PAGE_SIZE = 100;
+
+function SortIcon({
+  column,
+  sortKey,
+  sortDir,
+}: {
+  column: SortKey;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+}) {
+  if (sortKey !== column) {
+    return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
+  }
+  return sortDir === "asc" ? (
+    <ArrowUp className="h-3.5 w-3.5 text-cyan-400" />
+  ) : (
+    <ArrowDown className="h-3.5 w-3.5 text-cyan-400" />
+  );
+}
+
+let detailsPromise: Promise<Record<string, PlayerDetails>> | null = null;
+
+function fetchPlayerDetails(): Promise<Record<string, PlayerDetails>> {
+  // Relative URL so it works under the GitHub Pages base path too.
+  detailsPromise ??= fetch("player-details.json")
+    .then((res) => (res.ok ? res.json() : {}))
+    .catch(() => ({}));
+  return detailsPromise;
+}
 
 function vorForFilter(player: PlayerProjection, filter: Position | "ALL"): number {
   if (filter !== "ALL") {
@@ -38,6 +73,30 @@ export function RankingsTable({ players }: RankingsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("vor");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [details, setDetails] = useState<Record<string, PlayerDetails> | null>(
+    null,
+  );
+
+  // Reset pagination when the filter changes (render-time state adjustment).
+  const filterKey = `${position}|${query.trim().toLowerCase()}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setVisibleCount(PAGE_SIZE);
+  }
+
+  useEffect(() => {
+    if (expandedId != null && details === null) {
+      let cancelled = false;
+      fetchPlayerDetails().then((d) => {
+        if (!cancelled) setDetails(d);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [expandedId, details]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -83,17 +142,6 @@ export function RankingsTable({ players }: RankingsTableProps) {
     }
   }
 
-  function SortIcon({ column }: { column: SortKey }) {
-    if (sortKey !== column) {
-      return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
-    }
-    return sortDir === "asc" ? (
-      <ArrowUp className="h-3.5 w-3.5 text-cyan-400" />
-    ) : (
-      <ArrowDown className="h-3.5 w-3.5 text-cyan-400" />
-    );
-  }
-
   const tableCategories: readonly Category[] =
     position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
 
@@ -134,7 +182,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     onClick={() => toggleSort("rank")}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
-                    # <SortIcon column="rank" />
+                    # <SortIcon column="rank" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
                 <th className="px-4 py-3">
@@ -142,7 +190,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     onClick={() => toggleSort("name")}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
-                    Player <SortIcon column="name" />
+                    Player <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
                 <th className="px-4 py-3">Pos</th>
@@ -151,7 +199,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     onClick={() => toggleSort("team")}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
-                    Team <SortIcon column="team" />
+                    Team <SortIcon column="team" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
                 <th className="px-4 py-3">
@@ -159,7 +207,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     onClick={() => toggleSort("vor")}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
-                    VOR <SortIcon column="vor" />
+                    VOR <SortIcon column="vor" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
                 <th className="px-4 py-3">
@@ -167,7 +215,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     onClick={() => toggleSort("gamesPlayed")}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
-                    GP <SortIcon column="gamesPlayed" />
+                    GP <SortIcon column="gamesPlayed" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
                 {tableCategories.map((cat) => (
@@ -178,9 +226,10 @@ export function RankingsTable({ players }: RankingsTableProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filtered.map((player, idx) => {
+              {filtered.slice(0, visibleCount).map((player, idx) => {
                 const isExpanded = expandedId === player.id;
                 const cats = playerCategories(player);
+                const playerDetails = details?.[String(player.id)];
                 return (
                   <Fragment key={player.id}>
                     <tr
@@ -249,14 +298,19 @@ export function RankingsTable({ players }: RankingsTableProps) {
                               </span>
                             )}
                           </div>
-                          {player.reasoning && (
+                          {playerDetails?.reasoning && (
                             <p className="mb-3 text-sm leading-relaxed text-slate-300">
-                              {player.reasoning}
+                              {playerDetails.reasoning}
                             </p>
                           )}
-                          {player.profileSummary && (
+                          {playerDetails?.profileSummary && (
                             <p className="mb-4 rounded-xl border border-white/5 bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
-                              {player.profileSummary}
+                              {playerDetails.profileSummary}
+                            </p>
+                          )}
+                          {isExpanded && details === null && (
+                            <p className="mb-3 text-xs text-slate-500">
+                              Loading player notes...
                             </p>
                           )}
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -311,10 +365,21 @@ export function RankingsTable({ players }: RankingsTableProps) {
             No players match your filters.
           </div>
         )}
+        {filtered.length > visibleCount && (
+          <div className="border-t border-white/5 px-6 py-4 text-center">
+            <button
+              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+              className="rounded-full bg-white/5 px-6 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10"
+            >
+              Show {Math.min(PAGE_SIZE, filtered.length - visibleCount)} more
+            </button>
+          </div>
+        )}
       </div>
       <p className="text-center text-xs text-slate-500">
-        Showing {filtered.length.toLocaleString()} of{" "}
-        {players.length.toLocaleString()} players. Click a row for category
+        Showing {Math.min(visibleCount, filtered.length).toLocaleString()} of{" "}
+        {filtered.length.toLocaleString()} matching players (
+        {players.length.toLocaleString()} total). Click a row for category
         breakdown.
       </p>
     </div>

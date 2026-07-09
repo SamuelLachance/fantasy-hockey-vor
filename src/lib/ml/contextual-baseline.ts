@@ -247,8 +247,8 @@ export function contextualPerGameRateFromRows(
     }
 
     const toiBaseline = posGroup === "D" ? LEAGUE_D_TOI_PG : LEAGUE_F_TOI_PG;
-    const toi =
-      last?.toiPerGame ?? targetSeason.toiPerGame ?? 0;
+    // Only prior-season TOI — the target season's own TOI is a future outcome.
+    const toi = last?.toiPerGame ?? 0;
     if (toi > 0 && (target === "goals" || target === "assists")) {
       const toiMult = Math.max(
         0.82,
@@ -258,7 +258,7 @@ export function contextualPerGameRateFromRows(
     }
 
     if (target === "goals") {
-      const ppToi = last?.ppToiPerGame ?? targetSeason.ppToiPerGame ?? 0;
+      const ppToi = last?.ppToiPerGame ?? 0;
       if (ppToi > 0) {
         rate *= Math.min(
           1.14,
@@ -289,7 +289,7 @@ export function contextualPerGameRateFromRows(
 
     if (target === "assists") {
       const ppPts60 = last?.ppPointsPer60 ?? 0;
-      const ppToi = last?.ppToiPerGame ?? targetSeason.ppToiPerGame ?? 0;
+      const ppToi = last?.ppToiPerGame ?? 0;
       if (ppPts60 > 0 && ppToi > 0 && eligible.length < 2) {
         const ppAssistRate = ((ppPts60 * ppToi) / 60) * 0.55;
         rate = rate * 0.75 + ppAssistRate * 0.25;

@@ -1,8 +1,5 @@
 import type { PlayerProfile } from "../profile-types";
-import {
-  projectGoalieFromProfile,
-  projectSkaterFromProfile,
-} from "../contextual-projections";
+import { projectGoalieFromProfile } from "../contextual-projections";
 import {
   anchorSkaterProjectionToHistory,
   clampGoalieProjection,
@@ -31,7 +28,6 @@ import { loadMlModels } from "./train";
 import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "./contextual-baseline";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
-const CONTEXTUAL_BASELINE_R2 = 0.55;
 
 function ewmaPerGameRate(
   history: PlayerSeasonRow[],
@@ -64,43 +60,16 @@ function resolveSkaterModel(
   );
 }
 
-function mlWeightForTarget(models: MlModelBundle, target: string): number {
-  const r2 = models.metrics.skater[target]?.r2 ?? 0.5;
-  const mlW = Math.max(0.35, Math.min(0.92, r2));
-  const contextualW = Math.max(0.08, CONTEXTUAL_BASELINE_R2);
-  return mlW / (mlW + contextualW);
-}
-
+/** Same contextual signal the champion strategies were tuned on in training. */
 function contextualPerGameRates(
-  profile: PlayerProfile,
   history: PlayerSeasonRow[],
   targetRow: PlayerSeasonRow,
 ): Record<string, number> {
-  if (priorNhlSeasons(history) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
-    const rates: Record<string, number> = {};
-    for (const target of SKATER_ML_TARGETS) {
-      rates[target] = contextualPerGameRateFromRows(
-        history,
-        targetRow,
-        target,
-      );
-    }
-    return rates;
+  const rates: Record<string, number> = {};
+  for (const target of SKATER_ML_TARGETS) {
+    rates[target] = contextualPerGameRateFromRows(history, targetRow, target);
   }
-
-  const contextual = projectSkaterFromProfile(profile);
-  const gp = Math.max(1, contextual.gamesPlayed);
-  const p = contextual.projection;
-  return {
-    goals: p.goals / gp,
-    assists: p.assists / gp,
-    shots: p.shots / gp,
-    blocks: p.blocks / gp,
-    hits: p.hits / gp,
-    powerplayPoints: p.powerplayPoints / gp,
-    penaltyMinutes: p.penaltyMinutes / gp,
-    faceoffWins: p.faceoffWins / gp,
-  };
+  return rates;
 }
 
 function defaultYoungStrategy(target: string): ProductionStrategy {
@@ -199,25 +168,6 @@ function predictRateForTarget(
   const strategy = resolveProductionStrategy(model, history);
   const priorSeasons = priorNhlSeasons(history);
 
-  if (strategy.type === "ml_contextual_ensemble" && contextualRates) {
-    const mlShare =
-      strategy.mlContextualWeight ?? mlWeightForTarget(models, target);
-    const w = strategy.blendWeights ?? model.blendWeights;
-    let mlRate: number;
-    if (w) {
-      const [blended] = applyBlendWeights([ml], [ewmaRate], [lag1], w);
-      mlRate = blended;
-    } else {
-      mlRate = ewmaRate > 0 ? ewmaRate * 0.85 + ml * 0.15 : ml;
-    }
-    const rate = mlRate * mlShare + ctxRate * (1 - mlShare);
-    return anchorYoungScoringRate(target, priorSeasons, rate, ctxRate);
-  }
-
-  if (strategy.type === "contextual_only" && contextualRates) {
-    return ctxRate;
-  }
-
   const rate = applyProductionStrategy(strategy, ml, ewmaRate, lag1, ctxRate);
   return anchorYoungScoringRate(target, priorSeasons, rate, ctxRate);
 }
@@ -264,7 +214,7 @@ export function projectSkaterWithMl(
   });
 
   const contextualRates = blendContextual
-    ? contextualPerGameRates(profile, history, targetRow)
+    ? contextualPerGameRates(history, targetRow)
     : null;
 
   const rates: Record<string, number> = {};

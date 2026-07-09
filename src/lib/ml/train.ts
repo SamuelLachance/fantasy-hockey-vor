@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
+import { writeFileAtomic } from "../atomic-write";
 import { join } from "path";
 import {
   buildGoalieGpExamples,
@@ -398,22 +399,25 @@ function selectLowHistoryStrategy(
   _blendWeights: BlendWeights,
   valBlendR2: number,
 ): ProductionStrategy {
+  void test;
+  void testMl;
+  void testEwma;
+  void testLag1;
+  void testY;
+
+  // Selection must never touch the holdout set — val-only, defaults otherwise.
   const youngVal = val
     .map((ex, i) => ({ ex, i }))
     .filter(({ ex }) => isYoungExample(historyMap, ex));
-  const youngTest = test
-    .map((ex, i) => ({ ex, i }))
-    .filter(({ ex }) => isYoungExample(historyMap, ex));
 
-  if (youngVal.length < 3 && youngTest.length < 5) {
+  if (youngVal.length < 5) {
     return defaultYoungStrategy(target);
   }
 
-  const refSet = youngVal.length >= 3 ? youngVal : youngTest;
-  const refY = refSet.map(({ i }) => (youngVal.length >= 3 ? valY[i] : testY[i]));
-  const refMl = refSet.map(({ i }) => (youngVal.length >= 3 ? valMl[i] : testMl[i]));
-  const refEwma = refSet.map(({ i }) => (youngVal.length >= 3 ? valEwma[i] : testEwma[i]));
-  const refLag1 = refSet.map(({ i }) => (youngVal.length >= 3 ? valLag1[i] : testLag1[i]));
+  const refY = youngVal.map(({ i }) => valY[i]);
+  const refMl = youngVal.map(({ i }) => valMl[i]);
+  const refEwma = youngVal.map(({ i }) => valEwma[i]);
+  const refLag1 = youngVal.map(({ i }) => valLag1[i]);
 
   const maxMl = VOLATILE_LOW_HISTORY_TARGETS.has(target) ? 0.2 : 0.35;
   const youngBlend = selectYoungBlendWeights(
@@ -425,11 +429,11 @@ function selectLowHistoryStrategy(
   );
 
   const strategies = buildLowHistoryStrategies(target, youngBlend, valBlendR2);
-  const scoreSet = youngTest.length >= 5 ? youngTest : youngVal;
-  const scoreMlArr = youngTest.length >= 5 ? testMl : valMl;
-  const scoreEwmaArr = youngTest.length >= 5 ? testEwma : valEwma;
-  const scoreLag1Arr = youngTest.length >= 5 ? testLag1 : valLag1;
-  const scoreY = scoreSet.map(({ i }) => (youngTest.length >= 5 ? testY[i] : valY[i]));
+  const scoreSet = youngVal;
+  const scoreMlArr = valMl;
+  const scoreEwmaArr = valEwma;
+  const scoreLag1Arr = valLag1;
+  const scoreY = refY;
 
   let best = defaultYoungStrategy(target);
   let bestR2 = -Infinity;
@@ -1438,8 +1442,6 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
 }
 
 export function saveMlModels(bundle: MlModelBundle): void {
-  const dir = join(process.cwd(), "src", "data", "ml");
-  mkdirSync(dir, { recursive: true });
   const {
     championByTarget,
     skaterGpMlHoldout,
@@ -1472,7 +1474,7 @@ export function saveMlModels(bundle: MlModelBundle): void {
   void skaterGpHoldoutClassAcc;
   void goalieGpValClassAcc;
   void goalieGpHoldoutClassAcc;
-  writeFileSync(MODEL_PATH, JSON.stringify(toSave, null, 2));
+  writeFileAtomic(MODEL_PATH, JSON.stringify(toSave, null, 2));
 }
 
 export function loadMlModels(): MlModelBundle | null {

@@ -4,7 +4,6 @@ import { predictRidge } from "./ridge";
 import {
   clampGp,
   durabilityFromGpHistory,
-  ensembleGpFromProfile,
   extractEwmaGp,
   extractLag1Gp,
   injuryGpFromProfile,
@@ -167,6 +166,7 @@ export function predictTwoStepGpFromExample(
   return predictTwoStepGpFromSignals(signals, mlGp, injuryGp, config, isGoalie);
 }
 
+/** Mirrors predictTwoStepGpFromExample so inference matches training. */
 export function predictTwoStepGpFromProfile(
   profile: PlayerProfile,
   mlGp: number | null | undefined,
@@ -178,15 +178,7 @@ export function predictTwoStepGpFromProfile(
     ? signals.lag1
     : injuryGpFromProfile(profile);
   const ml = mlGp != null && mlGp > 0 ? mlGp : signals.lag1;
-  if (isProjectedFullSeason(signals, config)) {
-    return predictTwoStepGpFromSignals(signals, ml, injuryGp, config, isGoalie);
-  }
-  return ensembleGpFromProfile(
-    profile,
-    isGoalie,
-    mlGp,
-    config.partialEnsembleWeights,
-  );
+  return predictTwoStepGpFromSignals(signals, ml, injuryGp, config, isGoalie);
 }
 
 export function fullSeasonLabel(actualGp: number, config: GpTwoStepConfig): boolean {

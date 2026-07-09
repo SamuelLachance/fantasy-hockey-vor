@@ -33,6 +33,11 @@ import {
   SKATER_ML_TARGETS,
 } from "../src/lib/ml/types";
 import { loadMlModels } from "../src/lib/ml/train";
+import {
+  buildTeamDepthFromRows,
+  setTrainingTeamDepthCache,
+  type TeamDepthContext,
+} from "../src/lib/ml/team-depth";
 
 const HOLDOUT_SEASON = 20252026;
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
@@ -249,6 +254,17 @@ async function main() {
 
   const skaterHistory = buildHistoryMap(dataset.rows, false);
   const goalieHistory = buildHistoryMap(dataset.rows, true);
+
+  // Mirror training: depth-chart features must be populated in benchmarks too.
+  const depthBySeason = new Map<number, Map<number, TeamDepthContext>>();
+  for (const seasonId of dataset.seasonIds) {
+    depthBySeason.set(
+      seasonId,
+      buildTeamDepthFromRows(dataset.rows, skaterHistory, seasonId),
+    );
+  }
+  setTrainingTeamDepthCache(depthBySeason);
+
   const cells: Cell[] = [];
 
   const skaterSegments: Segment[] = ["all", "young", "veteran"];

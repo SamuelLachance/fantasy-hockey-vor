@@ -91,7 +91,7 @@ export function clampSkaterProjection(
   const gp = Math.max(1, gamesPlayed);
 
   let goals = clampTotal(projection.goals, limits.goals, gp);
-  let assists = clampTotal(projection.assists, limits.assists, gp);
+  const assists = clampTotal(projection.assists, limits.assists, gp);
   let shots = clampTotal(projection.shots, limits.shots, gp);
   const blocks = clampTotal(projection.blocks, limits.blocks, gp);
   const hits = clampTotal(projection.hits, limits.hits, gp);

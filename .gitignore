@@ -31,6 +31,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# ML training cache (models.json is committed for deploy)
+# ML training cache (models.json and context-cache.json are committed —
+# ML inference silently degrades without the context cache)
 src/data/ml/dataset.json
-src/data/ml/context-cache.json

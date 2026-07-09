@@ -1,5 +1,6 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "./atomic-write";
 import { PROJECTION_SEASON } from "./nhl-api";
 import type {
   AiGoalieProjection,
@@ -39,13 +40,18 @@ function cachePath(): string {
 export function loadAiCache(): AiProjectionCache | null {
   const path = cachePath();
   if (!existsSync(path)) return null;
-  return JSON.parse(readFileSync(path, "utf8")) as AiProjectionCache;
+  const cache = JSON.parse(readFileSync(path, "utf8")) as AiProjectionCache;
+  if (cache.season !== PROJECTION_SEASON) {
+    console.warn(
+      `WARN: ignoring ai-projections.json for season ${cache.season} (projecting ${PROJECTION_SEASON}).`,
+    );
+    return null;
+  }
+  return cache;
 }
 
 export function saveAiCache(cache: AiProjectionCache): void {
-  const dir = join(process.cwd(), "src", "data");
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(cachePath(), JSON.stringify(cache, null, 2));
+  writeFileAtomic(cachePath(), JSON.stringify(cache, null, 2));
 }
 
 function buildSkaterPrompt(profiles: PlayerProfile[]): string {

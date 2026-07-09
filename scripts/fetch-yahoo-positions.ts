@@ -1,4 +1,5 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { join } from "path";
 import * as readline from "readline";
 import {
@@ -81,8 +82,7 @@ async function fetchPositions() {
   const dataset = matchYahooToNhlIds(yahooPlayers, nhlPlayers);
   dataset.gameKey = gameKey;
 
-  mkdirSync(join(process.cwd(), "src", "data"), { recursive: true });
-  writeFileSync(OUT_PATH, JSON.stringify(dataset, null, 2));
+  writeFileAtomic(OUT_PATH, JSON.stringify(dataset, null, 2));
 
   const multi = Object.values(dataset.byNhlId).filter((p) => p.positions.length > 1);
   console.log(

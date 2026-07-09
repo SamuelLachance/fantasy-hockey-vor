@@ -34,6 +34,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Validate players data
+        run: npm run check:data
+
       - name: Build static site
         run: npm run build:pages
         env:

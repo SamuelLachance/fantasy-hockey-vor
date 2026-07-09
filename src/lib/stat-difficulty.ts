@@ -95,6 +95,9 @@ function replacementAndElite(
   let weightSum = 0;
 
   for (const position of positions) {
+    // Defensemen aren't scored on faceoffs; their all-zero pool would dilute
+    // the scarcity signal.
+    if (category === "faceoffWins" && position === "D") continue;
     const slotWeight = positionRosterWeight(position, league);
     if (slotWeight <= 0) continue;
 
@@ -136,7 +139,11 @@ function computeGroupWeights<C extends string>(
   const raw: Record<string, CategoryDifficultyMeta> = {};
 
   for (const category of categories) {
-    const values = players.map((p) => getStat(p.projection, category as Category));
+    const group =
+      category === "faceoffWins"
+        ? players.filter((p) => !p.positions.includes("D"))
+        : players;
+    const values = group.map((p) => getStat(p.projection, category as Category));
     const avg = mean(values);
     const sd = stdDev(values);
     const cv = avg > 0 ? sd / avg : sd;

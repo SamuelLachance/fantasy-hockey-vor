@@ -1,5 +1,6 @@
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
 import { loadAiCache } from "../src/lib/ai-projections";
 import {
   getMlModels,
@@ -7,6 +8,7 @@ import {
   projectSkaterWithMl,
 } from "../src/lib/ml/predict";
 import { setInferenceTeamDepthCache, buildTeamDepthFromProfiles } from "../src/lib/ml/team-depth";
+import { loadContextCaches } from "../src/lib/ml/enrich-rows";
 import type { MlModelBundle } from "../src/lib/ml/types";
 import {
   projectGoalieFromProfile,
@@ -39,7 +41,10 @@ import type {
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
 const MAX_PROFILE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-async function loadProfiles(): Promise<PlayerProfile[]> {
+async function loadProfiles(): Promise<{
+  profiles: PlayerProfile[];
+  collectedAt: string;
+}> {
   if (existsSync(PROFILES_PATH)) {
     const data = JSON.parse(readFileSync(PROFILES_PATH, "utf8")) as {
       collectedAt: string;
@@ -48,7 +53,7 @@ async function loadProfiles(): Promise<PlayerProfile[]> {
     const age = Date.now() - new Date(data.collectedAt).getTime();
     if (age < MAX_PROFILE_AGE_MS && data.profiles.length > 0) {
       console.log(`Using cached profiles (${data.profiles.length} players)`);
-      return data.profiles;
+      return { profiles: data.profiles, collectedAt: data.collectedAt };
     }
   }
 
@@ -57,16 +62,16 @@ async function loadProfiles(): Promise<PlayerProfile[]> {
     if (d % 100 === 0) console.log(`  collecting ${d}/${t}`);
   });
 
-  mkdirSync(join(process.cwd(), "src", "data"), { recursive: true });
-  writeFileSync(
+  const collectedAt = new Date().toISOString();
+  writeFileAtomic(
     PROFILES_PATH,
     JSON.stringify(
-      { collectedAt: new Date().toISOString(), count: profiles.length, profiles },
+      { collectedAt, count: profiles.length, profiles },
       null,
       2,
     ),
   );
-  return profiles;
+  return { profiles, collectedAt };
 }
 
 function buildFromProfile(
@@ -183,13 +188,24 @@ function buildFromProfile(
 async function main() {
   console.log(`Generating ${PROJECTION_SEASON} projections from full player dossiers...`);
 
-  const profiles = (await loadProfiles()).map(normalizeProfile);
+  const { profiles: rawProfiles, collectedAt: profilesCollectedAt } =
+    await loadProfiles();
+  const profiles = rawProfiles.map(normalizeProfile);
   const goalieRoleMap = buildGoalieRoleMap(profiles);
   const aiCache = loadAiCache();
   const mlModels = getMlModels();
   const aiCount =
     Object.keys(aiCache?.skaters ?? {}).length +
     Object.keys(aiCache?.goalies ?? {}).length;
+
+  const contextCaches = loadContextCaches();
+  if (mlModels && !contextCaches) {
+    throw new Error(
+      "ML models are present but src/data/ml/context-cache.json is missing. " +
+        "Inference would silently degrade (neutral age/draft/team context). " +
+        "Run `npm run ml:context` first, or restore the committed cache.",
+    );
+  }
 
   if (aiCount > 0) {
     console.log(`Using AI projections for ${aiCount} cached players`);
@@ -251,10 +267,48 @@ async function main() {
             ? "hybrid-ml-contextual"
             : "contextual-dossier";
 
+  // Long-form text lives in a separate lazily-fetched file so the table
+  // payload shipped to the client stays small.
+  const playerDetails = Object.fromEntries(
+    ranked.map((p) => [
+      p.id,
+      {
+        reasoning: p.reasoning ?? "",
+        profileSummary: p.profileSummary ?? "",
+      },
+    ]),
+  );
+  const slimPlayers = ranked.map((p) => {
+    const { reasoning: _reasoning, profileSummary: _profileSummary, ...rest } = p;
+    return rest;
+  });
+
+  // Provenance manifest: which upstream artifacts fed this dataset, and how
+  // fresh each was. Warn on stale/skewed inputs so drift is visible.
+  const dataManifest = {
+    profilesCollectedAt,
+    modelsTrainedAt: mlModels?.trainedAt ?? null,
+    contextCacheBuiltAt: contextCaches?.builtAt ?? null,
+    yahooPositionsFetchedAt: yahooPositions?.fetchedAt ?? null,
+    aiCacheGeneratedAt: aiCache?.generatedAt ?? null,
+  };
+  const staleDays = (iso: string | null): number | null => {
+    if (!iso) return null;
+    const t = new Date(iso).getTime();
+    return Number.isFinite(t) ? (Date.now() - t) / (24 * 60 * 60 * 1000) : null;
+  };
+  for (const [name, iso] of Object.entries(dataManifest)) {
+    const days = staleDays(iso);
+    if (days != null && days > 30) {
+      console.warn(`WARN: ${name} is ${days.toFixed(0)} days old`);
+    }
+  }
+
   const dataset = {
     generatedAt: new Date().toISOString(),
     season: PROJECTION_SEASON,
     league: DEFAULT_LEAGUE,
+    dataManifest,
     projectionEngine: engine,
     aiModel: aiCache?.model,
     positionSource: yahooPositions ? "yahoo-fantasy" : "nhl-fallback",
@@ -271,17 +325,22 @@ async function main() {
       }),
     ),
     categoryWeights,
-    players: ranked,
+    players: slimPlayers,
   };
 
   const outPath = join(process.cwd(), "src", "data", "players.json");
-  writeFileSync(
+  writeFileAtomic(
     outPath,
     JSON.stringify(
       dataset,
       (_k, v) => (typeof v === "number" && !Number.isFinite(v) ? 0 : v),
       2,
     ),
+  );
+
+  writeFileAtomic(
+    join(process.cwd(), "public", "player-details.json"),
+    JSON.stringify(playerDetails),
   );
 
   console.log(
