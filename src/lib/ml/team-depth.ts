@@ -306,3 +306,20 @@ export function depthOpportunityMult(
 
   return Math.max(0.78, Math.min(1.22, m));
 }
+
+/** Team depth prior for goalie GP — starter vs tandem vs third-string. */
+export function goalieGpPriorFromDepth(
+  depth: TeamDepthContext | undefined,
+  lastGp: number,
+): number {
+  if (!depth) {
+    return lastGp >= 35 ? 58 : 22;
+  }
+  if (depth.depthRank === 1) {
+    return Math.max(50, Math.min(65, Math.round(lastGp * 0.95)));
+  }
+  if (depth.depthRank === 2) {
+    return Math.max(18, Math.min(32, Math.round(lastGp * 0.5 + 10)));
+  }
+  return Math.max(8, Math.min(16, Math.round(lastGp * 0.2 + 6)));
+}

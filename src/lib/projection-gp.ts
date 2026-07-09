@@ -1,4 +1,5 @@
 import type { PlayerProfile } from "./profile-types";
+import { goalieGpPriorFromDepth, lookupTeamDepth } from "./ml/team-depth";
 import type {
   GoalieGpStrategyType,
   GpLag1EwmaBlend,
@@ -115,6 +116,10 @@ export function projectedGoalieGamesTrend(
     const backupShare = lastGp > 0 ? Math.min(0.42, 22 / Math.max(lastGp, 35)) : 0.32;
     gp = Math.max(15, Math.min(28, lastGp * backupShare + 8));
   }
+
+  const depth = lookupTeamDepth(0, profile.id);
+  const depthPrior = goalieGpPriorFromDepth(depth, lastGp);
+  gp = gp * 0.6 + depthPrior * 0.4;
 
   return Math.max(10, Math.min(FULL_SEASON, Math.round(gp)));
 }

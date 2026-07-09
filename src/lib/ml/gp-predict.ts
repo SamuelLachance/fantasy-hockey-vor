@@ -50,6 +50,19 @@ export function clampGp(gp: number): number {
   return Math.max(10, Math.min(FULL_SEASON, Math.round(gp)));
 }
 
+/** Cap GP for players with limited NHL history. */
+export function capYoungSkaterGp(gp: number, profile: PlayerProfile): number {
+  const seasons = profile.teamHistory.filter(
+    (s) => !s.isGoalie && s.gamesPlayed >= 10,
+  );
+  const n = seasons.length;
+  if (n >= 3) return gp;
+  const maxPrior = Math.max(0, ...seasons.map((s) => s.gamesPlayed));
+  if (n === 0) return Math.min(gp, 62);
+  if (n === 1) return Math.min(gp, Math.round(maxPrior * 1.08 + 6));
+  return Math.min(gp, Math.round(maxPrior * 1.12 + 10));
+}
+
 export function lag1EwmaGp(
   lag1: number,
   ewma: number,
@@ -172,31 +185,49 @@ export function predictSkaterGpFromStrategy(
   twoStepConfig?: GpTwoStepConfig,
 ): number {
   if (strategy === "two_step_full_season" && twoStepConfig) {
-    return predictTwoStepGpFromProfile(profile, mlGp, twoStepConfig, false);
+    return capYoungSkaterGp(
+      predictTwoStepGpFromProfile(profile, mlGp, twoStepConfig, false),
+      profile,
+    );
   }
   if (strategy === "ensemble" && ensembleWeights) {
-    return ensembleGpFromProfile(profile, false, mlGp, ensembleWeights);
+    return capYoungSkaterGp(
+      ensembleGpFromProfile(profile, false, mlGp, ensembleWeights),
+      profile,
+    );
   }
   switch (strategy) {
     case "lag1_only":
-      return lag1GpFromProfile(profile, false);
+      return capYoungSkaterGp(lag1GpFromProfile(profile, false), profile);
     case "ewma_only":
-      return ewmaGpFromProfile(profile, false);
+      return capYoungSkaterGp(ewmaGpFromProfile(profile, false), profile);
     case "lag1_ewma_blend":
-      return lag1EwmaGpFromProfile(profile, false, lag1EwmaBlend);
+      return capYoungSkaterGp(
+        lag1EwmaGpFromProfile(profile, false, lag1EwmaBlend),
+        profile,
+      );
     case "injury_only":
-      return clampGp(injuryGp);
+      return capYoungSkaterGp(clampGp(injuryGp), profile);
     case "ml_only":
-      return mlGp != null && mlGp > 0 ? clampGp(mlGp) : clampGp(injuryGp);
+      return capYoungSkaterGp(
+        mlGp != null && mlGp > 0 ? clampGp(mlGp) : clampGp(injuryGp),
+        profile,
+      );
     case "blend_55_45":
-      return mlGp != null && mlGp > 0
-        ? clampGp(injuryGp * 0.55 + mlGp * 0.45)
-        : clampGp(injuryGp);
+      return capYoungSkaterGp(
+        mlGp != null && mlGp > 0
+          ? clampGp(injuryGp * 0.55 + mlGp * 0.45)
+          : clampGp(injuryGp),
+        profile,
+      );
     case "blend_45_55":
     default:
-      return mlGp != null && mlGp > 0
-        ? clampGp(injuryGp * 0.45 + mlGp * 0.55)
-        : clampGp(injuryGp);
+      return capYoungSkaterGp(
+        mlGp != null && mlGp > 0
+          ? clampGp(injuryGp * 0.45 + mlGp * 0.55)
+          : clampGp(injuryGp),
+        profile,
+      );
   }
 }
 

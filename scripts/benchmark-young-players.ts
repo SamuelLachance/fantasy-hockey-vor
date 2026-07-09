@@ -13,6 +13,10 @@ import {
   type TrainingExample,
 } from "../src/lib/ml/features";
 import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "../src/lib/ml/contextual-baseline";
+import {
+  applyBlocksRoleFilter,
+  resolveProductionStrategy,
+} from "../src/lib/ml/young-strategy";
 import { applyBlendWeights, evaluateRegression, predictRidge } from "../src/lib/ml/ridge";
 import type {
   MlDataset,
@@ -53,19 +57,6 @@ function priorHistoryForExample(
   return idx > 0 ? history.slice(0, idx) : [];
 }
 
-function defaultYoungStrategy(target: string): ProductionStrategy {
-  if (target === "penaltyMinutes" || target === "hits") {
-    return { type: "contextual_only" };
-  }
-  if (target === "goals") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
-  }
-  if (target === "assists") {
-    return { type: "ewma_only" };
-  }
-  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
-}
-
 function applyProductionStrategy(
   strategy: ProductionStrategy,
   ml: number,
@@ -98,23 +89,6 @@ function applyProductionStrategy(
   }
 }
 
-function resolveStrategy(model: RidgeModel, prior: PlayerSeasonRow[]): ProductionStrategy {
-  if (priorNhlSeasons(prior) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
-    if (model.lowHistoryStrategy) {
-      return model.lowHistoryStrategy;
-    }
-    if (model.productionStrategy?.type === "ml_only") {
-      return defaultYoungStrategy(model.target);
-    }
-  }
-  return (
-    model.productionStrategy ?? {
-      type: "tuned_blend" as const,
-      blendWeights: model.blendWeights,
-    }
-  );
-}
-
 function predictWithModel(
   ex: TrainingExample,
   model: RidgeModel,
@@ -126,9 +100,12 @@ function predictWithModel(
   const lag1 = extractLag1Feature(ex.featureNames, ex.features, target);
   const prior = priorHistoryForExample(historyMap, ex);
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
-  const strategy = resolveStrategy(model, prior);
+  const strategy = resolveProductionStrategy(model, prior);
   let rate = applyProductionStrategy(strategy, ml, ewma, lag1, contextual);
   rate = anchorYoungScoringRate(target, priorNhlSeasons(prior), rate, contextual);
+  if (target === "blocks") {
+    rate = applyBlocksRoleFilter(rate, ex.targetSeason.position, prior, contextual);
+  }
   if (target === "faceoffWins" && ex.targetSeason.position !== "C") rate = 0;
   return rate;
 }
@@ -162,17 +139,33 @@ async function main() {
   for (const target of SKATER_ML_TARGETS) {
     const examples = buildSkaterTrainingExamplesForTarget(dataset.rows, target);
     const holdout = examples.filter((e) => e.seasonId === HOLDOUT_SEASON);
-    const model =
+    const defaultModel =
       models.skaterModels.find(
         (m) => m.target === target && (!m.positionGroup || m.positionGroup === "all"),
       ) ?? models.skaterModels.find((m) => m.target === target);
-    if (!model || holdout.length === 0) continue;
+    if (!defaultModel || holdout.length === 0) continue;
+
+    const resolveModel = (position: string) => {
+      const group = position === "D" ? "D" : "F";
+      return (
+        models.skaterModels.find(
+          (m) => m.target === target && m.positionGroup === group,
+        ) ?? defaultModel
+      );
+    };
 
     const y = holdout.map((ex) => {
       if (target === "faceoffWins" && ex.targetSeason.position !== "C") return 0;
       return skaterTargetValue(ex, target);
     });
-    const preds = holdout.map((ex) => predictWithModel(ex, model, target, historyMap));
+    const preds = holdout.map((ex) =>
+      predictWithModel(
+        ex,
+        resolveModel(ex.targetSeason.position),
+        target,
+        historyMap,
+      ),
+    );
     const all = evaluateRegression(y, preds);
 
     const youngIdx = holdout
@@ -197,8 +190,8 @@ async function main() {
           )
         : { r2: 0, mae: 0, samples: 0 };
 
-    const strat = model.productionStrategy?.type ?? "?";
-    const lowStrat = model.lowHistoryStrategy?.type ?? "(same)";
+    const strat = defaultModel.productionStrategy?.type ?? "?";
+    const lowStrat = defaultModel.lowHistoryStrategy?.type ?? "(same)";
     console.log(
       `${target.padEnd(16)} all R²=${all.r2.toFixed(3)} | young(<3) R²=${youngM.r2.toFixed(3)} n=${youngM.samples} MAE=${youngM.mae.toFixed(3)} | vet(3+) R²=${vetM.r2.toFixed(3)} n=${vetM.samples} | champ=${strat} low=${lowStrat}`,
     );

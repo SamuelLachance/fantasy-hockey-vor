@@ -29,7 +29,6 @@ import type {
 } from "../src/lib/ml/types";
 import {
   GOALIE_ML_TARGETS,
-  LOW_HISTORY_MAX_PRIOR_SEASONS,
   SKATER_ML_TARGETS,
 } from "../src/lib/ml/types";
 import { loadMlModels } from "../src/lib/ml/train";
@@ -38,6 +37,10 @@ import {
   setTrainingTeamDepthCache,
   type TeamDepthContext,
 } from "../src/lib/ml/team-depth";
+import {
+  applyBlocksRoleFilter,
+  resolveProductionStrategy,
+} from "../src/lib/ml/young-strategy";
 
 const HOLDOUT_SEASON = 20252026;
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
@@ -85,34 +88,6 @@ function segmentOf(
   return priorNhlSeasons(prior) < 3 ? "young" : "veteran";
 }
 
-function defaultYoungStrategy(target: string): ProductionStrategy {
-  if (target === "penaltyMinutes" || target === "hits") {
-    return { type: "contextual_only" };
-  }
-  if (target === "goals") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
-  }
-  if (target === "assists") {
-    return { type: "ewma_only" };
-  }
-  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
-}
-
-function resolveStrategy(model: RidgeModel, prior: PlayerSeasonRow[]): ProductionStrategy {
-  if (priorNhlSeasons(prior) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
-    if (model.lowHistoryStrategy) return model.lowHistoryStrategy;
-    if (model.productionStrategy?.type === "ml_only") {
-      return defaultYoungStrategy(model.target);
-    }
-  }
-  return (
-    model.productionStrategy ?? {
-      type: "tuned_blend",
-      blendWeights: model.blendWeights,
-    }
-  );
-}
-
 function applyStrategy(
   strategy: ProductionStrategy,
   ml: number,
@@ -156,9 +131,12 @@ function predictSkaterRate(
   const lag1 = extractLag1Feature(ex.featureNames, ex.features, target);
   const prior = priorHistory(historyMap, ex);
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
-  const strategy = resolveStrategy(model, prior);
+  const strategy = resolveProductionStrategy(model, prior);
   let rate = applyStrategy(strategy, ml, ewma, lag1, contextual);
   rate = anchorYoungScoringRate(target, priorNhlSeasons(prior), rate, contextual);
+  if (target === "blocks") {
+    rate = applyBlocksRoleFilter(rate, ex.targetSeason.position, prior, contextual);
+  }
   if (target === "faceoffWins" && ex.targetSeason.position !== "C") rate = 0;
   return rate;
 }

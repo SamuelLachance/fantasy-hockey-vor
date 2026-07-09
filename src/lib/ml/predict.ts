@@ -23,9 +23,13 @@ import {
 } from "./inference-context";
 import { applyBlendWeights, predictRidge } from "./ridge";
 import type { MlModelBundle, PlayerSeasonRow, ProductionStrategy, RidgeModel } from "./types";
-import { LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "./types";
+import { SKATER_ML_TARGETS } from "./types";
 import { loadMlModels } from "./train";
 import { contextualPerGameRateFromRows, anchorYoungScoringRate } from "./contextual-baseline";
+import {
+  applyBlocksRoleFilter,
+  resolveProductionStrategy,
+} from "./young-strategy";
 
 const EWMA_WEIGHTS = [0.15, 0.3, 0.55];
 
@@ -70,43 +74,6 @@ function contextualPerGameRates(
     rates[target] = contextualPerGameRateFromRows(history, targetRow, target);
   }
   return rates;
-}
-
-function defaultYoungStrategy(target: string): ProductionStrategy {
-  if (target === "penaltyMinutes" || target === "hits") {
-    return { type: "contextual_only" };
-  }
-  if (target === "goals") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
-  }
-  if (target === "assists") {
-    return { type: "ewma_only" };
-  }
-  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
-}
-
-function resolveProductionStrategy(
-  model: RidgeModel,
-  prior: PlayerSeasonRow[],
-): ProductionStrategy {
-  if (priorNhlSeasons(prior) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
-    if (model.lowHistoryStrategy) {
-      return model.lowHistoryStrategy;
-    }
-    if (model.productionStrategy?.type === "ml_only") {
-      return defaultYoungStrategy(model.target);
-    }
-  }
-  return (
-    model.productionStrategy ?? {
-      type: "tuned_blend" as const,
-      blendWeights: model.blendWeights ?? {
-        ml: 1 - (model.ewmaBlendWeight ?? 0.85),
-        ewma: model.ewmaBlendWeight ?? 0.85,
-        lag1: 0,
-      },
-    }
-  );
 }
 
 function applyProductionStrategy(
@@ -168,8 +135,12 @@ function predictRateForTarget(
   const strategy = resolveProductionStrategy(model, history);
   const priorSeasons = priorNhlSeasons(history);
 
-  const rate = applyProductionStrategy(strategy, ml, ewmaRate, lag1, ctxRate);
-  return anchorYoungScoringRate(target, priorSeasons, rate, ctxRate);
+  let rate = applyProductionStrategy(strategy, ml, ewmaRate, lag1, ctxRate);
+  rate = anchorYoungScoringRate(target, priorSeasons, rate, ctxRate);
+  if (target === "blocks") {
+    rate = applyBlocksRoleFilter(rate, profile.position, history, ctxRate);
+  }
+  return rate;
 }
 
 function predictSkaterGp(

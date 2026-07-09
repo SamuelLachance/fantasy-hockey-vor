@@ -173,21 +173,21 @@ export function contextualPerGameRateFromRows(
     const priorStrength =
       target === "goals"
         ? eligible.length === 0
-          ? 3.2
+          ? 4.5
           : eligible.length === 1
-            ? 2.4
-            : 1.6
+            ? 3.2
+            : 1.8
         : target === "assists"
           ? eligible.length === 0
-            ? 2.6
+            ? 3.8
             : eligible.length === 1
-              ? 1.8
-              : 1.2
+              ? 2.6
+              : 1.4
           : eligible.length === 0
-            ? 2.8
+            ? 3.5
             : eligible.length === 1
-              ? 2.0
-              : 1.3;
+              ? 2.4
+              : 1.4;
     rate = empiricalBayesShrink(rate, contextualPrior, eligible.length, priorStrength);
   }
 
@@ -314,6 +314,12 @@ export function contextualPerGameRateFromRows(
   return Math.max(0, rate);
 }
 
+const YOUNG_ANCHOR_WEIGHTS: Partial<Record<string, number>> = {
+  goals: 0.12,
+  assists: 0.08,
+  shots: 0.08,
+};
+
 /** Blend cohort/usage contextual anchor into young scoring rates at inference. */
 export function anchorYoungScoringRate(
   target: string,
@@ -321,6 +327,10 @@ export function anchorYoungScoringRate(
   rate: number,
   contextual: number,
 ): number {
-  if (priorSeasons > 2 || target !== "goals") return rate;
-  return rate * 0.92 + contextual * 0.08;
+  if (priorSeasons > 2) return rate;
+  const base = YOUNG_ANCHOR_WEIGHTS[target];
+  if (!base) return rate;
+  const tierMult = priorSeasons === 0 ? 1.3 : priorSeasons === 1 ? 1.1 : 1;
+  const w = Math.min(0.3, base * tierMult);
+  return rate * (1 - w) + contextual * w;
 }

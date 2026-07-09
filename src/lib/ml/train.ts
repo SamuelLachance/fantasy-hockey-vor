@@ -58,6 +58,8 @@ import {
 } from "./contextual-baseline";
 import {
   buildTeamDepthFromRows,
+  goalieGpPriorFromDepth,
+  lookupTeamDepth,
   setTrainingTeamDepthCache,
   type TeamDepthContext,
 } from "./team-depth";
@@ -67,6 +69,11 @@ import {
   type GoalieRole,
 } from "../projection-gp";
 import { evaluateGoalieProductionHoldout } from "./goalie-production-eval";
+import {
+  applyBlocksRoleFilter,
+  defaultYoungStrategy,
+  resolveProductionStrategy,
+} from "./young-strategy";
 
 const MODEL_PATH = join(process.cwd(), "src", "data", "ml", "models.json");
 const VAL_SEASON = 20242025;
@@ -87,7 +94,13 @@ const RECENCY_HALF_LIFE: Record<string, number> = {
   gamesPlayed: 3,
 };
 
-const POSITION_SPLIT_TARGETS = new Set(["blocks", "hits", "penaltyMinutes"]);
+const POSITION_SPLIT_TARGETS = new Set([
+  "goals",
+  "assists",
+  "blocks",
+  "hits",
+  "penaltyMinutes",
+]);
 
 const SKATER_GP_CANDIDATES: SkaterGpStrategyType[] = [
   "two_step_full_season",
@@ -192,17 +205,8 @@ function isVeteranExample(
   return priorNhlSeasons(priorHistoryForExample(historyMap, ex)) >= 3;
 }
 
-function defaultYoungStrategy(target: string): ProductionStrategy {
-  if (target === "penaltyMinutes" || target === "hits") {
-    return { type: "contextual_only" };
-  }
-  if (target === "goals") {
-    return { type: "ml_contextual_ensemble", mlContextualWeight: 0.08 };
-  }
-  if (target === "assists") {
-    return { type: "ewma_only" };
-  }
-  return { type: "ml_contextual_ensemble", mlContextualWeight: 0.15 };
+function defaultYoungStrategyForTune(target: string): ProductionStrategy {
+  return defaultYoungStrategy(target);
 }
 
 function mlContextualWeight(valBlendR2: number): number {
@@ -326,24 +330,23 @@ function selectProductionStrategy(
   return best;
 }
 
-function resolveProductionStrategy(
-  model: RidgeModel,
+function finalizeSkaterRate(
+  target: string,
+  position: string | undefined,
   prior: PlayerSeasonRow[],
-): ProductionStrategy {
-  if (priorNhlSeasons(prior) <= LOW_HISTORY_MAX_PRIOR_SEASONS) {
-    if (model.lowHistoryStrategy) {
-      return model.lowHistoryStrategy;
-    }
-    if (model.productionStrategy?.type === "ml_only") {
-      return defaultYoungStrategy(model.target);
-    }
-  }
-  return (
-    model.productionStrategy ?? {
-      type: "tuned_blend" as const,
-      blendWeights: model.blendWeights,
-    }
+  rate: number,
+  contextual: number,
+): number {
+  let out = anchorYoungScoringRate(
+    target,
+    priorNhlSeasons(prior),
+    rate,
+    contextual,
   );
+  if (target === "blocks") {
+    out = applyBlocksRoleFilter(out, position ?? "C", prior, contextual);
+  }
+  return finalizeFaceoffRate(target, position, out);
 }
 
 function buildLowHistoryStrategies(
@@ -412,7 +415,7 @@ function selectLowHistoryStrategy(
     .filter(({ ex }) => isYoungExample(historyMap, ex));
 
   if (youngVal.length < 5) {
-    return defaultYoungStrategy(target);
+    return defaultYoungStrategyForTune(target);
   }
 
   const refY = youngVal.map(({ i }) => valY[i]);
@@ -420,7 +423,7 @@ function selectLowHistoryStrategy(
   const refEwma = youngVal.map(({ i }) => valEwma[i]);
   const refLag1 = youngVal.map(({ i }) => valLag1[i]);
 
-  const maxMl = VOLATILE_LOW_HISTORY_TARGETS.has(target) ? 0.2 : 0.35;
+  const maxMl = VOLATILE_LOW_HISTORY_TARGETS.has(target) ? 0.1 : 0.25;
   const youngBlend = selectYoungBlendWeights(
     refY,
     refMl,
@@ -436,28 +439,25 @@ function selectLowHistoryStrategy(
   const scoreLag1Arr = valLag1;
   const scoreY = refY;
 
-  let best = defaultYoungStrategy(target);
+  let best = defaultYoungStrategyForTune(target);
   let bestR2 = -Infinity;
 
   for (const strategy of strategies) {
     const preds = scoreSet.map(({ ex, i }) => {
       const prior = priorHistoryForExample(historyMap, ex);
       const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
-      return finalizeFaceoffRate(
+      return finalizeSkaterRate(
         target,
         ex.targetSeason.position,
-        anchorYoungScoringRate(
-          target,
-          priorNhlSeasons(prior),
-          applyProductionStrategy(
-            strategy,
-            scoreMlArr[i],
-            scoreEwmaArr[i],
-            scoreLag1Arr[i],
-            contextual,
-          ),
+        prior,
+        applyProductionStrategy(
+          strategy,
+          scoreMlArr[i],
+          scoreEwmaArr[i],
+          scoreLag1Arr[i],
           contextual,
         ),
+        contextual,
       );
     });
     const r2 = evaluateRegression(scoreY, preds).r2;
@@ -468,7 +468,7 @@ function selectLowHistoryStrategy(
   }
 
   if (VOLATILE_LOW_HISTORY_TARGETS.has(target) && best.type === "ml_only") {
-    return defaultYoungStrategy(target);
+    return defaultYoungStrategyForTune(target);
   }
 
   return best;
@@ -487,9 +487,10 @@ function predictWithStrategy(
   const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
   const strategy = resolveProductionStrategy(model, prior);
   const rate = applyProductionStrategy(strategy, ml, ewma, lag1, contextual);
-  return anchorYoungScoringRate(
+  return finalizeSkaterRate(
     target,
-    priorNhlSeasons(prior),
+    ex.targetSeason.position,
+    prior,
     rate,
     contextual,
   );
@@ -556,6 +557,10 @@ function goalieGpTrendFromHistory(
     const backupShare = lastGp > 0 ? Math.min(0.42, 22 / Math.max(lastGp, 35)) : 0.32;
     gp = Math.max(15, Math.min(28, lastGp * backupShare + 8));
   }
+
+  const depth = lookupTeamDepth(targetSeason.seasonId, targetSeason.playerId);
+  const depthPrior = goalieGpPriorFromDepth(depth, lastGp);
+  gp = gp * 0.6 + depthPrior * 0.4;
 
   return Math.max(10, Math.min(FULL_SEASON, Math.round(gp)));
 }
@@ -1077,12 +1082,13 @@ function trainSkaterTarget(
     const prior = priorHistoryForExample(historyMap, ex);
     const contextual = contextualPerGameRateFromRows(prior, ex.targetSeason, target);
     const strategy = resolveProductionStrategy(
-      { productionStrategy, lowHistoryStrategy } as RidgeModel,
+      { target, productionStrategy, lowHistoryStrategy } as RidgeModel,
       prior,
     );
-    return finalizeFaceoffRate(
+    return finalizeSkaterRate(
       target,
       ex.targetSeason.position,
+      prior,
       applyProductionStrategy(
         strategy,
         testMl[i],
@@ -1090,6 +1096,7 @@ function trainSkaterTarget(
         testLag1[i],
         contextual,
       ),
+      contextual,
     );
   });
   const holdoutMetrics = evaluateRegression(testY, testPred);
@@ -1339,7 +1346,6 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     skaterGpLag1EwmaBlend,
     skaterGpEnsembleWeights,
     skaterGpTwoStepConfig,
-    "two_step_full_season",
   );
 
   const goalieGpSplit = splitExamples(goalieGpExamples);
@@ -1382,7 +1388,6 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     goalieGpLag1EwmaBlend,
     goalieGpEnsembleWeights,
     goalieGpTwoStepConfig,
-    "two_step_full_season",
   );
 
   const goalieModels: RidgeModel[] = [];
