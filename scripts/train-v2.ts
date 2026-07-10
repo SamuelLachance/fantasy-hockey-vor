@@ -41,6 +41,7 @@ import {
   trainGoalieBoundary,
 } from "../src/lib/ml/goalie-v2";
 import { loadMoneyPuckRegistrySync } from "../src/lib/moneypuck-goalies";
+import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import type { MlDataset, PlayerSeasonRow } from "../src/lib/ml/types";
 import type { V2Bundle } from "../src/lib/ml/v2-bundle";
 
@@ -55,7 +56,10 @@ const META_POOL_SEASONS = [
 async function main() {
   const dataset = JSON.parse(readFileSync(DATA_PATH, "utf8")) as MlDataset;
   const rows = dataset.rows;
-  console.log(`dataset: ${rows.length} rows, ${dataset.seasonIds.length} seasons`);
+  const durAttached = attachDurability(rows);
+  console.log(
+    `dataset: ${rows.length} rows, ${dataset.seasonIds.length} seasons, durability=${durAttached}`,
+  );
 
   // Team-depth caches per season (training-time lookups).
   const historyMap = new Map<number, PlayerSeasonRow[]>();

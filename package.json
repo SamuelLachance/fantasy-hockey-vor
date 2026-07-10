@@ -18,6 +18,7 @@
     "ml:train": "tsx scripts/train-ml.ts",
     "ml:backtest": "tsx scripts/backtest.ts",
     "ml:train-v2": "tsx scripts/train-v2.ts",
+    "ml:gamelogs": "tsx scripts/build-gamelogs.ts",
     "prospect:cache": "tsx scripts/build-prospect-cache.ts",
     "refresh-contracts": "tsx scripts/refresh-contracts.ts",
     "draft:registry": "tsx scripts/build-draft-registry.ts",

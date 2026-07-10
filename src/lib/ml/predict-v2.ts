@@ -19,6 +19,7 @@ import {
   type LeagueContext,
 } from "./dataset-view";
 import { sanitizeTargetSeasonRow } from "./features";
+import { attachDurability } from "./gamelog-durability";
 import {
   buildGoalieLeagueContext,
   buildGoalieLevels,
@@ -69,6 +70,7 @@ export function getV2Runtime(): V2Runtime | null {
     const bundle = JSON.parse(readFileSync(BUNDLE_PATH, "utf8")) as V2Bundle;
     const dataset = JSON.parse(readFileSync(DATASET_PATH, "utf8")) as MlDataset;
     const rows = dataset.rows;
+    attachDurability(rows);
     const byPlayer = new Map<number, PlayerSeasonRow[]>();
     for (const row of rows) {
       const list = byPlayer.get(row.playerId) ?? [];

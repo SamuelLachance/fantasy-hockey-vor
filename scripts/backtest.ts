@@ -24,6 +24,7 @@ import {
   V2_SKATER_TARGETS,
 } from "../src/lib/ml/stack";
 import { actualRate, eligibleHistory, gp82 } from "../src/lib/ml/dataset-view";
+import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import {
   fitGoalieMetas,
   goalieActual,
@@ -110,8 +111,12 @@ function fmt(m: Metrics): string {
 async function main() {
   const dataset = JSON.parse(readFileSync(DATA_PATH, "utf8")) as MlDataset;
   const rows = dataset.rows;
+  // --no-durability: ablation baseline (features NaN, GP signal falls back).
+  const durAttached = process.argv.includes("--no-durability")
+    ? 0
+    : attachDurability(rows);
   console.log(
-    `dataset: ${rows.length} rows, seasons ${dataset.seasonIds[0]}–${dataset.seasonIds.at(-1)}`,
+    `dataset: ${rows.length} rows, seasons ${dataset.seasonIds[0]}–${dataset.seasonIds.at(-1)}, durability=${durAttached}`,
   );
 
   const seasonsArg = process.argv.find((a) => a.startsWith("--seasons"));
@@ -167,6 +172,9 @@ async function main() {
     lag1: [],
     gbdt: [],
   };
+  // Young (≤2 eligible prior seasons) vs veteran GP breakdown.
+  const gpYoung: Metrics[] = [];
+  const gpVet: Metrics[] = [];
 
   for (const testSeason of testSeasons) {
     const seasonPred = wf.seasons.find((s) => s.seasonId === testSeason);
@@ -220,20 +228,39 @@ async function main() {
       const ewmaPred: number[] = [];
       const lag1Pred: number[] = [];
       const gbdtPred: number[] = [];
+      const yYoung: number[] = [];
+      const pYoung: number[] = [];
+      const yVet: number[] = [];
+      const pVet: number[] = [];
       for (let k = 0; k < seasonPred.examples.length; k++) {
         const ex = seasonPred.examples[k];
         const young = eligibleHistory(ex.history).length <= 2;
-        yTrue.push(Math.min(82, gp82(ex.actualRow)));
+        const yT = Math.min(82, gp82(ex.actualRow));
+        const p = metaGpPrediction(gpMeta, gpSig, k, young);
+        yTrue.push(yT);
         gpW.push(60);
-        stackPred.push(metaGpPrediction(gpMeta, gpSig, k, young));
+        stackPred.push(p);
         ewmaPred.push(gpSig.ewma[k]);
         lag1Pred.push(gpSig.lag1[k]);
         gbdtPred.push(gpSig.gbdt[k]);
+        if (young) {
+          yYoung.push(yT);
+          pYoung.push(p);
+        } else {
+          yVet.push(yT);
+          pVet.push(p);
+        }
       }
       gpMetrics.stack.push(computeMetrics(yTrue, stackPred, gpW));
       gpMetrics.ewma.push(computeMetrics(yTrue, ewmaPred, gpW));
       gpMetrics.lag1.push(computeMetrics(yTrue, lag1Pred, gpW));
       gpMetrics.gbdt.push(computeMetrics(yTrue, gbdtPred, gpW));
+      if (yYoung.length > 0) {
+        gpYoung.push(computeMetrics(yYoung, pYoung, yYoung.map(() => 60)));
+      }
+      if (yVet.length > 0) {
+        gpVet.push(computeMetrics(yVet, pVet, yVet.map(() => 60)));
+      }
     }
 
     console.log(`\n=== ${testSeason} (meta pool: ${pool.map((p) => p.seasonId).join(",")}) ===`);
@@ -263,6 +290,12 @@ async function main() {
   }
   console.log(
     `${"gamesPlayed".padEnd(16)} ${avg(gpMetrics.stack, "r2").toFixed(3)}/${avg(gpMetrics.stack, "spearman").toFixed(3)}/${avg(gpMetrics.stack, "mae").toFixed(2)}   —          ${avg(gpMetrics.ewma, "r2").toFixed(3)}     ${avg(gpMetrics.lag1, "r2").toFixed(3)}     ${avg(gpMetrics.gbdt, "r2").toFixed(3)}`,
+  );
+  console.log(
+    `${"  gp (young)".padEnd(16)} ${avg(gpYoung, "r2").toFixed(3)}/${avg(gpYoung, "spearman").toFixed(3)}/${avg(gpYoung, "mae").toFixed(2)}`,
+  );
+  console.log(
+    `${"  gp (vet)".padEnd(16)} ${avg(gpVet, "r2").toFixed(3)}/${avg(gpVet, "spearman").toFixed(3)}/${avg(gpVet, "mae").toFixed(2)}`,
   );
 
   // ------------------------------------------------------------------

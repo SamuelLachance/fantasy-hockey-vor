@@ -134,12 +134,16 @@ export interface TeamStanding {
   clinchIndicator: string;
 }
 
+/** NHL CDN throttles Node's default UA aggressively; a browser UA avoids it. */
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+
 export async function fetchJson<T>(url: string, retries = 7): Promise<T> {
   for (let attempt = 0; attempt < retries; attempt++) {
     let res: Response | null = null;
     try {
       res = await fetch(url, {
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", "User-Agent": BROWSER_UA },
         next: { revalidate: 3600 },
       });
     } catch {

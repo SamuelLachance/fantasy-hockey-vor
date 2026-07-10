@@ -70,6 +70,15 @@ export const GOALIE_V2_FEATURES: string[] = [
   ...lagNames("team_share"),
   "career_gp",
   "prior_seasons",
+  // Game-log durability. Goalies sit as healthy backups, so absence is only
+  // an injury signal for long gaps (8+ team games) — starters never sit that
+  // long by rotation alone.
+  "inj8_82_lag1",
+  "inj8_82_ewma",
+  "spells8_lag1",
+  "longest_gap_lag1",
+  "tail82_lag1",
+  "chronic_inj8",
   "age",
   "age_sq",
   "height_in",
@@ -387,6 +396,44 @@ export function goalieFeatureVector(
   );
   out.push(eligible.reduce((s, r) => s + r.gamesPlayed, 0));
   out.push(eligible.length);
+
+  // Game-log durability (full history; 8+ game gaps = goalie injury proxy)
+  const inj8Per82 = (r: PlayerSeasonRow): number =>
+    r.dur && r.dur.teamGames > 0
+      ? ((r.dur.inj8 + r.dur.tail) * 82) / r.dur.teamGames
+      : NaN;
+  const recent = history.slice(-3);
+  const j = recent.map(inj8Per82);
+  const [j1, j2, j3] = [j.at(-1) ?? NaN, j.at(-2) ?? NaN, j.at(-3) ?? NaN];
+  const jw = [0.5, 0.3, 0.2];
+  let jSum = 0;
+  let jWs = 0;
+  [j1, j2, j3].forEach((v, i) => {
+    if (Number.isFinite(v)) {
+      jSum += v * jw[i];
+      jWs += jw[i];
+    }
+  });
+  out.push(j1, jWs > 0 ? jSum / jWs : NaN);
+  const lastDur = history.at(-1)?.dur;
+  out.push(lastDur ? lastDur.spells8 : NaN);
+  out.push(lastDur ? lastDur.longestGap : NaN);
+  out.push(
+    lastDur && lastDur.teamGames > 0 ? (lastDur.tail * 82) / lastDur.teamGames : NaN,
+  );
+  let cSum = 0;
+  let cW = 0;
+  let cw = 1;
+  for (let i = history.length - 1; i >= 0 && history.length - i <= 6; i--) {
+    const v = inj8Per82(history[i]);
+    if (Number.isFinite(v)) {
+      cSum += cw * v;
+      cW += cw;
+    }
+    cw *= 0.75;
+  }
+  out.push(cW > 0 ? cSum / cW : NaN);
+
   const age = target.age && target.age > 0 ? target.age : NaN;
   out.push(age);
   out.push(Number.isFinite(age) ? ((age - 29) * (age - 29)) / 100 : NaN);

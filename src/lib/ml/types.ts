@@ -159,6 +159,8 @@ export interface PlayerSeasonRow {
   team: string;
   position: Position;
   isGoalie: boolean;
+  /** Game-log-derived durability (attached at load time, not persisted). */
+  dur?: import("./gamelog-durability").DurabilityRecord;
   gamesPlayed: number;
   goals: number;
   assists: number;

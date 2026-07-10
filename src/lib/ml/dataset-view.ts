@@ -71,6 +71,22 @@ export const SKATER_V2_FEATURES: string[] = [
   "durability",
   "career_gp82",
   "prior_seasons",
+  // Game-log durability (NaN where logs are unavailable). Computed over the
+  // FULL history, not just eligible seasons — partial rookie seasons carry
+  // real roster-timing information that the GP-filtered lags throw away.
+  "avail_lag1",
+  "avail_lag2",
+  "avail_ewma",
+  "inj82_lag1",
+  "inj82_ewma",
+  "spells_lag1",
+  "spells_ewma",
+  "longest_gap_lag1",
+  "chronic_inj",
+  "tail82_lag1",
+  "head82_lag1",
+  "share_lag1",
+  "scratch82_lag1",
   // Bio / identity
   "age",
   "age_sq",
@@ -275,6 +291,93 @@ function durabilityOf(eligible: PlayerSeasonRow[]): number {
   return Math.max(0.4, Math.min(1, 1 - (Math.sqrt(variance) / mean) * 0.5));
 }
 
+/** Scale a team-game count to an 82-game season (lockout/COVID safe). */
+function per82(count: number, teamGames: number): number {
+  return teamGames > 0 ? (count * 82) / teamGames : NaN;
+}
+
+/** Played / roster-window availability for one season (1 = never absent). */
+function availOf(row: PlayerSeasonRow): number {
+  const d = row.dur;
+  if (!d || d.window <= 0) return NaN;
+  return d.played / d.window;
+}
+
+/**
+ * Game-log durability feature block (13 features, see SKATER_V2_FEATURES).
+ * Uses full history: sub-10-GP seasons are exactly where roster-timing
+ * signal lives for young players.
+ */
+export function pushDurabilityBlock(out: number[], history: PlayerSeasonRow[]): void {
+  const recent = history.slice(-3);
+  const a = recent.map((r) => availOf(r));
+  const [a1, a2, a3] = [a.at(-1) ?? NaN, a.at(-2) ?? NaN, a.at(-3) ?? NaN];
+  out.push(a1, a2, ewmaOf(a1, a2, a3));
+
+  const inj = recent.map((r) =>
+    r.dur ? per82(r.dur.inj + r.dur.tail, r.dur.teamGames) : NaN,
+  );
+  const [i1, i2, i3] = [inj.at(-1) ?? NaN, inj.at(-2) ?? NaN, inj.at(-3) ?? NaN];
+  out.push(i1, ewmaOf(i1, i2, i3));
+
+  const sp = recent.map((r) => (r.dur ? r.dur.spells : NaN));
+  const [s1, s2, s3] = [sp.at(-1) ?? NaN, sp.at(-2) ?? NaN, sp.at(-3) ?? NaN];
+  out.push(s1, ewmaOf(s1, s2, s3));
+
+  const last = history.at(-1)?.dur;
+  out.push(last ? last.longestGap : NaN);
+
+  // Career chronic-injury index: recency-weighted injury misses per 82.
+  let cSum = 0;
+  let cW = 0;
+  let w = 1;
+  for (let i = history.length - 1; i >= 0 && history.length - i <= 6; i--) {
+    const d = history[i].dur;
+    if (d) {
+      const v = per82(d.inj + d.tail, d.teamGames);
+      if (Number.isFinite(v)) {
+        cSum += w * v;
+        cW += w;
+      }
+    }
+    w *= 0.75;
+  }
+  out.push(cW > 0 ? cSum / cW : NaN);
+
+  out.push(last ? per82(last.tail, last.teamGames) : NaN);
+  out.push(last ? per82(last.head, last.teamGames) : NaN);
+  out.push(last ? last.share : NaN);
+  out.push(last ? per82(last.scratch, last.teamGames) : NaN);
+}
+
+/**
+ * Availability-structured GP signal: E[GP82] = 82 × roster share × in-window
+ * availability, each EB-shrunk over the full history (decay 0.75 per season,
+ * ~30 team-game prior). Separates injury absence from scratches and call-up
+ * timing instead of pooling everything into raw GP variance; sub-10-GP
+ * seasons contribute (they carry the roster signal for young players).
+ * NaN when no game-log durability data exists for the player.
+ */
+export function durabilityGpSignal(history: PlayerSeasonRow[]): number {
+  let winSum = 0;
+  let teamSum = 0;
+  let playedSum = 0;
+  let w = 1;
+  for (let i = history.length - 1; i >= 0 && history.length - i <= 5; i--) {
+    const d = history[i].dur;
+    if (d && d.teamGames > 0) {
+      winSum += w * d.window;
+      teamSum += w * d.teamGames;
+      playedSum += w * d.played;
+    }
+    w *= 0.75;
+  }
+  if (teamSum <= 0) return NaN;
+  const share = (winSum + 0.94 * 30) / (teamSum + 30);
+  const avail = (playedSum + 0.95 * 30) / (winSum + 30);
+  return Math.min(82, 82 * share * avail);
+}
+
 function primaryTeamOf(row: PlayerSeasonRow): string {
   return row.team.split(",")[0].trim().toUpperCase();
 }
@@ -296,6 +399,9 @@ export function skaterFeatureVector(
   out.push(durabilityOf(eligible));
   out.push(eligible.reduce((s, r) => s + gp82(r), 0) / 82);
   out.push(eligible.length);
+
+  // Game-log durability
+  pushDurabilityBlock(out, history);
 
   // Bio
   const age = target.age && target.age > 0 ? target.age : NaN;

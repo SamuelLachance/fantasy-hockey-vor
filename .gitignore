@@ -34,3 +34,5 @@ next-env.d.ts
 # ML training cache (models.json and context-cache.json are committed —
 # ML inference silently degrades without the context cache)
 src/data/ml/dataset.json
+# Raw per-season game logs (large; durability.json derived from them is committed)
+src/data/ml/gamelog-cache/

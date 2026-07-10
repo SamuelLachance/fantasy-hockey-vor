@@ -14,6 +14,7 @@ import {
   buildLeagueContext,
   buildSkaterExamples,
   buildTargetLevels,
+  durabilityGpSignal,
   eligibleHistory,
   eraFactor,
   gp82,
@@ -577,7 +578,11 @@ export function computeBaseSignals(
         ? Math.sqrt(gps.reduce((s, g) => s + (g - mean) ** 2, 0) / gps.length) / mean
         : 0.15;
     const dur = Math.max(0.5, Math.min(1, 1 - cv * 0.5));
-    gp.durability[k] = Math.min(82, ewma * (0.88 + 0.14 * dur));
+    // Game-log availability signal when logs exist; CV heuristic otherwise.
+    const availSig = durabilityGpSignal(ex.history);
+    gp.durability[k] = Number.isFinite(availSig)
+      ? availSig
+      : Math.min(82, ewma * (0.88 + 0.14 * dur));
   }
 
   return { rates, gp };
@@ -843,13 +848,16 @@ export function inferBaseSignalsForPlayer(
       ? Math.sqrt(gps.reduce((s, g) => s + (g - mean) ** 2, 0) / gps.length) / mean
       : 0.15;
   const dur = Math.max(0.5, Math.min(1, 1 - cv * 0.5));
+  const availSig = durabilityGpSignal(input.history);
 
   const gp = {
     gbdt: Math.max(10, Math.min(82, predictGbdt(models.gbdtGp, vec))),
     ridge: Math.max(10, Math.min(82, predictRidgeV2(models.ridgeGp, vec))),
     ewma,
     lag1,
-    durability: Math.min(82, ewma * (0.88 + 0.14 * dur)),
+    durability: Number.isFinite(availSig)
+      ? availSig
+      : Math.min(82, ewma * (0.88 + 0.14 * dur)),
   };
 
   return { rates, gp };

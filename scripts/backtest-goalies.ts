@@ -12,6 +12,7 @@ import {
   GOALIE_V2_TARGETS,
   runGoalieWalkForward,
 } from "../src/lib/ml/goalie-v2";
+import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import type { MlDataset } from "../src/lib/ml/types";
 
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
@@ -56,6 +57,7 @@ function metrics(
 async function main() {
   const dataset = JSON.parse(readFileSync(DATA_PATH, "utf8")) as MlDataset;
   const rows = dataset.rows;
+  attachDurability(rows);
   const testSeasons = [20212022, 20222023, 20232024, 20242025, 20252026];
   const wfSeasons = [
     20162017, 20172018, 20182019, 20192020, 20202021,
