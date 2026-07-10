@@ -25,7 +25,7 @@ import type {
   ProductionStrategy,
   StatModel,
 } from "../src/lib/ml/types";
-import { LOW_HISTORY_MAX_PRIOR_SEASONS, SKATER_ML_TARGETS } from "../src/lib/ml/types";
+import { SKATER_ML_TARGETS } from "../src/lib/ml/types";
 import { loadMlModels } from "../src/lib/ml/train";
 import {
   buildTeamDepthFromRows,

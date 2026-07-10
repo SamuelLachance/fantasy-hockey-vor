@@ -15,8 +15,6 @@ import type {
   StatModel,
 } from "./types";
 
-const FULL_SEASON = 82;
-
 function priorHistoryForExample(
   historyMap: Map<number, PlayerSeasonRow[]>,
   example: TrainingExample,

@@ -4,50 +4,53 @@
 
 **Repository:** https://github.com/SamuelLachance/fantasy-hockey-vor
 
-AI-powered **Value Over Replacement** rankings for your head-to-head categories fantasy hockey league.
+**Value Over Replacement** rankings for a head-to-head categories fantasy hockey league, powered by a stacked machine-learning projection system trained on 20 seasons of NHL data.
 
-## Projection Engine
+## Projection Engine (v2 stacked ensemble)
 
-This is **not** a simple 3-year average. The pipeline:
+Every player with NHL history is projected by a walk-forward-validated stacked ensemble:
 
-1. **Collect** — Builds a full dossier per NHL player:
-   - Bio (age, height, weight, handedness, birth place)
-   - NHL Entry Draft (year, round, overall pick)
-   - Team context (standings rank, GF/G, recent L10 form)
-   - Team history & offseason changes
-   - Injury/durability profile (games missed, trends)
-   - Contract career stage (rookie / prime / veteran / decline)
-   - 3 seasons of standard + advanced stats (SAT, zone starts, hits, blocks, faceoffs)
-   - Career totals, awards, last 5 games
+1. **Data** — NHL API player/team stats back to 2005-06, per-player game logs (injury spells, ironman streaks, roster timing), MoneyPuck xG/GSAx, entry-draft registry, contracts, team Elo/standings context.
 
-2. **AI Project** — OpenAI reads each dossier and predicts **2026-27** category totals for your league (requires API key).
+2. **Base signals per stat** — gradient-boosted trees (histogram GBDT), ridge regression on a shared feature matrix, Marcel (age-adjusted weighted career rates), EWMA, last-season persistence, a contextual heuristic, and a shots×shooting% component model for goals. All persistence signals are era-normalized so league-wide scoring drift doesn't bias projections.
 
-3. **VOR Rank** — Category z-scores vs. replacement level in a 12-team league.
+3. **Meta-learner** — non-negative least squares blends the base signals per stat, fit only on out-of-sample walk-forward predictions (no leakage), segmented by veteran/young and forward/defense. Goalie save% uses a convex meta (weights sum to 1) over GSAx-structural, Marcel and EWMA signals so elite goalies stay separated from the league mean.
 
-Players without AI cache use a **contextual fallback** that still uses the full dossier (team offense, age, draft pedigree, durability, usage trends).
+4. **Games played** — dedicated GBDT + ridge + a game-log durability signal (injury spells vs. healthy scratches vs. call-up timing, ending ironman streaks, late-season rest on contenders, physical wear from TOI × hits/blocks, goalie back-to-back workload).
+
+5. **VOR rank** — per-category z-scores weighted by scarcity, compared to replacement level at each position in a 12-team league. Position eligibility comes from Yahoo Fantasy.
+
+Players without NHL history fall back to a contextual dossier model (prospect stats, draft pedigree, team depth). An optional OpenAI dossier engine exists (`npm run ai-project`) but is not used for the published rankings.
 
 ## Quick Start
 
+Projections, trained models, and all data artifacts are committed — the site builds without any API calls:
+
 ```bash
 npm install
-cp .env.example .env.local   # add OPENAI_API_KEY
-
-npm run collect      # ~15 min — fetch all player dossiers
-npm run ai-project   # ~2-4 hrs for all players (batched, resumable)
-npm run generate     # build rankings from dossiers + AI cache
-npm run dev
+npm run dev          # local dev server with committed rankings
 ```
 
-### Faster testing
+## Refreshing Data & Retraining
 
 ```bash
-# Collect + project a small batch first
-PROFILE_LIMIT=30 npm run collect
-AI_LIMIT=30 npm run ai-project
-npm run generate
+npm run collect              # fetch all player dossiers (~15 min)
+npm run yahoo:fetch          # optional: Yahoo position eligibility (needs OAuth)
+
+npm run ml:dataset           # build player-season training dataset (long)
+npm run ml:gamelogs          # fetch game logs, derive durability features
+npm run ml:context           # age/draft/team context caches
+npm run moneypuck:skaters    # MoneyPuck skater xG registry
+npm run moneypuck:goalies    # MoneyPuck goalie GSAx registry
+npm run ml:enrich-moneypuck  # merge MoneyPuck data into the dataset
+
+npm run ml:train-v2          # train the production stacked ensemble
+npm run generate             # produce players.json rankings
 ```
 
-## Your League Settings
+Evaluation tooling: `npm run ml:backtest` runs a multi-season rolling-origin backtest against Marcel/EWMA/persistence baselines; `scripts/benchmark-*.ts` cover segment-level holdout metrics.
+
+## League Settings
 
 - **Roster:** 2C · 2LW · 2RW · 4D · 2G
 - **Skater cats:** G, A, SOG, BLK, HIT, PPP, PIM, FOW
@@ -55,12 +58,13 @@ npm run generate
 
 ## Deploy
 
-Auto-deploys to GitHub Pages on push to `master`.
+Auto-deploys to GitHub Pages on push to `master` (lint → typecheck → data validation → static export).
 
 ## Data Sources
 
-- [NHL API](https://api.nhle.com) — stats, rosters, player bios
-- OpenAI — stat projections from full player context
+- [NHL API](https://api.nhle.com) — stats, rosters, game logs, player bios
+- [MoneyPuck](https://moneypuck.com) — expected goals, goals saved above expected
+- Yahoo Fantasy — position eligibility
 
 Not affiliated with the NHL.
 

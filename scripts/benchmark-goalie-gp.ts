@@ -2,7 +2,7 @@
  * Compare goalie GP strategies on 2025-26 holdout.
  * Run: npx tsx scripts/benchmark-goalie-gp.ts
  */
-import { existsSync, readFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 import { buildGoalieGpExamples } from "../src/lib/ml/features";
 import { clearGoalieAllocationCache } from "../src/lib/ml/goalie-team-allocator";

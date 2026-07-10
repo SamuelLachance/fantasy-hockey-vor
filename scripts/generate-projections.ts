@@ -295,7 +295,7 @@ async function main() {
     aiPlayers > ranked.length * 0.5
       ? "openai-dossier"
       : mlPlayers > ranked.length * 0.5
-        ? "ml-timeseries"
+        ? "stacked-ensemble"
         : aiPlayers > 0
           ? "hybrid-ai-contextual"
           : mlPlayers > 0

@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fantasy Hockey VOR | AI Player Rankings",
+  title: "Fantasy Hockey VOR | ML Player Rankings",
   description:
-    "Value Over Replacement fantasy hockey rankings with AI-weighted projections for every NHL player. Head-to-head categories league.",
+    "Value Over Replacement fantasy hockey rankings powered by a stacked machine-learning ensemble (gradient boosting + ridge + Marcel) for every NHL player. Head-to-head categories league.",
 };
 
 export default function RootLayout({

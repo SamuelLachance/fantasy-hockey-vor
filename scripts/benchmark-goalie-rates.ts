@@ -9,7 +9,6 @@ import { evaluateGoalieProductionHoldout } from "../src/lib/ml/goalie-production
 import { buildTeamDepthFromRows, setTrainingTeamDepthCache } from "../src/lib/ml/team-depth";
 import type { MlDataset, PlayerSeasonRow } from "../src/lib/ml/types";
 
-const HOLDOUT = 20252026;
 const DATA = join(process.cwd(), "src", "data", "ml", "dataset.json");
 
 function buildHistoryMap(rows: PlayerSeasonRow[]) {

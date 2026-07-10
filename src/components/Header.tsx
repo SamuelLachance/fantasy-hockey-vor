@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, Snowflake } from "lucide-react";
+import { formatCount } from "@/lib/format";
 
 interface HeaderProps {
   season: string;
@@ -32,9 +33,10 @@ export function Header({
               Fantasy Hockey Rankings
             </h1>
             <p className="mt-3 max-w-2xl text-lg text-slate-400">
-              AI-powered {season} projections built from full player dossiers —
-              bio, draft pedigree, team context, injuries, advanced stats — ranked
-              by VOR for your head-to-head categories league.
+              {season} projections from a stacked ML ensemble — gradient
+              boosting, ridge and Marcel models blended per stat, with game-log
+              durability, xG and team context — ranked by VOR for your
+              head-to-head categories league.
             </p>
             {projectionEngine && (
               <p className="mt-2 text-sm text-cyan-400/80">
@@ -46,7 +48,7 @@ export function Header({
           <div className="flex gap-3">
             <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center">
               <div className="text-2xl font-bold text-white">
-                {playerCount.toLocaleString()}
+                {formatCount(playerCount)}
               </div>
               <div className="text-xs uppercase tracking-wider text-slate-400">
                 Players

@@ -79,7 +79,6 @@ export function parseMoneyPuckSkaterCsv(csv: string): MoneyPuckSkaterSeason[] {
   const iTeam = header.indexOf("team");
   const iSituation = header.indexOf("situation");
   const iGp = header.indexOf("games_played");
-  const iToi = header.indexOf("icetime");
 
   if (iPlayer < 0 || iSeason < 0 || iSituation < 0) return [];
 

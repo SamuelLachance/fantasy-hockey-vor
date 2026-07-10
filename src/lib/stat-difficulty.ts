@@ -62,11 +62,17 @@ function mlR2ByCategory(): Partial<Record<Category, number>> {
   const bundle = loadMlModels();
   if (!bundle) return {};
   const out: Partial<Record<Category, number>> = {};
+  // Degenerate fits can report absurd R² (huge negatives); treat anything
+  // outside a plausible range as "no signal" instead of exporting garbage.
+  const sane = (r2: number): number | undefined =>
+    Number.isFinite(r2) && r2 > -5 && r2 <= 1 ? r2 : undefined;
   for (const [target, metrics] of Object.entries(bundle.metrics.skater)) {
-    out[target as SkaterCategory] = metrics.r2;
+    const r2 = sane(metrics.r2);
+    if (r2 !== undefined) out[target as SkaterCategory] = r2;
   }
   for (const [target, metrics] of Object.entries(bundle.metrics.goalie)) {
-    out[target as GoalieCategory] = metrics.r2;
+    const r2 = sane(metrics.r2);
+    if (r2 !== undefined) out[target as GoalieCategory] = r2;
   }
   return out;
 }

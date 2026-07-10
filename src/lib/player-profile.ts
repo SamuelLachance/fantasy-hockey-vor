@@ -11,8 +11,6 @@ import {
   fetchTeamStandings,
   mapNhlPosition,
   NHL_TEAMS,
-  PROJECTION_SEASON,
-  PROJECTION_SEASON_ID,
   seasonIdToLabel,
   type PlayerLanding,
   type RosterPlayer,

@@ -155,14 +155,6 @@ function resolveSkaterModel(
   );
 }
 
-function posGroup(row: PlayerSeasonRow): PosGroup {
-  if (row.isGoalie) return "G";
-  if (row.position === "C") return "C";
-  if (row.position === "LW") return "LW";
-  if (row.position === "RW") return "RW";
-  return "D";
-}
-
 function projectedGoalieGp(
   ex: TrainingExample,
   prior: PlayerSeasonRow[],
@@ -182,10 +174,6 @@ function projectedGoalieGp(
     true,
     trendGp,
   );
-}
-
-function forwardGroup(row: PlayerSeasonRow): PosGroup {
-  return row.position === "D" ? "D" : "F";
 }
 
 function segmentFilter(

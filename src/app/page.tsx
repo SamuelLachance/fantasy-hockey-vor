@@ -21,8 +21,10 @@ export default function HomePage() {
       </div>
 
       <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
-        Projections generated {new Date(data.generatedAt).toLocaleDateString()}{" "}
-        · {data.season} · {data.projectionEngine ?? "contextual"} · NHL API
+        Projections generated{" "}
+        {new Date(data.generatedAt).toISOString().slice(0, 10)} · {data.season}{" "}
+        · {(data.projectionEngine ?? "contextual").replace(/-/g, " ")} · NHL
+        API
       </footer>
     </main>
   );

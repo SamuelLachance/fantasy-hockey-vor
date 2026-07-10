@@ -23,8 +23,6 @@ const LEAGUE_TEAM_GF_PG = 3.05;
 const LEAGUE_F_TOI_PG = 16.5;
 const LEAGUE_D_TOI_PG = 21.5;
 const LEAGUE_PP_TOI_PG = 2.8;
-const LEAGUE_F_SHOTS_PG = 2.35;
-const LEAGUE_D_SHOTS_PG = 1.85;
 
 function rowStat(row: PlayerSeasonRow, target: string): number {
   return (row as unknown as Record<string, number>)[target] ?? 0;
@@ -286,8 +284,6 @@ export function contextualPerGameRateFromRows(
         last && last.gamesPlayed > 0
           ? (last.shots ?? 0) / last.gamesPlayed
           : 0;
-      const shotsBaseline =
-        posGroup === "D" ? LEAGUE_D_SHOTS_PG : LEAGUE_F_SHOTS_PG;
       if (shotsPg > 0) {
         const shotGoalRate =
           shotsPg * (posGroup === "D" ? 0.075 : 0.11);

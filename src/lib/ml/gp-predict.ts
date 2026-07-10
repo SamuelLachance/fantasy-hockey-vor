@@ -24,21 +24,6 @@ export function extractEwmaGp(featureNames: string[], features: number[]): numbe
   return i >= 0 ? features[i] : 0;
 }
 
-function skaterAgeGpMult(age: number): number {
-  if (age >= 36) return 0.9;
-  if (age >= 33) return 0.95;
-  if (age <= 22) return 1.04;
-  if (age <= 24) return 1.02;
-  return 1;
-}
-
-function goalieAgeGpMult(age: number): number {
-  if (age >= 37) return 0.88;
-  if (age >= 34) return 0.94;
-  if (age <= 24) return 1.04;
-  return 1;
-}
-
 export function durabilityFromGpHistory(gps: number[]): number {
   if (gps.length === 0) return 0.85;
   const mean = gps.reduce((a, b) => a + b, 0) / gps.length;

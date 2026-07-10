@@ -45,6 +45,15 @@ export const POSITION_COLORS: Record<Position, string> = {
   G: "bg-violet-500/20 text-violet-300 ring-violet-500/30",
 };
 
+/**
+ * Locale-pinned count formatting. The static HTML is prerendered once at
+ * build time; using the visitor's locale would cause a hydration mismatch
+ * (e.g. "1,346" vs "1 346") that forces React to re-render the whole tree.
+ */
+export function formatCount(value: number): string {
+  return value.toLocaleString("en-US");
+}
+
 export function formatStat(
   player: PlayerProjection,
   category: Category,
@@ -53,7 +62,7 @@ export function formatStat(
   if (value == null) return "—";
   if (category === "savePct") return (value * 100).toFixed(1) + "%";
   if (category === "penaltyMinutes") return value.toFixed(0);
-  return value.toLocaleString();
+  return formatCount(value);
 }
 
 /** Raw projected value for a category, or null if not applicable. */

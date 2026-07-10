@@ -1,7 +1,6 @@
 import { ML_FEATURE_LAGS, ML_MIN_SEASON_GP, scheduledGamesForSeason } from "../nhl-api";
 import { positionCode } from "./season-collector";
 import {
-  GOALIE_ML_TARGETS,
   LOW_HISTORY_MAX_PRIOR_SEASONS,
   SKATER_AUX_LAG_STATS,
   SKATER_ML_TARGETS,

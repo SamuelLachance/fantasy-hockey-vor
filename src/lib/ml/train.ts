@@ -9,7 +9,6 @@ import {
   extractEwmaFeature,
   extractLag1Feature,
   goalieTargetValue,
-  isYoungLowSample,
   priorNhlSeasons,
   skaterTargetValue,
   type TrainingExample,
@@ -71,7 +70,7 @@ import {
   type GoalieRole,
 } from "../projection-gp";
 import { evaluateGoalieProductionHoldout } from "./goalie-production-eval";
-import { fitGbm, evaluateGbmRegression } from "./gbm";
+import { fitGbm } from "./gbm";
 import { championSelectionScore, gpSelectionScore, spearmanCorrelation } from "./metrics";
 import { predictStatModel } from "./model-predict";
 import {

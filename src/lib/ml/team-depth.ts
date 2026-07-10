@@ -113,7 +113,7 @@ function assignDepthRanks(
   const result = new Map<number, TeamDepthContext>();
   const n = sorted.length;
   for (let i = 0; i < n; i++) {
-    const { playerId, veteran } = sorted[i];
+    const { playerId } = sorted[i];
     const rank = i + 1;
     let veteransAhead = 0;
     for (let j = 0; j < i; j++) {

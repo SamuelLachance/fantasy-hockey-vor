@@ -11,6 +11,7 @@ import {
 import {
   CATEGORY_FULL_LABELS,
   CATEGORY_LABELS,
+  formatCount,
   formatStat,
   playerCategories,
   projectionStatValue,
@@ -463,7 +464,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                               {player.projectionMethod === "ai"
                                 ? "AI projection"
                                 : player.projectionMethod === "ml"
-                                  ? "ML time-series"
+                                  ? "ML stacked ensemble"
                                   : "Contextual model"}
                             </span>
                             {player.confidence != null && (
@@ -551,9 +552,9 @@ export function RankingsTable({ players }: RankingsTableProps) {
         )}
       </div>
       <p className="text-center text-xs text-slate-500">
-        Showing {Math.min(visibleCount, filtered.length).toLocaleString()} of{" "}
-        {filtered.length.toLocaleString()} matching players (
-        {players.length.toLocaleString()} total). Click a row for category
+        Showing {formatCount(Math.min(visibleCount, filtered.length))} of{" "}
+        {formatCount(filtered.length)} matching players (
+        {formatCount(players.length)} total). Click a row for category
         breakdown. Click column headers to sort.
       </p>
     </div>
