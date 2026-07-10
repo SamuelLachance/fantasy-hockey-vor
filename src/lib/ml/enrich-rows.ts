@@ -40,42 +40,55 @@ export async function buildContextCaches(
   rows: PlayerSeasonRow[],
   onProgress?: (msg: string) => void,
 ): Promise<MlContextCaches> {
-  const playerIds = [...new Set(rows.map((r) => r.playerId))];
   const uniquePlayers = [...new Map(rows.map((r) => [r.playerId, r])).values()];
+  const existing = loadContextCaches();
 
   onProgress?.("Fetching team standings, ELO, and coaches per season...");
   const teamContexts = await buildTeamSeasonContexts(HISTORICAL_SEASON_IDS, onProgress);
 
-  onProgress?.(`Fetching player bio for ${playerIds.length} players...`);
+  // Incremental: keep cached bios (immutable data) and fetch only missing players.
+  const playerBio: MlContextCaches["playerBio"] = { ...existing?.playerBio };
+  const missingBio = uniquePlayers.filter((p) => !playerBio[p.playerId]);
+  onProgress?.(
+    `Fetching player bio for ${missingBio.length} players (${uniquePlayers.length - missingBio.length} cached)...`,
+  );
   const bioMap = await buildPlayerBioContexts(
-    uniquePlayers.map((p) => ({ playerId: p.playerId, name: p.name })),
+    missingBio.map((p) => ({ playerId: p.playerId, name: p.name })),
     (d, t) => {
       if (d % 100 === 0) onProgress?.(`  player bio ${d}/${t}`);
     },
   );
+  for (const [id, bio] of bioMap) {
+    playerBio[id] = bio;
+  }
 
-  onProgress?.(`Fetching CapWages contract history for ${uniquePlayers.length} players...`);
-  const contractMap = await buildContractSeasonMap(
-    uniquePlayers.map((p) => ({ playerId: p.playerId, name: p.name })),
-    (d, t) => {
-      if (d % 50 === 0) onProgress?.(`  contracts ${d}/${t}`);
-    },
-  );
+  // Contracts are a weak feature and CapWages scraping is slow — reuse the
+  // existing cache wholesale; fetch only when empty AND explicitly requested.
+  let contractByPlayerSeason: MlContextCaches["contractByPlayerSeason"] =
+    existing?.contractByPlayerSeason ?? {};
+  if (
+    Object.keys(contractByPlayerSeason).length === 0 &&
+    process.env.FETCH_CONTRACTS === "1"
+  ) {
+    onProgress?.(
+      `Fetching CapWages contract history for ${uniquePlayers.length} players...`,
+    );
+    const contractMap = await buildContractSeasonMap(
+      uniquePlayers.map((p) => ({ playerId: p.playerId, name: p.name })),
+      (d, t) => {
+        if (d % 50 === 0) onProgress?.(`  contracts ${d}/${t}`);
+      },
+    );
+    contractByPlayerSeason = {};
+    for (const [key, val] of contractMap) {
+      contractByPlayerSeason[key] = val;
+    }
+  }
 
   const teamBySeasonTeam: Record<string, MlContextCaches["teamBySeasonTeam"][string]> =
     {};
   for (const t of teamContexts) {
     teamBySeasonTeam[teamSeasonKey(t.seasonId, t.team)] = t;
-  }
-
-  const playerBio: MlContextCaches["playerBio"] = {};
-  for (const [id, bio] of bioMap) {
-    playerBio[id] = bio;
-  }
-
-  const contractByPlayerSeason: MlContextCaches["contractByPlayerSeason"] = {};
-  for (const [key, val] of contractMap) {
-    contractByPlayerSeason[key] = val;
   }
 
   return {
@@ -94,8 +107,22 @@ export async function loadOrBuildContextCaches(
     const cached = loadContextCaches();
     if (cached) {
       const age = Date.now() - new Date(cached.builtAt).getTime();
-      if (age < MAX_CACHE_AGE_MS && Object.keys(cached.playerBio).length > 100) {
+      const uniqueIds = new Set(rows.map((r) => r.playerId));
+      let missingBios = 0;
+      for (const id of uniqueIds) {
+        if (!cached.playerBio[id]) missingBios++;
+      }
+      if (
+        age < MAX_CACHE_AGE_MS &&
+        Object.keys(cached.playerBio).length > 100 &&
+        missingBios === 0
+      ) {
         return cached;
+      }
+      if (missingBios > 0) {
+        console.log(
+          `Context cache missing ${missingBios} player bios — refreshing incrementally...`,
+        );
       }
     }
   }

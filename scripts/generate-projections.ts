@@ -7,6 +7,11 @@ import {
   projectGoalieWithMl,
   projectSkaterWithMl,
 } from "../src/lib/ml/predict";
+import {
+  getV2Runtime,
+  projectGoalieV2,
+  projectSkaterV2,
+} from "../src/lib/ml/predict-v2";
 import { setInferenceTeamDepthCache, buildTeamDepthFromProfiles } from "../src/lib/ml/team-depth";
 import { loadContextCaches } from "../src/lib/ml/enrich-rows";
 import type { MlModelBundle } from "../src/lib/ml/types";
@@ -84,6 +89,28 @@ function buildFromProfile(
   PlayerProjection,
   "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
 > {
+  // v2 stacked ensemble is the primary engine for players with NHL history.
+  const v2 = profile.isGoalie ? projectGoalieV2(profile) : projectSkaterV2(profile);
+  if (v2) {
+    const projection = profile.isGoalie
+      ? clampGoalieProjection(v2.projection as never, v2.gamesPlayed)
+      : clampSkaterProjection(v2.projection as never, v2.gamesPlayed, profile.position);
+    return {
+      id: profile.id,
+      name: profile.name,
+      team: profile.team,
+      position: profile.position,
+      positions: profile.positions,
+      isGoalie: profile.isGoalie,
+      gamesPlayed: v2.gamesPlayed,
+      projection,
+      projectionMethod: "ml",
+      confidence: 0.8,
+      reasoning: v2.reasoning,
+      profileSummary: profile.contextNarrative,
+    };
+  }
+
   const aiSkater = aiCache?.skaters[profile.id];
   const aiGoalie = aiCache?.goalies[profile.id];
 
@@ -208,13 +235,19 @@ async function main() {
     );
   }
 
+  const v2Runtime = getV2Runtime();
+  if (v2Runtime) {
+    console.log(
+      `Using v2 stacked ensemble (trained ${v2Runtime.bundle.trainedAt}, dataset ${v2Runtime.bundle.datasetBuiltAt})`,
+    );
+  }
   if (aiCount > 0) {
     console.log(`Using AI projections for ${aiCount} cached players`);
   } else if (mlModels) {
     console.log(
-      `Using ML models (${mlModels.skaterModels.length} skater stat models; goalies via lag1 persistence + team-normalized GP, trained ${mlModels.trainedAt})`,
+      `Fallback ML models available (${mlModels.skaterModels.length} skater stat models, trained ${mlModels.trainedAt})`,
     );
-  } else {
+  } else if (!v2Runtime) {
     console.log(
       "No ML models — run npm run ml:dataset && npm run ml:train. Falling back to contextual engine.",
     );

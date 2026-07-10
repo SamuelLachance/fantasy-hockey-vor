@@ -4,8 +4,8 @@ import { buildMoneyPuckGoalieRegistry } from "../src/lib/moneypuck-goalies";
 
 const OUT_PATH = join(process.cwd(), "src", "data", "moneypuck-goalies.json");
 
-/** MoneyPuck season years with regular-season goalie CSVs (2010 = 2010–11). */
-const MONEYPUCK_YEARS = Array.from({ length: 16 }, (_, i) => 2010 + i);
+/** MoneyPuck season years with regular-season goalie CSVs (2007 = 2007–08). */
+const MONEYPUCK_YEARS = Array.from({ length: 19 }, (_, i) => 2007 + i);
 
 async function main() {
   console.log(

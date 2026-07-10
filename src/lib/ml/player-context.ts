@@ -54,13 +54,22 @@ export async function fetchPlayerLanding(playerId: number): Promise<PlayerLandin
 
 const REGISTRY_PATH = join(process.cwd(), "src", "data", "draft-registry.json");
 
+let draftRegistryCache: DraftRegistry | null | undefined;
+
 export function loadDraftRegistrySync(): DraftRegistry | null {
-  if (!existsSync(REGISTRY_PATH)) return null;
-  try {
-    return JSON.parse(readFileSync(REGISTRY_PATH, "utf8")) as DraftRegistry;
-  } catch {
+  if (draftRegistryCache !== undefined) return draftRegistryCache;
+  if (!existsSync(REGISTRY_PATH)) {
+    draftRegistryCache = null;
     return null;
   }
+  try {
+    draftRegistryCache = JSON.parse(
+      readFileSync(REGISTRY_PATH, "utf8"),
+    ) as DraftRegistry;
+  } catch {
+    draftRegistryCache = null;
+  }
+  return draftRegistryCache;
 }
 
 export function resolveDraftForBio(

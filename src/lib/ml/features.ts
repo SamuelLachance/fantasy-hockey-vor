@@ -1,4 +1,4 @@
-import { ML_FEATURE_LAGS, ML_MIN_SEASON_GP } from "../nhl-api";
+import { ML_FEATURE_LAGS, ML_MIN_SEASON_GP, scheduledGamesForSeason } from "../nhl-api";
 import { positionCode } from "./season-collector";
 import {
   GOALIE_ML_TARGETS,
@@ -361,9 +361,18 @@ function statValue(row: PlayerSeasonRow, target: string, usePerGame: boolean): n
   if (target === "savePct") {
     return raw > 1 ? raw / 100 : raw;
   }
+  if (target === "gamesPlayed") {
+    // 82-game-equivalent so lockout/COVID seasons don't distort GP scale.
+    return (raw * 82) / scheduledGamesForSeason(row.seasonId);
+  }
   const asRate = RATE_STATS.has(target);
   if (asRate) return normalizeRate(raw, target);
   return usePerGame ? perGame(raw, row.gamesPlayed) : raw;
+}
+
+/** Target-season GP normalized to an 82-game schedule. */
+export function normalizedGpTarget(row: PlayerSeasonRow): number {
+  return (row.gamesPlayed * 82) / scheduledGamesForSeason(row.seasonId);
 }
 
 function lagValues(

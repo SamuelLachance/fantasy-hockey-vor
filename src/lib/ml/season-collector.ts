@@ -54,28 +54,23 @@ function mergeRow(existing: PlayerSeasonRow, incoming: PlayerSeasonRow): PlayerS
 }
 
 async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
-  const [
-    skaters,
-    realtime,
-    faceoffs,
-    goalies,
-    puckPoss,
-    penalties,
-    timeonice,
-    powerplay,
-    penaltykill,
-    percentages,
-    goalsForAgainst,
-    faceoffwins,
-  ] = await Promise.all([
+  // Chunked (4 at a time) — a 12-wide burst trips the stats API rate limiter.
+  const pause = () => new Promise((r) => setTimeout(r, 700));
+  const [skaters, realtime, faceoffs, goalies] = await Promise.all([
     fetchSkaterSummaries(seasonId),
     fetchSkaterRealtime(seasonId),
     fetchSkaterFaceoffs(seasonId),
     fetchGoalieSummaries(seasonId),
+  ]);
+  await pause();
+  const [puckPoss, penalties, timeonice, powerplay] = await Promise.all([
     fetchSkaterStatReport("puckPossessions", seasonId),
     fetchSkaterStatReport("penalties", seasonId),
     fetchSkaterStatReport("timeonice", seasonId),
     fetchSkaterStatReport("powerplay", seasonId),
+  ]);
+  await pause();
+  const [penaltykill, percentages, goalsForAgainst, faceoffwins] = await Promise.all([
     fetchSkaterStatReport("penaltykill", seasonId),
     fetchSkaterStatReport("percentages", seasonId),
     fetchSkaterStatReport("goalsForAgainst", seasonId),

@@ -16,6 +16,8 @@
     "ml:context": "tsx scripts/build-ml-context.ts",
     "ml:re-enrich": "tsx scripts/re-enrich-dataset.ts",
     "ml:train": "tsx scripts/train-ml.ts",
+    "ml:backtest": "tsx scripts/backtest.ts",
+    "ml:train-v2": "tsx scripts/train-v2.ts",
     "prospect:cache": "tsx scripts/build-prospect-cache.ts",
     "refresh-contracts": "tsx scripts/refresh-contracts.ts",
     "draft:registry": "tsx scripts/build-draft-registry.ts",
