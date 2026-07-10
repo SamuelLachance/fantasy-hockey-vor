@@ -26,7 +26,7 @@ import {
   lookupMoneyPuckGoalieSeason,
   type MoneyPuckGoalieRegistry,
 } from "../moneypuck-goalies";
-import { fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, type MetaWeights, type RidgeV2 } from "./stack";
+import { fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, type MetaWeights, type RidgeV2 } from "./stack";
 import type { PlayerSeasonRow } from "./types";
 
 export const GOALIE_V2_TARGETS = ["wins", "saves", "shutouts", "savePct"] as const;
@@ -339,7 +339,8 @@ function pushLags(out: number[], vals: number[]): void {
   out.push(l1, l2, l3, ws > 0 ? sum / ws : NaN, Number.isFinite(l1) && Number.isFinite(l2) ? l1 - l2 : NaN);
 }
 
-/** EB-shrunk career save% (decay 0.8, prior 1200 shots at league mean). */
+/** EB-shrunk career save% (decay 0.8, prior 400 shots at league mean).
+ * Prior was 1200 — that crushed elites (92% → ~91%) before the meta ran. */
 function shrunkSavePct(
   eligible: PlayerSeasonRow[],
   leagueMean: number,
@@ -356,11 +357,12 @@ function shrunkSavePct(
     shots += w * shotsFaced;
     w *= 0.8;
   }
-  const PRIOR_SHOTS = 1200;
+  const PRIOR_SHOTS = 400;
   return (saves + PRIOR_SHOTS * leagueMean) / Math.max(1, shots + PRIOR_SHOTS);
 }
 
-/** EB-shrunk GSAx/60 (decay 0.8, prior 2000 minutes at 0). */
+/** EB-shrunk GSAx/60 (decay 0.8, prior 900 minutes at 0).
+ * Prior was 2000 — too aggressive for established starters. */
 function shrunkGsax60(
   eligible: PlayerSeasonRow[],
   registry: MoneyPuckGoalieRegistry | null,
@@ -378,7 +380,7 @@ function shrunkGsax60(
   }
   if (minutes <= 0) return 0;
   const rate = (gsax / minutes) * 60;
-  return rate * (minutes / (minutes + 2000));
+  return rate * (minutes / (minutes + 900));
 }
 
 export function goalieFeatureVector(
@@ -659,9 +661,13 @@ export function goalieStructuralSignal(
 
   switch (target) {
     case "savePct": {
-      // gsax60 ≈ goals saved above expected per game; ÷ shots/game → per-shot skill.
-      const skill = saPg > 0 ? gsax60 / saPg : 0;
-      return Math.max(0.86, Math.min(0.94, leagueSv + skill));
+      // Amplify GSAx residual slightly — EB already shrinks it; fantasy needs
+      // more separation between elites (~91–92%) and weak starters (~88–89%).
+      const skill = saPg > 0 ? (gsax60 / saPg) * 1.35 : 0;
+      const fromGsax = leagueSv + skill;
+      const fromCareer = sv;
+      const blended = 0.60 * fromGsax + 0.40 * fromCareer;
+      return Math.max(0.875, Math.min(0.935, blended));
     }
     case "saves":
       return Math.max(0, saPg * sv);
@@ -956,7 +962,7 @@ export function computeGoalieSignals(
 }
 
 function clampTarget(target: GoalieV2Target, v: number): number {
-  if (target === "savePct") return Math.max(0.85, Math.min(0.945, v));
+  if (target === "savePct") return Math.max(0.875, Math.min(0.935, v));
   if (target === "wins") return Math.max(0, Math.min(0.85, v));
   if (target === "shutouts") return Math.max(0, Math.min(0.3, v));
   return Math.max(0, v);
@@ -1050,7 +1056,10 @@ const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
   wins: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural"],
   saves: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural"],
   shutouts: ["gbdt", "marcel", "structural"],
-  savePct: ["gbdt", "ridge", "marcel", "structural"],
+  // Drop GBDT/Ridge for savePct — they regress hard to the league mean and
+  // erase elite/weak separation. Structural (GSAx) + Marcel + recent EWMA
+  // keep skill signal; convex meta preserves their spread.
+  savePct: ["structural", "marcel", "ewma"],
 };
 
 function goalieSignalRow(
@@ -1094,9 +1103,12 @@ export function fitGoalieMetas(
       }
     }
     const sigs = GOALIE_TARGET_SIGNALS[target];
+    // savePct: convex meta (weights sum to 1, no intercept) so elite/weak
+    // goalies keep differentiated projections instead of collapsing to ~.895.
+    const fit = target === "savePct" ? fitMetaConvex : fitMetaNnls;
     rateMetas[target] = {
-      established: fitMetaNnls(Xe, ye, we, sigs),
-      low: fitMetaNnls(Xl, yl, wl, sigs),
+      established: fit(Xe, ye, we, sigs),
+      low: fit(Xl, yl, wl, sigs),
     };
   }
 

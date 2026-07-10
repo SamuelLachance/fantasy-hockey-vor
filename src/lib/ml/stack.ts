@@ -296,6 +296,32 @@ export function applyMeta(meta: MetaWeights, signalValues: number[]): number {
   return Math.max(0, out);
 }
 
+/**
+ * Convex meta: non-negative weights that sum to 1, intercept = 0.
+ * Preserves the scale/spread of the base signals (critical for save%, where
+ * a free intercept + weight-sum < 1 collapses every goalie toward ~league mean).
+ */
+export function fitMetaConvex(
+  X: number[][],
+  y: number[],
+  sampleW: number[],
+  signals: readonly string[],
+): MetaWeights {
+  const raw = fitMetaNnls(X, y, sampleW, signals);
+  const sum = raw.weights.reduce((a, b) => a + b, 0);
+  if (sum <= 1e-9) {
+    const w = new Array(signals.length).fill(0);
+    const mIdx = signals.indexOf("marcel");
+    w[mIdx >= 0 ? mIdx : 0] = 1;
+    return { signals: [...signals], weights: w, intercept: 0 };
+  }
+  return {
+    signals: raw.signals,
+    weights: raw.weights.map((w) => w / sum),
+    intercept: 0,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Base model bundle per boundary
 
