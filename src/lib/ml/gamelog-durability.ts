@@ -55,6 +55,26 @@ export interface DurabilityRecord {
   share: number;
   /** Full-season team games (union-of-logs schedule length, last team). */
   teamGames: number;
+  /**
+   * Ending ironman streak: consecutive last-team games dressed ending at the
+   * player's final appearance (0 if they finished the season injured/out).
+   */
+  streak: number;
+  /** 1 if the player dressed for every last-team game this season. */
+  fullSeason: number;
+  /**
+   * Games missed among the last team's final 10 schedule games while the
+   * player was still active (last appearance in that window). Proxy for
+   * late-season rest / load management when combined with team contention.
+   */
+  lateMiss: number;
+  /** Games dressed among the last team's final 10 schedule games. */
+  latePlayed: number;
+  /**
+   * Back-to-back pairs on the last team's schedule (consecutive games one
+   * calendar day apart). Goalie starters almost never play both nights.
+   */
+  teamB2b: number;
 }
 
 export interface DurabilityRegistry {
@@ -139,6 +159,17 @@ function gamesAfter(schedule: string[], a: string): number {
   return count;
 }
 
+/** Count consecutive schedule pairs one calendar day apart. */
+export function countBackToBacks(schedule: string[]): number {
+  let n = 0;
+  for (let i = 1; i < schedule.length; i++) {
+    const a = Date.parse(schedule[i - 1] + "T12:00:00Z");
+    const b = Date.parse(schedule[i] + "T12:00:00Z");
+    if (Number.isFinite(a) && Number.isFinite(b) && b - a === 86_400_000) n++;
+  }
+  return n;
+}
+
 export function deriveDurability(
   games: RawGameEntry[],
   schedules: Map<string, string[]>,
@@ -190,6 +221,28 @@ export function deriveDurability(
   const window = played + inj + scratch + trans;
   const teamGames = lastSched.length;
 
+  // Ending ironman streak on the last team: walk the schedule backwards from
+  // the player's final appearance while they keep dressing.
+  const playedSet = new Set(
+    sorted.filter((g) => g.t === last.t).map((g) => g.d),
+  );
+  let streak = 0;
+  if (playedSet.has(last.d)) {
+    const endIdx = lastSched.indexOf(last.d);
+    for (let i = endIdx; i >= 0; i--) {
+      if (!playedSet.has(lastSched[i])) break;
+      streak++;
+    }
+  }
+
+  // Late-season availability among the last 10 team games (rest / load mgmt).
+  const lateWindow = lastSched.slice(-10);
+  let latePlayed = 0;
+  for (const d of lateWindow) {
+    if (playedSet.has(d)) latePlayed++;
+  }
+  const lateMiss = lateWindow.length - latePlayed;
+
   return {
     played,
     window,
@@ -204,6 +257,11 @@ export function deriveDurability(
     longestGap,
     share: teamGames > 0 ? window / teamGames : 1,
     teamGames,
+    streak,
+    fullSeason: teamGames > 0 && playedSet.size >= teamGames ? 1 : 0,
+    lateMiss,
+    latePlayed,
+    teamB2b: countBackToBacks(lastSched),
   };
 }
 

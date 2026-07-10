@@ -79,6 +79,11 @@ export const GOALIE_V2_FEATURES: string[] = [
   "longest_gap_lag1",
   "tail82_lag1",
   "chronic_inj8",
+  // Ironman + back-to-back workload (starters rarely play both B2B nights)
+  "streak_lag1",
+  "full_season_lag1",
+  "team_b2b_lag1",
+  "b2b_gp_cap",
   "age",
   "age_sq",
   "height_in",
@@ -433,6 +438,26 @@ export function goalieFeatureVector(
     cw *= 0.75;
   }
   out.push(cW > 0 ? cSum / cW : NaN);
+
+  // Ironman + B2B workload cap. Starters almost never play both nights of a
+  // back-to-back, so expected GP ≈ share × (82 − teamB2b) with a soft floor.
+  out.push(lastDur ? lastDur.streak / 82 : NaN);
+  out.push(lastDur ? lastDur.fullSeason : NaN);
+  out.push(lastDur ? lastDur.teamB2b : NaN);
+  if (lastDur && lastDur.teamGames > 0) {
+    const lastRow = history.at(-1)!;
+    const teamGp = league.teamGoalieGp.get(
+      `${primaryTeam(lastRow.team)}:${lastRow.seasonId}`,
+    );
+    const share =
+      teamGp && teamGp > 0 ? lastRow.gamesPlayed / teamGp : lastDur.played / lastDur.teamGames;
+    // One night of each B2B is typically the backup → subtract ~0.5×B2B from
+    // a full starter's slate, scaled by the goalie's team share.
+    const cap = Math.max(20, Math.min(72, share * (82 - 0.55 * lastDur.teamB2b)));
+    out.push(cap);
+  } else {
+    out.push(NaN);
+  }
 
   const age = target.age && target.age > 0 ? target.age : NaN;
   out.push(age);

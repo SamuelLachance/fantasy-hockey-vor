@@ -87,6 +87,16 @@ export const SKATER_V2_FEATURES: string[] = [
   "head82_lag1",
   "share_lag1",
   "scratch82_lag1",
+  // Ironman / late-season rest / physical wear (from game logs + usage)
+  "streak_lag1",
+  "full_season_lag1",
+  "ironman_seasons",
+  "late_miss_lag1",
+  "late_avail_lag1",
+  "rest_risk",
+  "wear_lag1",
+  "wear_ewma",
+  "wear_trend",
   // Bio / identity
   "age",
   "age_sq",
@@ -304,7 +314,7 @@ function availOf(row: PlayerSeasonRow): number {
 }
 
 /**
- * Game-log durability feature block (13 features, see SKATER_V2_FEATURES).
+ * Game-log durability feature block (see SKATER_V2_FEATURES).
  * Uses full history: sub-10-GP seasons are exactly where roster-timing
  * signal lives for young players.
  */
@@ -348,15 +358,56 @@ export function pushDurabilityBlock(out: number[], history: PlayerSeasonRow[]): 
   out.push(last ? per82(last.head, last.teamGames) : NaN);
   out.push(last ? last.share : NaN);
   out.push(last ? per82(last.scratch, last.teamGames) : NaN);
+
+  // Ironman streak + consecutive full seasons
+  out.push(last ? last.streak / 82 : NaN);
+  out.push(last ? last.fullSeason : NaN);
+  let ironmanSeasons = 0;
+  for (let i = history.length - 1; i >= 0; i--) {
+    const d = history[i].dur;
+    if (d && d.fullSeason === 1) ironmanSeasons++;
+    else break;
+  }
+  out.push(ironmanSeasons);
+
+  // Late-season rest: misses in final 10 games × team contention
+  out.push(last ? last.lateMiss : NaN);
+  out.push(
+    last && last.latePlayed + last.lateMiss > 0
+      ? last.latePlayed / (last.latePlayed + last.lateMiss)
+      : NaN,
+  );
+  const lastRow = history.at(-1);
+  const contention = lastRow?.teamPointPctg ?? NaN;
+  const lateMiss = last?.lateMiss ?? NaN;
+  // High contention + late misses → playoff-rest risk (0–1-ish scale).
+  out.push(
+    Number.isFinite(lateMiss) && Number.isFinite(contention)
+      ? (lateMiss / 10) * Math.max(0, (contention - 0.5) / 0.3)
+      : NaN,
+  );
+
+  // Physical wear: (hits + blocks)/60 × TOI minutes — high-usage physical
+  // players break down more often.
+  const wearOf = (r: PlayerSeasonRow): number => {
+    const toiMin = r.toiPerGame != null && r.toiPerGame > 0 ? r.toiPerGame / 60 : NaN;
+    const hits = r.hitsPer60 ?? NaN;
+    const blocks = r.blockedShotsPer60 ?? NaN;
+    if (!Number.isFinite(toiMin)) return NaN;
+    const physical =
+      (Number.isFinite(hits) ? hits : 0) + (Number.isFinite(blocks) ? blocks : 0);
+    return toiMin * physical;
+  };
+  const wears = recent.map(wearOf);
+  const [w1, w2, w3] = [wears.at(-1) ?? NaN, wears.at(-2) ?? NaN, wears.at(-3) ?? NaN];
+  out.push(w1, ewmaOf(w1, w2, w3), trendOf(w1, w2));
 }
 
 /**
  * Availability-structured GP signal: E[GP82] = 82 × roster share × in-window
  * availability, each EB-shrunk over the full history (decay 0.75 per season,
- * ~30 team-game prior). Separates injury absence from scratches and call-up
- * timing instead of pooling everything into raw GP variance; sub-10-GP
- * seasons contribute (they carry the roster signal for young players).
- * NaN when no game-log durability data exists for the player.
+ * ~30 team-game prior). Ironman streaks nudge toward a full season; late-season
+ * rest on contending teams nudges down. NaN when no game-log data exists.
  */
 export function durabilityGpSignal(history: PlayerSeasonRow[]): number {
   let winSum = 0;
@@ -375,7 +426,23 @@ export function durabilityGpSignal(history: PlayerSeasonRow[]): number {
   if (teamSum <= 0) return NaN;
   const share = (winSum + 0.94 * 30) / (teamSum + 30);
   const avail = (playedSum + 0.95 * 30) / (winSum + 30);
-  return Math.min(82, 82 * share * avail);
+  let gp = 82 * share * avail;
+
+  const last = history.at(-1);
+  const d = last?.dur;
+  if (d) {
+    // Ironman: ending streak ≥40 or a full season → pull toward 80–82.
+    if (d.fullSeason === 1 || d.streak >= 40) {
+      const iron = Math.min(1, d.streak / 82);
+      gp = gp * (1 - 0.25 * iron) + 81 * (0.25 * iron);
+    }
+    // Late rest on a contender: shave a few games off the projection.
+    const contention = last?.teamPointPctg ?? 0;
+    if (d.lateMiss >= 2 && contention >= 0.55 && d.tail === 0) {
+      gp -= Math.min(4, d.lateMiss * 0.4 * ((contention - 0.5) / 0.25));
+    }
+  }
+  return Math.max(10, Math.min(82, gp));
 }
 
 function primaryTeamOf(row: PlayerSeasonRow): string {
