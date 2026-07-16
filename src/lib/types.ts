@@ -78,6 +78,12 @@ export interface PlayerProjection {
   confidence?: number;
   reasoning?: string;
   profileSummary?: string;
+  /** Per-stat model − synthetic-market rate (per game), when market training is on. */
+  marketEdge?: Partial<Record<Category, number>>;
+  /** Rank if ordered by synthetic-market-only fantasy value (1 = best). */
+  syntheticMarketRank?: number;
+  /** syntheticMarketRank − rank: positive = undervalued vs consensus. */
+  draftValue?: number;
 }
 
 export interface LeagueSettings {

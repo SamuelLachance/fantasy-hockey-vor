@@ -36,6 +36,15 @@ export interface GbdtModel {
   bestIteration: number;
 }
 
+export interface GbdtAdversarialOptions {
+  /** Relative noise strength (e.g. 0.05 = ±5% of |value|). */
+  strength: number;
+  /** Column indices eligible for perturbation. */
+  columnIndices: number[];
+  /** Fraction of rows to augment with a perturbed copy (0–1). Default 0.5. */
+  rowFraction?: number;
+}
+
 export interface GbdtOptions {
   nEstimators?: number;
   learningRate?: number;
@@ -47,9 +56,11 @@ export interface GbdtOptions {
   maxBins?: number;
   earlyStoppingRounds?: number;
   seed?: number;
+  /** Optional adversarial feature augmentation before binning. */
+  adversarial?: GbdtAdversarialOptions;
 }
 
-const DEFAULTS: Required<GbdtOptions> = {
+const DEFAULTS = {
   nEstimators: 400,
   learningRate: 0.05,
   maxDepth: 3,
@@ -60,7 +71,7 @@ const DEFAULTS: Required<GbdtOptions> = {
   maxBins: 32,
   earlyStoppingRounds: 25,
   seed: 17,
-};
+} satisfies Omit<Required<GbdtOptions>, "adversarial">;
 
 /** Deterministic xorshift PRNG so training is reproducible. */
 function makeRng(seed: number): () => number {
@@ -149,6 +160,64 @@ interface SplitResult {
   defaultLeft: boolean;
 }
 
+/**
+ * Append adversarial copies of a random subset of rows (Gaussian noise on
+ * selected columns). Returns new X / y / weights — originals are not mutated.
+ */
+function augmentAdversarial(
+  X: Float64Array[],
+  y: Float64Array,
+  w: Float64Array,
+  adv: GbdtAdversarialOptions,
+  rng: () => number,
+): { X: Float64Array[]; y: Float64Array; w: Float64Array } {
+  const nRows = y.length;
+  const nCols = X.length;
+  const frac = adv.rowFraction ?? 0.5;
+  const strength = Math.max(0, adv.strength);
+  if (strength <= 0 || adv.columnIndices.length === 0 || frac <= 0) {
+    return { X, y, w };
+  }
+
+  const pick: number[] = [];
+  for (let i = 0; i < nRows; i++) {
+    if (rng() < frac) pick.push(i);
+  }
+  if (pick.length === 0) return { X, y, w };
+
+  const nNew = nRows + pick.length;
+  const X2: Float64Array[] = new Array(nCols);
+  for (let j = 0; j < nCols; j++) {
+    const col = new Float64Array(nNew);
+    col.set(X[j]);
+    X2[j] = col;
+  }
+  const y2 = new Float64Array(nNew);
+  y2.set(y);
+  const w2 = new Float64Array(nNew);
+  w2.set(w);
+
+  const colSet = new Set(adv.columnIndices);
+  for (let p = 0; p < pick.length; p++) {
+    const src = pick[p];
+    const dst = nRows + p;
+    y2[dst] = y[src];
+    w2[dst] = w[src];
+    for (let j = 0; j < nCols; j++) {
+      let v = X[j][src];
+      if (colSet.has(j) && Number.isFinite(v)) {
+        const u1 = Math.max(1e-12, rng());
+        const u2 = rng();
+        const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+        const scale = Math.max(Math.abs(v) * strength, strength * 0.01);
+        v = v + z * scale;
+      }
+      X2[j][dst] = v;
+    }
+  }
+  return { X: X2, y: y2, w: w2 };
+}
+
 export function fitGbdt(
   X: Float64Array[],
   y: Float64Array,
@@ -161,20 +230,25 @@ export function fitGbdt(
   valWeights?: Float64Array,
 ): GbdtModel {
   const opt = { ...DEFAULTS, ...options };
-  const nRows = y.length;
   const nCols = X.length;
-  if (nRows === 0 || nCols === 0) {
+  if (y.length === 0 || nCols === 0) {
     throw new Error(`gbdt(${target}): empty training data`);
   }
   const rng = makeRng(opt.seed);
-  const binned = binFeatures(X, opt.maxBins);
-
-  const w = sampleWeights ?? new Float64Array(nRows).fill(1);
+  const w0 = sampleWeights ?? new Float64Array(y.length).fill(1);
+  const aug = opt.adversarial
+    ? augmentAdversarial(X, y, w0, opt.adversarial, rng)
+    : { X, y, w: w0 };
+  const trainX = aug.X;
+  const trainY = aug.y;
+  const w = aug.w;
+  const nRows = trainY.length;
+  const binned = binFeatures(trainX, opt.maxBins);
   let wSum = 0;
   let ywSum = 0;
   for (let i = 0; i < nRows; i++) {
     wSum += w[i];
-    ywSum += w[i] * y[i];
+    ywSum += w[i] * trainY[i];
   }
   const baseScore = wSum > 0 ? ywSum / wSum : 0;
 
@@ -195,7 +269,7 @@ export function fitGbdt(
 
   for (let iter = 0; iter < opt.nEstimators; iter++) {
     // Gradient of squared loss = residual.
-    for (let i = 0; i < nRows; i++) grad[i] = y[i] - pred[i];
+    for (let i = 0; i < nRows; i++) grad[i] = trainY[i] - pred[i];
 
     // Row subsample.
     let nSampled = 0;

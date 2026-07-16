@@ -22,10 +22,12 @@ import {
 } from "../src/lib/ml/team-depth";
 import {
   fitStackedMetas,
+  marketTrainingEnabled,
   runWalkForward,
   trainBoundary,
   V2_SKATER_TARGETS,
 } from "../src/lib/ml/stack";
+import { defaultMarketTrainingConfig } from "../src/lib/ml/market-training";
 import {
   buildFeatureMatrix,
   buildLeagueContext,
@@ -114,10 +116,22 @@ async function main() {
   );
 
   // ---------------- Serialize ----------------
+  const marketTraining = marketTrainingEnabled()
+    ? defaultMarketTrainingConfig()
+    : undefined;
+  if (marketTraining) {
+    console.log(
+      `market-training ON: residual GBDT/ridge, disagreement σ=${marketTraining.disagreementSigma}, adversarial=${marketTraining.adversarialStrength}`,
+    );
+  } else {
+    console.log("market-training OFF (ML_MARKET_TRAINING=0)");
+  }
+
   const bundle: V2Bundle = {
     trainedAt: new Date().toISOString(),
     projectionSeasonId: PROJECTION_SEASON_ID,
     datasetBuiltAt: dataset.builtAt,
+    marketTraining,
     skater: {
       gbdt: finalSkater.gbdt,
       ridge: finalSkater.ridge,

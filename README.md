@@ -16,9 +16,11 @@ Every player with NHL history is projected by a walk-forward-validated stacked e
 
 3. **Meta-learner** — non-negative least squares blends the base signals per stat, fit only on out-of-sample walk-forward predictions (no leakage), segmented by veteran/young and forward/defense. Goalie save% uses a convex meta (weights sum to 1) over GSAx-structural, Marcel and EWMA signals so elite goalies stay separated from the league mean.
 
-4. **Games played** — dedicated GBDT + ridge + a game-log durability signal (injury spells vs. healthy scratches vs. call-up timing, ending ironman streaks, late-season rest on contenders, physical wear from TOI × hits/blocks, goalie back-to-back workload).
+4. **Synthetic-market / edge training** — GBDT and ridge train on residuals vs a walk-forward “market” (Marcel 50% + EWMA 30% + lag-1 20%). Meta sample weights upweight disagreement zones and Kelly-inspired draft-capital overlays. Optional adversarial feature noise hardens usage/context columns. The **Value** column is `consensusRank − modelRank` (positive = undervalued vs that synthetic consensus). No external ADP feed yet — upgrade path is swapping the market blend for real ADP when available. Disable with `ML_MARKET_TRAINING=0` / `ML_ADVERSARIAL=0`.
 
-5. **VOR rank** — per-category z-scores weighted by scarcity, compared to replacement level at each position in a 12-team league. Position eligibility comes from Yahoo Fantasy.
+5. **Games played** — dedicated GBDT + ridge + a game-log durability signal (injury spells vs. healthy scratches vs. call-up timing, ending ironman streaks, late-season rest on contenders, physical wear from TOI × hits/blocks, goalie back-to-back workload).
+
+6. **VOR rank** — per-category z-scores weighted by scarcity, compared to replacement level at each position in a 12-team league. Position eligibility comes from Yahoo Fantasy.
 
 Players without NHL history fall back to a contextual dossier model (prospect stats, draft pedigree, team depth). An optional OpenAI dossier engine exists (`npm run ai-project`) but is not used for the published rankings.
 
@@ -48,7 +50,7 @@ npm run ml:train-v2          # train the production stacked ensemble
 npm run generate             # produce players.json rankings
 ```
 
-Evaluation tooling: `npm run ml:backtest` runs a multi-season rolling-origin backtest against Marcel/EWMA/persistence baselines; `scripts/benchmark-*.ts` cover segment-level holdout metrics.
+Evaluation tooling: `npm run ml:backtest` runs a multi-season rolling-origin backtest against Marcel/EWMA/persistence baselines (includes agreement/disagreement market zones); `npm run ml:sanity-market` checks synthetic-market helpers; `scripts/benchmark-*.ts` cover segment-level holdout metrics.
 
 ## League Settings
 

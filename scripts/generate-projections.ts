@@ -39,6 +39,7 @@ import {
   yahooPositionsSummary,
 } from "../src/lib/yahoo-positions";
 import type {
+  Category,
   PlayerProjection,
   Position,
 } from "../src/lib/types";
@@ -108,6 +109,9 @@ function buildFromProfile(
       confidence: 0.8,
       reasoning: v2.reasoning,
       profileSummary: profile.contextNarrative,
+      ...("marketEdge" in v2 && v2.marketEdge
+        ? { marketEdge: v2.marketEdge as Partial<Record<Category, number>> }
+        : {}),
     };
   }
 
@@ -276,6 +280,30 @@ async function main() {
     withYahooPositions,
     DEFAULT_LEAGUE,
   );
+
+  // Synthetic-market ranks: order by (fantasyValue − edge-adjusted proxy).
+  // Players with marketEdge get a consensus score = FV minus total edge z-proxy;
+  // others keep fantasyValue. draftValue = marketRank − modelRank (>0 = value).
+  const consensusScore = (p: (typeof ranked)[0]): number => {
+    if (!p.marketEdge || p.isGoalie) return p.fantasyValue;
+    let edgeSum = 0;
+    let n = 0;
+    for (const v of Object.values(p.marketEdge)) {
+      if (typeof v === "number" && Number.isFinite(v)) {
+        edgeSum += v;
+        n++;
+      }
+    }
+    // Subtract a scaled edge sum so consensus ≈ market-only skill
+    return p.fantasyValue - (n > 0 ? edgeSum * p.gamesPlayed * 0.02 : 0);
+  };
+  const byConsensus = [...ranked].sort((a, b) => consensusScore(b) - consensusScore(a));
+  const marketRankById = new Map<number, number>();
+  byConsensus.forEach((p, i) => marketRankById.set(p.id, i + 1));
+  for (const p of ranked) {
+    p.syntheticMarketRank = marketRankById.get(p.id) ?? p.rank;
+    p.draftValue = p.syntheticMarketRank - p.rank;
+  }
 
   const issues = findProjectionIssues(ranked);
   if (issues.length > 0) {

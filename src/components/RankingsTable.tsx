@@ -20,10 +20,10 @@ import {
 } from "@/lib/format";
 import { PositionBadges } from "./PositionBadge";
 
-type CoreSortKey = "rank" | "vor" | "name" | "team" | "gamesPlayed";
+type CoreSortKey = "rank" | "vor" | "name" | "team" | "gamesPlayed" | "draftValue";
 type SortKey = CoreSortKey | Category;
 
-type CoreRangeKey = "gamesPlayed" | "vor";
+type CoreRangeKey = "gamesPlayed" | "vor" | "draftValue";
 type RangeKey = CoreRangeKey | Category;
 
 type StatRanges = Partial<Record<RangeKey, { min: string; max: string }>>;
@@ -86,6 +86,7 @@ function parseRangeValue(key: RangeKey, raw: string): number | undefined {
 
 function coreValue(player: PlayerProjection, key: CoreRangeKey, position: Position | "ALL"): number {
   if (key === "vor") return vorForFilter(player, position);
+  if (key === "draftValue") return player.draftValue ?? 0;
   return player.gamesPlayed;
 }
 
@@ -102,7 +103,7 @@ function passesRanges(
     if (min == null && max == null) continue;
 
     let value: number | null;
-    if (key === "gamesPlayed" || key === "vor") {
+    if (key === "gamesPlayed" || key === "vor" || key === "draftValue") {
       value = coreValue(player, key, position);
     } else {
       value = projectionStatValue(player, key);
@@ -117,6 +118,7 @@ function passesRanges(
 function rangeLabel(key: RangeKey): string {
   if (key === "gamesPlayed") return "Games Played";
   if (key === "vor") return "VOR";
+  if (key === "draftValue") return "Value (vs consensus)";
   return CATEGORY_FULL_LABELS[key];
 }
 
@@ -140,7 +142,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
   const filterRangeKeys = useMemo((): RangeKey[] => {
     const cats =
       position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
-    return ["gamesPlayed", "vor", ...cats];
+    return ["gamesPlayed", "vor", "draftValue", ...cats];
   }, [position]);
 
   const activeFilterCount = useMemo(() => {
@@ -200,10 +202,11 @@ export function RankingsTable({ players }: RankingsTableProps) {
         sortKey === "rank" ||
         sortKey === "name" ||
         sortKey === "team" ||
-        sortKey === "gamesPlayed"
+        sortKey === "gamesPlayed" ||
+        sortKey === "draftValue"
       ) {
-        av = a[sortKey];
-        bv = b[sortKey];
+        av = sortKey === "draftValue" ? (a.draftValue ?? 0) : a[sortKey];
+        bv = sortKey === "draftValue" ? (b.draftValue ?? 0) : b[sortKey];
       } else {
         av = projectionStatValue(a, sortKey) ?? -Infinity;
         bv = projectionStatValue(b, sortKey) ?? -Infinity;
@@ -381,6 +384,14 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     VOR <SortIcon column="vor" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
+                <th className="px-4 py-3" title="Model rank vs synthetic consensus (Marcel/EWMA/lag1). Positive = undervalued.">
+                  <button
+                    onClick={() => toggleSort("draftValue")}
+                    className="inline-flex items-center gap-1 hover:text-white"
+                  >
+                    Value <SortIcon column="draftValue" sortKey={sortKey} sortDir={sortDir} />
+                  </button>
+                </th>
                 <th className="px-4 py-3">
                   <button
                     onClick={() => toggleSort("gamesPlayed")}
@@ -436,6 +447,23 @@ export function RankingsTable({ players }: RankingsTableProps) {
                         {vorForFilter(player, position) >= 0 ? "+" : ""}
                         {vorForFilter(player, position).toFixed(2)}
                       </td>
+                      <td
+                        className={`px-4 py-3 font-mono text-sm ${
+                          (player.draftValue ?? 0) > 0
+                            ? "text-emerald-400"
+                            : (player.draftValue ?? 0) < 0
+                              ? "text-rose-400"
+                              : "text-slate-500"
+                        }`}
+                        title={
+                          player.syntheticMarketRank != null
+                            ? `Consensus rank ${player.syntheticMarketRank} − model rank ${player.rank}`
+                            : undefined
+                        }
+                      >
+                        {(player.draftValue ?? 0) > 0 ? "+" : ""}
+                        {player.draftValue ?? 0}
+                      </td>
                       <td className="px-4 py-3 font-mono text-slate-400">
                         {player.gamesPlayed}
                       </td>
@@ -450,7 +478,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     </tr>
                     {isExpanded && (
                       <tr className="bg-slate-950/40">
-                        <td colSpan={6 + tableCategories.length} className="px-6 py-4">
+                        <td colSpan={7 + tableCategories.length} className="px-6 py-4">
                           <div className="mb-4 flex flex-wrap items-center gap-2">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-semibold ${

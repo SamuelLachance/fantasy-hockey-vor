@@ -34,6 +34,20 @@ import {
   type MarcelParams,
 } from "./marcel";
 import { contextualPerGameRateFromRows } from "./contextual-baseline";
+import {
+  ADVERSARIAL_STRENGTH,
+  DISAGREEMENT_SIGMA,
+  adversarialColumnIndices,
+  disagreementWeight,
+  kellyFantasyWeight,
+  marketGp,
+  marketRate,
+  marketRateFromExample,
+  percentileRanks,
+  residualGp,
+  residualRate,
+  sampleStd,
+} from "./market-training";
 import type { PlayerSeasonRow } from "./types";
 
 export const V2_SKATER_TARGETS = [...MARCEL_TARGETS] as const;
@@ -47,8 +61,27 @@ export const BASE_SIGNALS = [
   "lag1",
   "contextual",
   "component",
+  "market",
 ] as const;
 export type BaseSignal = (typeof BASE_SIGNALS)[number];
+
+/** Residual GBDT/ridge + disagreement/Kelly meta (default on). */
+export function marketTrainingEnabled(): boolean {
+  return process.env.ML_MARKET_TRAINING !== "0";
+}
+
+function adversarialEnabled(): boolean {
+  return marketTrainingEnabled() && process.env.ML_ADVERSARIAL !== "0";
+}
+
+function gbdtAdversarialOpts(): GbdtOptions["adversarial"] | undefined {
+  if (!adversarialEnabled()) return undefined;
+  return {
+    strength: ADVERSARIAL_STRENGTH,
+    columnIndices: adversarialColumnIndices(SKATER_V2_FEATURES),
+    rowFraction: 0.5,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Ridge on the shared matrix (NaN-imputed, standardized)
@@ -296,6 +329,15 @@ export function applyMeta(meta: MetaWeights, signalValues: number[]): number {
   return Math.max(0, out);
 }
 
+/** Like applyMeta but allows negative residuals (no floor). */
+export function applyMetaRaw(meta: MetaWeights, signalValues: number[]): number {
+  let out = meta.intercept;
+  for (let j = 0; j < meta.weights.length; j++) {
+    out += meta.weights[j] * (Number.isFinite(signalValues[j]) ? signalValues[j] : 0);
+  }
+  return out;
+}
+
 /**
  * Convex meta: non-negative weights that sum to 1, intercept = 0.
  * Preserves the scale/spread of the base signals (critical for save%, where
@@ -320,6 +362,20 @@ export function fitMetaConvex(
     weights: raw.weights.map((w) => w / sum),
     intercept: 0,
   };
+}
+
+/**
+ * Decision-aware meta: NNLS with Kelly-inspired sample weights already folded
+ * into `sampleW` (caller applies kellyFantasyWeight × disagreementWeight).
+ * Alias kept for clarity at call sites.
+ */
+export function fitMetaKelly(
+  X: number[][],
+  y: number[],
+  sampleW: number[],
+  signals: readonly string[],
+): MetaWeights {
+  return fitMetaNnls(X, y, sampleW, signals);
 }
 
 // ---------------------------------------------------------------------------
@@ -408,13 +464,24 @@ export function trainBoundary(
   const gbdt: Record<string, GbdtModel> = {};
   const ridge: Record<string, RidgeV2> = {};
   const marcel: Record<string, MarcelParams> = {};
+  const useMarket = marketTrainingEnabled();
+  const advOpts = gbdtAdversarialOpts();
+
+  // Fit Marcel first — needed as the synthetic-market anchor for residual targets.
+  for (const target of V2_SKATER_TARGETS) {
+    marcel[target] = fitMarcelParams(trainRows, target);
+  }
+
+  const rateOpts: GbdtOptions = { ...GBDT_RATE_OPTS, adversarial: advOpts };
 
   for (const target of V2_SKATER_TARGETS) {
     const yTrain = new Float64Array(trainIdx.length);
     const wTrain = new Float64Array(trainIdx.length);
     for (let k = 0; k < trainIdx.length; k++) {
       const ex = allExamples[trainIdx[k]];
-      yTrain[k] = actualRate(ex.actualRow, target);
+      yTrain[k] = useMarket
+        ? residualRate(ex, target, marcel[target])
+        : actualRate(ex.actualRow, target);
       wTrain[k] =
         reliabilityWeight(ex.actualRow) * recencyWeight(ex.seasonId, boundarySeason);
     }
@@ -422,7 +489,9 @@ export function trainBoundary(
     const wVal = new Float64Array(valIdx.length);
     for (let k = 0; k < valIdx.length; k++) {
       const ex = allExamples[valIdx[k]];
-      yVal[k] = actualRate(ex.actualRow, target);
+      yVal[k] = useMarket
+        ? residualRate(ex, target, marcel[target])
+        : actualRate(ex.actualRow, target);
       wVal[k] = reliabilityWeight(ex.actualRow);
     }
 
@@ -432,7 +501,7 @@ export function trainBoundary(
       matrix.featureNames,
       target,
       wTrain,
-      GBDT_RATE_OPTS,
+      rateOpts,
       valCols,
       yVal,
       wVal,
@@ -444,7 +513,9 @@ export function trainBoundary(
     const wFit = new Float64Array(fitIdx.length);
     for (let k = 0; k < fitIdx.length; k++) {
       const ex = allExamples[fitIdx[k]];
-      yFit[k] = actualRate(ex.actualRow, target);
+      yFit[k] = useMarket
+        ? residualRate(ex, target, marcel[target])
+        : actualRate(ex.actualRow, target);
       wFit[k] =
         reliabilityWeight(ex.actualRow) * recencyWeight(ex.seasonId, boundarySeason);
     }
@@ -456,29 +527,33 @@ export function trainBoundary(
       wFit,
       RIDGE_LAMBDA,
     );
-
-    marcel[target] = fitMarcelParams(trainRows, target);
   }
 
-  // GP models (82-equivalent target).
+  // GP models (82-equivalent target; residual vs synthetic market GP when enabled).
   const yGpTrain = new Float64Array(trainIdx.length);
   const wGpTrain = new Float64Array(trainIdx.length);
   for (let k = 0; k < trainIdx.length; k++) {
     const ex = allExamples[trainIdx[k]];
-    yGpTrain[k] = Math.min(82, gp82(ex.actualRow));
+    yGpTrain[k] = useMarket
+      ? residualGp(ex)
+      : Math.min(82, gp82(ex.actualRow));
     wGpTrain[k] = recencyWeight(ex.seasonId, boundarySeason);
   }
   const yGpVal = new Float64Array(valIdx.length);
   for (let k = 0; k < valIdx.length; k++) {
-    yGpVal[k] = Math.min(82, gp82(allExamples[valIdx[k]].actualRow));
+    const ex = allExamples[valIdx[k]];
+    yGpVal[k] = useMarket
+      ? residualGp(ex)
+      : Math.min(82, gp82(ex.actualRow));
   }
+  const gpOpts: GbdtOptions = { ...GBDT_GP_OPTS, adversarial: advOpts };
   const gbdtGp = fitGbdt(
     trainCols,
     yGpTrain,
     matrix.featureNames,
     "gamesPlayed",
     wGpTrain,
-    GBDT_GP_OPTS,
+    gpOpts,
     valCols,
     yGpVal,
   );
@@ -488,7 +563,9 @@ export function trainBoundary(
   const wGpFit = new Float64Array(fitIdx.length);
   for (let k = 0; k < fitIdx.length; k++) {
     const ex = allExamples[fitIdx[k]];
-    yGpFit[k] = Math.min(82, gp82(ex.actualRow));
+    yGpFit[k] = useMarket
+      ? residualGp(ex)
+      : Math.min(82, gp82(ex.actualRow));
     wGpFit[k] = recencyWeight(ex.seasonId, boundarySeason);
   }
   const ridgeGp = fitRidgeV2(
@@ -529,6 +606,7 @@ export function computeBaseSignals(
 
   const rates: Record<string, Record<BaseSignal, Float64Array>> = {};
   const n = exampleRows.length;
+  const useMarket = marketTrainingEnabled();
 
   for (const target of V2_SKATER_TARGETS) {
     const gbdtPred = predictGbdtBatch(models.gbdt[target], cols);
@@ -540,14 +618,13 @@ export function computeBaseSignals(
       lag1: new Float64Array(n),
       contextual: new Float64Array(n),
       component: new Float64Array(n),
+      market: new Float64Array(n),
     };
 
     const vec = new Array(nCols);
     for (let k = 0; k < n; k++) {
       for (let j = 0; j < nCols; j++) vec[j] = cols[j][k];
-      set.ridge[k] = Math.max(0, predictRidgeV2(models.ridge[target], vec));
-      set.gbdt[k] = Math.max(0, set.gbdt[k]);
-
+      const ridgeRes = predictRidgeV2(models.ridge[target], vec);
       const ex = examples[k];
       // Era drift: persistence signals are anchored to the player's history
       // era; rescale them to the target season's expected league level.
@@ -566,6 +643,20 @@ export function computeBaseSignals(
       } else {
         set.component[k] = m;
       }
+
+      const mkt = useMarket
+        ? marketRateFromExample(ex, target, models.marcel[target], era)
+        : m;
+      set.market[k] = mkt;
+
+      if (useMarket) {
+        // Models predict residual; reconstruct absolute rate for signal consumers.
+        set.gbdt[k] = Math.max(0, mkt + set.gbdt[k]);
+        set.ridge[k] = Math.max(0, mkt + ridgeRes);
+      } else {
+        set.gbdt[k] = Math.max(0, set.gbdt[k]);
+        set.ridge[k] = Math.max(0, ridgeRes);
+      }
     }
     rates[target] = set;
   }
@@ -582,8 +673,7 @@ export function computeBaseSignals(
   const vec = new Array(nCols);
   for (let k = 0; k < n; k++) {
     for (let j = 0; j < nCols; j++) vec[j] = cols[j][k];
-    gp.ridge[k] = Math.max(10, Math.min(82, predictRidgeV2(models.ridgeGp, vec)));
-    gp.gbdt[k] = Math.max(10, Math.min(82, gp.gbdt[k]));
+    const ridgeRes = predictRidgeV2(models.ridgeGp, vec);
     const ex = examples[k];
     const el = eligibleHistory(ex.history);
     const gps = el.slice(-3).map((r) => gp82(r));
@@ -609,6 +699,15 @@ export function computeBaseSignals(
     gp.durability[k] = Number.isFinite(availSig)
       ? availSig
       : Math.min(82, ewma * (0.88 + 0.14 * dur));
+
+    const mktGp = useMarket ? marketGp(ex.history) : ewma;
+    if (useMarket) {
+      gp.gbdt[k] = Math.max(10, Math.min(82, mktGp + gp.gbdt[k]));
+      gp.ridge[k] = Math.max(10, Math.min(82, mktGp + ridgeRes));
+    } else {
+      gp.gbdt[k] = Math.max(10, Math.min(82, gp.gbdt[k]));
+      gp.ridge[k] = Math.max(10, Math.min(82, ridgeRes));
+    }
   }
 
   return { rates, gp };
@@ -713,18 +812,35 @@ export function fitStackedMetas(
   testSeason: number,
 ): { rateMetas: Record<string, StackedMeta>; gpMeta: GpMeta } {
   const rateMetas: Record<string, StackedMeta> = {};
+  const useMarket = marketTrainingEnabled();
 
   for (const target of V2_SKATER_TARGETS) {
     const X: Record<MetaSegment, number[][]> = { vetF: [], vetD: [], youngF: [], youngD: [] };
     const Y: Record<MetaSegment, number[]> = { vetF: [], vetD: [], youngF: [], youngD: [] };
     const W: Record<MetaSegment, number[]> = { vetF: [], vetD: [], youngF: [], youngD: [] };
 
+    // Collect raw rows first so we can compute Kelly percentiles within each season.
+    type RawRow = {
+      seg: MetaSegment;
+      x: number[];
+      y: number;
+      relW: number;
+      market: number;
+      opportunist: number;
+      actual: number;
+    };
+    const seasonBuckets: RawRow[][] = [];
+
     for (const season of pool) {
       const recency = Math.exp(-0.15 * ((testSeason - season.seasonId) / 10001));
       const sig = season.signals.rates[target];
+      const bucket: RawRow[] = [];
       for (let k = 0; k < season.examples.length; k++) {
         const ex = season.examples[k];
-        const row = [
+        const mkt = sig.market?.[k] ?? sig.marcel[k];
+        const actual = actualRate(ex.actualRow, target);
+        const opportunist = 0.5 * sig.gbdt[k] + 0.5 * sig.ridge[k];
+        const xAbs = [
           sig.gbdt[k],
           sig.ridge[k],
           sig.marcel[k],
@@ -732,21 +848,72 @@ export function fitStackedMetas(
           sig.lag1[k],
           sig.contextual[k],
           sig.component[k],
+          mkt,
         ];
-        const seg = metaSegmentOf(isYoungExample(ex), ex.targetRow.position === "D");
-        X[seg].push(row);
-        Y[seg].push(actualRate(ex.actualRow, target));
-        W[seg].push((Math.min(60, ex.actualRow.gamesPlayed) / 60) * recency);
+        // Residual meta: X is signal − market for deep/persistence; market absolute last.
+        const x = useMarket
+          ? [
+              sig.gbdt[k] - mkt,
+              sig.ridge[k] - mkt,
+              sig.marcel[k] - mkt,
+              sig.ewma[k] - mkt,
+              sig.lag1[k] - mkt,
+              sig.contextual[k] - mkt,
+              sig.component[k] - mkt,
+              mkt,
+            ]
+          : xAbs;
+        const y = useMarket ? actual - mkt : actual;
+        bucket.push({
+          seg: metaSegmentOf(isYoungExample(ex), ex.targetRow.position === "D"),
+          x,
+          y,
+          relW: (Math.min(60, ex.actualRow.gamesPlayed) / 60) * recency,
+          market: mkt,
+          opportunist,
+          actual,
+        });
+      }
+      seasonBuckets.push(bucket);
+    }
+
+    // League σ of actual rates across the pool (for disagreement z-score).
+    const allActual = seasonBuckets.flatMap((b) => b.map((r) => r.actual));
+    const statSd = sampleStd(allActual);
+
+    for (const bucket of seasonBuckets) {
+      const marketScores = bucket.map((r) => r.market);
+      const modelScores = bucket.map((r) => r.opportunist);
+      const marketPct = percentileRanks(marketScores);
+      const modelPct = percentileRanks(modelScores);
+      for (let i = 0; i < bucket.length; i++) {
+        const r = bucket[i];
+        let w = r.relW;
+        if (useMarket) {
+          const wD = disagreementWeight(
+            r.market,
+            r.opportunist,
+            statSd,
+            DISAGREEMENT_SIGMA,
+          );
+          const beat = r.actual > r.market;
+          const wK = kellyFantasyWeight(marketPct[i], modelPct[i], beat);
+          w *= wD * wK;
+        }
+        X[r.seg].push(r.x);
+        Y[r.seg].push(r.y);
+        W[r.seg].push(w);
       }
     }
 
+    const fitSeg = useMarket ? fitMetaKelly : fitMetaNnls;
     rateMetas[target] = {
       target,
       segments: {
-        vetF: fitMetaNnls(X.vetF, Y.vetF, W.vetF, [...BASE_SIGNALS]),
-        vetD: fitMetaNnls(X.vetD, Y.vetD, W.vetD, [...BASE_SIGNALS]),
-        youngF: fitMetaNnls(X.youngF, Y.youngF, W.youngF, [...BASE_SIGNALS]),
-        youngD: fitMetaNnls(X.youngD, Y.youngD, W.youngD, [...BASE_SIGNALS]),
+        vetF: fitSeg(X.vetF, Y.vetF, W.vetF, [...BASE_SIGNALS]),
+        vetD: fitSeg(X.vetD, Y.vetD, W.vetD, [...BASE_SIGNALS]),
+        youngF: fitSeg(X.youngF, Y.youngF, W.youngF, [...BASE_SIGNALS]),
+        youngD: fitSeg(X.youngD, Y.youngD, W.youngD, [...BASE_SIGNALS]),
       },
     };
   }
@@ -765,14 +932,20 @@ export function fitStackedMetas(
       const ex = season.examples[k];
       const row = [gp.gbdt[k], gp.ridge[k], gp.ewma[k], gp.lag1[k], gp.durability[k]];
       const y = Math.min(82, gp82(ex.actualRow));
+      const mkt = marketGp(ex.history);
+      const opportunist = 0.5 * gp.gbdt[k] + 0.5 * gp.ridge[k];
+      let w = recency;
+      if (useMarket) {
+        w *= disagreementWeight(mkt, opportunist, 12, DISAGREEMENT_SIGMA);
+      }
       if (isYoungExample(ex)) {
         Xy.push(row);
         yy.push(y);
-        wy.push(recency);
+        wy.push(w);
       } else {
         Xv.push(row);
         yv.push(y);
-        wv.push(recency);
+        wv.push(w);
       }
     }
   }
@@ -793,6 +966,38 @@ export function metaRatePrediction(
   young: boolean,
   isDefense: boolean,
 ): number {
+  const seg = meta.segments[metaSegmentOf(young, isDefense)];
+  const mkt = sig.market?.[k] ?? sig.marcel[k];
+  const residualize =
+    Boolean(sig.market) &&
+    seg.signals.includes("market") &&
+    marketTrainingEnabled();
+  if (residualize) {
+    const row = [
+      sig.gbdt[k] - mkt,
+      sig.ridge[k] - mkt,
+      sig.marcel[k] - mkt,
+      sig.ewma[k] - mkt,
+      sig.lag1[k] - mkt,
+      sig.contextual[k] - mkt,
+      sig.component[k] - mkt,
+      mkt,
+    ];
+    return Math.max(0, mkt + applyMetaRaw(seg, row));
+  }
+  // Legacy metas (no market signal): first 7 weights only.
+  if (!seg.signals.includes("market")) {
+    const row = [
+      sig.gbdt[k],
+      sig.ridge[k],
+      sig.marcel[k],
+      sig.ewma[k],
+      sig.lag1[k],
+      sig.contextual[k],
+      sig.component[k],
+    ];
+    return applyMeta(seg, row);
+  }
   const row = [
     sig.gbdt[k],
     sig.ridge[k],
@@ -801,8 +1006,9 @@ export function metaRatePrediction(
     sig.lag1[k],
     sig.contextual[k],
     sig.component[k],
+    mkt,
   ];
-  return applyMeta(meta.segments[metaSegmentOf(young, isDefense)], row);
+  return applyMeta(seg, row);
 }
 
 export function metaGpPrediction(
@@ -815,6 +1021,36 @@ export function metaGpPrediction(
   return Math.max(10, Math.min(82, applyMeta(young ? meta.young : meta.vet, row)));
 }
 
+/** Build residual-style signal row for a single-player absolute rate map. */
+export function rateSignalRow(
+  rates: Record<BaseSignal, number>,
+  residualize: boolean,
+): number[] {
+  const mkt = rates.market ?? rates.marcel;
+  if (residualize) {
+    return [
+      rates.gbdt - mkt,
+      rates.ridge - mkt,
+      rates.marcel - mkt,
+      rates.ewma - mkt,
+      rates.lag1 - mkt,
+      rates.contextual - mkt,
+      rates.component - mkt,
+      mkt,
+    ];
+  }
+  return [
+    rates.gbdt,
+    rates.ridge,
+    rates.marcel,
+    rates.ewma,
+    rates.lag1,
+    rates.contextual,
+    rates.component,
+    mkt,
+  ];
+}
+
 // ---------------------------------------------------------------------------
 // Single-row inference (used by production predict path)
 
@@ -824,6 +1060,8 @@ export interface V2InferenceInput {
   league: LeagueContext;
   /** Per-target league levels for era normalization. */
   levels: Record<string, Record<number, number>>;
+  /** True when GBDT/ridge were trained on market residuals (bundle.marketTraining). */
+  residualModels?: boolean;
 }
 
 export function inferBaseSignalsForPlayer(
@@ -834,6 +1072,7 @@ export function inferBaseSignalsForPlayer(
   const vec = skaterFeatureVector(input.history, input.targetRow, input.league);
   const rates: Record<string, Record<BaseSignal, number>> = {};
   const eligible = eligibleHistory(input.history);
+  const useMarket = input.residualModels ?? marketTrainingEnabled();
 
   for (const target of V2_SKATER_TARGETS) {
     const era = eraFactor(input.levels[target], eligible, input.targetRow.seasonId);
@@ -846,14 +1085,20 @@ export function inferBaseSignalsForPlayer(
       const cg = componentGoalsRate(models.marcel.shots, input.history, input.targetRow);
       if (Number.isFinite(cg)) comp = cg * era;
     }
+    const mkt = useMarket
+      ? marketRate(input.history, input.targetRow, target, models.marcel[target], era)
+      : m;
+    const gbdtRes = predictGbdt(models.gbdt[target], vec);
+    const ridgeRes = predictRidgeV2(models.ridge[target], vec);
     rates[target] = {
-      gbdt: Math.max(0, predictGbdt(models.gbdt[target], vec)),
-      ridge: Math.max(0, predictRidgeV2(models.ridge[target], vec)),
+      gbdt: useMarket ? Math.max(0, mkt + gbdtRes) : Math.max(0, gbdtRes),
+      ridge: useMarket ? Math.max(0, mkt + ridgeRes) : Math.max(0, ridgeRes),
       marcel: m,
       ewma: Number.isFinite(e) ? e * era : m,
       lag1: Number.isFinite(l) ? l * era : m,
       contextual: Number.isFinite(c) ? c * era : m,
       component: comp,
+      market: mkt,
     };
   }
 
@@ -875,10 +1120,17 @@ export function inferBaseSignalsForPlayer(
       : 0.15;
   const dur = Math.max(0.5, Math.min(1, 1 - cv * 0.5));
   const availSig = durabilityGpSignal(input.history);
+  const mktGp = useMarket ? marketGp(input.history) : ewma;
+  const gbdtGpRes = predictGbdt(models.gbdtGp, vec);
+  const ridgeGpRes = predictRidgeV2(models.ridgeGp, vec);
 
   const gp = {
-    gbdt: Math.max(10, Math.min(82, predictGbdt(models.gbdtGp, vec))),
-    ridge: Math.max(10, Math.min(82, predictRidgeV2(models.ridgeGp, vec))),
+    gbdt: useMarket
+      ? Math.max(10, Math.min(82, mktGp + gbdtGpRes))
+      : Math.max(10, Math.min(82, gbdtGpRes)),
+    ridge: useMarket
+      ? Math.max(10, Math.min(82, mktGp + ridgeGpRes))
+      : Math.max(10, Math.min(82, ridgeGpRes)),
     ewma,
     lag1,
     durability: Number.isFinite(availSig)

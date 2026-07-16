@@ -25,6 +25,7 @@ import {
 } from "../src/lib/ml/stack";
 import { actualRate, eligibleHistory, gp82 } from "../src/lib/ml/dataset-view";
 import { attachDurability } from "../src/lib/ml/gamelog-durability";
+import { DISAGREEMENT_SIGMA, sampleStd } from "../src/lib/ml/market-training";
 import {
   fitGoalieMetas,
   goalieActual,
@@ -297,6 +298,66 @@ async function main() {
   console.log(
     `${"  gp (vet)".padEnd(16)} ${avg(gpVet, "r2").toFixed(3)}/${avg(gpVet, "spearman").toFixed(3)}/${avg(gpVet, "mae").toFixed(2)}`,
   );
+
+  // ------------------------------------------------------------------
+  // Agreement vs disagreement zones (synthetic market edge)
+  if (!process.argv.includes("--no-market-zones")) {
+    console.log(
+      `\n=== MARKET ZONES (σ=${DISAGREEMENT_SIGMA}, last test season) ===`,
+    );
+    const lastSeason = Math.max(...testSeasons);
+    const seasonPred = wf.seasons.find((s) => s.seasonId === lastSeason);
+    if (seasonPred) {
+      const pool = wf.seasons.filter((s) => s.seasonId < lastSeason);
+      const { rateMetas } = fitStackedMetas(pool, lastSeason);
+      for (const target of ["goals", "assists", "shots"] as const) {
+        const sig = seasonPred.signals.rates[target];
+        if (!sig?.market) {
+          console.log(`${target}: no market signal (market training off?)`);
+          continue;
+        }
+        const yTrue: number[] = [];
+        const stackPred: number[] = [];
+        const edges: number[] = [];
+        const gp: number[] = [];
+        for (let k = 0; k < seasonPred.examples.length; k++) {
+          const ex = seasonPred.examples[k];
+          const young = eligibleHistory(ex.history).length <= 2;
+          const isD = ex.targetRow.position === "D";
+          const pred = metaRatePrediction(rateMetas[target], sig, k, young, isD);
+          const mkt = sig.market[k];
+          yTrue.push(actualRate(ex.actualRow, target));
+          stackPred.push(pred);
+          edges.push(Math.abs(pred - mkt));
+          gp.push(ex.actualRow.gamesPlayed);
+        }
+        const sd = sampleStd(yTrue);
+        const thresh = DISAGREEMENT_SIGMA * sd;
+        const agreeY: number[] = [];
+        const agreeP: number[] = [];
+        const agreeG: number[] = [];
+        const disY: number[] = [];
+        const disP: number[] = [];
+        const disG: number[] = [];
+        for (let i = 0; i < yTrue.length; i++) {
+          if (edges[i] < thresh) {
+            agreeY.push(yTrue[i]);
+            agreeP.push(stackPred[i]);
+            agreeG.push(gp[i]);
+          } else {
+            disY.push(yTrue[i]);
+            disP.push(stackPred[i]);
+            disG.push(gp[i]);
+          }
+        }
+        const aM = computeMetrics(agreeY, agreeP, agreeG);
+        const dM = computeMetrics(disY, disP, disG);
+        console.log(
+          `${target.padEnd(16)} agree n=${agreeY.length} ${fmt(aM)} | disagree n=${disY.length} ${fmt(dM)}`,
+        );
+      }
+    }
+  }
 
   // ------------------------------------------------------------------
   // Goalies

@@ -111,6 +111,8 @@ export interface V2SkaterResult {
   gamesPlayed: number;
   projection: SkaterProjection;
   reasoning: string;
+  /** Per-stat model rate minus synthetic market rate (per game). */
+  marketEdge?: Partial<Record<string, number>>;
 }
 
 export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
@@ -137,7 +139,13 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
   const models = skaterModelsFromBundle(rt.bundle);
   const { rates, gp } = inferBaseSignalsForPlayer(
     models,
-    { history, targetRow: target, league: rt.league, levels: rt.skaterLevels },
+    {
+      history,
+      targetRow: target,
+      league: rt.league,
+      levels: rt.skaterLevels,
+      residualModels: Boolean(rt.bundle.marketTraining),
+    },
     contextualRates,
   );
 
@@ -153,6 +161,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
     metaGpPrediction(rt.bundle.skater.gpMeta, gpSignals, 0, young),
   );
 
+  const marketEdge: Partial<Record<string, number>> = {};
   const perGame: Record<string, number> = {};
   for (const t of V2_SKATER_TARGETS) {
     const sig = rates[t];
@@ -164,6 +173,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
       lag1: Float64Array.of(sig.lag1),
       contextual: Float64Array.of(sig.contextual),
       component: Float64Array.of(sig.component),
+      market: Float64Array.of(sig.market ?? sig.marcel),
     };
     perGame[t] = metaRatePrediction(
       rt.bundle.skater.rateMetas[t],
@@ -172,6 +182,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
       young,
       profile.position === "D",
     );
+    marketEdge[t] = perGame[t] - (sig.market ?? sig.marcel);
   }
 
   const total = (t: string): number => Math.max(0, Math.round(perGame[t] * gamesPlayed));
@@ -190,7 +201,8 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
   return {
     gamesPlayed,
     projection,
-    reasoning: `v2 stacked ensemble (GBDT+ridge+Marcel+EB, ${eligible.length} NHL seasons${young ? ", young segment" : ""}). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
+    marketEdge,
+    reasoning: `v2 stacked ensemble (GBDT+ridge+Marcel+EB${rt.bundle.marketTraining ? "+market-residual" : ""}, ${eligible.length} NHL seasons${young ? ", young segment" : ""}). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }
 

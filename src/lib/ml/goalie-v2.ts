@@ -26,7 +26,8 @@ import {
   lookupMoneyPuckGoalieSeason,
   type MoneyPuckGoalieRegistry,
 } from "../moneypuck-goalies";
-import { fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, type MetaWeights, type RidgeV2 } from "./stack";
+import { fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, marketTrainingEnabled, type MetaWeights, type RidgeV2 } from "./stack";
+import { DISAGREEMENT_SIGMA, disagreementWeight, sampleStd } from "./market-training";
 import type { PlayerSeasonRow } from "./types";
 
 export const GOALIE_V2_TARGETS = ["wins", "saves", "shutouts", "savePct"] as const;
@@ -39,6 +40,7 @@ export const GOALIE_SIGNALS = [
   "ewma",
   "lag1",
   "structural",
+  "market",
 ] as const;
 export type GoalieSignal = (typeof GOALIE_SIGNALS)[number];
 
@@ -895,6 +897,7 @@ export function computeGoalieSignals(
       ewma: new Float64Array(n),
       lag1: new Float64Array(n),
       structural: new Float64Array(n),
+      market: new Float64Array(n),
     };
     const vec = new Array(nCols);
     for (let k = 0; k < n; k++) {
@@ -917,6 +920,9 @@ export function computeGoalieSignals(
       const l = adj(goalieLag1(ex.history, target));
       set.lag1[k] = Number.isFinite(l) ? l : set.marcel[k];
       set.structural[k] = goalieStructuralSignal(models.structural, ex, target, league, registry);
+      // Synthetic market: Marcel/EWMA/lag1 blend (structural is the opportunist anchor).
+      set.market[k] =
+        0.5 * set.marcel[k] + 0.3 * set.ewma[k] + 0.2 * set.lag1[k];
     }
     rates[target] = set;
   }
@@ -1053,13 +1059,13 @@ const GOALIE_GP_SIGNALS = ["gbdt", "ridge", "ewma", "lag1", "structural"] as con
  * and only give the NNLS meta more ways to overfit small pools.
  */
 const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
-  wins: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural"],
-  saves: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural"],
-  shutouts: ["gbdt", "marcel", "structural"],
+  wins: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural", "market"],
+  saves: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural", "market"],
+  shutouts: ["gbdt", "marcel", "structural", "market"],
   // Drop GBDT/Ridge for savePct — they regress hard to the league mean and
   // erase elite/weak separation. Structural (GSAx) + Marcel + recent EWMA
   // keep skill signal; convex meta preserves their spread.
-  savePct: ["structural", "marcel", "ewma"],
+  savePct: ["structural", "marcel", "ewma", "market"],
 };
 
 function goalieSignalRow(
@@ -1075,6 +1081,7 @@ export function fitGoalieMetas(
   testSeason: number,
 ): GoalieStackedMetas {
   const rateMetas: GoalieStackedMetas["rateMetas"] = {};
+  const useMarket = marketTrainingEnabled();
 
   for (const target of GOALIE_V2_TARGETS) {
     const Xe: number[][] = [];
@@ -1083,6 +1090,15 @@ export function fitGoalieMetas(
     const Xl: number[][] = [];
     const yl: number[] = [];
     const wl: number[] = [];
+
+    const allActual: number[] = [];
+    for (const season of pool) {
+      for (let k = 0; k < season.examples.length; k++) {
+        allActual.push(goalieActual(season.examples[k].actualRow, target));
+      }
+    }
+    const statSd = sampleStd(allActual);
+
     for (const season of pool) {
       const recency = Math.exp(-0.15 * ((testSeason - season.seasonId) / 10001));
       const sig = season.signals.rates[target];
@@ -1090,7 +1106,12 @@ export function fitGoalieMetas(
         const ex = season.examples[k];
         const row = goalieSignalRow(target, sig, k);
         const y = goalieActual(ex.actualRow, target);
-        const w = (Math.min(40, ex.actualRow.gamesPlayed) / 40) * recency;
+        let w = (Math.min(40, ex.actualRow.gamesPlayed) / 40) * recency;
+        if (useMarket && sig.market) {
+          const mkt = sig.market[k];
+          const opp = sig.structural?.[k] ?? 0.5 * (sig.gbdt[k] + sig.marcel[k]);
+          w *= disagreementWeight(mkt, opp, statSd, DISAGREEMENT_SIGMA);
+        }
         if (isLowHistory(ex)) {
           Xl.push(row);
           yl.push(y);
@@ -1216,9 +1237,14 @@ export function inferGoalieForPlayer(
       ewma: Number.isFinite(e) ? e : marcel,
       lag1: Number.isFinite(l) ? l : marcel,
       structural: goalieStructuralSignal(models.structural, ex, target, league, registry),
+      market: 0,
     };
-    const signalRow = GOALIE_TARGET_SIGNALS[target].map((s) => bySignal[s]);
+    bySignal.market =
+      0.5 * bySignal.marcel + 0.3 * bySignal.ewma + 0.2 * bySignal.lag1;
     const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
+    // Legacy metas omit "market" — only pass signals the meta was fit on.
+    const sigNames = meta.signals.length > 0 ? meta.signals : [...GOALIE_TARGET_SIGNALS[target]];
+    const signalRow = sigNames.map((s) => bySignal[s as GoalieSignal] ?? 0);
     rates[target] = clampTarget(target, applyMeta(meta, signalRow));
   }
 
