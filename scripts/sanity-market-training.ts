@@ -37,6 +37,6 @@ assert(pert[1] === 0, "pos_C not perturbed");
 assert(pert[0] !== 10 || pert[2] !== 5, "at least one whitelisted changed");
 
 assert(sampleStd([1, 2, 3]) > 0, "std positive");
-assert(DISAGREEMENT_SIGMA === 0.15, "sigma constant");
+assert(DISAGREEMENT_SIGMA === 0.3, "sigma constant");
 
 console.log("OK: market-training sanity checks passed");

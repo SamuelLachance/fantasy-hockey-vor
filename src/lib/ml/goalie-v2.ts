@@ -1079,6 +1079,7 @@ function goalieSignalRow(
 export function fitGoalieMetas(
   pool: GoalieSeasonPredictions[],
   testSeason: number,
+  disagreementSigma = DISAGREEMENT_SIGMA,
 ): GoalieStackedMetas {
   const rateMetas: GoalieStackedMetas["rateMetas"] = {};
   const useMarket = marketTrainingEnabled();
@@ -1110,7 +1111,7 @@ export function fitGoalieMetas(
         if (useMarket && sig.market) {
           const mkt = sig.market[k];
           const opp = sig.structural?.[k] ?? 0.5 * (sig.gbdt[k] + sig.marcel[k]);
-          w *= disagreementWeight(mkt, opp, statSd, DISAGREEMENT_SIGMA);
+          w *= disagreementWeight(mkt, opp, statSd, disagreementSigma);
         }
         if (isLowHistory(ex)) {
           Xl.push(row);

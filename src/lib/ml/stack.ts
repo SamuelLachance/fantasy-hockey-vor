@@ -810,6 +810,7 @@ export function metaSegmentOf(young: boolean, isDefense: boolean): MetaSegment {
 export function fitStackedMetas(
   pool: SeasonPredictions[],
   testSeason: number,
+  disagreementSigma = DISAGREEMENT_SIGMA,
 ): { rateMetas: Record<string, StackedMeta>; gpMeta: GpMeta } {
   const rateMetas: Record<string, StackedMeta> = {};
   const useMarket = marketTrainingEnabled();
@@ -894,7 +895,7 @@ export function fitStackedMetas(
             r.market,
             r.opportunist,
             statSd,
-            DISAGREEMENT_SIGMA,
+            disagreementSigma,
           );
           const beat = r.actual > r.market;
           const wK = kellyFantasyWeight(marketPct[i], modelPct[i], beat);
@@ -936,7 +937,7 @@ export function fitStackedMetas(
       const opportunist = 0.5 * gp.gbdt[k] + 0.5 * gp.ridge[k];
       let w = recency;
       if (useMarket) {
-        w *= disagreementWeight(mkt, opportunist, 12, DISAGREEMENT_SIGMA);
+        w *= disagreementWeight(mkt, opportunist, 12, disagreementSigma);
       }
       if (isYoungExample(ex)) {
         Xy.push(row);

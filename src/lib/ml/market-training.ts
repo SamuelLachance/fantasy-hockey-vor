@@ -28,7 +28,11 @@ export const MARKET_BLEND = {
 } as const;
 
 /** Disagreement threshold in units of within-stat σ. */
-export const DISAGREEMENT_SIGMA = 0.15;
+const disagreementSigmaEnv = Number(process.env.ML_DISAGREEMENT_SIGMA);
+export const DISAGREEMENT_SIGMA =
+  Number.isFinite(disagreementSigmaEnv) && disagreementSigmaEnv > 0
+    ? disagreementSigmaEnv
+    : 0.3;
 
 /** Relative Gaussian noise on whitelisted feature columns during GBDT training. */
 export const ADVERSARIAL_STRENGTH = 0.05;
