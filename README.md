@@ -20,7 +20,7 @@ Every player with NHL history is projected by a walk-forward-validated stacked e
 
 5. **Games played** — dedicated GBDT + ridge + a game-log durability signal (injury spells vs. healthy scratches vs. call-up timing, ending ironman streaks, late-season rest on contenders, physical wear from TOI × hits/blocks, goalie back-to-back workload).
 
-6. **VOR rank** — per-category z-scores weighted by scarcity, compared to replacement level at each position in a 12-team league. Position eligibility comes from Yahoo Fantasy.
+6. **VOR rank** — per-category z-scores measured against the draftable pool (top ~1.5× rosterable players per position, so fringe players don't distort category spreads), weighted by a bounded scarcity tilt (shrunk halfway toward the equal-weight H2H baseline, clamped to [0.7, 1.4]), compared to replacement level at each position in a 12-team league. Goalie SV% is scored as volume-weighted saves above average, and total goalie value is discounted (`goalieVorFactor`, default 0.25) for weekly start volatility and streamability in head-to-head play. Position eligibility comes from Yahoo Fantasy.
 
 Players without NHL history fall back to a contextual dossier model (prospect stats, draft pedigree, team depth). An optional OpenAI dossier engine exists (`npm run ai-project`) but is not used for the published rankings.
 

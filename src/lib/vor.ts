@@ -1,4 +1,5 @@
-import { DEFAULT_LEAGUE, replacementRank } from "./league";
+import { leagueAverageSavePct, savesAboveAverage } from "./goalie-impact";
+import { DEFAULT_LEAGUE, draftablePoolSize, replacementRank } from "./league";
 import {
   categoryWeight,
   computeCategoryDifficultyWeights,
@@ -15,6 +16,11 @@ import {
   type Position,
   type SkaterProjection,
 } from "./types";
+
+type RawPlayer = Omit<
+  PlayerProjection,
+  "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
+>;
 
 function mean(values: number[]): number {
   const valid = values.filter((v) => Number.isFinite(v));
@@ -45,11 +51,24 @@ function getStat(
   );
 }
 
+/**
+ * Z-scores for every player in `players`, measured against the distribution
+ * of `reference` (defaults to the full pool). Passing the draftable pool as
+ * the reference keeps hundreds of near-zero fringe players from distorting
+ * category means and spreads.
+ *
+ * savePct is scored as saves above the reference pool's shots-weighted
+ * average SV%, so its z reflects volume-weighted team impact rather than a
+ * raw rate that a low-workload backup can top.
+ */
 export function computeCategoryZScores(
-  players: Omit<PlayerProjection, "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank">[],
+  players: RawPlayer[],
+  reference: RawPlayer[] = players,
 ): Map<number, Partial<Record<Category, number>>> {
   const skaters = players.filter((p) => !p.isGoalie);
   const goalies = players.filter((p) => p.isGoalie);
+  const refSkaters = reference.filter((p) => !p.isGoalie);
+  const refGoalies = reference.filter((p) => p.isGoalie);
   const result = new Map<number, Partial<Record<Category, number>>>();
 
   for (const category of SKATER_CATEGORIES) {
@@ -59,7 +78,11 @@ export function computeCategoryZScores(
       category === "faceoffWins"
         ? skaters.filter((p) => p.position !== "D")
         : skaters;
-    const values = pool.map((p) =>
+    const refPool =
+      category === "faceoffWins"
+        ? refSkaters.filter((p) => p.position !== "D")
+        : refSkaters;
+    const values = refPool.map((p) =>
       getStat(p.projection as SkaterProjection, category),
     );
     const avg = mean(values);
@@ -73,17 +96,22 @@ export function computeCategoryZScores(
     }
   }
 
+  const leagueSavePct = leagueAverageSavePct(
+    refGoalies.map((p) => p.projection as GoalieProjection),
+  );
+  const goalieStat = (player: RawPlayer, category: Category): number =>
+    category === "savePct"
+      ? savesAboveAverage(player.projection as GoalieProjection, leagueSavePct)
+      : getStat(player.projection as GoalieProjection, category);
+
   for (const category of GOALIE_CATEGORIES) {
-    const values = goalies.map((p) =>
-      getStat(p.projection as GoalieProjection, category),
-    );
+    const values = refGoalies.map((p) => goalieStat(p, category));
     const avg = mean(values);
     const sd = stdDev(values);
 
     for (const player of goalies) {
-      const value = getStat(player.projection as GoalieProjection, category);
       const scores = result.get(player.id) ?? {};
-      scores[category] = zScore(value, avg, sd);
+      scores[category] = zScore(goalieStat(player, category), avg, sd);
       result.set(player.id, scores);
     }
   }
@@ -91,6 +119,13 @@ export function computeCategoryZScores(
   return result;
 }
 
+/**
+ * KNOWN LIMITATION: the category set comes from the primary position, so a
+ * player eligible at both D and a forward slot would carry a D-scored
+ * (7-category) value into forward pools and vice versa. Yahoo currently
+ * lists no D+forward dual-eligible players, so the case is unreachable; if
+ * one appears, score per-position values against per-position replacement.
+ */
 export function fantasyValueFromZScores(
   zScores: Partial<Record<Category, number>>,
   isGoalie: boolean,
@@ -114,6 +149,7 @@ export function fantasyValueFromZScores(
 export interface VorResult {
   players: PlayerProjection[];
   categoryWeights: CategoryDifficultyWeights;
+  replacementLevels: Partial<Record<Position, number>>;
 }
 
 export function computeReplacementLevels(
@@ -160,26 +196,80 @@ function bestVorPosition(
   return { vor: Number.isFinite(bestVor) ? bestVor : 0, position: bestPosition };
 }
 
-export function applyVor(
-  players: Omit<
-    PlayerProjection,
-    "categoryZScores" | "fantasyValue" | "vor" | "rank" | "positionRank"
-  >[],
-  league: LeagueSettings = DEFAULT_LEAGUE,
-): VorResult {
-  const categoryWeights = computeCategoryDifficultyWeights(players, league);
-  const zScores = computeCategoryZScores(players);
+type ValuedPlayer = RawPlayer & {
+  categoryZScores: Partial<Record<Category, number>>;
+  fantasyValue: number;
+  vor: number;
+};
 
-  const withValues = players.map((player) => {
+function computeFantasyValues(
+  players: RawPlayer[],
+  zScores: Map<number, Partial<Record<Category, number>>>,
+  goalieFactor: number,
+  difficultyWeights?: CategoryDifficultyWeights,
+): ValuedPlayer[] {
+  return players.map((player) => {
     const categoryZScores = zScores.get(player.id) ?? {};
-    const fantasyValue = fantasyValueFromZScores(
+    const value = fantasyValueFromZScores(
       categoryZScores,
       player.isGoalie,
-      categoryWeights,
+      difficultyWeights,
       player.position,
     );
+    const fantasyValue = player.isGoalie ? value * goalieFactor : value;
     return { ...player, categoryZScores, fantasyValue, vor: 0 };
   });
+}
+
+/** Ids of the top draftable players at each position by fantasy value. */
+function selectDraftableIds(
+  players: ValuedPlayer[],
+  league: LeagueSettings,
+): Set<number> {
+  const ids = new Set<number>();
+  const positions: Position[] = ["C", "LW", "RW", "D", "G"];
+
+  for (const position of positions) {
+    const pool = players
+      .filter((p) => p.positions.includes(position))
+      .sort((a, b) => b.fantasyValue - a.fantasyValue);
+    const size = draftablePoolSize(
+      position as keyof LeagueSettings["roster"],
+      league.teams,
+      league.roster,
+    );
+    for (const player of pool.slice(0, size)) ids.add(player.id);
+  }
+
+  return ids;
+}
+
+export function applyVor(
+  players: RawPlayer[],
+  league: LeagueSettings = DEFAULT_LEAGUE,
+): VorResult {
+  const goalieFactor = league.goalieVorFactor ?? 1;
+
+  // Pass 1: unweighted z-scores over the full pool, only to identify the
+  // draftable pool at each position.
+  const passOne = computeFantasyValues(
+    players,
+    computeCategoryZScores(players),
+    goalieFactor,
+  );
+  const draftableIds = selectDraftableIds(passOne, league);
+  const draftable = players.filter((p) => draftableIds.has(p.id));
+
+  // Pass 2: scarcity weights and z-score baselines come from the draftable
+  // pool; every player is then scored against those baselines.
+  const categoryWeights = computeCategoryDifficultyWeights(draftable, league);
+  const zScores = computeCategoryZScores(players, draftable);
+  const withValues = computeFantasyValues(
+    players,
+    zScores,
+    goalieFactor,
+    categoryWeights,
+  );
 
   const replacementLevels = computeReplacementLevels(
     withValues as PlayerProjection[],
@@ -218,5 +308,6 @@ export function applyVor(
       };
     }),
     categoryWeights,
+    replacementLevels,
   };
 }

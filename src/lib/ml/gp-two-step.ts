@@ -85,7 +85,10 @@ export function gpSignalsFromProfile(
   return {
     lag1,
     ewma,
-    durability: profile.injury.durabilityScore || durabilityFromGpHistory(gps),
+    // Must mirror gpSignalsFromExample: durabilityMin was tuned against the
+    // CV-based metric (floor 0.55), not the injury.durabilityScore GP share
+    // (max ~0.79 for goalies), which would misfire the full-season gate.
+    durability: durabilityFromGpHistory(gps),
     age: profile.bio.age,
   };
 }

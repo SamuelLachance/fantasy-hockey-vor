@@ -160,6 +160,11 @@ export function buildProjectionTargetRow(
     teamElo: teamCtx?.teamElo ?? 500,
     coachId: teamCtx?.coachId ?? 0,
     coachTenureSeasons: teamCtx?.coachTenureSeasons ?? 0,
+    // KNOWN LIMITATION: league-average placeholders. The context cache has
+    // no team-style fields, so the v1 fallback path sees these constants for
+    // every team (training saw real values via sanitizeTargetSeasonRow). The
+    // v2 path overwrites them from dataset rows; only zero-NHL-history
+    // players projected through v1 are affected.
     teamHitsPerGame: 22,
     teamPimPerGame: 8,
     teamBlocksPerGame: 14,

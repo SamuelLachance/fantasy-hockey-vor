@@ -429,6 +429,7 @@ export function trainBoundary(
   matrix: { columns: Float64Array[]; featureNames: string[] },
   allRows: PlayerSeasonRow[],
   boundarySeason: number,
+  levels?: Record<string, Record<number, number>>,
 ): BoundaryModels {
   const trainIdx: number[] = [];
   const valIdx: number[] = [];
@@ -466,6 +467,13 @@ export function trainBoundary(
   const marcel: Record<string, MarcelParams> = {};
   const useMarket = marketTrainingEnabled();
   const advOpts = gbdtAdversarialOpts();
+  // Residual targets must be taken against the same era-adjusted market used
+  // when signals are reconstructed (computeBaseSignals / inference add the
+  // prediction to market(era), so training against market(1) would bake in a
+  // per-player bias of market × (era − 1)).
+  const eraLevels = levels ?? buildTargetLevels(allRows, V2_SKATER_TARGETS, false);
+  const exampleEra = (ex: SkaterExample, target: string): number =>
+    eraFactor(eraLevels[target], eligibleHistory(ex.history), ex.seasonId);
 
   // Fit Marcel first — needed as the synthetic-market anchor for residual targets.
   for (const target of V2_SKATER_TARGETS) {
@@ -480,7 +488,7 @@ export function trainBoundary(
     for (let k = 0; k < trainIdx.length; k++) {
       const ex = allExamples[trainIdx[k]];
       yTrain[k] = useMarket
-        ? residualRate(ex, target, marcel[target])
+        ? residualRate(ex, target, marcel[target], exampleEra(ex, target))
         : actualRate(ex.actualRow, target);
       wTrain[k] =
         reliabilityWeight(ex.actualRow) * recencyWeight(ex.seasonId, boundarySeason);
@@ -490,7 +498,7 @@ export function trainBoundary(
     for (let k = 0; k < valIdx.length; k++) {
       const ex = allExamples[valIdx[k]];
       yVal[k] = useMarket
-        ? residualRate(ex, target, marcel[target])
+        ? residualRate(ex, target, marcel[target], exampleEra(ex, target))
         : actualRate(ex.actualRow, target);
       wVal[k] = reliabilityWeight(ex.actualRow);
     }
@@ -514,7 +522,7 @@ export function trainBoundary(
     for (let k = 0; k < fitIdx.length; k++) {
       const ex = allExamples[fitIdx[k]];
       yFit[k] = useMarket
-        ? residualRate(ex, target, marcel[target])
+        ? residualRate(ex, target, marcel[target], exampleEra(ex, target))
         : actualRate(ex.actualRow, target);
       wFit[k] =
         reliabilityWeight(ex.actualRow) * recencyWeight(ex.seasonId, boundarySeason);
@@ -756,7 +764,7 @@ export function runWalkForward(
     const exampleRows = rowsBySeason.get(seasonId) ?? [];
     if (exampleRows.length === 0) continue;
     const t0 = Date.now();
-    const models = trainBoundary(examples, matrix, rows, seasonId);
+    const models = trainBoundary(examples, matrix, rows, seasonId, levels);
     const sigs = computeBaseSignals(
       models,
       exampleRows.map((i) => examples[i]),
@@ -966,13 +974,17 @@ export function metaRatePrediction(
   k: number,
   young: boolean,
   isDefense: boolean,
+  residualModels?: boolean,
 ): number {
   const seg = meta.segments[metaSegmentOf(young, isDefense)];
   const mkt = sig.market?.[k] ?? sig.marcel[k];
+  // Residual-vs-absolute application must match the space the weights were
+  // FIT in. Inference passes the bundle's marketTraining flag; only training
+  // (same process as the fit) may fall back to the env toggle.
   const residualize =
     Boolean(sig.market) &&
     seg.signals.includes("market") &&
-    marketTrainingEnabled();
+    (residualModels ?? marketTrainingEnabled());
   if (residualize) {
     const row = [
       sig.gbdt[k] - mkt,

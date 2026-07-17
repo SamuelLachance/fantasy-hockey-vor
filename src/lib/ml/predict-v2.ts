@@ -181,6 +181,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
       0,
       young,
       profile.position === "D",
+      Boolean(rt.bundle.marketTraining),
     );
     marketEdge[t] = perGame[t] - (sig.market ?? sig.marcel);
   }

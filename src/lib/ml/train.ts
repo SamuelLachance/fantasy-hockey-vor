@@ -1062,11 +1062,24 @@ function trainSkaterTarget(
 
   let lambda = 12;
   let model: StatModel;
+  let selectionModel: StatModel;
   if (useGbm) {
     const gbmOpts =
       target === "penaltyMinutes"
         ? { nEstimators: 50, learningRate: 0.08, minSamplesLeaf: 8 }
         : { nEstimators: 45, learningRate: 0.08, minSamplesLeaf: 8 };
+    // Selection model: train only, so val predictions used for blend/champion
+    // selection are out-of-sample. Production model refits on train+val.
+    selectionModel = fitGbm(
+      trainX,
+      trainY.map((y) => transformTarget(y, logTarget)),
+      featureNames,
+      target,
+      false,
+      trainW,
+      gbmOpts,
+    );
+    if (logTarget) selectionModel.logTarget = true;
     const yFit = fitTrainY.map((y) => transformTarget(y, logTarget));
     model = fitGbm(
       fitTrainX,
@@ -1092,6 +1105,16 @@ function trainSkaterTarget(
       valLag1,
       logTarget,
     );
+    selectionModel = fitRidge(
+      trainX,
+      trainY,
+      featureNames,
+      target,
+      false,
+      lambda,
+      trainW,
+      logTarget,
+    );
     model = fitRidge(
       fitTrainX,
       fitTrainY,
@@ -1104,7 +1127,9 @@ function trainSkaterTarget(
     );
   }
 
-  const valMl = valX.map((x) => predictStatModel(model, x));
+  // Out-of-sample val predictions: blend weights and champion strategies must
+  // not score the ML term on the season it was fit on.
+  const valMl = valX.map((x) => predictStatModel(selectionModel, x));
   const blendWeights = selectBlendWeights(valY, valMl, valEwma, valLag1, target);
   const valBlended = applyBlendWeights(valMl, valEwma, valLag1, blendWeights);
   const valBlendR2 = evaluateRegression(valY, valBlended).r2;
@@ -1280,7 +1305,11 @@ function trainPositionSplitTarget(
 function trainGpModel(
   examples: TrainingExample[],
   isGoalie: boolean,
-): { model: StatModel; metrics: ReturnType<typeof evaluateRegression> } {
+): {
+  model: StatModel;
+  selectionModel: StatModel;
+  metrics: ReturnType<typeof evaluateRegression>;
+} {
   const { train, val, test } = splitExamples(examples);
   const target = "gamesPlayed";
   const featureNames = train[0]?.featureNames ?? examples[0]?.featureNames ?? [];
@@ -1299,6 +1328,19 @@ function trainGpModel(
   const metrics = evaluateRegression(testY, testPred);
   metrics.spearman = spearmanCorrelation(testY, testPred);
 
+  // Train-only fit for all val-based tuning / strategy selection: those
+  // routines score candidate strategies on val (and test), so handing them a
+  // model that saw those seasons would rig the comparison toward ML.
+  const selectionModel = fitGbm(
+    train.map((ex) => ex.features),
+    train.map((ex) => ex.targetSeason.gamesPlayed),
+    featureNames,
+    target,
+    isGoalie,
+    exampleWeights(train, target),
+    { nEstimators: isGoalie ? 45 : 65, learningRate: 0.08 },
+  );
+
   const productionModel = fitGbm(
     examples.map((ex) => ex.features),
     examples.map((ex) => ex.targetSeason.gamesPlayed),
@@ -1310,7 +1352,7 @@ function trainGpModel(
   );
   productionModel.holdoutR2 = metrics.r2;
 
-  return { model: productionModel, metrics };
+  return { model: productionModel, selectionModel, metrics };
 }
 
 export function trainMlModels(dataset: MlDataset): MlModelBundle {
@@ -1382,14 +1424,16 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     goalieMetrics[target] = evaluateRegression(testY, testPred);
   }
 
-  const { model: goalieGpModel, metrics: goalieGpMlMetrics } = trainGpModel(
-    goalieGpExamples,
-    true,
-  );
-  const { model: skaterGpModel, metrics: skaterGpMlMetrics } = trainGpModel(
-    skaterGpExamples,
-    false,
-  );
+  const {
+    model: goalieGpModel,
+    selectionModel: goalieGpSelectionModel,
+    metrics: goalieGpMlMetrics,
+  } = trainGpModel(goalieGpExamples, true);
+  const {
+    model: skaterGpModel,
+    selectionModel: skaterGpSelectionModel,
+    metrics: skaterGpMlMetrics,
+  } = trainGpModel(skaterGpExamples, false);
 
   const skaterGpSplit = splitExamples(skaterGpExamples);
   const skaterGpLag1EwmaBlend = tuneLag1EwmaBlend(
@@ -1400,13 +1444,13 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
   const skaterGpEnsembleWeights = tuneGpEnsemble(
     skaterGpSplit.val,
     skaterHistoryMap,
-    skaterGpModel,
+    skaterGpSelectionModel,
     false,
   );
   const skaterGpTwoStepConfig = tuneTwoStepConfig(
     skaterGpSplit.val,
     skaterHistoryMap,
-    skaterGpModel,
+    skaterGpSelectionModel,
     false,
     skaterGpEnsembleWeights,
     injuryGpFromHistory,
@@ -1421,7 +1465,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     skaterGpSplit.val,
     skaterGpSplit.test,
     skaterHistoryMap,
-    skaterGpModel,
+    skaterGpSelectionModel,
     skaterGpLag1EwmaBlend,
     skaterGpEnsembleWeights,
     skaterGpTwoStepConfig,
@@ -1436,13 +1480,13 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
   const goalieGpEnsembleWeights = tuneGpEnsemble(
     goalieGpSplit.val,
     goalieHistoryMap,
-    goalieGpModel,
+    goalieGpSelectionModel,
     true,
   );
   const goalieGpTwoStepConfig = tuneTwoStepConfig(
     goalieGpSplit.val,
     goalieHistoryMap,
-    goalieGpModel,
+    goalieGpSelectionModel,
     true,
     goalieGpEnsembleWeights,
     (prior) => {
@@ -1457,7 +1501,7 @@ export function trainMlModels(dataset: MlDataset): MlModelBundle {
     goalieGpSplit.val,
     goalieGpSplit.test,
     goalieHistoryMap,
-    goalieGpModel,
+    goalieGpSelectionModel,
     goalieGpLag1EwmaBlend,
     goalieGpEnsembleWeights,
     goalieGpTwoStepConfig,

@@ -432,7 +432,9 @@ export function durabilityGpSignal(history: PlayerSeasonRow[]): number {
   const d = last?.dur;
   if (d) {
     // Ironman: ending streak ≥40 or a full season → pull toward 80–82.
-    if (d.fullSeason === 1 || d.streak >= 40) {
+    // Guard on tail === 0: committed durability data predates the producer
+    // fix and can carry a nonzero streak for players who finished injured.
+    if (d.fullSeason === 1 || (d.streak >= 40 && d.tail === 0)) {
       const iron = Math.min(1, d.streak / 82);
       gp = gp * (1 - 0.25 * iron) + 81 * (0.25 * iron);
     }

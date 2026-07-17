@@ -103,9 +103,10 @@ export function TopPlayers({ players, categoryWeights }: TopPlayersProps) {
             <Zap className="mb-2 h-5 w-5 text-cyan-400" />
             <h3 className="font-medium text-white">Category Z-Scores</h3>
             <p className="mt-1 text-sm text-slate-400">
-              Each stat is converted to a z-score, then multiplied by a
-              scarcity weight (harder-to-generate stats count more) and summed
-              for total fantasy value.
+              Each stat is converted to a z-score against the draftable pool,
+              multiplied by a bounded scarcity weight and summed for total
+              fantasy value. Goalie SV% is volume-weighted, and goalie value
+              is discounted for weekly H2H volatility and streamability.
             </p>
           </div>
           <div className="rounded-xl border border-white/5 bg-white/5 p-4">

@@ -219,7 +219,7 @@ function estimateFromMoneyPuck(
     gsaxSource: "moneypuck",
     gsaxPer60,
     gsaxPerGame,
-    gsaaPer60: wOngoal > 0 ? (gsaa(wSaves, wOngoal) / wOngoal) * 60 : 0,
+    gsaaPer60: wToi > 0 ? gsaa(wSaves, wOngoal) / (wToi / 3600) : 0,
     shotsPerGame,
     xGaPerGame,
     totalWeightedShots: wOngoal,
@@ -264,8 +264,10 @@ function estimateFromProxy(
     weightedGp > 0
       ? (weightedSa * teamAdjustedGoalRatePerShot(teamGoalsAgainstPerGame)) / weightedGp
       : 2.85;
-  const gsaxPer60 =
-    weightedSa > 0 ? (shrunkGsax / weightedSa) * 60 : gsaxPer60FromPerGame(gsaxPerGame, shotsPerGame);
+  // One appearance ≈ 60 minutes, so per-game GSAx approximates GSAx/60.
+  // Dividing by shots (per-60-SHOTS) would run ~2x hot vs the MoneyPuck
+  // icetime-based path.
+  const gsaxPer60 = gsaxPerGame;
 
   return {
     savePct: shrunkSv,
@@ -274,7 +276,7 @@ function estimateFromProxy(
     gsaxSource: "proxy",
     gsaxPer60,
     gsaxPerGame,
-    gsaaPer60: weightedSa > 0 ? (gsaaTotal / weightedSa) * 60 : 0,
+    gsaaPer60: weightedGp > 0 ? gsaaTotal / weightedGp : 0,
     shotsPerGame,
     xGaPerGame,
     totalWeightedShots: weightedSa,
@@ -405,8 +407,8 @@ export function estimateShrunkGoalieSkillFromCareer(
     gsaxPer60: 0,
     gsaxPerGame: 0,
     gsaaPer60:
-      career.shotsAgainst > 0
-        ? (gsaa(career.saves, career.shotsAgainst) / career.shotsAgainst) * 60
+      career.gamesPlayed > 0
+        ? gsaa(career.saves, career.shotsAgainst) / career.gamesPlayed
         : 0,
     shotsPerGame: career.shotsAgainst / career.gamesPlayed,
     xGaPerGame: 2.85,
@@ -436,13 +438,16 @@ export function teamAdjustedGsaxPer60(
   return gsaxPer60 * teamFactor;
 }
 
-/** Derive GSAx/60 from per-game GSAx and shot volume. */
+/**
+ * Derive GSAx/60 from per-game GSAx. A goalie appearance is ≈60 minutes, so
+ * the per-game rate already approximates the per-60-minute rate.
+ */
 export function gsaxPer60FromPerGame(
   gsaxPerGame: number,
   shotsPerGame: number,
 ): number {
-  if (gsaxPerGame === 0 || shotsPerGame <= 0) return 0;
-  return (gsaxPerGame / shotsPerGame) * 60;
+  void shotsPerGame;
+  return gsaxPerGame;
 }
 
 /** Translate save skill above/below average into a win-rate multiplier. */

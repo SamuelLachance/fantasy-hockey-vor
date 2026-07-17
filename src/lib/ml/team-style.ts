@@ -40,6 +40,14 @@ export function buildTeamStyleBySeasonTeam(
     b.evGoals += row.evGoals ?? 0;
     const shToi = (row.shToiPerGame ?? 0) * row.gamesPlayed;
     b.shToi += shToi;
+    // KNOWN DEFECT (needs paired dataset rebuild + retrain to change):
+    // shGoalsPer60 is the skater's shorthanded goals SCORED per 60, not
+    // on-ice PK goals against, so pkGoalsAgainstPer60 lands around 0.1-0.6 —
+    // roughly 10x below the 2.5 missing-data default. Training and inference
+    // currently see the feature computed identically, so correcting the
+    // source (e.g. the goalsForAgainst report) or the default without
+    // retraining the committed bundle would skew inference. Fix at the next
+    // full retrain.
     b.shGa += (row.shGoalsPer60 ?? 0) * (shToi / 60);
     buckets.set(key, b);
   }

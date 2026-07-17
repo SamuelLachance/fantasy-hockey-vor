@@ -110,12 +110,19 @@ export function clampSkaterProjection(
       ? 0
       : clampTotal(projection.faceoffWins, limits.faceoffWins, gp);
 
+  if (powerplayPoints > goals + assists) {
+    // Reconcile an inconsistent PPP head with the scoring stats, but never
+    // beyond the positional goal-rate cap; the shots floor below then keeps
+    // shots >= goals for the bumped value.
+    goals = clampTotal(
+      Math.max(goals, Math.round(powerplayPoints * 0.45)),
+      limits.goals,
+      gp,
+    );
+  }
+
   const minShots = Math.max(goals, Math.round((goals + assists) * 0.65));
   shots = Math.max(shots, minShots);
-
-  if (powerplayPoints > goals + assists) {
-    goals = Math.max(goals, Math.round(powerplayPoints * 0.45));
-  }
 
   return {
     goals,
@@ -216,9 +223,10 @@ export function anchorSkaterProjectionToHistory(
     const priorRate = Math.max(careerRate, maxRate * 0.85);
     const priorWeight = Math.min(30, Math.max(8, careerGp * 0.25));
     const projectedRate = projected / gp;
+    // Empirical Bayes: the projection carries its own gp games of evidence
+    // against priorWeight pseudo-games of history.
     const shrunkRate =
-      (priorRate * priorWeight + projectedRate * priorWeight) /
-      (priorWeight + priorWeight);
+      (priorRate * priorWeight + projectedRate * gp) / (priorWeight + gp);
     const ceiling = Math.max(priorRate, maxRate) * gp * ceilingMult;
     return Math.min(Math.round(shrunkRate * gp), Math.round(ceiling));
   };

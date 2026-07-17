@@ -62,7 +62,10 @@ export function goalieLag1PeersFromRows(
     const last = lastGoalieSeason(prior);
     return {
       playerId: row.playerId,
-      lastGp: last?.gamesPlayed ?? row.gamesPlayed,
+      // No prior season → 0, matching goalieLag1PeersFromProfiles. Falling
+      // back to row.gamesPlayed would leak the target season's outcome into
+      // holdout evaluation.
+      lastGp: last?.gamesPlayed ?? 0,
     };
   });
 }

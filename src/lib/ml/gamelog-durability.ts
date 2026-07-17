@@ -222,12 +222,14 @@ export function deriveDurability(
   const teamGames = lastSched.length;
 
   // Ending ironman streak on the last team: walk the schedule backwards from
-  // the player's final appearance while they keep dressing.
+  // the player's final appearance while they keep dressing. Only counts when
+  // the player was active through the season's end (tail === 0) — a streak
+  // that ends in a season-ending injury is not an ironman signal.
   const playedSet = new Set(
     sorted.filter((g) => g.t === last.t).map((g) => g.d),
   );
   let streak = 0;
-  if (playedSet.has(last.d)) {
+  if (tail === 0) {
     const endIdx = lastSched.indexOf(last.d);
     for (let i = endIdx; i >= 0; i--) {
       if (!playedSet.has(lastSched[i])) break;

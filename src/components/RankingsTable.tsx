@@ -94,8 +94,13 @@ function passesRanges(
   player: PlayerProjection,
   ranges: StatRanges,
   position: Position | "ALL",
+  validKeys: readonly RangeKey[],
 ): boolean {
   for (const [key, bounds] of Object.entries(ranges) as [RangeKey, { min: string; max: string }][]) {
+    // Only enforce filters for categories visible under the current position
+    // tab; a range set under another tab (e.g. Wins under G, then ALL) would
+    // otherwise null-fail every player while the filter badge shows 0.
+    if (!validKeys.includes(key)) continue;
     if (!bounds?.min && !bounds?.max) continue;
 
     const min = bounds.min ? parseRangeValue(key, bounds.min) : undefined;
@@ -123,7 +128,8 @@ function rangeLabel(key: RangeKey): string {
 }
 
 function defaultSortDir(key: SortKey): "asc" | "desc" {
-  return key === "name" || key === "team" ? "asc" : "desc";
+  // rank is lower-is-better: first click should show rank 1 first.
+  return key === "name" || key === "team" || key === "rank" ? "asc" : "desc";
 }
 
 export function RankingsTable({ players }: RankingsTableProps) {
@@ -189,7 +195,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
       );
     }
 
-    list = list.filter((p) => passesRanges(p, statRanges, position));
+    list = list.filter((p) => passesRanges(p, statRanges, position, filterRangeKeys));
 
     return [...list].sort((a, b) => {
       let av: number | string;
@@ -221,7 +227,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
         ? Number(av) - Number(bv)
         : Number(bv) - Number(av);
     });
-  }, [players, query, position, sortKey, sortDir, statRanges]);
+  }, [players, query, position, sortKey, sortDir, statRanges, filterRangeKeys]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {

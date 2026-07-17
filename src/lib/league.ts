@@ -4,7 +4,30 @@ export const DEFAULT_LEAGUE: LeagueSettings = {
   teams: 12,
   roster: { C: 2, LW: 2, RW: 2, D: 4, G: 2 },
   season: "2026-27",
+  // Yahoo H2H categories: goalie value is discounted because weekly goalie
+  // starts are volatile, goalie categories are streamable off waivers, and
+  // goalie stat projections carry the most noise. The factor also offsets the
+  // structural z-score inflation of starters vs a bimodal starter/backup
+  // pool (raw z-sums would put the top goalie #1 overall). At 0.25 the top
+  // goalie drafts late round 2 / early round 3. Tune to taste (1 = none).
+  goalieVorFactor: 0.25,
 };
+
+/**
+ * How deep the "draftable pool" runs at each position, as a multiple of
+ * starter slots (starters + likely benched/streamed players). Z-score
+ * baselines and scarcity weights are computed over this pool so the hundreds
+ * of fringe players projected near zero don't distort category spreads.
+ */
+export const DRAFTABLE_POOL_FACTOR = 1.5;
+
+export function draftablePoolSize(
+  position: keyof LeagueSettings["roster"],
+  teams: number = DEFAULT_LEAGUE.teams,
+  roster: LeagueSettings["roster"] = DEFAULT_LEAGUE.roster,
+): number {
+  return Math.ceil(teams * roster[position] * DRAFTABLE_POOL_FACTOR);
+}
 
 export function replacementRank(
   position: keyof LeagueSettings["roster"],

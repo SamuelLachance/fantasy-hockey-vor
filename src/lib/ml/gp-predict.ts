@@ -59,10 +59,11 @@ export function lag1EwmaGp(
   durability: number,
 ): number {
   void age;
-  void isGoalie;
   void durability;
   const base = lag1 * blend.lag1 + ewma * blend.ewma;
-  if (base <= 0) return FULL_SEASON;
+  // No usable GP history: a conservative rookie workload, not a full season
+  // (the goalie strategy arms apply no young-player cap downstream).
+  if (base <= 0) return isGoalie ? 25 : 60;
   return clampGp(base);
 }
 

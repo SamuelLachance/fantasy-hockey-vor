@@ -475,8 +475,12 @@ function buildStaticContextFeatures(
   ];
   const names = [...STATIC_CONTEXT_FEATURE_NAMES];
   if (!includeTeamsInLag) {
+    // Drop the teams_in_lag_window ELEMENT (not the last element): slicing
+    // off the tail removed opportunity_score, left the placeholder zero in
+    // the vector, and shifted every later feature against its name.
+    const idx = names.indexOf("teams_in_lag_window");
     return {
-      features: features.slice(0, -1),
+      features: features.filter((_, i) => i !== idx),
       names: names.filter((n) => n !== "teams_in_lag_window"),
     };
   }

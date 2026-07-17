@@ -37,8 +37,8 @@ export function ageCurveMult(position: string, age: number): number {
   }
   if (age <= 22) return 1.09;
   if (age <= 26) return 1.04;
-  if (age >= 33) return 0.91;
   if (age >= 36) return 0.84;
+  if (age >= 33) return 0.91;
   return 1;
 }
 
@@ -149,7 +149,7 @@ export function contextualPerGameRateFromRows(
         const ppRate = recent.reduce((sum, row, i) => {
           const pp =
             row.gamesPlayed > 0
-              ? (row.ppGoalsPer60 ?? 0) * (row.ppToiPerGame ?? 1) / 60
+              ? (row.ppPointsPer60 ?? 0) * (row.ppToiPerGame ?? 1) / 60
               : 0;
           return sum + pp * (weights[i] / totalW);
         }, 0);
@@ -191,7 +191,12 @@ export function contextualPerGameRateFromRows(
   }
 
   if (eligible.length < 3) {
-    const prospect = lookupProspectRates(targetSeason.playerId);
+    // Pass the target season as cutoff: on historical training examples the
+    // blend must not see prospect seasons that postdate the target.
+    const prospect = lookupProspectRates(
+      targetSeason.playerId,
+      targetSeason.seasonId,
+    );
     if (prospect) {
       const w = eligible.length === 0 ? 0.5 : eligible.length === 1 ? 0.35 : 0.2;
       if (target === "goals") {

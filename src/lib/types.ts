@@ -96,6 +96,12 @@ export interface LeagueSettings {
     G: number;
   };
   season: string;
+  /**
+   * Multiplier on goalie fantasy value (and therefore VOR). H2H category
+   * leagues discount goalies: weekly start counts are volatile, the goalie
+   * categories are streamable, and W/SO/SV% are the noisiest projections.
+   */
+  goalieVorFactor?: number;
 }
 
 export interface DataManifest {

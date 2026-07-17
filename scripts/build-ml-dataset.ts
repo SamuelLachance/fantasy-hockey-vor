@@ -20,7 +20,7 @@ async function main() {
     }
   }
 
-  console.log("Building ML dataset from NHL API (2010-11 through 2025-26)...");
+  console.log("Building ML dataset from NHL API (2005-06 through 2025-26)...");
   const dataset = await buildMlDataset((seasonId, i, total) => {
     console.log(`  [${i}/${total}] season ${seasonId}`);
   });

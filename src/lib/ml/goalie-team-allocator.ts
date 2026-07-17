@@ -78,7 +78,10 @@ export function goalieTeamGpAllocation(
     const inputs: GoalieAllocatorInput[] = teamGoalies.map((row) => {
       const prior =
         historyMap.get(row.playerId)?.filter((r) => r.seasonId < seasonId) ?? [];
-      const lastGp = prior.at(-1)?.gamesPlayed ?? row.gamesPlayed;
+      // No prior season → 0, matching allocateGoalieGpFromProfiles. Falling
+      // back to row.gamesPlayed would leak the target season's outcome into
+      // the training allocation and starter inference.
+      const lastGp = prior.at(-1)?.gamesPlayed ?? 0;
       const depth = depthByPlayer.get(row.playerId);
       return {
         playerId: row.playerId,

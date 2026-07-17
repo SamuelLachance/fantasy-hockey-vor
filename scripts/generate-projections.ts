@@ -38,11 +38,7 @@ import {
   loadYahooPositions,
   yahooPositionsSummary,
 } from "../src/lib/yahoo-positions";
-import type {
-  Category,
-  PlayerProjection,
-  Position,
-} from "../src/lib/types";
+import type { Category, PlayerProjection } from "../src/lib/types";
 
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
 const MAX_PROFILE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -244,6 +240,14 @@ async function main() {
     console.log(
       `Using v2 stacked ensemble (trained ${v2Runtime.bundle.trainedAt}, dataset ${v2Runtime.bundle.datasetBuiltAt})`,
     );
+  } else if (process.env.ALLOW_NON_V2 !== "1") {
+    // dataset.json is gitignored, so a fresh clone would otherwise silently
+    // publish v1/contextual rankings under the v2 branding.
+    throw new Error(
+      "v2 stacked ensemble unavailable (src/data/ml/v2-bundle.json or src/data/ml/dataset.json missing or unreadable). " +
+        "Refusing to silently fall back to v1/contextual projections. " +
+        "Run `npm run ml:dataset` first, or set ALLOW_NON_V2=1 to override.",
+    );
   }
   if (aiCount > 0) {
     console.log(`Using AI projections for ${aiCount} cached players`);
@@ -276,30 +280,28 @@ async function main() {
   const withYahooPositions = raw.map((player) =>
     applyYahooPositionsToPlayer(player, yahooPositions),
   );
-  const { players: ranked, categoryWeights } = applyVor(
+  const { players: ranked, categoryWeights, replacementLevels } = applyVor(
     withYahooPositions,
     DEFAULT_LEAGUE,
   );
 
-  // Synthetic-market ranks: order by (fantasyValue − edge-adjusted proxy).
-  // Players with marketEdge get a consensus score = FV minus total edge z-proxy;
-  // others keep fantasyValue. draftValue = marketRank − modelRank (>0 = value).
-  const consensusScore = (p: (typeof ranked)[0]): number => {
-    if (!p.marketEdge || p.isGoalie) return p.fantasyValue;
-    let edgeSum = 0;
-    let n = 0;
-    for (const v of Object.values(p.marketEdge)) {
-      if (typeof v === "number" && Number.isFinite(v)) {
-        edgeSum += v;
-        n++;
+  // Synthetic-market ranks: re-rank the pool as if the synthetic market's
+  // per-stat rates were true (model rate − marketEdge), through the same VOR
+  // machinery. Summing raw per-game edges with one constant would price a
+  // faceoff win the same as a goal in z-score fantasyValue space.
+  const marketRaw = withYahooPositions.map((p) => {
+    if (p.isGoalie || !p.marketEdge) return p;
+    const proj = { ...(p.projection as unknown as Record<string, number>) };
+    for (const [stat, edge] of Object.entries(p.marketEdge)) {
+      if (typeof edge === "number" && Number.isFinite(edge) && stat in proj) {
+        proj[stat] = Math.max(0, proj[stat] - edge * p.gamesPlayed);
       }
     }
-    // Subtract a scaled edge sum so consensus ≈ market-only skill
-    return p.fantasyValue - (n > 0 ? edgeSum * p.gamesPlayed * 0.02 : 0);
-  };
-  const byConsensus = [...ranked].sort((a, b) => consensusScore(b) - consensusScore(a));
+    return { ...p, projection: proj as unknown as typeof p.projection };
+  });
+  const { players: marketRanked } = applyVor(marketRaw, DEFAULT_LEAGUE);
   const marketRankById = new Map<number, number>();
-  byConsensus.forEach((p, i) => marketRankById.set(p.id, i + 1));
+  for (const p of marketRanked) marketRankById.set(p.id, p.rank);
   for (const p of ranked) {
     p.syntheticMarketRank = marketRankById.get(p.id) ?? p.rank;
     p.draftValue = p.syntheticMarketRank - p.rank;
@@ -376,17 +378,7 @@ async function main() {
     aiModel: aiCache?.model,
     positionSource: yahooPositions ? "yahoo-fantasy" : "nhl-fallback",
     yahooPositionsFetchedAt: yahooPositions?.fetchedAt,
-    replacementLevels: Object.fromEntries(
-      (["C", "LW", "RW", "D", "G"] as Position[]).map((pos) => {
-        const pool = ranked.filter((p) => p.positions.includes(pos));
-        const replacement = pool.find(
-          (p) =>
-            p.positionRank ===
-            DEFAULT_LEAGUE.teams * DEFAULT_LEAGUE.roster[pos],
-        );
-        return [pos, replacement?.fantasyValue ?? 0];
-      }),
-    ),
+    replacementLevels,
     categoryWeights,
     players: slimPlayers,
   };

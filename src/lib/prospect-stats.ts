@@ -131,7 +131,9 @@ export function prospectRatesFromSeasons(
     leagues.add(s.leagueAbbrev);
     goalsPg += (s.goals / s.gamesPlayed) * factor * w;
     assistsPg += (s.assists / s.gamesPlayed) * factor * w;
-    shotsPg += ((s.shots ?? s.goals * 2.5) / s.gamesPlayed) * factor * w;
+    // `||` not `??`: leagues that don't report shots parse as 0, which must
+    // fall back to the goals-based estimate instead of zeroing the blend.
+    shotsPg += ((s.shots || s.goals * 2.5) / s.gamesPlayed) * factor * w;
     pimPg += ((s.pim ?? 0) / s.gamesPlayed) * w;
     factorSum += factor * w;
   }
@@ -149,6 +151,8 @@ export function prospectRatesFromSeasons(
 export interface ProspectCacheEntry {
   playerId: number;
   rates: ProspectRates;
+  /** Raw eligible prospect seasons, kept for temporal filtering at lookup. */
+  seasons?: ProspectSeasonRow[];
 }
 
 export interface ProspectCache {
@@ -156,18 +160,18 @@ export interface ProspectCache {
   entries: ProspectCacheEntry[];
 }
 
-let cache: Map<number, ProspectRates> | null = null;
+let cache: Map<number, ProspectCacheEntry> | null = null;
 
 const CACHE_PATH = join(process.cwd(), "src", "data", "prospect-stats.json");
 
-export function loadProspectCache(): Map<number, ProspectRates> {
+export function loadProspectCache(): Map<number, ProspectCacheEntry> {
   if (cache) return cache;
   cache = new Map();
   if (!existsSync(CACHE_PATH)) return cache;
   try {
     const data = JSON.parse(readFileSync(CACHE_PATH, "utf8")) as ProspectCache;
     for (const entry of data.entries ?? []) {
-      cache.set(entry.playerId, entry.rates);
+      cache.set(entry.playerId, entry);
     }
   } catch {
     cache = new Map();
@@ -179,8 +183,14 @@ export function lookupProspectRates(
   playerId: number,
   beforeSeasonId?: number,
 ): ProspectRates | undefined {
-  const rates = loadProspectCache().get(playerId);
-  if (!rates || beforeSeasonId == null) return rates;
-  void beforeSeasonId;
-  return rates;
+  const entry = loadProspectCache().get(playerId);
+  if (!entry) return undefined;
+  // Honor the temporal cutoff when the cache carries raw seasons — otherwise
+  // training examples for past seasons would blend in prospect years that
+  // postdate the target season. Older caches without seasons fall back to
+  // the aggregate rates.
+  if (beforeSeasonId != null && entry.seasons?.length) {
+    return prospectRatesFromSeasons(entry.seasons, beforeSeasonId) ?? undefined;
+  }
+  return entry.rates;
 }

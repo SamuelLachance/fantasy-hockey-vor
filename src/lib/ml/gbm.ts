@@ -102,9 +102,12 @@ export function fitGbm(
   const n = X.length;
   if (n === 0) throw new Error(`No samples for GBM ${target}`);
 
-  let prediction = mean(y, sampleWeights);
+  const initBias = mean(y, sampleWeights);
   const trees: Stump[] = [];
-  const residuals = y.map((v) => v - prediction);
+  // Per-row running predictions: residuals must track each row's own model
+  // output (matching predictGbm), not a scalar accumulated across rows.
+  const predictions = y.map(() => initBias);
+  const residuals = y.map((v) => v - initBias);
 
   for (let t = 0; t < nEstimators; t++) {
     const stump = bestStump(X, residuals, sampleWeights, new Set());
@@ -115,8 +118,8 @@ export function fitGbm(
         (X[i][stump.featureIndex] <= stump.threshold
           ? stump.leftValue
           : stump.rightValue) * learningRate;
-      prediction += add;
-      residuals[i] = y[i] - prediction;
+      predictions[i] += add;
+      residuals[i] = y[i] - predictions[i];
     }
   }
 

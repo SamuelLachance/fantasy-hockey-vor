@@ -49,7 +49,8 @@ async function main() {
         const seasons = parseSeasonTotals(landing.seasonTotals);
         const rates = prospectRatesFromSeasons(seasons);
         if (!rates) return null;
-        return { playerId, rates };
+        // Keep raw seasons so lookupProspectRates can apply temporal cutoffs.
+        return { playerId, rates, seasons };
       }),
     );
     for (const r of results) {

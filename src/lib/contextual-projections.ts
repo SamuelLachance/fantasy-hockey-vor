@@ -175,8 +175,8 @@ function draftPedigreeMultiplier(profile: PlayerProfile): number {
 function ageCurve(position: Position, age: number): number {
   if (position === "G") {
     if (age <= 26) return 1.03;
-    if (age >= 34) return 0.9;
     if (age >= 37) return 0.82;
+    if (age >= 34) return 0.9;
     return 1;
   }
   if (position === "D") {
@@ -187,8 +187,8 @@ function ageCurve(position: Position, age: number): number {
   }
   if (age <= 22) return 1.09;
   if (age <= 26) return 1.04;
-  if (age >= 33) return 0.91;
   if (age >= 36) return 0.84;
+  if (age >= 33) return 0.91;
   return 1;
 }
 
@@ -373,7 +373,8 @@ export function projectGoalieFromProfile(
   const projection = clampGoalieProjection(
     {
       wins: Math.round(winRate * gamesPlayed),
-      shutouts: Math.round(shutoutRate * gamesPlayed * ageMult),
+      // shutoutRate already includes ageMult (applied above).
+      shutouts: Math.round(shutoutRate * gamesPlayed),
       saves,
       savePct: Math.round(savePct * 10000) / 10000,
     },

@@ -1,3 +1,4 @@
+import { leagueAverageSavePct, savesAboveAverage } from "./goalie-impact";
 import { DEFAULT_LEAGUE, replacementRank } from "./league";
 import { loadMlModels } from "./ml/train";
 import type {
@@ -12,17 +13,29 @@ import type {
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "./types";
 
 export interface CategoryDifficultyMeta {
-  /** Normalized weight used in fantasy value (mean ≈ 1). */
+  /** Normalized weight used in fantasy value (mean ≈ 1, clamped). */
   weight: number;
   /** Elite vs replacement gap divided by league std. */
   scarcity: number;
-  /** Coefficient of variation (std / mean). */
+  /** Coefficient of variation (std / mean); 1 for zero-centered stats. */
   cv: number;
   /** Holdout R² from ML models when available. */
   r2: number | null;
+  /** For savePct these are in saves-above-average units, not raw SV%. */
   replacementLevel: number;
   eliteLevel: number;
 }
+
+/**
+ * In H2H categories every category is worth exactly one matchup point, so
+ * equal weights are the neutral baseline. The scarcity heuristic is applied
+ * as a partial tilt on top of that baseline: weights are shrunk halfway
+ * toward 1, then clamped, so no category is ever effectively deleted or
+ * double-counted by population artifacts.
+ */
+const SCARCITY_TILT = 0.5;
+const WEIGHT_MIN = 0.7;
+const WEIGHT_MAX = 1.4;
 
 export interface CategoryDifficultyWeights {
   skater: Record<SkaterCategory, CategoryDifficultyMeta>;
@@ -41,6 +54,23 @@ function getStat(
   category: Category,
 ): number {
   return (projection as unknown as Record<string, number>)[category] ?? 0;
+}
+
+/**
+ * Category value used for spreads and scarcity. savePct is converted to
+ * saves above average so a rate stat bounded near 0.9 (where std/mean and
+ * elite-vs-replacement gaps are meaninglessly tiny) competes on the same
+ * footing as counting stats, weighted by shot volume.
+ */
+function statValue(
+  projection: SkaterProjection | GoalieProjection,
+  category: Category,
+  leagueSavePct: number,
+): number {
+  if (category === "savePct") {
+    return savesAboveAverage(projection as GoalieProjection, leagueSavePct);
+  }
+  return getStat(projection, category);
 }
 
 function mean(values: number[]): number {
@@ -94,6 +124,7 @@ function replacementAndElite(
   players: PlayerLike[],
   category: Category,
   league: LeagueSettings,
+  leagueSavePct: number,
 ): { replacement: number; elite: number } {
   const positions: Position[] = ["C", "LW", "RW", "D", "G"];
   let replSum = 0;
@@ -111,7 +142,9 @@ function replacementAndElite(
     if (pool.length === 0) continue;
 
     const sorted = [...pool].sort(
-      (a, b) => getStat(b.projection, category) - getStat(a.projection, category),
+      (a, b) =>
+        statValue(b.projection, category, leagueSavePct) -
+        statValue(a.projection, category, leagueSavePct),
     );
     const rank = replacementRank(
       position as keyof LeagueSettings["roster"],
@@ -119,11 +152,13 @@ function replacementAndElite(
       league.roster,
     );
     const replIdx = Math.min(Math.max(rank - 1, 0), sorted.length - 1);
-    const replacement = getStat(sorted[replIdx].projection, category);
+    const replacement = statValue(sorted[replIdx].projection, category, leagueSavePct);
 
     const starterCount = Math.min(rank, sorted.length);
     const eliteSlice = sorted.slice(0, Math.max(1, Math.floor(starterCount / 2)));
-    const elite = mean(eliteSlice.map((p) => getStat(p.projection, category)));
+    const elite = mean(
+      eliteSlice.map((p) => statValue(p.projection, category, leagueSavePct)),
+    );
 
     replSum += replacement * slotWeight;
     eliteSum += elite * slotWeight;
@@ -143,21 +178,29 @@ function computeGroupWeights<C extends string>(
   r2Map: Partial<Record<Category, number>>,
 ): Record<C, CategoryDifficultyMeta> {
   const raw: Record<string, CategoryDifficultyMeta> = {};
+  const leagueSavePct = leagueAverageSavePct(
+    players.filter((p) => p.isGoalie).map((p) => p.projection as GoalieProjection),
+  );
 
   for (const category of categories) {
     const group =
       category === "faceoffWins"
         ? players.filter((p) => !p.positions.includes("D"))
         : players;
-    const values = group.map((p) => getStat(p.projection, category as Category));
+    const values = group.map((p) =>
+      statValue(p.projection, category as Category, leagueSavePct),
+    );
     const avg = mean(values);
     const sd = stdDev(values);
-    const cv = avg > 0 ? sd / avg : sd;
+    // std/mean is undefined for zero-centered stats (saves above average);
+    // fall back to a neutral 1 so the weight is driven by scarcity alone.
+    const cv = avg > 1e-6 ? sd / avg : 1;
 
     const { replacement, elite } = replacementAndElite(
       players,
       category as Category,
       league,
+      leagueSavePct,
     );
     const gap = Math.max(0, elite - replacement);
     const scarcity = gap / Math.max(sd, 1e-6);
@@ -185,9 +228,11 @@ function computeGroupWeights<C extends string>(
   const result = {} as Record<C, CategoryDifficultyMeta>;
   for (const category of categories) {
     const meta = raw[category];
+    const normalized = avgWeight > 0 ? meta.weight / avgWeight : 1;
+    const tilted = 1 + SCARCITY_TILT * (normalized - 1);
     result[category] = {
       ...meta,
-      weight: avgWeight > 0 ? meta.weight / avgWeight : 1,
+      weight: Math.min(WEIGHT_MAX, Math.max(WEIGHT_MIN, tilted)),
     };
   }
   return result;
