@@ -1,0 +1,76 @@
+name: Retrain Models
+
+# Full retraining pipeline on GitHub runners: rebuild the (gitignored) ML
+# dataset from the NHL API, retrain the v2 stacked ensemble and the v1
+# fallback models, regenerate players.json, commit the artifacts and trigger
+# the Pages deploy. Run it from the Actions tab (workflow_dispatch).
+on:
+  workflow_dispatch:
+    inputs:
+      rebuild_gamelogs:
+        description: "Also refetch game logs and rebuild durability.json (slow)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: retrain
+  cancel-in-progress: false
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build ML dataset (NHL API)
+        run: npm run ml:dataset
+
+      - name: Rebuild game logs / durability
+        if: ${{ inputs.rebuild_gamelogs }}
+        run: npm run ml:gamelogs
+
+      - name: Train v2 stacked ensemble
+        run: npm run ml:train-v2
+
+      - name: Train v1 fallback models
+        run: npm run ml:train
+
+      - name: Regenerate rankings
+        run: npm run generate
+
+      - name: Validate players data
+        run: npm run check:data
+
+      - name: Commit retrained artifacts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Retrain models on fresh dataset (automated)"
+            git push
+          fi
+
+      # Pushes made with GITHUB_TOKEN don't fire on:push workflows — trigger
+      # the Pages deploy explicitly.
+      - name: Trigger Pages deploy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-pages.yml --ref master
