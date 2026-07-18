@@ -15,10 +15,17 @@ import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "./types";
 export interface CategoryDifficultyMeta {
   /** Normalized weight used in fantasy value (mean ≈ 1, clamped). */
   weight: number;
-  /** Elite vs replacement gap divided by league std. */
+  /** Elite vs replacement gap divided by league std (informational). */
   scarcity: number;
   /** Coefficient of variation (std / mean); 1 for zero-centered stats. */
   cv: number;
+  /**
+   * Gini of production among players who generate the stat — the driver of the
+   * skater weight. High = a few players produce most of it (goals, PP points):
+   * hard to produce, so scarce and valuable. Low = evenly spread (hits, PIM):
+   * easy to produce. 0 for zero-centered stats (goalie savePct).
+   */
+  gini: number;
   /** Holdout R² from ML models when available. */
   r2: number | null;
   /** For savePct these are in saves-above-average units, not raw SV%. */
@@ -28,14 +35,40 @@ export interface CategoryDifficultyMeta {
 
 /**
  * In H2H categories every category is worth exactly one matchup point, so
- * equal weights are the neutral baseline. The scarcity heuristic is applied
+ * equal weights are the neutral baseline. The difficulty heuristic is applied
  * as a partial tilt on top of that baseline: weights are shrunk halfway
  * toward 1, then clamped, so no category is ever effectively deleted or
  * double-counted by population artifacts.
+ *
+ * Skater difficulty = how hard the stat is to produce, measured by the Gini
+ * concentration of production: few players producing a lot (goals) is scarce
+ * and weighted up; production everyone racks up (hits, PIM) is weighted down.
+ * Goalie categories keep the elite-vs-replacement scarcity measure because
+ * savePct is scored as signed saves-above-average, where a Gini is undefined.
  */
 const SCARCITY_TILT = 0.5;
 const WEIGHT_MIN = 0.7;
 const WEIGHT_MAX = 1.4;
+
+/**
+ * Gini coefficient of the positive production values. 0 = perfectly even
+ * (everyone produces the same), → 1 = one player produces everything. This is
+ * exactly "how few players produce a lot": the harder-to-generate the stat,
+ * the higher the concentration.
+ */
+function gini(values: number[]): number {
+  const xs = values.filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b);
+  const n = xs.length;
+  if (n < 2) return 0;
+  let cumulative = 0;
+  let weighted = 0;
+  for (let i = 0; i < n; i++) {
+    cumulative += xs[i];
+    weighted += cumulative;
+  }
+  if (cumulative <= 0) return 0;
+  return (n + 1 - 2 * (weighted / cumulative)) / n;
+}
 
 export interface CategoryDifficultyWeights {
   skater: Record<SkaterCategory, CategoryDifficultyMeta>;
@@ -176,6 +209,7 @@ function computeGroupWeights<C extends string>(
   categories: readonly C[],
   league: LeagueSettings,
   r2Map: Partial<Record<Category, number>>,
+  useConcentration: boolean,
 ): Record<C, CategoryDifficultyMeta> {
   const raw: Record<string, CategoryDifficultyMeta> = {};
   const leagueSavePct = leagueAverageSavePct(
@@ -205,8 +239,23 @@ function computeGroupWeights<C extends string>(
     const gap = Math.max(0, elite - replacement);
     const scarcity = gap / Math.max(sd, 1e-6);
 
-    // Harder-to-generate stats: wider elite/replacement gap and higher relative spread.
-    const rawDifficulty = scarcity * Math.sqrt(Math.max(cv, 0.05));
+    // Production concentration: how few players generate the stat. Faceoffs are
+    // only taken by centers, so measure their concentration among centers —
+    // including wingers with ~0 would fake scarcity from a positional zero.
+    const producePool =
+      category === "faceoffWins"
+        ? players.filter((p) => p.positions.includes("C"))
+        : group;
+    const g = gini(
+      producePool.map((p) => statValue(p.projection, category as Category, leagueSavePct)),
+    );
+
+    // Skater difficulty = production concentration (Gini): few big producers →
+    // hard to produce → scarce. Goalies keep the elite/replacement scarcity
+    // measure (savePct is signed saves-above-average, where Gini is undefined).
+    const rawDifficulty = useConcentration
+      ? Math.max(g, 1e-3)
+      : scarcity * Math.sqrt(Math.max(cv, 0.05));
 
     const r2 = r2Map[category as Category] ?? null;
     // Slight boost for predictable skill stats; dampen noisy categories (e.g. PIM).
@@ -216,6 +265,7 @@ function computeGroupWeights<C extends string>(
       weight: rawDifficulty * skillFactor,
       scarcity,
       cv,
+      gini: g,
       r2,
       replacementLevel: replacement,
       eliteLevel: elite,
@@ -247,8 +297,8 @@ export function computeCategoryDifficultyWeights(
   const goalies = players.filter((p) => p.isGoalie);
 
   return {
-    skater: computeGroupWeights(skaters, SKATER_CATEGORIES, league, r2Map),
-    goalie: computeGroupWeights(goalies, GOALIE_CATEGORIES, league, r2Map),
+    skater: computeGroupWeights(skaters, SKATER_CATEGORIES, league, r2Map, true),
+    goalie: computeGroupWeights(goalies, GOALIE_CATEGORIES, league, r2Map, false),
   };
 }
 
