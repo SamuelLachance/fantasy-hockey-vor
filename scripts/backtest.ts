@@ -508,10 +508,17 @@ async function main() {
   const gwf = runGoalieWalkForward(rows, wfSeasons, (msg) => console.log(msg));
   const gPerTarget: Record<
     string,
-    { stack: Metrics[]; marcel: Metrics[]; ewma: Metrics[]; lag1: Metrics[]; structural: Metrics[] }
+    {
+      stack: Metrics[];
+      stackCal: Metrics[];
+      marcel: Metrics[];
+      ewma: Metrics[];
+      lag1: Metrics[];
+      structural: Metrics[];
+    }
   > = {};
   for (const t of GOALIE_V2_TARGETS) {
-    gPerTarget[t] = { stack: [], marcel: [], ewma: [], lag1: [], structural: [] };
+    gPerTarget[t] = { stack: [], stackCal: [], marcel: [], ewma: [], lag1: [], structural: [] };
   }
   const gGp: { stack: Metrics[]; ewma: Metrics[]; lag1: Metrics[]; share: Metrics[] } = {
     stack: [],
@@ -533,6 +540,7 @@ async function main() {
       const yTrue: number[] = [];
       const gpArr: number[] = [];
       const stackP: number[] = [];
+      const stackCalP: number[] = [];
       const marcelP: number[] = [];
       const ewmaP: number[] = [];
       const lag1P: number[] = [];
@@ -542,7 +550,8 @@ async function main() {
         const low = goalieEligible(ex.history).length <= 2;
         yTrue.push(goalieActual(ex.actualRow, target));
         gpArr.push(ex.actualRow.gamesPlayed);
-        stackP.push(goalieMetaRate(metas, target, sig, k, low));
+        stackP.push(goalieMetaRate(metas, target, sig, k, low, false));
+        stackCalP.push(goalieMetaRate(metas, target, sig, k, low, true));
         marcelP.push(sig.marcel[k]);
         ewmaP.push(sig.ewma[k]);
         lag1P.push(sig.lag1[k]);
@@ -550,12 +559,13 @@ async function main() {
       }
       const m = gPerTarget[target];
       m.stack.push(computeMetrics(yTrue, stackP, gpArr));
+      m.stackCal.push(computeMetrics(yTrue, stackCalP, gpArr));
       m.marcel.push(computeMetrics(yTrue, marcelP, gpArr));
       m.ewma.push(computeMetrics(yTrue, ewmaP, gpArr));
       m.lag1.push(computeMetrics(yTrue, lag1P, gpArr));
       m.structural.push(computeMetrics(yTrue, structP, gpArr));
       console.log(
-        `${target.padEnd(10)} stack ${fmt(m.stack.at(-1)!)} | marcel R²=${m.marcel.at(-1)!.r2.toFixed(3)} | ewma R²=${m.ewma.at(-1)!.r2.toFixed(3)} | lag1 R²=${m.lag1.at(-1)!.r2.toFixed(3)} | struct R²=${m.structural.at(-1)!.r2.toFixed(3)}`,
+        `${target.padEnd(10)} stack ${fmt(m.stack.at(-1)!)} → cal ${fmt(m.stackCal.at(-1)!)}`,
       );
     }
     {
@@ -586,11 +596,11 @@ async function main() {
     }
   }
 
-  console.log(`\n=== GOALIE AVERAGE over ${testSeasons.length} seasons ===`);
+  console.log(`\n=== GOALIE AVERAGE over ${testSeasons.length} seasons (raw stack → calibrated) ===`);
   for (const target of GOALIE_V2_TARGETS) {
     const m = gPerTarget[target];
     console.log(
-      `${target.padEnd(10)} stack ${avg(m.stack, "r2").toFixed(3)}/${avg(m.stack, "spearman").toFixed(3)}   marcel ${avg(m.marcel, "r2").toFixed(3)}   ewma ${avg(m.ewma, "r2").toFixed(3)}   lag1 ${avg(m.lag1, "r2").toFixed(3)}   struct ${avg(m.structural, "r2").toFixed(3)}`,
+      `${target.padEnd(10)} R² ${avg(m.stack, "r2").toFixed(3)} → ${avg(m.stackCal, "r2").toFixed(3)}  ρ ${avg(m.stack, "spearman").toFixed(3)} → ${avg(m.stackCal, "spearman").toFixed(3)}  (marcel ${avg(m.marcel, "r2").toFixed(3)}, struct ${avg(m.structural, "r2").toFixed(3)})`,
     );
   }
   console.log(
@@ -633,6 +643,73 @@ async function main() {
     const r = sxy / Math.sqrt(sx * sy);
     console.log(
       `${target.padEnd(16)} yoy r=${r.toFixed(3)} → ceiling R²≈${(r * r).toFixed(3)}`,
+    );
+  }
+
+  // GP + goalie ceilings and model efficiency (model R² / ceiling R²): the
+  // honest grade is how close each layer sits to its achievable ceiling, not
+  // its absolute R² (a stat with a 0.09 ceiling can never hit R²=0.9).
+  const yoyCeiling = (
+    goalie: boolean,
+    stat: string,
+    minGp: number,
+    perGame: boolean,
+  ): number => {
+    const byPl = new Map<number, PlayerSeasonRow[]>();
+    for (const rr of rows) {
+      if (rr.isGoalie !== goalie) continue;
+      const l = byPl.get(rr.playerId) ?? [];
+      l.push(rr);
+      byPl.set(rr.playerId, l);
+    }
+    for (const l of byPl.values()) l.sort((a, b) => a.seasonId - b.seasonId);
+    const xs: number[] = [];
+    const ys: number[] = [];
+    const val = (rr: PlayerSeasonRow): number => {
+      if (stat === "gp82") return gp82(rr);
+      let v = (rr as unknown as Record<string, number>)[stat] ?? 0;
+      if (stat === "savePct") return v > 1 ? v / 100 : v;
+      if (perGame) v = rr.gamesPlayed > 0 ? v / rr.gamesPlayed : 0;
+      return v;
+    };
+    for (const l of byPl.values()) {
+      for (let i = 1; i < l.length; i++) {
+        if (l[i].seasonId - l[i - 1].seasonId !== 10001) continue;
+        if (gp82(l[i - 1]) < minGp || gp82(l[i]) < minGp) continue;
+        xs.push(val(l[i - 1]));
+        ys.push(val(l[i]));
+      }
+    }
+    const n = xs.length;
+    if (n < 3) return 0;
+    const mx = xs.reduce((a, b) => a + b, 0) / n;
+    const my = ys.reduce((a, b) => a + b, 0) / n;
+    let sxy = 0;
+    let sx = 0;
+    let sy = 0;
+    for (let i = 0; i < n; i++) {
+      sxy += (xs[i] - mx) * (ys[i] - my);
+      sx += (xs[i] - mx) ** 2;
+      sy += (ys[i] - my) ** 2;
+    }
+    const rr = sx > 0 && sy > 0 ? sxy / Math.sqrt(sx * sy) : 0;
+    return rr * rr;
+  };
+
+  console.log("\n=== GP & goalie ceilings vs model (efficiency = model/ceiling) ===");
+  const effLine = (label: string, model: number, ceil: number): void => {
+    const eff = ceil > 1e-6 ? model / ceil : NaN;
+    console.log(
+      `${label.padEnd(18)} model R²=${model.toFixed(3)}  ceiling R²=${ceil.toFixed(3)}  efficiency=${(eff * 100).toFixed(0)}%`,
+    );
+  };
+  effLine("skater gp", avg(gpMetrics.stack, "r2"), yoyCeiling(false, "gp82", 40, false));
+  effLine("goalie gp", avg(gGp.stack, "r2"), yoyCeiling(true, "gp82", 25, false));
+  for (const target of GOALIE_V2_TARGETS) {
+    effLine(
+      `goalie ${target}`,
+      avg(gPerTarget[target].stackCal, "r2"),
+      yoyCeiling(true, target, 25, target !== "savePct"),
     );
   }
 }

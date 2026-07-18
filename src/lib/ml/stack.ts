@@ -1047,13 +1047,18 @@ export function applyRateCalibrator(
   return Math.max(0, cal.intercept + cal.slope * pred);
 }
 
-/** Weighted LS of actual ~ a + b·pred, shrunk toward identity by n_eff. */
-function fitAffineCalibrator(
+/**
+ * Weighted LS of actual ~ a + b·pred, shrunk toward identity by n_eff.
+ * `K` = shrinkage strength (effective samples); larger → closer to identity.
+ * Skater rates use a large K (already well-scaled); noise-dominated goalie
+ * rates use a smaller K so the calibrator can actually correct the scale.
+ */
+export function fitAffineCalibrator(
   pred: number[],
   actual: number[],
   w: number[],
+  K = 400,
 ): RateCalibrator {
-  const K = 400; // shrinkage strength (effective samples); larger → identity.
   let sw = 0;
   let sw2 = 0;
   let swx = 0;

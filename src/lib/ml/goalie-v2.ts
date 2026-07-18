@@ -26,7 +26,7 @@ import {
   lookupMoneyPuckGoalieSeason,
   type MoneyPuckGoalieRegistry,
 } from "../moneypuck-goalies";
-import { fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, marketTrainingEnabled, type MetaWeights, type RidgeV2 } from "./stack";
+import { applyRateCalibrator, fitAffineCalibrator, fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, marketTrainingEnabled, type MetaWeights, type RateCalibrator, type RidgeV2 } from "./stack";
 import { DISAGREEMENT_SIGMA, disagreementWeight, sampleStd } from "./market-training";
 import type { PlayerSeasonRow } from "./types";
 
@@ -1045,7 +1045,29 @@ export function runGoalieWalkForward(
 export interface GoalieStackedMetas {
   rateMetas: Record<string, { established: MetaWeights; low: MetaWeights }>;
   gpMeta: { established: MetaWeights; low: MetaWeights };
+  /**
+   * Per-target leakage-free affine calibrators. Goalie rates (esp. savePct,
+   * shutouts, saves) are noise-dominated: the meta keeps too much spread and
+   * lands BELOW the mean (negative OOS R²). A monotone affine shrink corrects
+   * the scale toward the reliability floor WITHOUT reordering goalies, so the
+   * ranking the convex meta protects is preserved exactly. On by default here
+   * (unlike skaters) because it recovers real accuracy.
+   */
+  calibrators?: Partial<Record<string, RateCalibrator>>;
 }
+
+/** Smaller shrinkage than skaters: goalie rates are genuinely mis-scaled. */
+const GOALIE_CALIB_K = 150;
+
+/**
+ * Only calibrate targets where the monotone affine shrink robustly improves
+ * out-of-sample error. savePct and shutouts are noise-dominated: the convex
+ * meta keeps too much spread and lands BELOW the mean, so shrinking helps
+ * (savePct −0.21→−0.12 OOS, ρ preserved). wins is already at its ceiling and
+ * saves ranks decently but re-scales poorly across eras — calibrating them
+ * hurts, so they stay raw. Selection mirrors the per-target GOALIE_TARGET_SIGNALS.
+ */
+const GOALIE_CALIBRATE_TARGETS: ReadonlySet<string> = new Set(["savePct", "shutouts"]);
 
 function isLowHistory(ex: GoalieExample): boolean {
   return goalieEligible(ex.history).length <= 2;
@@ -1076,10 +1098,46 @@ function goalieSignalRow(
   return GOALIE_TARGET_SIGNALS[target].map((s) => sig[s][k]);
 }
 
+/**
+ * Leakage-free per-target affine calibrators for goalie rates. Expanding-window
+ * meta walk-forward INSIDE the pool (metas for season s fit on pool seasons < s,
+ * uncalibrated predictions), so `testSeason` is never seen.
+ */
+export function fitGoalieCalibrators(
+  pool: GoalieSeasonPredictions[],
+  disagreementSigma = DISAGREEMENT_SIGMA,
+): Partial<Record<string, RateCalibrator>> {
+  const ordered = [...pool].sort((x, y) => x.seasonId - y.seasonId);
+  const acc: Record<string, { p: number[]; a: number[]; w: number[] }> = {};
+  for (const t of GOALIE_V2_TARGETS) acc[t] = { p: [], a: [], w: [] };
+  for (let si = 1; si < ordered.length; si++) {
+    const past = ordered.slice(0, si);
+    const cur = ordered[si];
+    const metas = fitGoalieMetas(past, cur.seasonId, disagreementSigma, false);
+    for (const t of GOALIE_V2_TARGETS) {
+      const sig = cur.signals.rates[t];
+      for (let k = 0; k < cur.examples.length; k++) {
+        const ex = cur.examples[k];
+        const low = isLowHistory(ex);
+        acc[t].p.push(goalieMetaRate(metas, t, sig, k, low, false));
+        acc[t].a.push(goalieActual(ex.actualRow, t));
+        acc[t].w.push(Math.min(40, ex.actualRow.gamesPlayed) / 40);
+      }
+    }
+  }
+  const out: Partial<Record<string, RateCalibrator>> = {};
+  for (const t of GOALIE_V2_TARGETS) {
+    if (!GOALIE_CALIBRATE_TARGETS.has(t)) continue; // others stay raw (no-op)
+    out[t] = fitAffineCalibrator(acc[t].p, acc[t].a, acc[t].w, GOALIE_CALIB_K);
+  }
+  return out;
+}
+
 export function fitGoalieMetas(
   pool: GoalieSeasonPredictions[],
   testSeason: number,
   disagreementSigma = DISAGREEMENT_SIGMA,
+  withCalibrators = true,
 ): GoalieStackedMetas {
   const rateMetas: GoalieStackedMetas["rateMetas"] = {};
   const useMarket = marketTrainingEnabled();
@@ -1159,13 +1217,17 @@ export function fitGoalieMetas(
     }
   }
 
-  return {
+  const metas: GoalieStackedMetas = {
     rateMetas,
     gpMeta: {
       established: fitMetaNnls(Xe, ye, we, GOALIE_GP_SIGNALS),
       low: fitMetaNnls(Xl, yl, wl, GOALIE_GP_SIGNALS),
     },
   };
+  if (withCalibrators) {
+    metas.calibrators = fitGoalieCalibrators(pool, disagreementSigma);
+  }
+  return metas;
 }
 
 export function goalieMetaRate(
@@ -1174,9 +1236,12 @@ export function goalieMetaRate(
   sig: Record<GoalieSignal, Float64Array>,
   k: number,
   low: boolean,
+  useCalibrator = true,
 ): number {
   const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
-  return clampTarget(target, applyMeta(meta, goalieSignalRow(target, sig, k)));
+  const raw = applyMeta(meta, goalieSignalRow(target, sig, k));
+  const cal = useCalibrator ? applyRateCalibrator(metas.calibrators?.[target], raw) : raw;
+  return clampTarget(target, cal);
 }
 
 export function goalieMetaGp(
@@ -1246,7 +1311,11 @@ export function inferGoalieForPlayer(
     // Legacy metas omit "market" — only pass signals the meta was fit on.
     const sigNames = meta.signals.length > 0 ? meta.signals : [...GOALIE_TARGET_SIGNALS[target]];
     const signalRow = sigNames.map((s) => bySignal[s as GoalieSignal] ?? 0);
-    rates[target] = clampTarget(target, applyMeta(meta, signalRow));
+    const raw = applyMeta(meta, signalRow);
+    rates[target] = clampTarget(
+      target,
+      applyRateCalibrator(metas.calibrators?.[target], raw),
+    );
   }
 
   // GP signals
