@@ -1,7 +1,7 @@
 /** Serialized v2 model bundle: everything inference needs, no refitting. */
 
 import type { GbdtModel } from "./gbdt";
-import type { GpMeta, RidgeV2, StackedMeta } from "./stack";
+import type { GpMeta, RateCalibrator, RidgeV2, StackedMeta } from "./stack";
 import type { GoalieStackedMetas, GoalieStructuralParams } from "./goalie-v2";
 import type { MarcelParams } from "./marcel";
 import type { MarketTrainingConfig } from "./market-training";
@@ -20,6 +20,8 @@ export interface V2Bundle {
     ridgeGp: RidgeV2;
     rateMetas: Record<string, StackedMeta>;
     gpMeta: GpMeta;
+    /** Per-target post-hoc affine calibration (Principle 2). Absent → no-op. */
+    rateCalibrators?: Record<string, RateCalibrator>;
   };
   goalie: {
     gbdt: Record<string, GbdtModel>;

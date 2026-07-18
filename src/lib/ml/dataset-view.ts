@@ -97,6 +97,11 @@ export const SKATER_V2_FEATURES: string[] = [
   "wear_lag1",
   "wear_ewma",
   "wear_trend",
+  // Back-to-back exposure + age×availability interaction (Principle 1: more
+  // initial-state signal for the injury-dominated GP target). Appended LAST in
+  // the durability block; pushes in skaterFeatureVector must match this order.
+  "team_b2b_lag1",
+  "age_x_avail",
   // Bio / identity
   "age",
   "age_sq",
@@ -472,6 +477,24 @@ export function skaterFeatureVector(
   // Game-log durability
   pushDurabilityBlock(out, history);
 
+  // Back-to-back exposure + age×availability interaction. Appended immediately
+  // after the durability block so they occupy the two new SKATER_V2_FEATURES
+  // slots (team_b2b_lag1, age_x_avail); order is positionally coupled.
+  const lastDur = history.at(-1)?.dur;
+  out.push(lastDur && lastDur.teamGames > 0 ? lastDur.teamB2b / lastDur.teamGames : NaN);
+  const recentAvail = history.slice(-3).map((r) => availOf(r));
+  const availE = ewmaOf(
+    recentAvail.at(-1) ?? NaN,
+    recentAvail.at(-2) ?? NaN,
+    recentAvail.at(-3) ?? NaN,
+  );
+  const interactAge = target.age && target.age > 0 ? target.age : NaN;
+  out.push(
+    Number.isFinite(interactAge) && Number.isFinite(availE)
+      ? ((interactAge - 27) / 10) * (1 - availE)
+      : NaN,
+  );
+
   // Bio
   const age = target.age && target.age > 0 ? target.age : NaN;
   out.push(age);
@@ -559,6 +582,13 @@ export function buildFeatureMatrix(
   );
   for (let i = 0; i < nRows; i++) {
     const vec = skaterFeatureVector(examples[i].history, examples[i].targetRow, league);
+    if (vec.length !== nCols) {
+      // Names list and skaterFeatureVector push order are positionally coupled;
+      // a mismatch silently shifts every later feature against its column.
+      throw new Error(
+        `skater feature desync: vector length ${vec.length} != SKATER_V2_FEATURES ${nCols}`,
+      );
+    }
     for (let j = 0; j < nCols; j++) {
       columns[j][i] = vec[j];
     }

@@ -1024,6 +1024,106 @@ export function metaRatePrediction(
   return applyMeta(seg, row);
 }
 
+// ---------------------------------------------------------------------------
+// Post-hoc rate calibration (Principle 2: reduce systematic misspecification).
+//
+// At the reliability ceiling the ranking is saturated, so the only recoverable
+// error is systematic: the blended rate can be mildly over/under-dispersed
+// (regression-to-mean) and is positively biased at the low end by the max(0,·)
+// floor. A strictly-monotone affine map actual ≈ a + b·pred, shrunk toward
+// identity, removes that without ever reordering players (slope ≥ 0), so it
+// cannot cost ranking accuracy and cannot overfit in the shrinkage limit.
+
+export interface RateCalibrator {
+  slope: number;
+  intercept: number;
+}
+
+export function applyRateCalibrator(
+  cal: RateCalibrator | undefined,
+  pred: number,
+): number {
+  if (!cal) return pred;
+  return Math.max(0, cal.intercept + cal.slope * pred);
+}
+
+/** Weighted LS of actual ~ a + b·pred, shrunk toward identity by n_eff. */
+function fitAffineCalibrator(
+  pred: number[],
+  actual: number[],
+  w: number[],
+): RateCalibrator {
+  const K = 400; // shrinkage strength (effective samples); larger → identity.
+  let sw = 0;
+  let sw2 = 0;
+  let swx = 0;
+  let swy = 0;
+  let swxx = 0;
+  let swxy = 0;
+  for (let i = 0; i < pred.length; i++) {
+    const p = pred[i];
+    const a = actual[i];
+    const wi = w[i];
+    if (!Number.isFinite(p) || !Number.isFinite(a) || !(wi > 0)) continue;
+    sw += wi;
+    sw2 += wi * wi;
+    swx += wi * p;
+    swy += wi * a;
+    swxx += wi * p * p;
+    swxy += wi * p * a;
+  }
+  if (sw <= 0) return { slope: 1, intercept: 0 };
+  const denom = sw * swxx - swx * swx;
+  let b = denom > 1e-9 ? (sw * swxy - swx * swy) / denom : 1;
+  let a = (swy - b * swx) / sw;
+  const nEff = (sw * sw) / Math.max(1e-9, sw2); // Kish effective sample size
+  const lambda = nEff / (nEff + K);
+  b = 1 + lambda * (b - 1);
+  a = lambda * a;
+  b = Math.max(0.5, Math.min(1.5, b)); // monotone + guard pathological slopes
+  return { slope: b, intercept: a };
+}
+
+/**
+ * Fit one affine calibrator per target on strictly out-of-sample (pred, actual)
+ * pairs. Leakage-free: an expanding-window meta walk-forward INSIDE the pool
+ * (meta for season s fit only on pool seasons < s), and the fit predictions are
+ * UNCALIBRATED. `testSeason` is never in `pool`, so it is never touched.
+ */
+export function fitRateCalibrators(
+  pool: SeasonPredictions[],
+  testSeason: number,
+  disagreementSigma = DISAGREEMENT_SIGMA,
+): Record<string, RateCalibrator> {
+  const ordered = [...pool].sort((x, y) => x.seasonId - y.seasonId);
+  const acc: Record<string, { p: number[]; a: number[]; w: number[] }> = {};
+  for (const t of V2_SKATER_TARGETS) acc[t] = { p: [], a: [], w: [] };
+  const residual = marketTrainingEnabled();
+  for (let si = 1; si < ordered.length; si++) {
+    const past = ordered.slice(0, si);
+    const cur = ordered[si];
+    const { rateMetas } = fitStackedMetas(past, cur.seasonId, disagreementSigma);
+    for (const t of V2_SKATER_TARGETS) {
+      const sig = cur.signals.rates[t];
+      const meta = rateMetas[t];
+      for (let k = 0; k < cur.examples.length; k++) {
+        const ex = cur.examples[k];
+        const young = eligibleHistory(ex.history).length <= 2;
+        const isD = ex.targetRow.position === "D";
+        const pred = metaRatePrediction(meta, sig, k, young, isD, residual);
+        acc[t].p.push(pred);
+        acc[t].a.push(actualRate(ex.actualRow, t));
+        acc[t].w.push(Math.min(60, ex.actualRow.gamesPlayed) / 60);
+      }
+    }
+  }
+  const out: Record<string, RateCalibrator> = {};
+  for (const t of V2_SKATER_TARGETS) {
+    out[t] = fitAffineCalibrator(acc[t].p, acc[t].a, acc[t].w);
+  }
+  return out;
+}
+
 export function metaGpPrediction(
   meta: GpMeta,
   gp: BaseSignalSet["gp"],

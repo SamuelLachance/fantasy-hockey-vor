@@ -86,6 +86,8 @@ export const ADVERSARIAL_FEATURE_WHITELIST: ReadonlySet<string> = new Set([
   "wear_lag1",
   "wear_ewma",
   "wear_trend",
+  "team_b2b_lag1",
+  "age_x_avail",
   "team_gf_pg",
   "team_ga_pg",
   "team_diff_pg",

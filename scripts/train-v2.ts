@@ -21,6 +21,7 @@ import {
   type TeamDepthContext,
 } from "../src/lib/ml/team-depth";
 import {
+  fitRateCalibrators,
   fitStackedMetas,
   marketTrainingEnabled,
   runWalkForward,
@@ -89,6 +90,24 @@ async function main() {
     );
   }
 
+  // Principle 2: leakage-free post-hoc affine calibration per target. The
+  // rolling backtest shows the blend is already well-scaled at the reliability
+  // ceiling (ΔRMSE ≈ 0, Spearman unchanged), so this ships OFF by default and
+  // is only baked into the bundle when ML_RATE_CALIBRATION=1. Always fit + log
+  // it so drift is visible.
+  const fittedCalibrators = fitRateCalibrators(wf.seasons, PROJECTION_SEASON_ID);
+  for (const t of V2_SKATER_TARGETS) {
+    const c = fittedCalibrators[t];
+    console.log(
+      `calib[${t}] slope=${c.slope.toFixed(3)} intercept=${c.intercept.toFixed(4)}`,
+    );
+  }
+  const rateCalibrators =
+    process.env.ML_RATE_CALIBRATION === "1" ? fittedCalibrators : undefined;
+  console.log(
+    `rate calibration ${rateCalibrators ? "ON (baked into bundle)" : "OFF (set ML_RATE_CALIBRATION=1 to enable)"}`,
+  );
+
   console.log("training final skater base models on all seasons...");
   const league = buildLeagueContext(rows);
   const examples = buildSkaterExamples(rows);
@@ -140,6 +159,7 @@ async function main() {
       ridgeGp: finalSkater.ridgeGp,
       rateMetas,
       gpMeta,
+      rateCalibrators,
     },
     goalie: {
       gbdt: finalGoalie.gbdt,

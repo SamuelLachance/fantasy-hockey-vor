@@ -108,6 +108,9 @@ function buildFromProfile(
       ...("marketEdge" in v2 && v2.marketEdge
         ? { marketEdge: v2.marketEdge as Partial<Record<Category, number>> }
         : {}),
+      ...("uncertainty" in v2 && v2.uncertainty
+        ? { uncertainty: v2.uncertainty }
+        : {}),
     };
   }
 

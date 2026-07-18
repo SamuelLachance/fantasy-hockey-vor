@@ -17,12 +17,22 @@ import {
   type TeamDepthContext,
 } from "../src/lib/ml/team-depth";
 import {
+  applyRateCalibrator,
+  fitRateCalibrators,
   fitStackedMetas,
   metaGpPrediction,
   metaRatePrediction,
   runWalkForward,
   V2_SKATER_TARGETS,
 } from "../src/lib/ml/stack";
+import {
+  gpSigma,
+  popStdev,
+  rateUncertainty,
+  SIGMA_CALIBRATION,
+  UNCERTAINTY_GP_SIGNALS,
+  UNCERTAINTY_RATE_SIGNALS,
+} from "../src/lib/ml/uncertainty";
 import { actualRate, eligibleHistory, gp82 } from "../src/lib/ml/dataset-view";
 import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import { DISAGREEMENT_SIGMA, sampleStd } from "../src/lib/ml/market-training";
@@ -162,10 +172,17 @@ async function main() {
   // Score each test season with metas fit only on earlier pool seasons.
   const perTarget: Record<
     string,
-    { stack: Metrics[]; marcel: Metrics[]; ewma: Metrics[]; lag1: Metrics[]; gbdt: Metrics[] }
+    {
+      stack: Metrics[];
+      stackCal: Metrics[];
+      marcel: Metrics[];
+      ewma: Metrics[];
+      lag1: Metrics[];
+      gbdt: Metrics[];
+    }
   > = {};
   for (const t of V2_SKATER_TARGETS) {
-    perTarget[t] = { stack: [], marcel: [], ewma: [], lag1: [], gbdt: [] };
+    perTarget[t] = { stack: [], stackCal: [], marcel: [], ewma: [], lag1: [], gbdt: [] };
   }
   const gpMetrics: { stack: Metrics[]; ewma: Metrics[]; lag1: Metrics[]; gbdt: Metrics[] } = {
     stack: [],
@@ -176,6 +193,57 @@ async function main() {
   // Young (≤2 eligible prior seasons) vs veteran GP breakdown.
   const gpYoung: Metrics[] = [];
   const gpVet: Metrics[] = [];
+
+  // ------------------------------------------------------------------
+  // Uncertainty calibration (Principle 3): accumulate, per stat, the ratio
+  // |residual| / rawσ where rawσ = √(aleatoricFloor² + baseSignalSpread²).
+  // The 68th percentile of that ratio is the recommended SIGMA_CALIBRATION so
+  // that ±1σ coverage ≈ 0.68. Cross-sectional stat σ and YoY reliability r are
+  // measured up front from 40+ GP82 pairs (same population as inference).
+  const relR: Record<string, number> = {};
+  const relSd: Record<string, number> = {};
+  {
+    const byPl = new Map<number, PlayerSeasonRow[]>();
+    for (const r of rows) {
+      if (r.isGoalie) continue;
+      const l = byPl.get(r.playerId) ?? [];
+      l.push(r);
+      byPl.set(r.playerId, l);
+    }
+    for (const l of byPl.values()) l.sort((a, b) => a.seasonId - b.seasonId);
+    for (const target of V2_SKATER_TARGETS) {
+      const xs: number[] = [];
+      const ys: number[] = [];
+      for (const l of byPl.values()) {
+        for (let i = 1; i < l.length; i++) {
+          if (l[i].seasonId - l[i - 1].seasonId !== 10001) continue;
+          if (gp82(l[i - 1]) < 40 || gp82(l[i]) < 40) continue;
+          xs.push(actualRate(l[i - 1], target));
+          ys.push(actualRate(l[i], target));
+        }
+      }
+      const n = xs.length;
+      const mx = xs.reduce((a, b) => a + b, 0) / Math.max(1, n);
+      const my = ys.reduce((a, b) => a + b, 0) / Math.max(1, n);
+      let sxy = 0;
+      let sx = 0;
+      let sy = 0;
+      for (let i = 0; i < n; i++) {
+        sxy += (xs[i] - mx) * (ys[i] - my);
+        sx += (xs[i] - mx) ** 2;
+        sy += (ys[i] - my) ** 2;
+      }
+      relR[target] = sx > 0 && sy > 0 ? sxy / Math.sqrt(sx * sy) : 0;
+      relSd[target] = n > 0 ? Math.sqrt(sy / n) : 0;
+    }
+  }
+  const covRatios: Record<string, number[]> = {};
+  for (const t of V2_SKATER_TARGETS) covRatios[t] = [];
+  const gpAbsResid: number[] = [];
+  let gpDispSum = 0;
+  let gpDispN = 0;
+  let gpCovHit = 0;
+  let gpCovN = 0;
 
   for (const testSeason of testSeasons) {
     const seasonPred = wf.seasons.find((s) => s.seasonId === testSeason);
@@ -189,12 +257,15 @@ async function main() {
       continue;
     }
     const { rateMetas, gpMeta } = fitStackedMetas(pool, testSeason);
+    // Principle 2: fit calibrators on the pool only (never touches testSeason).
+    const rateCalibrators = fitRateCalibrators(pool, testSeason);
 
     for (const target of V2_SKATER_TARGETS) {
       const sig = seasonPred.signals.rates[target];
       const yTrue: number[] = [];
       const gp: number[] = [];
       const stackPred: number[] = [];
+      const stackCalPred: number[] = [];
       const marcelPred: number[] = [];
       const ewmaPred: number[] = [];
       const lag1Pred: number[] = [];
@@ -204,16 +275,29 @@ async function main() {
         const ex = seasonPred.examples[k];
         const young = eligibleHistory(ex.history).length <= 2;
         const isD = ex.targetRow.position === "D";
-        yTrue.push(actualRate(ex.actualRow, target));
+        const actual = actualRate(ex.actualRow, target);
+        const pred = metaRatePrediction(rateMetas[target], sig, k, young, isD);
+        yTrue.push(actual);
         gp.push(ex.actualRow.gamesPlayed);
-        stackPred.push(metaRatePrediction(rateMetas[target], sig, k, young, isD));
+        stackPred.push(pred);
+        stackCalPred.push(applyRateCalibrator(rateCalibrators[target], pred));
         marcelPred.push(sig.marcel[k]);
         ewmaPred.push(sig.ewma[k]);
         lag1Pred.push(sig.lag1[k]);
         gbdtPred.push(sig.gbdt[k]);
+
+        // Uncertainty coverage at the CURRENT calibration constants, so the
+        // recommended multiplier converges to 1 once SIGMA_CALIBRATION is set.
+        const ru = rateUncertainty(
+          target,
+          UNCERTAINTY_RATE_SIGNALS.map((s) => (sig as Record<string, Float64Array>)[s]?.[k]),
+          relSd[target] ?? 0,
+        );
+        if (ru.sigma > 0) covRatios[target].push(Math.abs(actual - pred) / ru.sigma);
       }
 
       perTarget[target].stack.push(computeMetrics(yTrue, stackPred, gp));
+      perTarget[target].stackCal.push(computeMetrics(yTrue, stackCalPred, gp));
       perTarget[target].marcel.push(computeMetrics(yTrue, marcelPred, gp));
       perTarget[target].ewma.push(computeMetrics(yTrue, ewmaPred, gp));
       perTarget[target].lag1.push(computeMetrics(yTrue, lag1Pred, gp));
@@ -244,6 +328,18 @@ async function main() {
         ewmaPred.push(gpSig.ewma[k]);
         lag1Pred.push(gpSig.lag1[k]);
         gbdtPred.push(gpSig.gbdt[k]);
+        // GP uncertainty: coverage at the current gpSigma, plus the pieces to
+        // recommend GP_ALEATORIC ≈ √(P68(|resid|)² − meanDisp²).
+        const gpVals = UNCERTAINTY_GP_SIGNALS.map(
+          (s) => (gpSig as Record<string, Float64Array>)[s]?.[k],
+        );
+        const gs = gpSigma(gpVals);
+        const ar = Math.abs(yT - p);
+        gpAbsResid.push(ar);
+        if (gs > 0 && ar <= gs) gpCovHit++;
+        gpCovN++;
+        gpDispSum += popStdev(gpVals);
+        gpDispN++;
         if (young) {
           yYoung.push(yT);
           pYoung.push(p);
@@ -298,6 +394,53 @@ async function main() {
   console.log(
     `${"  gp (vet)".padEnd(16)} ${avg(gpVet, "r2").toFixed(3)}/${avg(gpVet, "spearman").toFixed(3)}/${avg(gpVet, "mae").toFixed(2)}`,
   );
+
+  // ------------------------------------------------------------------
+  // Principle 2: effect of the leakage-free affine calibrator (must not drop
+  // Spearman — affine slope ≥ 0 cannot reorder — and should trim RMSE/wMAE).
+  console.log(`\n=== CALIBRATION effect (Principle 2: raw stack → calibrated) ===`);
+  console.log("target            ΔR²      Δspearman  ΔwMAE       ΔRMSE");
+  for (const target of V2_SKATER_TARGETS) {
+    const m = perTarget[target];
+    const dR2 = avg(m.stackCal, "r2") - avg(m.stack, "r2");
+    const dSp = avg(m.stackCal, "spearman") - avg(m.stack, "spearman");
+    const dW = avg(m.stackCal, "wMae") - avg(m.stack, "wMae");
+    const dRmse = avg(m.stackCal, "rmse") - avg(m.stack, "rmse");
+    const sign = (x: number, d = 3): string => (x >= 0 ? "+" : "") + x.toFixed(d);
+    console.log(
+      `${target.padEnd(16)} ${sign(dR2)}   ${sign(dSp)}     ${sign(dW, 4)}    ${sign(dRmse, 4)}`,
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Principle 3: 1σ coverage + recommended calibration constants.
+  const quantile = (xs: number[], q: number): number => {
+    if (xs.length === 0) return NaN;
+    const s = [...xs].sort((a, b) => a - b);
+    const i = Math.min(s.length - 1, Math.max(0, Math.round(q * (s.length - 1))));
+    return s[i];
+  };
+  console.log(`\n=== 1σ COVERAGE (Principle 3; target ≈ 0.68) ===`);
+  console.log("target            coverage   recommended SIGMA_CALIBRATION   n");
+  for (const target of V2_SKATER_TARGETS) {
+    const ratios = covRatios[target];
+    const cov = ratios.filter((r) => r <= 1).length / Math.max(1, ratios.length);
+    // recommended = current constant × the ratio's 68th percentile → converges
+    // to the current constant once coverage ≈ 0.68.
+    const recommend = (SIGMA_CALIBRATION[target] ?? 1) * quantile(ratios, 0.68);
+    console.log(
+      `${target.padEnd(16)} ${cov.toFixed(3)}      ${recommend.toFixed(3)}                          ${ratios.length}`,
+    );
+  }
+  {
+    const p68 = quantile(gpAbsResid, 0.68);
+    const meanDisp = gpDispN > 0 ? gpDispSum / gpDispN : 0;
+    const recGpAle = Math.sqrt(Math.max(0, p68 * p68 - meanDisp * meanDisp));
+    const covGp = gpCovHit / Math.max(1, gpCovN);
+    console.log(
+      `${"gamesPlayed".padEnd(16)} ${covGp.toFixed(3)}      recommended GP_ALEATORIC=${recGpAle.toFixed(1)} (P68|resid|=${p68.toFixed(1)}, meanDisp=${meanDisp.toFixed(1)})`,
+    );
+  }
 
   // ------------------------------------------------------------------
   // Agreement vs disagreement zones (synthetic market edge)

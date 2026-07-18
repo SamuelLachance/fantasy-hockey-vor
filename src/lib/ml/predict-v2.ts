@@ -10,14 +10,29 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { PROJECTION_SEASON_ID } from "../nhl-api";
 import type { PlayerProfile } from "../profile-types";
-import type { GoalieProjection, SkaterProjection } from "../types";
+import type {
+  Category,
+  GoalieProjection,
+  ProjectionUncertainty,
+  SkaterProjection,
+  StatUncertainty,
+} from "../types";
 import { contextualPerGameRateFromRows } from "./contextual-baseline";
 import {
+  actualRate,
   buildLeagueContext,
   buildTargetLevels,
   eligibleHistory,
+  gp82,
   type LeagueContext,
 } from "./dataset-view";
+import {
+  gpSigma,
+  rateUncertainty,
+  totalStatSigma,
+  UNCERTAINTY_GP_SIGNALS,
+  UNCERTAINTY_RATE_SIGNALS,
+} from "./uncertainty";
 import { sanitizeTargetSeasonRow } from "./features";
 import { attachDurability } from "./gamelog-durability";
 import {
@@ -30,6 +45,7 @@ import {
 import { buildProjectionTargetRow } from "./inference-context";
 import { loadContextCaches } from "./enrich-rows";
 import {
+  applyRateCalibrator,
   inferBaseSignalsForPlayer,
   metaGpPrediction,
   metaRatePrediction,
@@ -56,6 +72,8 @@ interface V2Runtime {
   caches: ReturnType<typeof loadContextCaches>;
   skaterLevels: Record<string, Record<number, number>>;
   goalieLevels: GoalieLevels;
+  /** Cross-sectional σ of each stat's per-game rate (40+ GP82 skaters). */
+  statStdev: Record<string, number>;
 }
 
 let runtimeCache: V2Runtime | null | undefined;
@@ -78,6 +96,21 @@ export function getV2Runtime(): V2Runtime | null {
       byPlayer.set(row.playerId, list);
     }
     for (const list of byPlayer.values()) list.sort((a, b) => a.seasonId - b.seasonId);
+    // Cross-sectional σ of each stat's per-game rate over the draftable pool
+    // (40+ GP82 skaters) — the population the YoY reliability r was measured on,
+    // so the aleatoric floor rateSd·√(1−r²) is in matching units.
+    const statStdev: Record<string, number> = {};
+    for (const t of V2_SKATER_TARGETS) {
+      const vals: number[] = [];
+      for (const r of rows) {
+        if (!r.isGoalie && gp82(r) >= 40) vals.push(actualRate(r, t));
+      }
+      const m = vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length);
+      statStdev[t] =
+        vals.length > 1
+          ? Math.sqrt(vals.reduce((s, x) => s + (x - m) ** 2, 0) / vals.length)
+          : 0;
+    }
     runtimeCache = {
       bundle,
       rows,
@@ -88,6 +121,7 @@ export function getV2Runtime(): V2Runtime | null {
       caches: loadContextCaches(),
       skaterLevels: buildTargetLevels(rows, V2_SKATER_TARGETS, false),
       goalieLevels: buildGoalieLevels(rows),
+      statStdev,
     };
   } catch (e) {
     console.warn(`v2 runtime unavailable: ${e instanceof Error ? e.message : e}`);
@@ -113,6 +147,8 @@ export interface V2SkaterResult {
   reasoning: string;
   /** Per-stat model rate minus synthetic market rate (per game). */
   marketEdge?: Partial<Record<string, number>>;
+  /** Calibrated uncertainty on the projection (Principle 3). */
+  uncertainty: ProjectionUncertainty;
 }
 
 export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
@@ -160,9 +196,21 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
   const gamesPlayed = Math.round(
     metaGpPrediction(rt.bundle.skater.gpMeta, gpSignals, 0, young),
   );
+  // GP uncertainty (games) — signal dispersion plus the irreducible injury
+  // floor. Feeds Var(total) = GP²·σ_rate² + rate²·σ_GP².
+  const gamesPlayedSigma = gpSigma(
+    UNCERTAINTY_GP_SIGNALS.map(
+      (s) => (gpSignals as Record<string, Float64Array>)[s][0],
+    ),
+  );
 
   const marketEdge: Partial<Record<string, number>> = {};
   const perGame: Record<string, number> = {};
+  const perStatU: Partial<Record<Category, StatUncertainty>> = {};
+  const relevantStat = (t: string): boolean =>
+    t !== "faceoffWins" || profile.position === "C";
+  let aleVar = 0;
+  let spreadVar = 0;
   for (const t of V2_SKATER_TARGETS) {
     const sig = rates[t];
     const sigArrays = {
@@ -175,16 +223,57 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
       component: Float64Array.of(sig.component),
       market: Float64Array.of(sig.market ?? sig.marcel),
     };
-    perGame[t] = metaRatePrediction(
-      rt.bundle.skater.rateMetas[t],
-      sigArrays,
-      0,
-      young,
-      profile.position === "D",
-      Boolean(rt.bundle.marketTraining),
+    perGame[t] = applyRateCalibrator(
+      rt.bundle.skater.rateCalibrators?.[t],
+      metaRatePrediction(
+        rt.bundle.skater.rateMetas[t],
+        sigArrays,
+        0,
+        young,
+        profile.position === "D",
+        Boolean(rt.bundle.marketTraining),
+      ),
     );
     marketEdge[t] = perGame[t] - (sig.market ?? sig.marcel);
+
+    if (relevantStat(t)) {
+      // Per-game rate uncertainty → season-total scale via total = rate·GP.
+      const ru = rateUncertainty(
+        t,
+        UNCERTAINTY_RATE_SIGNALS.map((s) => (sig as Record<string, number>)[s]),
+        rt.statStdev[t] ?? 0,
+      );
+      const sigmaTotal = totalStatSigma(
+        perGame[t],
+        ru.sigma,
+        gamesPlayed,
+        gamesPlayedSigma,
+      );
+      // Split the total σ into aleatoric/model shares by the rate-σ ratio.
+      const rateVar = ru.sigma * ru.sigma || 1;
+      const aleShare = (ru.aleatoric * ru.aleatoric) / rateVar;
+      const totalVar = sigmaTotal * sigmaTotal;
+      perStatU[t as Category] = {
+        sigma: sigmaTotal,
+        aleatoric: Math.sqrt(totalVar * aleShare),
+        modelSpread: Math.sqrt(totalVar * (1 - aleShare)),
+      };
+      aleVar += totalVar * aleShare;
+      spreadVar += totalVar * (1 - aleShare);
+    }
   }
+
+  const totalSigma = Math.sqrt(aleVar + spreadVar);
+  const uncertainty: ProjectionUncertainty = {
+    gamesPlayedSigma,
+    perStat: perStatU,
+    total: {
+      sigma: totalSigma,
+      aleatoric: Math.sqrt(aleVar),
+      modelSpread: Math.sqrt(spreadVar),
+    },
+    aleatoricShare: totalSigma > 0 ? aleVar / (aleVar + spreadVar) : 0,
+  };
 
   const total = (t: string): number => Math.max(0, Math.round(perGame[t] * gamesPlayed));
 
@@ -203,6 +292,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
     gamesPlayed,
     projection,
     marketEdge,
+    uncertainty,
     reasoning: `v2 stacked ensemble (GBDT+ridge+Marcel+EB${rt.bundle.marketTraining ? "+market-residual" : ""}, ${eligible.length} NHL seasons${young ? ", young segment" : ""}). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }

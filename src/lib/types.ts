@@ -52,6 +52,40 @@ export interface GoalieProjection {
   savePct: number;
 }
 
+/**
+ * Uncertainty on a single projected stat (season-total scale, matching the
+ * projection). `sigma² = aleatoric² + modelSpread²`.
+ */
+export interface StatUncertainty {
+  /** Combined 1σ band on the projected season total. */
+  sigma: number;
+  /** Irreducible share (Bayes floor from the stat's YoY reliability). */
+  aleatoric: number;
+  /** Reducible share (disagreement among the base signals for this player). */
+  modelSpread: number;
+}
+
+/**
+ * Calibrated uncertainty attached to a projection. Reported, never used to
+ * shrink the point estimate — it tells you how much to trust the number, and
+ * how much of the doubt is beatable (modelSpread) vs irreducible (aleatoric).
+ */
+export interface ProjectionUncertainty {
+  /** 1σ on games played (games). */
+  gamesPlayedSigma: number;
+  /** 1σ on each projected season-total stat. */
+  perStat: Partial<Record<Category, StatUncertainty>>;
+  /** Quadrature aggregate across the player's scored categories. */
+  total: StatUncertainty;
+  /**
+   * Fraction of total variance that is irreducible, in [0, 1]. High → the
+   * reliability ceiling is the limit and more modelling won't help; low → the
+   * base models disagree and better information could still sharpen this
+   * player.
+   */
+  aleatoricShare: number;
+}
+
 export interface PlayerProjection {
   id: number;
   name: string;
@@ -80,6 +114,8 @@ export interface PlayerProjection {
   profileSummary?: string;
   /** Per-stat model − synthetic-market rate (per game), when market training is on. */
   marketEdge?: Partial<Record<Category, number>>;
+  /** Calibrated projection uncertainty (v2 ML skaters). */
+  uncertainty?: ProjectionUncertainty;
   /** Rank if ordered by synthetic-market-only fantasy value (1 = best). */
   syntheticMarketRank?: number;
   /** syntheticMarketRank − rank: positive = undervalued vs consensus. */
