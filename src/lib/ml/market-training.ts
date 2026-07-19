@@ -202,24 +202,20 @@ export function disagreementWeight(
 }
 
 /**
- * Kelly-inspired draft-capital weight.
+ * Kelly-inspired draft-capital weight (no label leakage).
  * marketFvPctile / modelFvPctile in [0,1] (1 = highest fantasy value).
- * Rewards correctly identifying overlays (model > market and actual beat market)
- * and underlays (model < market and actual missed market).
+ * Upweights examples where model and market disagree on draft capital —
+ * using only pre-outcome information.
  */
 export function kellyFantasyWeight(
   marketFvPctile: number,
   modelFvPctile: number,
-  actualBeatMarket: boolean,
   cap = 3,
 ): number {
   const edge = modelFvPctile - marketFvPctile;
-  const aligned = (edge > 0 && actualBeatMarket) || (edge < 0 && !actualBeatMarket);
-  // Capital proxy: higher when either market or model puts the player in top half
   const capital = Math.max(marketFvPctile, modelFvPctile);
   const mag = Math.abs(edge) * (0.5 + capital);
-  const base = aligned ? 1 + 2 * mag : Math.max(0.35, 1 - mag);
-  return Math.min(cap, Math.max(0.25, base));
+  return Math.min(cap, Math.max(0.25, 1 + mag));
 }
 
 /** Simple percentile ranks for an array of scores (higher = better → pctile near 1). */

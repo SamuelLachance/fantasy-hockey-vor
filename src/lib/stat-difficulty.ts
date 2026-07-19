@@ -51,13 +51,14 @@ const WEIGHT_MIN = 0.7;
 const WEIGHT_MAX = 1.4;
 
 /**
- * Gini coefficient of the positive production values. 0 = perfectly even
- * (everyone produces the same), → 1 = one player produces everything. This is
- * exactly "how few players produce a lot": the harder-to-generate the stat,
- * the higher the concentration.
+ * Gini coefficient over the full draftable group (zeros included).
+ * 0 = perfectly even; → 1 = one player produces everything. Including zeros
+ * correctly marks sparse stats (few producers) as more concentrated.
  */
 function gini(values: number[]): number {
-  const xs = values.filter((v) => Number.isFinite(v) && v > 0).sort((a, b) => a - b);
+  const xs = values
+    .map((v) => (Number.isFinite(v) && v > 0 ? v : 0))
+    .sort((a, b) => a - b);
   const n = xs.length;
   if (n < 2) return 0;
   let cumulative = 0;
@@ -275,14 +276,25 @@ function computeGroupWeights<C extends string>(
   const avgWeight =
     categories.reduce((s, c) => s + raw[c].weight, 0) / Math.max(1, categories.length);
 
-  const result = {} as Record<C, CategoryDifficultyMeta>;
+  const tilted: Record<string, number> = {};
   for (const category of categories) {
     const meta = raw[category];
     const normalized = avgWeight > 0 ? meta.weight / avgWeight : 1;
-    const tilted = 1 + SCARCITY_TILT * (normalized - 1);
+    tilted[category] = Math.min(
+      WEIGHT_MAX,
+      Math.max(WEIGHT_MIN, 1 + SCARCITY_TILT * (normalized - 1)),
+    );
+  }
+  // Re-normalize after clamp so mean weight stays 1 (total FV scale stable).
+  const tiltMean =
+    categories.reduce((s, c) => s + tilted[c], 0) / Math.max(1, categories.length);
+
+  const result = {} as Record<C, CategoryDifficultyMeta>;
+  for (const category of categories) {
+    const meta = raw[category];
     result[category] = {
       ...meta,
-      weight: Math.min(WEIGHT_MAX, Math.max(WEIGHT_MIN, tilted)),
+      weight: tiltMean > 0 ? tilted[category] / tiltMean : 1,
     };
   }
   return result;

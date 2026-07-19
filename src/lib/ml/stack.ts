@@ -340,8 +340,7 @@ export function applyMetaRaw(meta: MetaWeights, signalValues: number[]): number 
 
 /**
  * Convex meta: non-negative weights that sum to 1, intercept = 0.
- * Preserves the scale/spread of the base signals (critical for save%, where
- * a free intercept + weight-sum < 1 collapses every goalie toward ~league mean).
+ * Projected-gradient fit onto the simplex (not post-hoc renorm of free NNLS).
  */
 export function fitMetaConvex(
   X: number[][],
@@ -349,19 +348,59 @@ export function fitMetaConvex(
   sampleW: number[],
   signals: readonly string[],
 ): MetaWeights {
-  const raw = fitMetaNnls(X, y, sampleW, signals);
-  const sum = raw.weights.reduce((a, b) => a + b, 0);
-  if (sum <= 1e-9) {
-    const w = new Array(signals.length).fill(0);
+  const n = y.length;
+  const p = signals.length;
+  if (n < 20 || p === 0) {
+    const w = new Array(p).fill(0);
     const mIdx = signals.indexOf("marcel");
     w[mIdx >= 0 ? mIdx : 0] = 1;
     return { signals: [...signals], weights: w, intercept: 0 };
   }
-  return {
-    signals: raw.signals,
-    weights: raw.weights.map((w) => w / sum),
-    intercept: 0,
-  };
+
+  const wSum = sampleW.reduce((a, b) => a + b, 0) || 1;
+  // Uniform start on the simplex.
+  let weights = new Array(p).fill(1 / p);
+  const grad = new Array(p).fill(0);
+
+  for (let iter = 0; iter < 400; iter++) {
+    grad.fill(0);
+    for (let i = 0; i < n; i++) {
+      const wi = sampleW[i] / wSum;
+      let pred = 0;
+      for (let j = 0; j < p; j++) {
+        const xij = Number.isFinite(X[i][j]) ? X[i][j] : 0;
+        pred += weights[j] * xij;
+      }
+      const resid = pred - y[i];
+      for (let j = 0; j < p; j++) {
+        const xij = Number.isFinite(X[i][j]) ? X[i][j] : 0;
+        grad[j] += 2 * wi * resid * xij;
+      }
+    }
+    // Diminishing step keeps the walk stable on correlated ~0.9 signals.
+    const step = 0.15 / (1 + iter * 0.01);
+    const candidate = weights.map((w, j) => w - step * grad[j]);
+    weights = projectToSimplex(candidate);
+  }
+
+  return { signals: [...signals], weights, intercept: 0 };
+}
+
+/** Euclidean projection onto {w ≥ 0, Σw = 1}. */
+function projectToSimplex(v: number[]): number[] {
+  const n = v.length;
+  const u = v.slice().sort((a, b) => b - a);
+  let cssv = 0;
+  let rho = n - 1;
+  for (let i = 0; i < n; i++) {
+    cssv += u[i];
+    const t = (cssv - 1) / (i + 1);
+    if (u[i] - t > 0) rho = i;
+  }
+  let soft = 0;
+  for (let i = 0; i <= rho; i++) soft += u[i];
+  const theta = (soft - 1) / (rho + 1);
+  return v.map((x) => Math.max(0, x - theta));
 }
 
 /**
@@ -647,7 +686,10 @@ export function computeBaseSignals(
       set.contextual[k] = Number.isFinite(c) ? c * era : m;
       if (target === "goals") {
         const comp = componentGoalsRate(models.marcel.shots, ex.history, ex.targetRow);
-        set.component[k] = Number.isFinite(comp) ? comp * era : m;
+        // Scale shot volume by the shots-era factor; finishing rate stays in
+        // history-era units (componentGoalsRate = marcelShots × sh%).
+        const shotsEra = eraFactor(levels.shots, eligibleHistory(ex.history), ex.seasonId);
+        set.component[k] = Number.isFinite(comp) ? comp * shotsEra : m;
       } else {
         set.component[k] = m;
       }
@@ -658,9 +700,9 @@ export function computeBaseSignals(
       set.market[k] = mkt;
 
       if (useMarket) {
-        // Models predict residual; reconstruct absolute rate for signal consumers.
-        set.gbdt[k] = Math.max(0, mkt + set.gbdt[k]);
-        set.ridge[k] = Math.max(0, mkt + ridgeRes);
+        // Keep signed residuals intact for the meta; clamp only published rates.
+        set.gbdt[k] = mkt + set.gbdt[k];
+        set.ridge[k] = mkt + ridgeRes;
       } else {
         set.gbdt[k] = Math.max(0, set.gbdt[k]);
         set.ridge[k] = Math.max(0, ridgeRes);
@@ -710,8 +752,9 @@ export function computeBaseSignals(
 
     const mktGp = useMarket ? marketGp(ex.history) : ewma;
     if (useMarket) {
-      gp.gbdt[k] = Math.max(10, Math.min(82, mktGp + gp.gbdt[k]));
-      gp.ridge[k] = Math.max(10, Math.min(82, mktGp + ridgeRes));
+      // Preserve signed GP residuals for meta blending; clamp at prediction.
+      gp.gbdt[k] = mktGp + gp.gbdt[k];
+      gp.ridge[k] = mktGp + ridgeRes;
     } else {
       gp.gbdt[k] = Math.max(10, Math.min(82, gp.gbdt[k]));
       gp.ridge[k] = Math.max(10, Math.min(82, ridgeRes));
@@ -905,8 +948,7 @@ export function fitStackedMetas(
             statSd,
             disagreementSigma,
           );
-          const beat = r.actual > r.market;
-          const wK = kellyFantasyWeight(marketPct[i], modelPct[i], beat);
+          const wK = kellyFantasyWeight(marketPct[i], modelPct[i]);
           w *= wD * wK;
         }
         X[r.seg].push(r.x);
@@ -1201,7 +1243,10 @@ export function inferBaseSignalsForPlayer(
     let comp = m;
     if (target === "goals") {
       const cg = componentGoalsRate(models.marcel.shots, input.history, input.targetRow);
-      if (Number.isFinite(cg)) comp = cg * era;
+      if (Number.isFinite(cg)) {
+        const shotsEra = eraFactor(input.levels.shots, eligible, input.targetRow.seasonId);
+        comp = cg * shotsEra;
+      }
     }
     const mkt = useMarket
       ? marketRate(input.history, input.targetRow, target, models.marcel[target], era)
@@ -1209,8 +1254,8 @@ export function inferBaseSignalsForPlayer(
     const gbdtRes = predictGbdt(models.gbdt[target], vec);
     const ridgeRes = predictRidgeV2(models.ridge[target], vec);
     rates[target] = {
-      gbdt: useMarket ? Math.max(0, mkt + gbdtRes) : Math.max(0, gbdtRes),
-      ridge: useMarket ? Math.max(0, mkt + ridgeRes) : Math.max(0, ridgeRes),
+      gbdt: useMarket ? mkt + gbdtRes : Math.max(0, gbdtRes),
+      ridge: useMarket ? mkt + ridgeRes : Math.max(0, ridgeRes),
       marcel: m,
       ewma: Number.isFinite(e) ? e * era : m,
       lag1: Number.isFinite(l) ? l * era : m,
@@ -1243,12 +1288,8 @@ export function inferBaseSignalsForPlayer(
   const ridgeGpRes = predictRidgeV2(models.ridgeGp, vec);
 
   const gp = {
-    gbdt: useMarket
-      ? Math.max(10, Math.min(82, mktGp + gbdtGpRes))
-      : Math.max(10, Math.min(82, gbdtGpRes)),
-    ridge: useMarket
-      ? Math.max(10, Math.min(82, mktGp + ridgeGpRes))
-      : Math.max(10, Math.min(82, ridgeGpRes)),
+    gbdt: useMarket ? mktGp + gbdtGpRes : Math.max(10, Math.min(82, gbdtGpRes)),
+    ridge: useMarket ? mktGp + ridgeGpRes : Math.max(10, Math.min(82, ridgeGpRes)),
     ewma,
     lag1,
     durability: Number.isFinite(availSig)

@@ -320,14 +320,20 @@ export function estimateShrunkGoalieSkill(
 
   const shotSeasons = recent.map(seasonToShots);
   const mpRows: MoneyPuckGoalieSeason[] = [];
-  for (const s of recent) {
-    const mp = lookupMoneyPuckGoalieSeason(mpRegistry, playerId, s.seasonId);
-    if (mp && mp.gamesPlayed >= MIN_SEASON_GP) mpRows.push(mp);
+  const mpWeights: number[] = [];
+  for (let i = 0; i < recent.length; i++) {
+    const mp = lookupMoneyPuckGoalieSeason(mpRegistry, playerId, recent[i].seasonId);
+    if (mp && mp.gamesPlayed >= MIN_SEASON_GP) {
+      mpRows.push(mp);
+      mpWeights.push(weights[i]);
+    }
   }
 
   if (mpRows.length > 0) {
-    const mpWeights = weights.slice(-mpRows.length);
-    return estimateFromMoneyPuck(mpRows, mpWeights, shotSeasons.slice(-mpRows.length));
+    const nhlMatched = recent
+      .filter((s) => mpRows.some((mp) => mp.seasonId === s.seasonId))
+      .map(seasonToShots);
+    return estimateFromMoneyPuck(mpRows, mpWeights, nhlMatched);
   }
 
   return estimateFromProxy(
@@ -343,11 +349,21 @@ export function careerGoalieShots(profile: PlayerProfile): GoalieSeasonShots | n
   const gp = finite(career.gamesPlayed);
   if (gp < MIN_SEASON_GP) return null;
 
-  const saves = finite(career.saves ?? career.shotsAgainst);
+  const rawSaves = finite(career.saves);
+  const rawSa = finite(career.shotsAgainst);
+  const svRaw = career.savePctg ?? career.savePct;
+  const saves =
+    rawSaves > 0
+      ? rawSaves
+      : rawSa > 0 && typeof svRaw === "number" && svRaw > 0
+        ? rawSa * (svRaw > 1 ? svRaw / 100 : svRaw)
+        : 0;
+  if (saves <= 0) return null;
+
   const shotsAgainst = deriveShotsAgainst(
     saves,
-    career.savePctg ?? career.savePct,
-    finite(career.shotsAgainst) || undefined,
+    svRaw,
+    rawSa > 0 ? rawSa : undefined,
   );
 
   return {
@@ -379,7 +395,10 @@ export function estimateShrunkGoalieSkillFromCareer(
   }
 
   if (mpRows.length >= 2) {
-    const weights = mpRows.map((_, i) => (i + 1) / mpRows.length);
+    // Normalize ascending recency weights so EB prior mass is not inflated.
+    const raw = mpRows.map((_, i) => i + 1);
+    const sum = raw.reduce((a, b) => a + b, 0) || 1;
+    const weights = raw.map((w) => w / sum);
     const nhlRows = goalieSeasons
       .filter((s) =>
         mpRows.some((mp) => mp.seasonId === s.seasonId),
@@ -489,11 +508,13 @@ export function projectGoalieSaveStats(
     const projectedXga = skill.xGaPerGame * projectedGp;
     const projectedGsax = skill.gsaxPerGame * projectedGp;
     const projectedGa = Math.max(0, projectedXga - projectedGsax);
-    const saves = Math.round(Math.max(0, projectedShots - projectedGa));
     const computedSv =
-      projectedShots > 0 ? saves / projectedShots : skill.savePct;
-    // Anchor save% to EB-shrunk skill — raw GSAx ratio alone collapses to the floor.
+      projectedShots > 0
+        ? Math.max(0, projectedShots - projectedGa) / projectedShots
+        : skill.savePct;
+    // Anchor save% to EB-shrunk skill, then keep saves coherent with that rate.
     const savePct = computedSv * 0.35 + skill.savePct * 0.65;
+    const saves = Math.round(Math.max(0, projectedShots * savePct));
     return { saves, savePct };
   }
 

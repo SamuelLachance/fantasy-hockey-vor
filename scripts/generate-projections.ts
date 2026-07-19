@@ -288,26 +288,50 @@ async function main() {
     DEFAULT_LEAGUE,
   );
 
-  // Synthetic-market ranks: re-rank the pool as if the synthetic market's
-  // per-stat rates were true (model rate − marketEdge), through the same VOR
-  // machinery. Summing raw per-game edges with one constant would price a
-  // faceoff win the same as a goal in z-score fantasyValue space.
+  // Synthetic-market ranks: rebuild market season totals from per-game rates
+  // (model rate − edge), then clamp with the same pipeline before VOR.
+  // Players without edges (and goalies) keep model projections so the pool
+  // stays complete; their draftValue is forced to 0 below.
   const marketRaw = withYahooPositions.map((p) => {
     if (p.isGoalie || !p.marketEdge) return p;
-    const proj = { ...(p.projection as unknown as Record<string, number>) };
-    for (const [stat, edge] of Object.entries(p.marketEdge)) {
-      if (typeof edge === "number" && Number.isFinite(edge) && stat in proj) {
-        proj[stat] = Math.max(0, proj[stat] - edge * p.gamesPlayed);
-      }
-    }
-    return { ...p, projection: proj as unknown as typeof p.projection };
+    const edge = p.marketEdge;
+    const gp = Math.max(1, p.gamesPlayed);
+    const proj = p.projection as unknown as Record<string, number>;
+    const uncapped = {
+      goals: Math.max(0, (proj.goals / gp - (edge.goals ?? 0)) * gp),
+      assists: Math.max(0, (proj.assists / gp - (edge.assists ?? 0)) * gp),
+      shots: Math.max(0, (proj.shots / gp - (edge.shots ?? 0)) * gp),
+      blocks: Math.max(0, (proj.blocks / gp - (edge.blocks ?? 0)) * gp),
+      hits: Math.max(0, (proj.hits / gp - (edge.hits ?? 0)) * gp),
+      powerplayPoints: Math.max(
+        0,
+        (proj.powerplayPoints / gp - (edge.powerplayPoints ?? 0)) * gp,
+      ),
+      penaltyMinutes: Math.max(
+        0,
+        (proj.penaltyMinutes / gp - (edge.penaltyMinutes ?? 0)) * gp,
+      ),
+      faceoffWins: Math.max(
+        0,
+        (proj.faceoffWins / gp - (edge.faceoffWins ?? 0)) * gp,
+      ),
+    };
+    return {
+      ...p,
+      projection: clampSkaterProjection(uncapped as never, gp, p.position),
+    };
   });
   const { players: marketRanked } = applyVor(marketRaw, DEFAULT_LEAGUE);
   const marketRankById = new Map<number, number>();
   for (const p of marketRanked) marketRankById.set(p.id, p.rank);
   for (const p of ranked) {
-    p.syntheticMarketRank = marketRankById.get(p.id) ?? p.rank;
-    p.draftValue = p.syntheticMarketRank - p.rank;
+    if (p.isGoalie || !p.marketEdge) {
+      p.syntheticMarketRank = p.rank;
+      p.draftValue = 0;
+    } else {
+      p.syntheticMarketRank = marketRankById.get(p.id) ?? p.rank;
+      p.draftValue = p.syntheticMarketRank - p.rank;
+    }
   }
 
   const issues = findProjectionIssues(ranked);

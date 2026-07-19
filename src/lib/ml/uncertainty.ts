@@ -145,10 +145,20 @@ export function rateUncertainty(
   };
 }
 
+/** Games-played σ components: signal dispersion + irreducible injury floor. */
+export function gpUncertainty(gpSignalVals: number[]): RateUncertainty {
+  const modelSpread = GP_SIGMA_CALIBRATION * popStdev(gpSignalVals);
+  const aleatoric = GP_ALEATORIC;
+  return {
+    sigma: Math.hypot(modelSpread, aleatoric),
+    aleatoric,
+    modelSpread,
+  };
+}
+
 /** Games-played σ: signal dispersion combined with the injury floor. */
 export function gpSigma(gpSignalVals: number[]): number {
-  const disp = GP_SIGMA_CALIBRATION * popStdev(gpSignalVals);
-  return Math.hypot(disp, GP_ALEATORIC);
+  return gpUncertainty(gpSignalVals).sigma;
 }
 
 /**
@@ -164,4 +174,28 @@ export function totalStatSigma(
   const varTotal =
     gp * gp * rateSigma * rateSigma + rate * rate * gamesPlayedSigma * gamesPlayedSigma;
   return Math.sqrt(Math.max(0, varTotal));
+}
+
+/**
+ * Season-total uncertainty with a correct aleatoric/model split:
+ *   σ_ale² = GP²·σ_rate_ale² + rate²·σ_GP_ale²
+ *   σ_model² = GP²·σ_rate_model² + rate²·σ_GP_model²
+ */
+export function totalStatUncertainty(
+  rate: number,
+  rateU: RateUncertainty,
+  gp: number,
+  gpU: RateUncertainty,
+): RateUncertainty {
+  const aleVar =
+    gp * gp * rateU.aleatoric * rateU.aleatoric +
+    rate * rate * gpU.aleatoric * gpU.aleatoric;
+  const modelVar =
+    gp * gp * rateU.modelSpread * rateU.modelSpread +
+    rate * rate * gpU.modelSpread * gpU.modelSpread;
+  return {
+    sigma: Math.sqrt(Math.max(0, aleVar + modelVar)),
+    aleatoric: Math.sqrt(Math.max(0, aleVar)),
+    modelSpread: Math.sqrt(Math.max(0, modelVar)),
+  };
 }

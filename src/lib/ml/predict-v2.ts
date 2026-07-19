@@ -27,9 +27,9 @@ import {
   type LeagueContext,
 } from "./dataset-view";
 import {
-  gpSigma,
+  gpUncertainty,
   rateUncertainty,
-  totalStatSigma,
+  totalStatUncertainty,
   UNCERTAINTY_GP_SIGNALS,
   UNCERTAINTY_RATE_SIGNALS,
 } from "./uncertainty";
@@ -198,11 +198,12 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
   );
   // GP uncertainty (games) — signal dispersion plus the irreducible injury
   // floor. Feeds Var(total) = GP²·σ_rate² + rate²·σ_GP².
-  const gamesPlayedSigma = gpSigma(
+  const gpU = gpUncertainty(
     UNCERTAINTY_GP_SIGNALS.map(
       (s) => (gpSignals as Record<string, Float64Array>)[s][0],
     ),
   );
+  const gamesPlayedSigma = gpU.sigma;
 
   const marketEdge: Partial<Record<string, number>> = {};
   const perGame: Record<string, number> = {};
@@ -237,29 +238,20 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
     marketEdge[t] = perGame[t] - (sig.market ?? sig.marcel);
 
     if (relevantStat(t)) {
-      // Per-game rate uncertainty → season-total scale via total = rate·GP.
+      // Per-game rate uncertainty → season-total with correct ale/model split.
       const ru = rateUncertainty(
         t,
         UNCERTAINTY_RATE_SIGNALS.map((s) => (sig as Record<string, number>)[s]),
         rt.statStdev[t] ?? 0,
       );
-      const sigmaTotal = totalStatSigma(
-        perGame[t],
-        ru.sigma,
-        gamesPlayed,
-        gamesPlayedSigma,
-      );
-      // Split the total σ into aleatoric/model shares by the rate-σ ratio.
-      const rateVar = ru.sigma * ru.sigma || 1;
-      const aleShare = (ru.aleatoric * ru.aleatoric) / rateVar;
-      const totalVar = sigmaTotal * sigmaTotal;
+      const totU = totalStatUncertainty(perGame[t], ru, gamesPlayed, gpU);
       perStatU[t as Category] = {
-        sigma: sigmaTotal,
-        aleatoric: Math.sqrt(totalVar * aleShare),
-        modelSpread: Math.sqrt(totalVar * (1 - aleShare)),
+        sigma: totU.sigma,
+        aleatoric: totU.aleatoric,
+        modelSpread: totU.modelSpread,
       };
-      aleVar += totalVar * aleShare;
-      spreadVar += totalVar * (1 - aleShare);
+      aleVar += totU.aleatoric * totU.aleatoric;
+      spreadVar += totU.modelSpread * totU.modelSpread;
     }
   }
 
@@ -335,11 +327,16 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   if (!result) return null;
 
   const gamesPlayed = Math.round(result.gamesPlayed);
+  // Reconcile saves with SV% in shot space so SAA VOR uses a coherent triple.
+  // Volume comes from the saves-rate model; skill from savePct.
+  const savePct = Math.max(0.86, Math.min(0.945, result.rates.savePct));
+  const volumeSv = Math.max(0.88, Math.min(0.92, result.rates.savePct));
+  const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {
     wins: Math.max(0, Math.round(result.rates.wins * gamesPlayed)),
-    saves: Math.max(0, Math.round(result.rates.saves * gamesPlayed)),
+    saves: Math.max(0, Math.round(shotsPg * savePct * gamesPlayed)),
     shutouts: Math.max(0, Math.round(result.rates.shutouts * gamesPlayed)),
-    savePct: Math.round(result.rates.savePct * 1000) / 1000,
+    savePct: Math.round(savePct * 1000) / 1000,
   };
 
   return {

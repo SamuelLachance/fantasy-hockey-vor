@@ -186,11 +186,12 @@ function fromRelative(
 ): number {
   if (target === "saves") {
     const lvl = levelEstimate(levels.saves, seasonId);
-    return Number.isFinite(lvl) && lvl > 0 ? rel * lvl : rel;
+    // Never return raw relative units if the level is missing.
+    return Number.isFinite(lvl) && lvl > 0 ? rel * lvl : rel * 28;
   }
   if (target === "savePct") {
     const lvl = levelEstimate(levels.savePct, seasonId);
-    return Number.isFinite(lvl) ? rel + lvl : rel;
+    return Number.isFinite(lvl) ? rel + lvl : rel + 0.905;
   }
   return rel;
 }
@@ -595,7 +596,7 @@ export function fitGoalieStructural(
     }
   }
 
-  // Shutout calibration: actual shutout rate ÷ mean Poisson prediction.
+  // Shutout calibration: must use the same Poisson recipe as prediction.
   let poisSum = 0;
   let actSum = 0;
   let n = 0;
@@ -603,12 +604,7 @@ export function fitGoalieStructural(
     if (ex.actualRow.gamesPlayed < 15) continue;
     const eligible = goalieEligible(ex.history);
     if (eligible.length === 0) continue;
-    const leagueSv = league.svPct.get(ex.seasonId - 10001) ?? 0.905;
-    const sv = shrunkSavePct(eligible, leagueSv);
-    const saPg =
-      league.teamSaPerGame.get(
-        `${primaryTeam(ex.targetRow.team)}:${ex.seasonId - 10001}`,
-      ) ?? league.saPerGame.get(ex.seasonId - 10001) ?? 30;
+    const { sv, saPg } = goalieWorkloadContext(ex, league);
     const gaPg = saPg * (1 - sv);
     poisSum += Math.exp(-gaPg);
     actSum += goalieActual(ex.actualRow, "shutouts");
@@ -619,25 +615,16 @@ export function fitGoalieStructural(
   return { winsA, winsB, winsC, shutoutCal: Math.max(0.4, Math.min(2.5, shutoutCal)) };
 }
 
-export function goalieStructuralSignal(
-  params: GoalieStructuralParams,
+/** Shared SA/SV context for structural signals and shutout calibration. */
+function goalieWorkloadContext(
   ex: { history: PlayerSeasonRow[]; targetRow: PlayerSeasonRow; seasonId: number },
-  target: GoalieV2Target,
   league: GoalieLeagueContext,
-  registry: MoneyPuckGoalieRegistry | null,
-): number {
+): { eligible: PlayerSeasonRow[]; leagueSv: number; sv: number; saPg: number } {
   const eligible = goalieEligible(ex.history);
   const prevSeason = ex.seasonId - 10001;
-  // Trend-estimated league levels: sv% and shot volume drift monotonically
-  // across eras, so a damped trend beats the lag-1 level.
   const leagueSv = trendLevel(league.svPct, ex.seasonId, 0.905);
   const leagueSaPg = trendLevel(league.saPerGame, ex.seasonId, 30);
   const sv = shrunkSavePct(eligible, leagueSv);
-  const gsax60 = shrunkGsax60(eligible, registry);
-
-  // Expected shots against per game: team volume (shrunk toward league —
-  // team SA persists only moderately) blended with the goalie's own recent
-  // workload profile (starters face full-game volume; relievers less).
   const teamSaRaw = league.teamSaPerGame.get(
     `${primaryTeam(ex.targetRow.team)}:${prevSeason}`,
   );
@@ -660,6 +647,18 @@ export function goalieStructuralSignal(
     if (gp > 0) ownSaPg = saves / gp;
   }
   const saPg = Number.isFinite(ownSaPg) ? 0.5 * teamSa + 0.5 * ownSaPg : teamSa;
+  return { eligible, leagueSv, sv, saPg };
+}
+
+export function goalieStructuralSignal(
+  params: GoalieStructuralParams,
+  ex: { history: PlayerSeasonRow[]; targetRow: PlayerSeasonRow; seasonId: number },
+  target: GoalieV2Target,
+  league: GoalieLeagueContext,
+  registry: MoneyPuckGoalieRegistry | null,
+): number {
+  const { eligible, leagueSv, sv, saPg } = goalieWorkloadContext(ex, league);
+  const gsax60 = shrunkGsax60(eligible, registry);
 
   switch (target) {
     case "savePct": {
@@ -669,7 +668,7 @@ export function goalieStructuralSignal(
       const fromGsax = leagueSv + skill;
       const fromCareer = sv;
       const blended = 0.60 * fromGsax + 0.40 * fromCareer;
-      return Math.max(0.875, Math.min(0.935, blended));
+      return Math.max(0.86, Math.min(0.945, blended));
     }
     case "saves":
       return Math.max(0, saPg * sv);
@@ -701,7 +700,11 @@ function goalieMarcelRate(
   if (eligible.length === 0) return NaN;
 
   if (target === "savePct") {
-    return shrunkSavePct(eligible, trendLevel(league.svPct, seasonId, 0.905));
+    // Shrink toward the history-era (lag-1) league mean; goalieEraAdjust then
+    // shifts once into the target season. Using trendLevel(target) here would
+    // double-count the era move when era-adjust is applied downstream.
+    const prior = league.svPct.get(seasonId - 10001) ?? 0.905;
+    return shrunkSavePct(eligible, prior);
   }
 
   // Count rates: decay-weighted with GP-scaled prior.
@@ -968,7 +971,7 @@ export function computeGoalieSignals(
 }
 
 function clampTarget(target: GoalieV2Target, v: number): number {
-  if (target === "savePct") return Math.max(0.875, Math.min(0.935, v));
+  if (target === "savePct") return Math.max(0.86, Math.min(0.945, v));
   if (target === "wins") return Math.max(0, Math.min(0.85, v));
   if (target === "shutouts") return Math.max(0, Math.min(0.3, v));
   return Math.max(0, v);

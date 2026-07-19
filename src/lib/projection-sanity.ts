@@ -60,8 +60,8 @@ const GOALIE_RATE_LIMITS = {
   winRate: 0.62,
   shutoutRate: 0.12,
   savesPerGame: 40,
-  savePctMin: 0.865,
-  savePctMax: 0.935,
+  savePctMin: 0.86,
+  savePctMax: 0.945,
 };
 
 function clampTotal(value: number, perGameMax: number, gamesPlayed: number): number {
@@ -150,8 +150,19 @@ export function clampGoalieProjection(
     clampTotal(projection.shutouts, GOALIE_RATE_LIMITS.shutoutRate, gp),
     wins,
   );
-  const saves = Math.min(
-    Math.max(shutouts * 12, Math.round(projection.saves)),
+  // Keep saves and SV% coherent in shot space so SAA VOR is not corrupted.
+  const rawSv = Number.isFinite(projection.savePct) ? projection.savePct : 0.905;
+  const impliedShots =
+    rawSv > 0.5
+      ? Math.max(0, projection.saves / rawSv)
+      : Math.max(0, projection.saves / 0.905);
+  const savePct = Math.max(
+    GOALIE_RATE_LIMITS.savePctMin,
+    Math.min(GOALIE_RATE_LIMITS.savePctMax, rawSv),
+  );
+  let saves = Math.round(impliedShots * savePct);
+  saves = Math.min(
+    Math.max(shutouts * 12, saves),
     Math.round(GOALIE_RATE_LIMITS.savesPerGame * gp),
   );
 
@@ -159,10 +170,7 @@ export function clampGoalieProjection(
     wins,
     shutouts,
     saves,
-    savePct: Math.max(
-      GOALIE_RATE_LIMITS.savePctMin,
-      Math.min(GOALIE_RATE_LIMITS.savePctMax, projection.savePct),
-    ),
+    savePct,
   };
 }
 

@@ -20,7 +20,7 @@ function assert(cond: boolean, msg: string) {
 assert(Math.abs(MARKET_BLEND.marcel + MARKET_BLEND.ewma + MARKET_BLEND.lag1 - 1) < 1e-9, "blend sums to 1");
 assert(disagreementWeight(0.3, 0.3, 0.1) === 0.25, "agreement → 0.25");
 assert(disagreementWeight(0.3, 0.5, 0.1) > 1, "large edge → >1");
-assert(kellyFantasyWeight(0.2, 0.8, true) > kellyFantasyWeight(0.2, 0.8, false), "aligned Kelly > misaligned");
+assert(kellyFantasyWeight(0.2, 0.8) > kellyFantasyWeight(0.4, 0.5), "larger edge → higher Kelly weight");
 
 const ranks = percentileRanks([1, 3, 2]);
 assert(ranks[0] === 0 && ranks[1] === 1 && ranks[2] === 0.5, `ranks=${ranks}`);
