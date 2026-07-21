@@ -328,9 +328,11 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
 
   const gamesPlayed = Math.round(result.gamesPlayed);
   // Reconcile saves with SV% in shot space so SAA VOR uses a coherent triple.
-  // Volume comes from the saves-rate model; skill from savePct.
+  // Volume denom = league SV% (not predicted skill SV%), matching structural saves.
   const savePct = Math.max(0.86, Math.min(0.945, result.rates.savePct));
-  const volumeSv = Math.max(0.88, Math.min(0.92, result.rates.savePct));
+  const prevSeason = PROJECTION_SEASON_ID - 10001;
+  const leagueSv = rt.goalieLeague.svPct.get(prevSeason) ?? 0.905;
+  const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
   const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {
     wins: Math.max(0, Math.round(result.rates.wins * gamesPlayed)),

@@ -1100,6 +1100,7 @@ export function fitAffineCalibrator(
   actual: number[],
   w: number[],
   K = 400,
+  minSlope = 0.5,
 ): RateCalibrator {
   let sw = 0;
   let sw2 = 0;
@@ -1127,7 +1128,9 @@ export function fitAffineCalibrator(
   const lambda = nEff / (nEff + K);
   b = 1 + lambda * (b - 1);
   a = lambda * a;
-  b = Math.max(0.5, Math.min(1.5, b)); // monotone + guard pathological slopes
+  // Skaters keep minSlope≈0.5; noise-dominated goalie rates need ~0.2 to match
+  // YoY reliability without destroying Spearman order.
+  b = Math.max(minSlope, Math.min(1.5, b));
   return { slope: b, intercept: a };
 }
 
