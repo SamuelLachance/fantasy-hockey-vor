@@ -60,8 +60,8 @@ const GOALIE_RATE_LIMITS = {
   winRate: 0.62,
   shutoutRate: 0.12,
   savesPerGame: 40,
-  savePctMin: 0.86,
-  savePctMax: 0.945,
+  savePctMin: 0.885,
+  savePctMax: 0.925,
 };
 
 function clampTotal(value: number, perGameMax: number, gamesPlayed: number): number {

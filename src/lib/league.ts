@@ -6,11 +6,10 @@ export const DEFAULT_LEAGUE: LeagueSettings = {
   season: "2026-27",
   // Yahoo H2H categories: goalie value is discounted because weekly goalie
   // starts are volatile, goalie categories are streamable off waivers, and
-  // goalie stat projections carry the most noise. The factor also offsets the
-  // structural z-score inflation of starters vs a bimodal starter/backup
-  // pool (raw z-sums would put the top goalie #1 overall). At 0.25 the top
-  // goalie drafts late round 2 / early round 3. Tune to taste (1 = none).
-  goalieVorFactor: 0.25,
+  // goalie skill stats (SV%/SO) are near-unpredictable season-to-season.
+  // Prefer volume (wins/saves/GP) over skill in rankings. At 0.2 the top goalie
+  // drafts mid-round 3-ish. Tune to taste (1 = none).
+  goalieVorFactor: 0.2,
 };
 
 /**

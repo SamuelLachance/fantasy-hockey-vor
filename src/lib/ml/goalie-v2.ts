@@ -1,16 +1,14 @@
 /**
- * Goalie projection v2: walk-forward stacked ensemble with structural
- * components.
+ * Goalie projection v2 — reliability-matched (not skater-grade skill accuracy).
+ *
+ * Public research: YoY SV% R² ≈ 0.04; best public GSAx YoY r ≈ 0.12.
+ * Honest design:
+ *  - savePct  → league mean ± tiny EB/GSAx tilt (heavy shrink)
+ *  - saves    → shot volume × league SV% (workload / team defense)
+ *  - shutouts → Poisson(volume × league GA rate)
+ *  - wins/GP  → stacked models (these already beat their YoY ceilings)
  *
  * Targets: wins/gp, saves/gp, shutouts/gp, savePct (plus GP separately).
- * Signals per target:
- *  - gbdt / ridge on a goalie feature matrix (trajectories + team + bio + GSAx)
- *  - marcel: EB-shrunk decay-weighted career rate
- *  - ewma / lag1 persistence
- *  - structural: decomposed from team context and shot-quality-adjusted
- *    goalie skill (GSAx): saves = SA/g × (fraction stopped), wins = f(team
- *    strength, goalie quality), shutouts = Poisson(0 | GA/g), savePct =
- *    league mean + shrunk GSAx-per-shot.
  */
 
 import { fitGbdt, predictGbdt, predictGbdtBatch, type GbdtModel, type GbdtOptions } from "./gbdt";
@@ -342,9 +340,10 @@ function pushLags(out: number[], vals: number[]): void {
   out.push(l1, l2, l3, ws > 0 ? sum / ws : NaN, Number.isFinite(l1) && Number.isFinite(l2) ? l1 - l2 : NaN);
 }
 
-/** EB-shrunk career save% (decay 0.8, prior ~1000 shots at league mean).
- * Prior was cut to 400 for elite separation, but that under-shrinks a YoY-r≈0.3
- * skill signal and drives negative OOS R². 1000 balances rank spread vs luck. */
+/**
+ * EB-shrunk career save%. Prior ≈ 3000 shots matches published GSAx regression
+ * constants — YoY skill is tiny, so almost everyone sits near league mean.
+ */
 function shrunkSavePct(
   eligible: PlayerSeasonRow[],
   leagueMean: number,
@@ -361,12 +360,11 @@ function shrunkSavePct(
     shots += w * shotsFaced;
     w *= 0.8;
   }
-  const PRIOR_SHOTS = 1200;
+  const PRIOR_SHOTS = 3000;
   return (saves + PRIOR_SHOTS * leagueMean) / Math.max(1, shots + PRIOR_SHOTS);
 }
 
-/** EB-shrunk GSAx/60 (decay 0.8, prior 900 minutes at 0).
- * Prior was 2000 — too aggressive for established starters. */
+/** EB-shrunk GSAx/60 (decay 0.8, prior 2000 minutes at 0). */
 function shrunkGsax60(
   eligible: PlayerSeasonRow[],
   registry: MoneyPuckGoalieRegistry | null,
@@ -384,7 +382,7 @@ function shrunkGsax60(
   }
   if (minutes <= 0) return 0;
   const rate = (gsax / minutes) * 60;
-  return rate * (minutes / (minutes + 900));
+  return rate * (minutes / (minutes + 2000));
 }
 
 export function goalieFeatureVector(
@@ -664,20 +662,17 @@ export function goalieStructuralSignal(
 
   switch (target) {
     case "savePct": {
-      // No GSAx amplify — YoY reliability is ~0.3; overstating skill drives
-      // negative OOS R². Slight GSAx tilt keeps elites ordered without over-dispersion.
-      const skill = saPg > 0 ? gsax60 / saPg : 0;
-      const fromGsax = leagueSv + skill;
-      const fromCareer = sv;
-      const blended = 0.45 * fromGsax + 0.55 * fromCareer;
-      return Math.max(0.86, Math.min(0.945, blended));
+      // League ± tiny skill tilt. Reliability r≈0.12 → keep ~85–90% of mass on
+      // the league mean; GSAx/career only nudge elites a few points of SV%.
+      const skillTilt = saPg > 0 ? gsax60 / saPg : 0;
+      const careerTilt = sv - leagueSv;
+      const blended = leagueSv + 0.12 * careerTilt + 0.08 * skillTilt;
+      return Math.max(0.885, Math.min(0.925, blended));
     }
     case "saves":
-      // Volume only (SA × league SV%). Skill luck lives in the savePct target;
-      // mixing it here destroyed the SA-persistence signal (R² 0.04 vs ceiling ~0.19).
+      // Volume only (SA × league SV%). Workload/team defense — not SV% luck.
       return Math.max(0, saPg * leagueSv);
     case "wins": {
-      // Shrink prior-season team quality toward .500 (moderate persistence).
       const pp = 0.5 + 0.65 * ((ex.targetRow.teamPointPctg ?? 0.5) - 0.5);
       return Math.max(
         0.05,
@@ -685,8 +680,6 @@ export function goalieStructuralSignal(
       );
     }
     case "shutouts": {
-      // Volume × league finishing — skill SV% injects savePct noise into a
-      // near-unpredictable count. Keep structural simple for ranking.
       const gaPg = saPg * (1 - leagueSv);
       return Math.max(0, Math.min(0.3, Math.exp(-gaPg) * params.shutoutCal));
     }
@@ -707,19 +700,38 @@ function goalieMarcelRate(
 
   if (target === "savePct") {
     // Shrink toward the history-era (lag-1) league mean; goalieEraAdjust then
-    // shifts once into the target season. Using trendLevel(target) here would
-    // double-count the era move when era-adjust is applied downstream.
+    // shifts once into the target season.
     const prior = league.svPct.get(seasonId - 10001) ?? 0.905;
     return shrunkSavePct(eligible, prior);
+  }
+
+  if (target === "saves") {
+    // Volume Marcel: decay-weighted SA/g × history-era league SV% (not raw saves,
+    // which bake in SV% luck).
+    const leagueSv = league.svPct.get(seasonId - 10001) ?? 0.905;
+    let saNum = 0;
+    let saDen = 0;
+    let w = 1;
+    for (let i = eligible.length - 1; i >= 0; i--) {
+      const r = eligible[i];
+      const sv = r.savePct > 1 ? r.savePct / 100 : r.savePct;
+      if (sv > 0 && sv < 1 && r.saves > 0 && r.gamesPlayed > 0) {
+        saNum += w * (r.saves / sv);
+        saDen += w * r.gamesPlayed;
+      }
+      w *= 0.7;
+    }
+    const saPg = saDen > 0 ? saNum / saDen : 30;
+    return (saPg * leagueSv * saDen + 26 * 10) / (saDen + 10);
   }
 
   // Count rates: decay-weighted with GP-scaled prior.
   const PRIORS: Record<string, { rate: number; games: number }> = {
     wins: { rate: 0.45, games: 25 },
-    saves: { rate: 26, games: 10 },
     shutouts: { rate: 0.035, games: 60 },
   };
   const prior = PRIORS[target];
+  if (!prior) return NaN;
   let num = 0;
   let den = 0;
   let w = 1;
@@ -977,7 +989,8 @@ export function computeGoalieSignals(
 }
 
 function clampTarget(target: GoalieV2Target, v: number): number {
-  if (target === "savePct") return Math.max(0.86, Math.min(0.945, v));
+  // Save% projections live in a tight band around league — matches reliability.
+  if (target === "savePct") return Math.max(0.885, Math.min(0.925, v));
   if (target === "wins") return Math.max(0, Math.min(0.85, v));
   if (target === "shutouts") return Math.max(0, Math.min(0.3, v));
   return Math.max(0, v);
@@ -1083,17 +1096,14 @@ function isLowHistory(ex: GoalieExample): boolean {
 const GOALIE_GP_SIGNALS = ["gbdt", "ridge", "ewma", "lag1", "structural"] as const;
 
 /**
- * Signals allowed per target. Shutouts / savePct are noise-dominated: ewma,
- * lag1, and the synthetic market (which re-injects them) have negative OOS R²
- * and only give the meta more ways to over-disperse. Saves keep volume models
- * only — skill luck belongs in savePct.
+ * Signals per target. savePct/shutouts: structural only (league-anchored).
+ * Saves: volume models without persistence luck. Wins: full stack (predictable).
  */
 const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
   wins: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural", "market"],
-  saves: ["gbdt", "ridge", "marcel", "structural"],
-  shutouts: ["gbdt", "marcel", "structural"],
-  // Structural (GSAx) + Marcel only; convex meta preserves elite/weak order.
-  savePct: ["structural", "marcel"],
+  saves: ["gbdt", "ridge", "structural"],
+  shutouts: ["structural"],
+  savePct: ["structural"],
 };
 
 function goalieSignalRow(
@@ -1134,7 +1144,7 @@ export function fitGoalieCalibrators(
   const out: Partial<Record<string, RateCalibrator>> = {};
   for (const t of GOALIE_V2_TARGETS) {
     if (!GOALIE_CALIBRATE_TARGETS.has(t)) continue; // others stay raw (no-op)
-    out[t] = fitAffineCalibrator(acc[t].p, acc[t].a, acc[t].w, GOALIE_CALIB_K, 0.15);
+    out[t] = fitAffineCalibrator(acc[t].p, acc[t].a, acc[t].w, GOALIE_CALIB_K, 0.1);
   }
   return out;
 }
@@ -1193,9 +1203,9 @@ export function fitGoalieMetas(
       }
     }
     const sigs = GOALIE_TARGET_SIGNALS[target];
-    // savePct: convex meta (weights sum to 1, no intercept) so elite/weak
-    // goalies keep differentiated projections instead of collapsing to ~.895.
-    const fit = target === "savePct" ? fitMetaConvex : fitMetaNnls;
+    // Single-signal / heavily shrunk targets: convex keeps weight = 1, no intercept.
+    const fit =
+      target === "savePct" || target === "shutouts" ? fitMetaConvex : fitMetaNnls;
     rateMetas[target] = {
       established: fit(Xe, ye, we, sigs),
       low: fit(Xl, yl, wl, sigs),

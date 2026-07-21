@@ -327,23 +327,24 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   if (!result) return null;
 
   const gamesPlayed = Math.round(result.gamesPlayed);
-  // Reconcile saves with SV% in shot space so SAA VOR uses a coherent triple.
-  // Volume denom = league SV% (not predicted skill SV%), matching structural saves.
-  const savePct = Math.max(0.86, Math.min(0.945, result.rates.savePct));
+  // Workload × league SV% for volume; skill SV% is a tiny tilt around league.
   const prevSeason = PROJECTION_SEASON_ID - 10001;
   const leagueSv = rt.goalieLeague.svPct.get(prevSeason) ?? 0.905;
+  const rawSv = Math.max(0.885, Math.min(0.925, result.rates.savePct));
+  // Final reliability shrink: 85% league + 15% model (r≈0.12 public ceiling).
+  const savePct = Math.round((0.85 * leagueSv + 0.15 * rawSv) * 1000) / 1000;
   const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
   const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {
     wins: Math.max(0, Math.round(result.rates.wins * gamesPlayed)),
     saves: Math.max(0, Math.round(shotsPg * savePct * gamesPlayed)),
     shutouts: Math.max(0, Math.round(result.rates.shutouts * gamesPlayed)),
-    savePct: Math.round(savePct * 1000) / 1000,
+    savePct,
   };
 
   return {
     gamesPlayed,
     projection,
-    reasoning: `v2 goalie ensemble (GBDT+ridge+EB save%+GSAx+structural wins). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
+    reasoning: `v2 goalie (workload/volume first; SV% = league ± tiny EB/GSAx tilt). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }
