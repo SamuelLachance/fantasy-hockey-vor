@@ -348,6 +348,6 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   return {
     gamesPlayed,
     projection,
-    reasoning: `v2 goalie (GBDT+ridge+MLP on SA/xSV residual). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
+    reasoning: `v2 goalie (170 feats: HD/5v5/MP + NHL GS/SA/TOI + injury/contract/team). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }

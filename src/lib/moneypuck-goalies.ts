@@ -1,3 +1,9 @@
+/**
+ * MoneyPuck goalie season registry — expanded skill / shot-quality fields.
+ *
+ * Parses situation=all (primary) and situation=5on5 (even-strength skill).
+ */
+
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 
@@ -8,6 +14,17 @@ export function moneypuckYearToSeasonId(year: number): number {
 
 export function seasonIdToMoneypuckYear(seasonId: number): number {
   return Math.floor(seasonId / 10000);
+}
+
+/** Even-strength (5v5) subset stored alongside all-situations totals. */
+export interface MoneyPuckGoalieFiveOn5 {
+  icetimeSeconds: number;
+  xGoalsAgainst: number;
+  goalsAgainst: number;
+  shotsOnGoalAgainst: number;
+  highDangerShots: number;
+  highDangerGoals: number;
+  highDangerxGoals: number;
 }
 
 export interface MoneyPuckGoalieSeason {
@@ -23,6 +40,23 @@ export interface MoneyPuckGoalieSeason {
   gsax: number;
   shotsOnGoalAgainst: number;
   unblockedShotAttempts: number;
+  blockedShotAttempts: number;
+  flurryAdjustedxGoals: number;
+  lowDangerShots: number;
+  mediumDangerShots: number;
+  highDangerShots: number;
+  lowDangerxGoals: number;
+  mediumDangerxGoals: number;
+  highDangerxGoals: number;
+  lowDangerGoals: number;
+  mediumDangerGoals: number;
+  highDangerGoals: number;
+  xRebounds: number;
+  rebounds: number;
+  xFreeze: number;
+  freeze: number;
+  /** 5v5 row when present in the CSV. */
+  fiveOn5?: MoneyPuckGoalieFiveOn5;
 }
 
 export interface MoneyPuckGoalieRegistry {
@@ -37,7 +71,13 @@ export function goalieSeasonKey(playerId: number, seasonId: number): string {
   return `${playerId}|${seasonId}`;
 }
 
-/** Parse MoneyPuck goalies.csv (situation=all rows only). */
+function num(cols: string[], i: number): number {
+  if (i < 0) return 0;
+  const v = Number(cols[i]);
+  return Number.isFinite(v) ? v : 0;
+}
+
+/** Parse MoneyPuck goalies.csv — keep `all` rows, attach `5on5` splits. */
 export function parseMoneyPuckGoalieCsv(csv: string): MoneyPuckGoalieSeason[] {
   const lines = csv.trim().split("\n");
   if (lines.length < 2) return [];
@@ -55,36 +95,89 @@ export function parseMoneyPuckGoalieCsv(csv: string): MoneyPuckGoalieSeason[] {
   const iGoals = idx("goals");
   const iOnGoal = idx("ongoal");
   const iUnblocked = idx("unblocked_shot_attempts");
+  const iBlocked = idx("blocked_shot_attempts");
+  const iFlurry = idx("flurryAdjustedxGoals");
+  const iLdSh = idx("lowDangerShots");
+  const iMdSh = idx("mediumDangerShots");
+  const iHdSh = idx("highDangerShots");
+  const iLdXg = idx("lowDangerxGoals");
+  const iMdXg = idx("mediumDangerxGoals");
+  const iHdXg = idx("highDangerxGoals");
+  const iLdG = idx("lowDangerGoals");
+  const iMdG = idx("mediumDangerGoals");
+  const iHdG = idx("highDangerGoals");
+  const iXReb = idx("xRebounds");
+  const iReb = idx("rebounds");
+  const iXFrz = idx("xFreeze");
+  const iFrz = idx("freeze");
 
   if (iPlayer < 0 || iSeason < 0 || iSituation < 0) return [];
 
-  const rows: MoneyPuckGoalieSeason[] = [];
+  const allByKey = new Map<string, MoneyPuckGoalieSeason>();
+  const fiveByKey = new Map<string, MoneyPuckGoalieFiveOn5>();
 
   for (let lineIdx = 1; lineIdx < lines.length; lineIdx++) {
     const cols = lines[lineIdx].split(",");
     if (cols.length < header.length) continue;
-    if (cols[iSituation] !== "all") continue;
-
+    const situation = cols[iSituation];
     const mpYear = Number(cols[iSeason]);
-    const xGoalsAgainst = Number(cols[iXg]);
-    const goalsAgainst = Number(cols[iGoals]);
-    if (!Number.isFinite(xGoalsAgainst) || !Number.isFinite(goalsAgainst)) continue;
+    const playerId = Number(cols[iPlayer]);
+    if (!Number.isFinite(mpYear) || !Number.isFinite(playerId)) continue;
+    const seasonId = moneypuckYearToSeasonId(mpYear);
+    const key = goalieSeasonKey(playerId, seasonId);
 
-    rows.push({
-      playerId: Number(cols[iPlayer]),
-      seasonId: moneypuckYearToSeasonId(mpYear),
+    if (situation === "5on5") {
+      fiveByKey.set(key, {
+        icetimeSeconds: num(cols, iToi),
+        xGoalsAgainst: num(cols, iXg),
+        goalsAgainst: num(cols, iGoals),
+        shotsOnGoalAgainst: num(cols, iOnGoal),
+        highDangerShots: num(cols, iHdSh),
+        highDangerGoals: num(cols, iHdG),
+        highDangerxGoals: num(cols, iHdXg),
+      });
+      continue;
+    }
+    if (situation !== "all") continue;
+
+    const xGoalsAgainst = num(cols, iXg);
+    const goalsAgainst = num(cols, iGoals);
+    allByKey.set(key, {
+      playerId,
+      seasonId,
       name: cols[iName],
       team: cols[iTeam],
-      gamesPlayed: Number(cols[iGp]) || 0,
-      icetimeSeconds: Number(cols[iToi]) || 0,
+      gamesPlayed: num(cols, iGp),
+      icetimeSeconds: num(cols, iToi),
       xGoalsAgainst,
       goalsAgainst,
       gsax: xGoalsAgainst - goalsAgainst,
-      shotsOnGoalAgainst: Number(cols[iOnGoal]) || 0,
-      unblockedShotAttempts: Number(cols[iUnblocked]) || 0,
+      shotsOnGoalAgainst: num(cols, iOnGoal),
+      unblockedShotAttempts: num(cols, iUnblocked),
+      blockedShotAttempts: num(cols, iBlocked),
+      flurryAdjustedxGoals: num(cols, iFlurry),
+      lowDangerShots: num(cols, iLdSh),
+      mediumDangerShots: num(cols, iMdSh),
+      highDangerShots: num(cols, iHdSh),
+      lowDangerxGoals: num(cols, iLdXg),
+      mediumDangerxGoals: num(cols, iMdXg),
+      highDangerxGoals: num(cols, iHdXg),
+      lowDangerGoals: num(cols, iLdG),
+      mediumDangerGoals: num(cols, iMdG),
+      highDangerGoals: num(cols, iHdG),
+      xRebounds: num(cols, iXReb),
+      rebounds: num(cols, iReb),
+      xFreeze: num(cols, iXFrz),
+      freeze: num(cols, iFrz),
     });
   }
 
+  const rows: MoneyPuckGoalieSeason[] = [];
+  for (const [key, row] of allByKey) {
+    const five = fiveByKey.get(key);
+    if (five) row.fiveOn5 = five;
+    rows.push(row);
+  }
   return rows;
 }
 
@@ -126,7 +219,10 @@ export async function buildMoneyPuckGoalieRegistry(
     try {
       const rows = await fetchMoneyPuckGoalieSeason(year);
       allRows.push(...rows);
-      onProgress?.(`  ${rows.length} goalies (all situations)`);
+      const withFive = rows.filter((r) => r.fiveOn5).length;
+      onProgress?.(
+        `  ${rows.length} goalies (all), ${withFive} with 5v5, HD/rebound/freeze fields`,
+      );
     } catch (e) {
       onProgress?.(`  skipped ${year}: ${e instanceof Error ? e.message : e}`);
     }
@@ -185,4 +281,28 @@ export function empiricalBayesGsaxPer60(
 export function expectedSavePctOnShots(xGoalsAgainst: number, shotsOnGoal: number): number {
   if (shotsOnGoal <= 0) return 0.905;
   return Math.max(0.85, Math.min(0.94, 1 - xGoalsAgainst / shotsOnGoal));
+}
+
+/** High-danger SV% residual vs expected (positive = better). */
+export function hdSvResidual(mp: MoneyPuckGoalieSeason): number {
+  if (mp.highDangerShots < 40 || mp.highDangerxGoals <= 0) return NaN;
+  const act = 1 - mp.highDangerGoals / mp.highDangerShots;
+  const exp = 1 - mp.highDangerxGoals / mp.highDangerShots;
+  return act - exp;
+}
+
+/** Rebound rate vs expected (negative = better control). */
+export function reboundRateDelta(mp: MoneyPuckGoalieSeason): number {
+  if (mp.shotsOnGoalAgainst < 200 || mp.xRebounds <= 0) return NaN;
+  const act = mp.rebounds / mp.shotsOnGoalAgainst;
+  const exp = mp.xRebounds / mp.shotsOnGoalAgainst;
+  return act - exp;
+}
+
+/** Freeze rate vs expected (positive = more freezes than model). */
+export function freezeRateDelta(mp: MoneyPuckGoalieSeason): number {
+  if (mp.shotsOnGoalAgainst < 200 || mp.xFreeze <= 0) return NaN;
+  const act = mp.freeze / mp.shotsOnGoalAgainst;
+  const exp = mp.xFreeze / mp.shotsOnGoalAgainst;
+  return act - exp;
 }

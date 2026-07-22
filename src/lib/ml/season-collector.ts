@@ -49,6 +49,20 @@ function mergeRow(existing: PlayerSeasonRow, incoming: PlayerSeasonRow): PlayerS
     shutouts: sum(existing.shutouts, incoming.shutouts),
     saves: sum(existing.saves, incoming.saves),
     savePct: wavg(existing.savePct, incoming.savePct),
+    gamesStarted: sum(existing.gamesStarted ?? 0, incoming.gamesStarted ?? 0),
+    shotsAgainst: sum(existing.shotsAgainst ?? 0, incoming.shotsAgainst ?? 0),
+    goalsAgainst: sum(existing.goalsAgainst ?? 0, incoming.goalsAgainst ?? 0),
+    timeOnIceSeconds: sum(
+      existing.timeOnIceSeconds ?? 0,
+      incoming.timeOnIceSeconds ?? 0,
+    ),
+    losses: sum(existing.losses ?? 0, incoming.losses ?? 0),
+    goalsAgainstAverage:
+      gp > 0
+        ? ((existing.goalsAgainstAverage ?? 0) * gpA +
+            (incoming.goalsAgainstAverage ?? 0) * gpB) /
+          gp
+        : existing.goalsAgainstAverage,
     teamGoalsForPerGame: existing.teamGoalsForPerGame,
   };
 }
@@ -152,6 +166,12 @@ async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
       shutouts: finite(g.shutouts),
       saves: finite(g.saves),
       savePct: finite(g.savePct) > 1 ? finite(g.savePct) / 100 : finite(g.savePct),
+      gamesStarted: finite(g.gamesStarted),
+      shotsAgainst: finite(g.shotsAgainst),
+      goalsAgainst: finite(g.goalsAgainst),
+      timeOnIceSeconds: finite(g.timeOnIce),
+      goalsAgainstAverage: finite(g.goalsAgainstAverage),
+      losses: finite(g.losses),
       teamGoalsForPerGame: 2.85,
     };
     const key = `${g.playerId}-${seasonId}`;

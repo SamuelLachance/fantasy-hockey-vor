@@ -233,6 +233,14 @@ export interface PlayerSeasonRow {
   shutouts: number;
   saves: number;
   savePct: number;
+  /** NHL goalie summary extras (filled by collector / enrich script). */
+  gamesStarted?: number;
+  shotsAgainst?: number;
+  goalsAgainst?: number;
+  /** Total TOI in seconds for the season. */
+  timeOnIceSeconds?: number;
+  goalsAgainstAverage?: number;
+  losses?: number;
   teamGoalsForPerGame: number;
   teamGoalsAgainstPerGame?: number;
   teamGoalDiffPerGame?: number;

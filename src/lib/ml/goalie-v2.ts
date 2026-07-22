@@ -23,6 +23,9 @@ import { sanitizeTargetSeasonRow } from "./features";
 import {
   loadMoneyPuckRegistrySync,
   lookupMoneyPuckGoalieSeason,
+  hdSvResidual,
+  reboundRateDelta,
+  freezeRateDelta,
   type MoneyPuckGoalieRegistry,
 } from "../moneypuck-goalies";
 import { applyRateCalibrator, fitAffineCalibrator, fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, marketTrainingEnabled, type MetaWeights, type RateCalibrator, type RidgeV2 } from "./stack";
@@ -72,6 +75,9 @@ export const GOALIE_V2_FEATURES: string[] = [
   ...lagNames("team_share"),
   "career_gp",
   "prior_seasons",
+  "career_starts",
+  "starter_seasons",
+  "gp_volatility",
   // Game-log durability. Goalies sit as healthy backups, so absence is only
   // an injury signal for long gaps (8+ team games) — starters never sit that
   // long by rotation alone.
@@ -81,31 +87,75 @@ export const GOALIE_V2_FEATURES: string[] = [
   "longest_gap_lag1",
   "tail82_lag1",
   "chronic_inj8",
+  "inj3_82_lag1",
+  "scratch82_lag1",
+  "head82_lag1",
+  "late_miss_lag1",
+  "late_avail_lag1",
   // Ironman + back-to-back workload (starters rarely play both B2B nights)
   "streak_lag1",
   "full_season_lag1",
   "team_b2b_lag1",
   "b2b_gp_cap",
+  // Bio / draft / contract
   "age",
   "age_sq",
+  "age_over_35",
   "height_in",
+  "weight_lb",
+  "bmi",
+  "shoots_left",
   "draft_overall",
+  "draft_round",
+  "years_since_draft",
+  "undrafted",
+  "cap_hit_m",
+  "years_remaining",
+  "walk_year",
+  // Fantasy + NHL summary history
   ...lagNames("wins_pg"),
   ...lagNames("saves_pg"),
   ...lagNames("shutouts_pg"),
   ...lagNames("savePct"),
+  ...lagNames("gs_pg"),
+  ...lagNames("start_share"),
+  ...lagNames("sa_pg"),
+  ...lagNames("toi_pg"),
+  ...lagNames("gaa"),
+  ...lagNames("win_pct"),
+  // MoneyPuck skill / volume / process
   ...lagNames("gsax60"),
   ...lagNames("xsvpct_delta"),
   ...lagNames("workload_sa60"),
+  ...lagNames("hd_sv_delta"),
+  ...lagNames("hd_shot_share"),
+  ...lagNames("rebound_delta"),
+  ...lagNames("freeze_delta"),
+  ...lagNames("flurry_gsax60"),
+  ...lagNames("unblocked_sa60"),
+  ...lagNames("five_gsax60"),
+  ...lagNames("five_hd_sv_delta"),
   "sv_shrunk",
   "gsax60_shrunk",
+  "hd_sv_shrunk",
+  // Team / era / coach / depth
   "team_ga_pg",
   "team_gf_pg",
+  "team_diff_pg",
   "team_point_pct",
+  "team_rank",
   "team_elo",
+  "team_hits_pg",
+  "team_pim_pg",
+  "team_blocks_pg",
+  "team_pp_share",
+  "team_pk_ga60",
   "team_sa_pg",
   "team_xsv",
   "team_changed",
+  "coach_tenure",
+  "depth_rank",
+  "is_starter",
   "league_svpct",
 ];
 
@@ -406,6 +456,14 @@ interface MpDerived {
   gsax60: number;
   xsvpctDelta: number;
   sa60: number;
+  hdSvDelta: number;
+  hdShotShare: number;
+  reboundDelta: number;
+  freezeDelta: number;
+  flurryGsax60: number;
+  unblockedSa60: number;
+  fiveGsax60: number;
+  fiveHdSvDelta: number;
 }
 
 function mpDerived(
@@ -421,7 +479,96 @@ function mpDerived(
     mp.shotsOnGoalAgainst > 0 ? 1 - mp.goalsAgainst / mp.shotsOnGoalAgainst : 0.905;
   const expectedSv =
     mp.shotsOnGoalAgainst > 0 ? 1 - mp.xGoalsAgainst / mp.shotsOnGoalAgainst : 0.905;
-  return { gsax60, xsvpctDelta: actualSv - expectedSv, sa60 };
+  const totalShots =
+    mp.lowDangerShots + mp.mediumDangerShots + mp.highDangerShots;
+  const hdShotShare = totalShots > 0 ? mp.highDangerShots / totalShots : NaN;
+  const flurryGsax =
+    mp.flurryAdjustedxGoals > 0
+      ? ((mp.flurryAdjustedxGoals - mp.goalsAgainst) / minutes) * 60
+      : NaN;
+  const unblockedSa60 =
+    mp.unblockedShotAttempts > 0 ? (mp.unblockedShotAttempts / minutes) * 60 : NaN;
+
+  let fiveGsax60 = NaN;
+  let fiveHdSvDelta = NaN;
+  if (mp.fiveOn5 && mp.fiveOn5.icetimeSeconds > 0) {
+    const m5 = mp.fiveOn5.icetimeSeconds / 60;
+    fiveGsax60 =
+      ((mp.fiveOn5.xGoalsAgainst - mp.fiveOn5.goalsAgainst) / m5) * 60;
+    if (mp.fiveOn5.highDangerShots >= 25 && mp.fiveOn5.highDangerxGoals > 0) {
+      const act = 1 - mp.fiveOn5.highDangerGoals / mp.fiveOn5.highDangerShots;
+      const exp = 1 - mp.fiveOn5.highDangerxGoals / mp.fiveOn5.highDangerShots;
+      fiveHdSvDelta = act - exp;
+    }
+  }
+
+  return {
+    gsax60,
+    xsvpctDelta: actualSv - expectedSv,
+    sa60,
+    hdSvDelta: hdSvResidual(mp),
+    hdShotShare,
+    reboundDelta: reboundRateDelta(mp),
+    freezeDelta: freezeRateDelta(mp),
+    flurryGsax60: flurryGsax,
+    unblockedSa60,
+    fiveGsax60,
+    fiveHdSvDelta,
+  };
+}
+
+/** Shots against per game from NHL field or derived from saves/SV%. */
+function rowSaPg(r: PlayerSeasonRow): number {
+  if (r.gamesPlayed <= 0) return NaN;
+  if (r.shotsAgainst != null && r.shotsAgainst > 0) return r.shotsAgainst / r.gamesPlayed;
+  const sv = r.savePct > 1 ? r.savePct / 100 : r.savePct;
+  if (sv > 0 && sv < 1 && r.saves > 0) return r.saves / sv / r.gamesPlayed;
+  return NaN;
+}
+
+function rowStartShare(r: PlayerSeasonRow, league: GoalieLeagueContext): number {
+  const gs = r.gamesStarted;
+  if (gs != null && gs > 0 && r.gamesPlayed > 0) {
+    // Starts as share of appearances when GS known; else fall back to team GP share.
+    return Math.min(1, gs / Math.max(r.gamesPlayed, gs));
+  }
+  const teamGp = league.teamGoalieGp.get(`${primaryTeam(r.team)}:${r.seasonId}`);
+  return teamGp && teamGp > 0 ? r.gamesPlayed / teamGp : NaN;
+}
+
+function rowGaa(r: PlayerSeasonRow): number {
+  if (r.goalsAgainstAverage != null && r.goalsAgainstAverage > 0) return r.goalsAgainstAverage;
+  if (r.gamesPlayed <= 0) return NaN;
+  if (r.goalsAgainst != null && r.goalsAgainst >= 0) {
+    return (r.goalsAgainst * 60) / Math.max(1, (r.timeOnIceSeconds ?? r.gamesPlayed * 3600) / 60);
+  }
+  const sa = rowSaPg(r);
+  const sv = r.savePct > 1 ? r.savePct / 100 : r.savePct;
+  if (Number.isFinite(sa) && sv > 0 && sv < 1) return sa * (1 - sv);
+  return NaN;
+}
+
+function shrunkHdSv(
+  eligible: PlayerSeasonRow[],
+  registry: MoneyPuckGoalieRegistry | null,
+): number {
+  let num = 0;
+  let den = 0;
+  let w = 1;
+  for (let i = eligible.length - 1; i >= 0; i--) {
+    const mp = lookupMoneyPuckGoalieSeason(registry, eligible[i].playerId, eligible[i].seasonId);
+    if (mp) {
+      const d = hdSvResidual(mp);
+      if (Number.isFinite(d) && mp.highDangerShots > 0) {
+        num += w * d * mp.highDangerShots;
+        den += w * mp.highDangerShots;
+      }
+    }
+    w *= 0.8;
+  }
+  if (den <= 0) return 0;
+  const raw = num / den;
+  return raw * (den / (den + 400));
 }
 
 function pushLags(out: number[], vals: number[]): void {
@@ -505,12 +652,28 @@ export function goalieFeatureVector(
   );
   out.push(eligible.reduce((s, r) => s + r.gamesPlayed, 0));
   out.push(eligible.length);
+  out.push(eligible.reduce((s, r) => s + (r.gamesStarted ?? 0), 0));
+  out.push(eligible.filter((r) => r.gamesPlayed >= 40).length);
+  {
+    const gps = eligible.map((r) => gp82(r)).filter((v) => Number.isFinite(v));
+    if (gps.length >= 2) {
+      const m = gps.reduce((a, b) => a + b, 0) / gps.length;
+      const v = gps.reduce((s, x) => s + (x - m) ** 2, 0) / gps.length;
+      out.push(Math.sqrt(v) / Math.max(1, m));
+    } else {
+      out.push(NaN);
+    }
+  }
 
   // Game-log durability (full history; 8+ game gaps = goalie injury proxy)
   const inj8Per82 = (r: PlayerSeasonRow): number =>
     r.dur && r.dur.teamGames > 0
       ? ((r.dur.inj8 + r.dur.tail) * 82) / r.dur.teamGames
       : NaN;
+  const inj3Per82 = (r: PlayerSeasonRow): number =>
+    r.dur && r.dur.teamGames > 0 ? (r.dur.inj * 82) / r.dur.teamGames : NaN;
+  const scratch82 = (r: PlayerSeasonRow): number =>
+    r.dur && r.dur.teamGames > 0 ? (r.dur.scratch * 82) / r.dur.teamGames : NaN;
   const recent = history.slice(-3);
   const j = recent.map(inj8Per82);
   const [j1, j2, j3] = [j.at(-1) ?? NaN, j.at(-2) ?? NaN, j.at(-3) ?? NaN];
@@ -525,6 +688,7 @@ export function goalieFeatureVector(
   });
   out.push(j1, jWs > 0 ? jSum / jWs : NaN);
   const lastDur = history.at(-1)?.dur;
+  const lastHist = history.at(-1);
   out.push(lastDur ? lastDur.spells8 : NaN);
   out.push(lastDur ? lastDur.longestGap : NaN);
   out.push(
@@ -542,6 +706,17 @@ export function goalieFeatureVector(
     cw *= 0.75;
   }
   out.push(cW > 0 ? cSum / cW : NaN);
+  out.push(lastHist ? inj3Per82(lastHist) : NaN);
+  out.push(lastHist ? scratch82(lastHist) : NaN);
+  out.push(
+    lastDur && lastDur.teamGames > 0 ? lastDur.head / lastDur.teamGames : NaN,
+  );
+  out.push(
+    lastDur && lastDur.window > 0 ? lastDur.lateMiss / lastDur.window : NaN,
+  );
+  out.push(
+    lastDur && lastDur.window > 0 ? lastDur.latePlayed / lastDur.window : NaN,
+  );
 
   // Ironman + B2B workload cap. Starters almost never play both nights of a
   // back-to-back, so expected GP ≈ share × (82 − teamB2b) with a soft floor.
@@ -566,37 +741,139 @@ export function goalieFeatureVector(
   const age = target.age && target.age > 0 ? target.age : NaN;
   out.push(age);
   out.push(Number.isFinite(age) ? ((age - 29) * (age - 29)) / 100 : NaN);
+  out.push(Number.isFinite(age) && age >= 35 ? 1 : Number.isFinite(age) ? 0 : NaN);
   out.push(target.heightInches ?? NaN);
+  out.push(target.weightPounds ?? NaN);
+  out.push(
+    target.heightInches && target.weightPounds && target.heightInches > 0
+      ? (target.weightPounds / (target.heightInches * target.heightInches)) * 703
+      : NaN,
+  );
+  out.push(
+    target.shootsLeft === 1 || target.shootsLeft === 0 ? target.shootsLeft : NaN,
+  );
   out.push(
     target.draftOverallPick && target.draftOverallPick > 0 ? target.draftOverallPick : NaN,
+  );
+  out.push(target.draftRound && target.draftRound > 0 ? target.draftRound : NaN);
+  {
+    const draftYear = target.draftYear ?? 0;
+    const seasonYear = Math.floor(target.seasonId / 10000);
+    out.push(draftYear > 0 ? Math.max(0, seasonYear - draftYear) : NaN);
+    out.push(draftYear > 0 || (target.draftOverallPick ?? 0) > 0 ? 0 : 1);
+  }
+  out.push(
+    target.capHitUsd && target.capHitUsd > 0 ? target.capHitUsd / 1_000_000 : NaN,
+  );
+  out.push(
+    target.contractYearsRemaining != null && target.contractYearsRemaining > 0
+      ? target.contractYearsRemaining
+      : NaN,
+  );
+  out.push(
+    target.contractYearsRemaining === 1
+      ? 1
+      : target.contractYearsRemaining != null && target.contractYearsRemaining > 1
+        ? 0
+        : NaN,
   );
 
   pushLags(out, eligible.map((r) => goalieActual(r, "wins")));
   pushLags(out, eligible.map((r) => goalieActual(r, "saves")));
   pushLags(out, eligible.map((r) => goalieActual(r, "shutouts")));
   pushLags(out, eligible.map((r) => goalieActual(r, "savePct")));
+  pushLags(
+    out,
+    eligible.map((r) =>
+      r.gamesPlayed > 0 && r.gamesStarted != null ? r.gamesStarted / r.gamesPlayed : NaN,
+    ),
+  );
+  pushLags(
+    out,
+    eligible.map((r) => rowStartShare(r, league)),
+  );
+  pushLags(out, eligible.map((r) => rowSaPg(r)));
+  pushLags(
+    out,
+    eligible.map((r) =>
+      r.timeOnIceSeconds && r.gamesPlayed > 0
+        ? r.timeOnIceSeconds / 60 / r.gamesPlayed
+        : NaN,
+    ),
+  );
+  pushLags(out, eligible.map((r) => rowGaa(r)));
+  pushLags(
+    out,
+    eligible.map((r) =>
+      r.gamesPlayed > 0 ? r.wins / r.gamesPlayed : NaN,
+    ),
+  );
 
   const mpVals = eligible.map((r) => mpDerived(registry, r));
   pushLags(out, mpVals.map((m) => m?.gsax60 ?? NaN));
   pushLags(out, mpVals.map((m) => m?.xsvpctDelta ?? NaN));
   pushLags(out, mpVals.map((m) => m?.sa60 ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.hdSvDelta ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.hdShotShare ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.reboundDelta ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.freezeDelta ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.flurryGsax60 ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.unblockedSa60 ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.fiveGsax60 ?? NaN));
+  pushLags(out, mpVals.map((m) => m?.fiveHdSvDelta ?? NaN));
 
   const leagueSv = league.svPct.get(prevSeason) ?? 0.905;
   out.push(shrunkSavePct(eligible, leagueSv));
   out.push(shrunkGsax60(eligible, registry));
+  out.push(shrunkHdSv(eligible, registry));
 
   out.push(target.teamGoalsAgainstPerGame ?? NaN);
   out.push(target.teamGoalsForPerGame ?? NaN);
+  out.push(target.teamGoalDiffPerGame ?? NaN);
   out.push(target.teamPointPctg ?? NaN);
+  out.push(target.teamLeagueRank ?? NaN);
   out.push(target.teamElo != null ? target.teamElo / 1000 : NaN);
+  out.push(target.teamHitsPerGame ?? NaN);
+  out.push(target.teamPimPerGame ?? NaN);
+  out.push(target.teamBlocksPerGame ?? NaN);
+  out.push(target.teamPpGoalShare ?? NaN);
+  out.push(target.teamPkGaPer60 ?? NaN);
   const targetTeam = primaryTeam(target.team);
   out.push(league.teamSaPerGame.get(`${targetTeam}:${prevSeason}`) ?? NaN);
   out.push(league.teamXsv.get(`${targetTeam}:${prevSeason}`) ?? NaN);
   const lastTeam =
     history.length > 0 ? primaryTeam(history[history.length - 1].team) : "";
   out.push(lastTeam && targetTeam ? (lastTeam === targetTeam ? 0 : 1) : NaN);
+  out.push(target.coachTenureSeasons ?? NaN);
+
+  // Depth among team goalies last season (by GP share).
+  {
+    const last = eligible.at(-1);
+    if (last) {
+      const team = primaryTeam(last.team);
+      const teamGp = league.teamGoalieGp.get(`${team}:${last.seasonId}`) ?? 0;
+      const share = teamGp > 0 ? last.gamesPlayed / teamGp : NaN;
+      // Approximate rank: 1 if share≥0.55, 2 if ≥0.25, else 3.
+      const depthRank = Number.isFinite(share)
+        ? share >= 0.55
+          ? 1
+          : share >= 0.25
+            ? 2
+            : 3
+        : NaN;
+      out.push(depthRank);
+      out.push(Number.isFinite(share) ? (share >= 0.55 ? 1 : 0) : NaN);
+    } else {
+      out.push(NaN, NaN);
+    }
+  }
   out.push(leagueSv);
 
+  if (out.length !== GOALIE_V2_FEATURES.length) {
+    throw new Error(
+      `goalie feature length mismatch: got ${out.length}, expected ${GOALIE_V2_FEATURES.length}`,
+    );
+  }
   return out;
 }
 
