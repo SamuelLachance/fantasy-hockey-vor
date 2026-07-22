@@ -120,9 +120,9 @@ async function main() {
   const goalieMetas = fitGoalieMetas(gwf.seasons, PROJECTION_SEASON_ID);
 
   console.log("training final goalie base models on all seasons...");
-  const gLeague = buildGoalieLeagueContext(rows);
-  const gExamples = buildGoalieExamples(rows);
   const registry = loadMoneyPuckRegistrySync();
+  const gLeague = buildGoalieLeagueContext(rows, registry);
+  const gExamples = buildGoalieExamples(rows);
   const gMatrix = buildGoalieMatrix(gExamples, gLeague, registry);
   const gLevels = buildGoalieLevels(rows);
   const finalGoalie = trainGoalieBoundary(

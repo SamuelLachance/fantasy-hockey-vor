@@ -111,13 +111,14 @@ export function getV2Runtime(): V2Runtime | null {
           ? Math.sqrt(vals.reduce((s, x) => s + (x - m) ** 2, 0) / vals.length)
           : 0;
     }
+    const registry = loadMoneyPuckRegistrySync();
     runtimeCache = {
       bundle,
       rows,
       byPlayer,
       league: buildLeagueContext(rows),
-      goalieLeague: buildGoalieLeagueContext(rows),
-      registry: loadMoneyPuckRegistrySync(),
+      goalieLeague: buildGoalieLeagueContext(rows, registry),
+      registry,
       caches: loadContextCaches(),
       skaterLevels: buildTargetLevels(rows, V2_SKATER_TARGETS, false),
       goalieLevels: buildGoalieLevels(rows),
@@ -327,12 +328,12 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   if (!result) return null;
 
   const gamesPlayed = Math.round(result.gamesPlayed);
-  // Workload × league SV% for volume; skill SV% is a tiny tilt around league.
+  // Workload × model SV%; residual-trained SV% already sits near league.
   const prevSeason = PROJECTION_SEASON_ID - 10001;
   const leagueSv = rt.goalieLeague.svPct.get(prevSeason) ?? 0.905;
   const rawSv = Math.max(0.885, Math.min(0.925, result.rates.savePct));
-  // Final reliability shrink: 85% league + 15% model (r≈0.12 public ceiling).
-  const savePct = Math.round((0.85 * leagueSv + 0.15 * rawSv) * 1000) / 1000;
+  // Light final shrink (models already train on quality residual, not raw SV%).
+  const savePct = Math.round((0.7 * leagueSv + 0.3 * rawSv) * 1000) / 1000;
   const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
   const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {
@@ -345,6 +346,6 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   return {
     gamesPlayed,
     projection,
-    reasoning: `v2 goalie (workload/volume first; SV% = league ± tiny EB/GSAx tilt). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
+    reasoning: `v2 goalie (factorized: SA volume + xSV residual + team xGA). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }

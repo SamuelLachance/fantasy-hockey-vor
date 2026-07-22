@@ -38,9 +38,9 @@ async function main() {
   );
 
   console.log("training final goalie models...");
-  const league = buildGoalieLeagueContext(rows);
-  const examples = buildGoalieExamples(rows);
   const registry = loadMoneyPuckRegistrySync();
+  const league = buildGoalieLeagueContext(rows, registry);
+  const examples = buildGoalieExamples(rows);
   const matrix = buildGoalieMatrix(examples, league, registry);
   const levels = buildGoalieLevels(rows);
   const final = trainGoalieBoundary(

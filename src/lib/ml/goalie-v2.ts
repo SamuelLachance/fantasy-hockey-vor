@@ -1,12 +1,12 @@
 /**
- * Goalie projection v2 — reliability-matched (not skater-grade skill accuracy).
+ * Goalie projection v2 — factorized training (not skater-style raw SV%).
  *
  * Public research: YoY SV% R² ≈ 0.04; best public GSAx YoY r ≈ 0.12.
- * Honest design:
- *  - savePct  → league mean ± tiny EB/GSAx tilt (heavy shrink)
- *  - saves    → shot volume × league SV% (workload / team defense)
- *  - shutouts → Poisson(volume × league GA rate)
- *  - wins/GP  → stacked models (these already beat their YoY ceilings)
+ * Models learn what persists, then we derive fantasy rates:
+ *  - savePct GBDT/ridge → quality residual (xSV%−xExpected, else SV%−league)
+ *  - saves   GBDT/ridge → shots-against/gp, decoded as SA × league SV%
+ *  - shutouts → Poisson(SA × GA%) + Marcel
+ *  - wins/GP  → full stack (team + workload; already useful)
  *
  * Targets: wins/gp, saves/gp, shutouts/gp, savePct (plus GP separately).
  */
@@ -102,6 +102,7 @@ export const GOALIE_V2_FEATURES: string[] = [
   "team_point_pct",
   "team_elo",
   "team_sa_pg",
+  "team_xsv",
   "team_changed",
   "league_svpct",
 ];
@@ -123,6 +124,8 @@ export interface GoalieLeagueContext {
   teamSaPerGame: Map<string, number>;
   /** `${team}:${seasonId}` → total goalie GP for that team-season. */
   teamGoalieGp: Map<string, number>;
+  /** `${team}:${seasonId}` → MoneyPuck expected SV% (1 − xGA/SOG). */
+  teamXsv: Map<string, number>;
 }
 
 function primaryTeam(team: string): string {
@@ -154,12 +157,75 @@ function knownLevel(rec: Record<number, number> | undefined, seasonId: number): 
 }
 
 /**
- * Era-relative encode/decode for model targets. saves scales with league shot
- * volume (multiplicative); savePct shifts with the league save% environment
- * (additive). Training uses the actual season's known level; prediction uses
- * the pre-season trend estimate.
+ * Model training spaces (what GBDT/ridge optimize):
+ *  - savePct → quality residual (not raw SV%)
+ *  - saves   → SA/gp (workload), decoded to saves via league SV%
+ *  - wins/shutouts → per-game rates as before
  */
-function toRelative(
+function actualSaPg(row: PlayerSeasonRow): number {
+  if (row.gamesPlayed <= 0 || row.saves <= 0) return NaN;
+  const sv = row.savePct > 1 ? row.savePct / 100 : row.savePct;
+  if (!(sv > 0 && sv < 1)) return NaN;
+  return row.saves / sv / row.gamesPlayed;
+}
+
+function actualShotsFaced(row: PlayerSeasonRow): number {
+  const sv = row.savePct > 1 ? row.savePct / 100 : row.savePct;
+  if (!(sv > 0 && sv < 1) || row.saves <= 0) return 0;
+  return row.saves / sv;
+}
+
+/** Train label for GBDT/ridge (model space). */
+function modelTrainY(
+  target: GoalieV2Target,
+  actual: PlayerSeasonRow,
+  league: GoalieLeagueContext,
+  registry: MoneyPuckGoalieRegistry | null,
+  levels: GoalieLevels,
+): number {
+  if (target === "savePct") {
+    const mp = lookupMoneyPuckGoalieSeason(registry, actual.playerId, actual.seasonId);
+    if (mp && mp.shotsOnGoalAgainst >= 200) {
+      const act = 1 - mp.goalsAgainst / mp.shotsOnGoalAgainst;
+      const exp = 1 - mp.xGoalsAgainst / mp.shotsOnGoalAgainst;
+      return act - exp; // xSV% residual — more persistent than raw SV%
+    }
+    const sv = goalieActual(actual, "savePct");
+    const leagueSv = knownLevel(levels.savePct, actual.seasonId);
+    return Number.isFinite(leagueSv) ? sv - leagueSv : sv - 0.905;
+  }
+  if (target === "saves") {
+    const sa = actualSaPg(actual);
+    const leagueSa = league.saPerGame.get(actual.seasonId) ?? 30;
+    return Number.isFinite(sa) && leagueSa > 0 ? sa / leagueSa : 1;
+  }
+  return toRelativeRate(target, goalieActual(actual, target), levels, actual.seasonId);
+}
+
+/** Decode GBDT/ridge output into the fantasy rate the meta expects. */
+function modelDecodeY(
+  target: GoalieV2Target,
+  pred: number,
+  seasonId: number,
+  league: GoalieLeagueContext,
+  levels: GoalieLevels,
+): number {
+  if (target === "savePct") {
+    const leagueSv = trendLevel(league.svPct, seasonId, 0.905);
+    // Residual is tiny; clamp skill delta hard (±1.5 pts SV%).
+    const delta = Math.max(-0.015, Math.min(0.015, pred));
+    return clampTarget("savePct", leagueSv + delta);
+  }
+  if (target === "saves") {
+    const leagueSa = trendLevel(league.saPerGame, seasonId, 30);
+    const leagueSv = trendLevel(league.svPct, seasonId, 0.905);
+    const saPg = Math.max(18, Math.min(40, pred * leagueSa));
+    return Math.max(0, saPg * leagueSv);
+  }
+  return clampTarget(target, fromRelativeRate(target, pred, levels, seasonId));
+}
+
+function toRelativeRate(
   target: GoalieV2Target,
   y: number,
   levels: GoalieLevels,
@@ -176,7 +242,7 @@ function toRelative(
   return y;
 }
 
-function fromRelative(
+function fromRelativeRate(
   target: GoalieV2Target,
   rel: number,
   levels: GoalieLevels,
@@ -184,7 +250,6 @@ function fromRelative(
 ): number {
   if (target === "saves") {
     const lvl = levelEstimate(levels.saves, seasonId);
-    // Never return raw relative units if the level is missing.
     return Number.isFinite(lvl) && lvl > 0 ? rel * lvl : rel * 28;
   }
   if (target === "savePct") {
@@ -192,6 +257,17 @@ function fromRelative(
     return Number.isFinite(lvl) ? rel + lvl : rel + 0.905;
   }
   return rel;
+}
+
+/** Shot-faced sample weight — SV%/volume labels are noise unless heavily shot-weighted. */
+function goalieSampleWeight(row: PlayerSeasonRow, target: GoalieV2Target): number {
+  const gpW = Math.min(40, row.gamesPlayed) / 40;
+  if (target === "savePct" || target === "saves") {
+    const shots = actualShotsFaced(row);
+    const shotW = Math.min(1, Math.sqrt(Math.max(0, shots) / 1200));
+    return Math.max(0.05, gpW * shotW);
+  }
+  return Math.max(0.05, gpW);
 }
 
 /**
@@ -224,11 +300,15 @@ function goalieEraAdjust(
   return value;
 }
 
-export function buildGoalieLeagueContext(rows: PlayerSeasonRow[]): GoalieLeagueContext {
+export function buildGoalieLeagueContext(
+  rows: PlayerSeasonRow[],
+  registry: MoneyPuckGoalieRegistry | null = null,
+): GoalieLeagueContext {
   const svPct = new Map<number, number>();
   const saPerGame = new Map<number, number>();
   const teamSaPerGame = new Map<string, number>();
   const teamGoalieGp = new Map<string, number>();
+  const teamXsv = new Map<string, number>();
 
   const bySeason = new Map<number, PlayerSeasonRow[]>();
   for (const r of rows) {
@@ -268,7 +348,25 @@ export function buildGoalieLeagueContext(rows: PlayerSeasonRow[]): GoalieLeagueC
     saPerGame.set(seasonId, saCnt > 0 ? saSum / saCnt : 30);
   }
 
-  return { svPct, saPerGame, teamSaPerGame, teamGoalieGp };
+  // Team expected SV% from MoneyPuck xGA / SOG (shot-quality environment).
+  if (registry) {
+    const agg = new Map<string, { xga: number; sog: number }>();
+    for (const mp of Object.values(registry.byKey)) {
+      if (mp.shotsOnGoalAgainst < 50) continue;
+      const team = primaryTeam(mp.team);
+      if (!team) continue;
+      const key = `${team}:${mp.seasonId}`;
+      const cur = agg.get(key) ?? { xga: 0, sog: 0 };
+      cur.xga += mp.xGoalsAgainst;
+      cur.sog += mp.shotsOnGoalAgainst;
+      agg.set(key, cur);
+    }
+    for (const [key, v] of agg) {
+      if (v.sog >= 400) teamXsv.set(key, 1 - v.xga / v.sog);
+    }
+  }
+
+  return { svPct, saPerGame, teamSaPerGame, teamGoalieGp, teamXsv };
 }
 
 export function buildGoalieExamples(
@@ -491,6 +589,7 @@ export function goalieFeatureVector(
   out.push(target.teamElo != null ? target.teamElo / 1000 : NaN);
   const targetTeam = primaryTeam(target.team);
   out.push(league.teamSaPerGame.get(`${targetTeam}:${prevSeason}`) ?? NaN);
+  out.push(league.teamXsv.get(`${targetTeam}:${prevSeason}`) ?? NaN);
   const lastTeam =
     history.length > 0 ? primaryTeam(history[history.length - 1].team) : "";
   out.push(lastTeam && targetTeam ? (lastTeam === targetTeam ? 0 : 1) : NaN);
@@ -595,8 +694,7 @@ export function fitGoalieStructural(
     }
   }
 
-  // Shutout calibration: SA × league SV% (not skill SV%, not xGA — shrunk xGA
-  // flattened ranks in OOS tests). Same recipe as prediction.
+  // Shutout calibration: SA × skill-tilted GA rate (matches prediction).
   let poisSum = 0;
   let actSum = 0;
   let n = 0;
@@ -604,8 +702,8 @@ export function fitGoalieStructural(
     if (ex.actualRow.gamesPlayed < 15) continue;
     const eligible = goalieEligible(ex.history);
     if (eligible.length === 0) continue;
-    const { leagueSv, saPg } = goalieWorkloadContext(ex, league);
-    const gaPg = saPg * (1 - leagueSv);
+    const { sv, saPg } = goalieWorkloadContext(ex, league);
+    const gaPg = saPg * (1 - sv);
     poisSum += Math.exp(-gaPg);
     actSum += goalieActual(ex.actualRow, "shutouts");
     n++;
@@ -662,11 +760,14 @@ export function goalieStructuralSignal(
 
   switch (target) {
     case "savePct": {
-      // League ± tiny skill tilt. Reliability r≈0.12 → keep ~85–90% of mass on
-      // the league mean; GSAx/career only nudge elites a few points of SV%.
+      // Blend: league + team shot-quality env (xSV) + tiny GSAx/career tilt.
+      const prevSeason = ex.seasonId - 10001;
+      const teamXsv =
+        league.teamXsv.get(`${primaryTeam(ex.targetRow.team)}:${prevSeason}`) ?? leagueSv;
       const skillTilt = saPg > 0 ? gsax60 / saPg : 0;
       const careerTilt = sv - leagueSv;
-      const blended = leagueSv + 0.12 * careerTilt + 0.08 * skillTilt;
+      const blended =
+        0.55 * leagueSv + 0.3 * teamXsv + 0.1 * (leagueSv + careerTilt) + 0.05 * (leagueSv + skillTilt);
       return Math.max(0.885, Math.min(0.925, blended));
     }
     case "saves":
@@ -680,7 +781,8 @@ export function goalieStructuralSignal(
       );
     }
     case "shutouts": {
-      const gaPg = saPg * (1 - leagueSv);
+      // Use skill-tilted SV for GA rate — low-GA environments produce more SO.
+      const gaPg = saPg * (1 - sv);
       return Math.max(0, Math.min(0.3, Math.exp(-gaPg) * params.shutoutCal));
     }
   }
@@ -826,21 +928,20 @@ export function trainGoalieBoundary(
   const ridge: Record<string, RidgeV2> = {};
 
   for (const target of GOALIE_V2_TARGETS) {
-    // Targets in era-relative units: models learn skill, not the era; decoding
-    // at prediction time re-anchors to the target season's estimated level.
+    // Factorized labels: savePct→quality residual, saves→SA/gp, else rates.
     const yT = new Float64Array(trainIdx.length);
     const wT = new Float64Array(trainIdx.length);
     for (let k = 0; k < trainIdx.length; k++) {
       const ex = examples[trainIdx[k]];
-      yT[k] = toRelative(target, goalieActual(ex.actualRow, target), levels, ex.seasonId);
-      wT[k] = Math.min(40, ex.actualRow.gamesPlayed) / 40;
+      yT[k] = modelTrainY(target, ex.actualRow, league, registry, levels);
+      wT[k] = goalieSampleWeight(ex.actualRow, target);
     }
     const yV = new Float64Array(valIdx.length);
     const wV = new Float64Array(valIdx.length);
     for (let k = 0; k < valIdx.length; k++) {
       const ex = examples[valIdx[k]];
-      yV[k] = toRelative(target, goalieActual(ex.actualRow, target), levels, ex.seasonId);
-      wV[k] = Math.min(40, ex.actualRow.gamesPlayed) / 40;
+      yV[k] = modelTrainY(target, ex.actualRow, league, registry, levels);
+      wV[k] = goalieSampleWeight(ex.actualRow, target);
     }
     gbdt[target] = fitGbdt(trainCols, yT, matrix.featureNames, target, wT, GBDT_OPTS, valCols, yV, wV);
 
@@ -849,8 +950,8 @@ export function trainGoalieBoundary(
     const wF = new Float64Array(fitIdx.length);
     for (let k = 0; k < fitIdx.length; k++) {
       const ex = examples[fitIdx[k]];
-      yF[k] = toRelative(target, goalieActual(ex.actualRow, target), levels, ex.seasonId);
-      wF[k] = Math.min(40, ex.actualRow.gamesPlayed) / 40;
+      yF[k] = modelTrainY(target, ex.actualRow, league, registry, levels);
+      wF[k] = goalieSampleWeight(ex.actualRow, target);
     }
     ridge[target] = fitRidgeV2(matrix.columns, matrix.featureNames, fitIdx, yF, wF, RIDGE_LAMBDA_G);
   }
@@ -924,14 +1025,14 @@ export function computeGoalieSignals(
     for (let k = 0; k < n; k++) {
       for (let j = 0; j < nCols; j++) vec[j] = cols[j][k];
       const ex = examples[k];
-      set.ridge[k] = clampTarget(
+      set.ridge[k] = modelDecodeY(
         target,
-        fromRelative(target, predictRidgeV2(models.ridge[target], vec), levels, ex.seasonId),
+        predictRidgeV2(models.ridge[target], vec),
+        ex.seasonId,
+        league,
+        levels,
       );
-      set.gbdt[k] = clampTarget(
-        target,
-        fromRelative(target, set.gbdt[k], levels, ex.seasonId),
-      );
+      set.gbdt[k] = modelDecodeY(target, set.gbdt[k], ex.seasonId, league, levels);
       const adj = (v: number): number =>
         goalieEraAdjust(target, v, levels, ex.history, ex.seasonId);
       const m = adj(goalieMarcelRate(ex.history, target, league, ex.seasonId));
@@ -1022,7 +1123,7 @@ export function runGoalieWalkForward(
   levels: GoalieLevels;
 } {
   const registry = loadMoneyPuckRegistrySync();
-  const league = buildGoalieLeagueContext(rows);
+  const league = buildGoalieLeagueContext(rows, registry);
   const examples = buildGoalieExamples(rows);
   const levels = buildGoalieLevels(rows);
   onProgress?.(
@@ -1096,14 +1197,16 @@ function isLowHistory(ex: GoalieExample): boolean {
 const GOALIE_GP_SIGNALS = ["gbdt", "ridge", "ewma", "lag1", "structural"] as const;
 
 /**
- * Signals per target. savePct/shutouts: structural only (league-anchored).
- * Saves: volume models without persistence luck. Wins: full stack (predictable).
+ * Signals per target after factorized training.
+ * savePct/saves: residual/volume models + structural + Marcel.
+ * Shutouts: Poisson structural + Marcel (rare events).
+ * Wins: full stack.
  */
 const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
   wins: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural", "market"],
-  saves: ["gbdt", "ridge", "structural"],
-  shutouts: ["structural"],
-  savePct: ["structural"],
+  saves: ["gbdt", "ridge", "marcel", "structural"],
+  shutouts: ["structural", "marcel"],
+  savePct: ["gbdt", "ridge", "marcel", "structural"],
 };
 
 function goalieSignalRow(
@@ -1203,7 +1306,7 @@ export function fitGoalieMetas(
       }
     }
     const sigs = GOALIE_TARGET_SIGNALS[target];
-    // Single-signal / heavily shrunk targets: convex keeps weight = 1, no intercept.
+    // Rare/noisy rates: convex keeps mass on reliable signals.
     const fit =
       target === "savePct" || target === "shutouts" ? fitMetaConvex : fitMetaNnls;
     rateMetas[target] = {
@@ -1311,13 +1414,19 @@ export function inferGoalieForPlayer(
     const e = adj(goalieEwma(history, target));
     const l = adj(goalieLag1(history, target));
     const bySignal: Record<GoalieSignal, number> = {
-      gbdt: clampTarget(
+      gbdt: modelDecodeY(
         target,
-        fromRelative(target, predictGbdt(models.gbdt[target], vec), levels, targetRow.seasonId),
+        predictGbdt(models.gbdt[target], vec),
+        targetRow.seasonId,
+        league,
+        levels,
       ),
-      ridge: clampTarget(
+      ridge: modelDecodeY(
         target,
-        fromRelative(target, predictRidgeV2(models.ridge[target], vec), levels, targetRow.seasonId),
+        predictRidgeV2(models.ridge[target], vec),
+        targetRow.seasonId,
+        league,
+        levels,
       ),
       marcel,
       ewma: Number.isFinite(e) ? e : marcel,
