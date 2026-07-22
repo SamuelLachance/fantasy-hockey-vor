@@ -13,6 +13,7 @@ import {
   goalieMetaGp,
   goalieMetaRate,
   GOALIE_V2_TARGETS,
+  isBackupGoalie,
   runGoalieWalkForward,
 } from "../src/lib/ml/goalie-v2";
 import type { MlDataset } from "../src/lib/ml/types";
@@ -94,7 +95,7 @@ async function main() {
       const sig = season.signals.rates[target];
       for (let k = 0; k < season.examples.length; k++) {
         const ex = season.examples[k];
-        const low = goalieEligible(ex.history).length <= 2;
+        const low = isBackupGoalie(ex);
         y.push(goalieActual(ex.actualRow, target));
         raw.push(goalieMetaRate(metas, target, sig, k, low, false));
         cal.push(goalieMetaRate(metas, target, sig, k, low, true));
@@ -115,7 +116,7 @@ async function main() {
       const ex = season.examples[k];
       yGp.push(Math.min(72, gp82(ex.actualRow)));
       pGp.push(
-        goalieMetaGp(metas, season.signals.gp, k, goalieEligible(ex.history).length <= 2),
+        goalieMetaGp(metas, season.signals.gp, k, isBackupGoalie(ex)),
       );
     }
     const mGp = metrics(yGp, pGp);

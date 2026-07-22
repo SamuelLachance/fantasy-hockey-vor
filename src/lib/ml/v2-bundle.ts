@@ -28,7 +28,7 @@ export interface V2Bundle {
     gbdt: Record<string, GbdtModel>;
     ridge: Record<string, RidgeV2>;
     /** Optional for older bundles — inference falls back if missing. */
-    mlp?: Record<string, MlpModel>;
+    mlp?: Partial<Record<string, MlpModel>>;
     structural: GoalieStructuralParams;
     gbdtGp: GbdtModel;
     ridgeGp: RidgeV2;

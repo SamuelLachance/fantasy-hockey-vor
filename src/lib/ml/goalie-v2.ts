@@ -1,14 +1,15 @@
 /**
- * Goalie projection v2 — factorized training (not skater-style raw SV%).
+ * Goalie projection v2 — factorized + pruned + role-split.
  *
- * Public research: YoY SV% R² ≈ 0.04; best public GSAx YoY r ≈ 0.12.
- * Models learn what persists, then we derive fantasy rates:
- *  - savePct GBDT/ridge → quality residual (xSV%−xExpected, else SV%−league)
- *  - saves   GBDT/ridge → shots-against/gp, decoded as SA × league SV%
- *  - shutouts → Poisson(SA × GA%) + Marcel
- *  - wins/GP  → full stack (team + workload; already useful)
+ * Models learn intermediates that persist, then fantasy rates are derived:
+ *  - savePct → quality residual (xSV − xExpected / SV − league)
+ *  - saves   → SA/gp × SV%
+ *  - wins    → team strength × role (+ tiny GSAx)
+ *  - shutouts → Poisson(SA × GA%)
+ *  - GP      → stack + tandem renormalization (~82 team GP)
  *
- * Targets: wins/gp, saves/gp, shutouts/gp, savePct (plus GP separately).
+ * Training uses OOS-selected ~56 features (170 candidates) and separate
+ * starter vs backup meta weights.
  */
 
 import { fitGbdt, predictGbdt, predictGbdtBatch, type GbdtModel, type GbdtOptions } from "./gbdt";
@@ -43,9 +44,54 @@ export const GOALIE_SIGNALS = [
   "ewma",
   "lag1",
   "structural",
+  "factor",
   "market",
 ] as const;
 export type GoalieSignal = (typeof GOALIE_SIGNALS)[number];
+
+/** Max features kept after walk-forward univariate screen. */
+const GOALIE_FEATURE_BUDGET = 56;
+
+/** Always retain these when present — role, skill, team, injury core. */
+const GOALIE_ANCHOR_FEATURES = new Set([
+  "gp82_lag1",
+  "gp82_ewma",
+  "team_share_lag1",
+  "team_share_ewma",
+  "career_gp",
+  "prior_seasons",
+  "inj8_82_lag1",
+  "chronic_inj8",
+  "b2b_gp_cap",
+  "age",
+  "age_sq",
+  "wins_pg_lag1",
+  "saves_pg_lag1",
+  "savePct_lag1",
+  "gs_pg_lag1",
+  "sa_pg_lag1",
+  "start_share_lag1",
+  "gsax60_lag1",
+  "xsvpct_delta_lag1",
+  "hd_sv_delta_lag1",
+  "five_gsax60_lag1",
+  "workload_sa60_lag1",
+  "sv_shrunk",
+  "gsax60_shrunk",
+  "hd_sv_shrunk",
+  "team_ga_pg",
+  "team_gf_pg",
+  "team_point_pct",
+  "team_elo",
+  "team_sa_pg",
+  "team_xsv",
+  "team_pk_ga60",
+  "team_diff_pg",
+  "depth_rank",
+  "is_starter",
+  "league_svpct",
+  "cap_hit_m",
+]);
 
 const GOALIE_MIN_ELIGIBLE_GP = 8;
 
@@ -1036,10 +1082,18 @@ export function goalieStructuralSignal(
 ): number {
   const { eligible, leagueSv, sv, saPg } = goalieWorkloadContext(ex, league);
   const gsax60 = shrunkGsax60(eligible, registry);
+  const last = eligible.at(-1);
+  let startShare = 0.5;
+  if (last) {
+    const teamGp = league.teamGoalieGp.get(`${primaryTeam(last.team)}:${last.seasonId}`);
+    if (teamGp && teamGp > 0) startShare = last.gamesPlayed / teamGp;
+    else if (last.gamesStarted != null && last.gamesPlayed > 0) {
+      startShare = Math.min(1, last.gamesStarted / Math.max(last.gamesPlayed, last.gamesStarted));
+    }
+  }
 
   switch (target) {
     case "savePct": {
-      // Blend: league + team shot-quality env (xSV) + tiny GSAx/career tilt.
       const prevSeason = ex.seasonId - 10001;
       const teamXsv =
         league.teamXsv.get(`${primaryTeam(ex.targetRow.team)}:${prevSeason}`) ?? leagueSv;
@@ -1050,18 +1104,60 @@ export function goalieStructuralSignal(
       return Math.max(0.885, Math.min(0.925, blended));
     }
     case "saves":
-      // Volume only (SA × league SV%). Workload/team defense — not SV% luck.
       return Math.max(0, saPg * leagueSv);
     case "wins": {
+      // Wins/gp ≈ team win rate when this goalie plays (point% proxy) + tiny skill.
       const pp = 0.5 + 0.65 * ((ex.targetRow.teamPointPctg ?? 0.5) - 0.5);
+      const roleTilt = 0.92 + 0.16 * (startShare - 0.5);
       return Math.max(
         0.05,
-        Math.min(0.85, params.winsA + params.winsB * (pp - 0.5) + params.winsC * gsax60),
+        Math.min(
+          0.85,
+          params.winsA * 0.35 +
+            pp * roleTilt * 0.55 +
+            params.winsB * (pp - 0.5) * 0.25 +
+            params.winsC * gsax60,
+        ),
       );
     }
     case "shutouts": {
-      // Use skill-tilted SV for GA rate — low-GA environments produce more SO.
       const gaPg = saPg * (1 - sv);
+      return Math.max(0, Math.min(0.3, Math.exp(-gaPg) * params.shutoutCal));
+    }
+  }
+}
+
+/**
+ * Pure derived fantasy rates from intermediates (SA, SV residual, team, role).
+ * Complements learned models — meta can trust this when trees chase noise.
+ */
+export function goalieFactorSignal(
+  params: GoalieStructuralParams,
+  ex: { history: PlayerSeasonRow[]; targetRow: PlayerSeasonRow; seasonId: number },
+  target: GoalieV2Target,
+  league: GoalieLeagueContext,
+  registry: MoneyPuckGoalieRegistry | null,
+): number {
+  const { eligible, leagueSv, sv, saPg } = goalieWorkloadContext(ex, league);
+  const gsax60 = shrunkGsax60(eligible, registry);
+  const prevSeason = ex.seasonId - 10001;
+  const teamXsv =
+    league.teamXsv.get(`${primaryTeam(ex.targetRow.team)}:${prevSeason}`) ?? leagueSv;
+  const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
+  const savePct = Math.max(
+    0.885,
+    Math.min(0.925, 0.6 * leagueSv + 0.25 * teamXsv + 0.15 * (sv + skillTilt)),
+  );
+
+  switch (target) {
+    case "savePct":
+      return savePct;
+    case "saves":
+      return Math.max(0, saPg * savePct);
+    case "wins":
+      return goalieStructuralSignal(params, ex, "wins", league, registry);
+    case "shutouts": {
+      const gaPg = saPg * (1 - savePct);
       return Math.max(0, Math.min(0.3, Math.exp(-gaPg) * params.shutoutCal));
     }
   }
@@ -1151,12 +1247,15 @@ export interface GoalieBoundaryModels {
   boundarySeason: number;
   gbdt: Record<string, GbdtModel>;
   ridge: Record<string, RidgeV2>;
-  mlp: Record<string, MlpModel>;
+  mlp: Partial<Record<string, MlpModel>>;
   structural: GoalieStructuralParams;
   gbdtGp: GbdtModel;
   ridgeGp: RidgeV2;
   /** Optional; GP meta does not use MLP (unstable on small n). */
   mlpGp?: MlpModel;
+  /** Indices into GOALIE_V2_FEATURES used for GBDT/ridge/MLP this boundary. */
+  keptFeatureIdx: number[];
+  keptFeatureNames: string[];
 }
 
 const GBDT_OPTS: GbdtOptions = {
@@ -1166,7 +1265,7 @@ const GBDT_OPTS: GbdtOptions = {
   minChildWeight: 8,
   lambda: 1.5,
   subsample: 0.85,
-  colsampleByTree: 0.8,
+  colsampleByTree: 0.7,
   earlyStoppingRounds: 20,
 };
 
@@ -1181,6 +1280,112 @@ const MLP_OPTS: MlpOptions = {
 };
 
 const RIDGE_LAMBDA_G = 80;
+
+/** Weighted |corr| of a feature column vs target labels on train rows. */
+function featureAbsCorr(
+  col: Float64Array,
+  rowIdx: number[],
+  y: Float64Array,
+  w: Float64Array,
+): number {
+  let sw = 0;
+  let sx = 0;
+  let sy = 0;
+  let nFin = 0;
+  for (let k = 0; k < rowIdx.length; k++) {
+    const x = col[rowIdx[k]];
+    if (!Number.isFinite(x) || !Number.isFinite(y[k])) continue;
+    const wt = w[k] || 0;
+    sw += wt;
+    sx += wt * x;
+    sy += wt * y[k];
+    nFin++;
+  }
+  if (sw <= 0 || nFin < 25) return 0;
+  const mx = sx / sw;
+  const my = sy / sw;
+  let sxx = 0;
+  let syy = 0;
+  let sxy = 0;
+  for (let k = 0; k < rowIdx.length; k++) {
+    const x = col[rowIdx[k]];
+    if (!Number.isFinite(x) || !Number.isFinite(y[k])) continue;
+    const wt = w[k] || 0;
+    const dx = x - mx;
+    const dy = y[k] - my;
+    sxx += wt * dx * dx;
+    syy += wt * dy * dy;
+    sxy += wt * dx * dy;
+  }
+  const den = Math.sqrt(sxx * syy);
+  return den > 0 ? Math.abs(sxy / den) : 0;
+}
+
+/**
+ * Pick ~GOALIE_FEATURE_BUDGET columns: anchors first, then best univariate
+ * correlation with factorized train labels (max over targets).
+ */
+function selectGoalieFeatureIndices(
+  matrix: GoalieMatrix,
+  examples: GoalieExample[],
+  trainIdx: number[],
+  league: GoalieLeagueContext,
+  registry: MoneyPuckGoalieRegistry | null,
+  levels: GoalieLevels,
+): number[] {
+  const scores = new Float64Array(matrix.featureNames.length);
+  for (const target of GOALIE_V2_TARGETS) {
+    const y = new Float64Array(trainIdx.length);
+    const w = new Float64Array(trainIdx.length);
+    for (let k = 0; k < trainIdx.length; k++) {
+      const ex = examples[trainIdx[k]];
+      y[k] = modelTrainY(target, ex.actualRow, league, registry, levels);
+      w[k] = goalieSampleWeight(ex.actualRow, target);
+    }
+    for (let j = 0; j < matrix.columns.length; j++) {
+      const c = featureAbsCorr(matrix.columns[j], trainIdx, y, w);
+      if (c > scores[j]) scores[j] = c;
+    }
+  }
+
+  const anchorIdx: number[] = [];
+  const rest: { j: number; s: number }[] = [];
+  for (let j = 0; j < matrix.featureNames.length; j++) {
+    const name = matrix.featureNames[j];
+    if (GOALIE_ANCHOR_FEATURES.has(name)) anchorIdx.push(j);
+    else rest.push({ j, s: scores[j] });
+  }
+  rest.sort((a, b) => b.s - a.s);
+  const kept = new Set(anchorIdx);
+  for (const { j, s } of rest) {
+    if (kept.size >= GOALIE_FEATURE_BUDGET) break;
+    if (s <= 0.02) continue;
+    kept.add(j);
+  }
+  // Fill if anchors alone are short.
+  for (const { j } of rest) {
+    if (kept.size >= GOALIE_FEATURE_BUDGET) break;
+    kept.add(j);
+  }
+  return [...kept].sort((a, b) => a - b);
+}
+
+function subsetColumns(columns: Float64Array[], idx: number[]): Float64Array[] {
+  return idx.map((j) => columns[j]);
+}
+
+function alignFeatureVector(
+  fullVec: number[],
+  fullNames: string[],
+  modelNames: string[],
+): number[] {
+  if (modelNames.length === fullNames.length) return fullVec;
+  const map = new Map(fullNames.map((n, i) => [n, fullVec[i]]));
+  return modelNames.map((n) => {
+    const v = map.get(n);
+    return v != null && Number.isFinite(v) ? v : NaN;
+  });
+}
 
 export function trainGoalieBoundary(
   examples: GoalieExample[],
@@ -1203,12 +1408,23 @@ export function trainGoalieBoundary(
     else trainIdx.push(i);
   }
 
-  const nCols = matrix.columns.length;
+  const keptFeatureIdx = selectGoalieFeatureIndices(
+    matrix,
+    examples,
+    trainIdx.length >= 40 ? trainIdx : [...trainIdx, ...valIdx],
+    league,
+    registry,
+    levels,
+  );
+  const keptFeatureNames = keptFeatureIdx.map((j) => matrix.featureNames[j]);
+  const keptCols = subsetColumns(matrix.columns, keptFeatureIdx);
+
+  const nCols = keptCols.length;
   const sub = (idx: number[]): Float64Array[] => {
     const cols: Float64Array[] = new Array(nCols);
     for (let j = 0; j < nCols; j++) {
       const col = new Float64Array(idx.length);
-      for (let k = 0; k < idx.length; k++) col[k] = matrix.columns[j][idx[k]];
+      for (let k = 0; k < idx.length; k++) col[k] = keptCols[j][idx[k]];
       cols[j] = col;
     }
     return cols;
@@ -1221,7 +1437,6 @@ export function trainGoalieBoundary(
   const mlp: Record<string, MlpModel> = {};
 
   for (const target of GOALIE_V2_TARGETS) {
-    // Factorized labels: savePct→quality residual, saves→SA/gp, else rates.
     const yT = new Float64Array(trainIdx.length);
     const wT = new Float64Array(trainIdx.length);
     for (let k = 0; k < trainIdx.length; k++) {
@@ -1236,7 +1451,17 @@ export function trainGoalieBoundary(
       yV[k] = modelTrainY(target, ex.actualRow, league, registry, levels);
       wV[k] = goalieSampleWeight(ex.actualRow, target);
     }
-    gbdt[target] = fitGbdt(trainCols, yT, matrix.featureNames, target, wT, GBDT_OPTS, valCols, yV, wV);
+    gbdt[target] = fitGbdt(
+      trainCols,
+      yT,
+      keptFeatureNames,
+      target,
+      wT,
+      GBDT_OPTS,
+      valCols,
+      yV,
+      wV,
+    );
 
     const fitIdx = [...trainIdx, ...valIdx];
     const yF = new Float64Array(fitIdx.length);
@@ -1246,20 +1471,22 @@ export function trainGoalieBoundary(
       yF[k] = modelTrainY(target, ex.actualRow, league, registry, levels);
       wF[k] = goalieSampleWeight(ex.actualRow, target);
     }
-    ridge[target] = fitRidgeV2(matrix.columns, matrix.featureNames, fitIdx, yF, wF, RIDGE_LAMBDA_G);
-    mlp[target] = fitMlp(
-      matrix.columns,
-      matrix.featureNames,
-      trainIdx,
-      yT,
-      wT,
-      target,
-      MLP_OPTS,
-      matrix.columns,
-      yV,
-      wV,
-      valIdx,
-    );
+    ridge[target] = fitRidgeV2(keptCols, keptFeatureNames, fitIdx, yF, wF, RIDGE_LAMBDA_G);
+    if (target !== "shutouts") {
+      mlp[target] = fitMlp(
+        keptCols,
+        keptFeatureNames,
+        trainIdx,
+        yT,
+        wT,
+        target,
+        MLP_OPTS,
+        keptCols,
+        yV,
+        wV,
+        valIdx,
+      );
+    }
   }
 
   const structural = fitGoalieStructural(
@@ -1268,7 +1495,6 @@ export function trainGoalieBoundary(
     registry,
   );
 
-  // GP models
   const yGpT = new Float64Array(trainIdx.length);
   const wGpT = new Float64Array(trainIdx.length);
   for (let k = 0; k < trainIdx.length; k++) {
@@ -1276,12 +1502,19 @@ export function trainGoalieBoundary(
     wGpT[k] = 1;
   }
   const yGpV = new Float64Array(valIdx.length);
-  const wGpV = new Float64Array(valIdx.length);
   for (let k = 0; k < valIdx.length; k++) {
     yGpV[k] = Math.min(72, gp82(examples[valIdx[k]].actualRow));
-    wGpV[k] = 1;
   }
-  const gbdtGp = fitGbdt(trainCols, yGpT, matrix.featureNames, "gamesPlayed", wGpT, GBDT_OPTS, valCols, yGpV);
+  const gbdtGp = fitGbdt(
+    trainCols,
+    yGpT,
+    keptFeatureNames,
+    "gamesPlayed",
+    wGpT,
+    GBDT_OPTS,
+    valCols,
+    yGpV,
+  );
 
   const fitIdx = [...trainIdx, ...valIdx];
   const yGpF = new Float64Array(fitIdx.length);
@@ -1290,9 +1523,19 @@ export function trainGoalieBoundary(
     yGpF[k] = Math.min(72, gp82(examples[fitIdx[k]].actualRow));
     wGpF[k] = 1;
   }
-  const ridgeGp = fitRidgeV2(matrix.columns, matrix.featureNames, fitIdx, yGpF, wGpF, RIDGE_LAMBDA_G);
+  const ridgeGp = fitRidgeV2(keptCols, keptFeatureNames, fitIdx, yGpF, wGpF, RIDGE_LAMBDA_G);
 
-  return { boundarySeason, gbdt, ridge, mlp, structural, gbdtGp, ridgeGp };
+  return {
+    boundarySeason,
+    gbdt,
+    ridge,
+    mlp,
+    structural,
+    gbdtGp,
+    ridgeGp,
+    keptFeatureIdx,
+    keptFeatureNames,
+  };
 }
 
 export interface GoalieSignalSet {
@@ -1309,25 +1552,30 @@ export function computeGoalieSignals(
   registry: MoneyPuckGoalieRegistry | null,
   levels: GoalieLevels,
 ): GoalieSignalSet {
-  const nCols = matrix.columns.length;
+  const keptIdx = models.keptFeatureIdx ?? matrix.featureNames.map((_, i) => i);
+  const keptNames = models.keptFeatureNames ?? matrix.featureNames;
+  const nCols = keptIdx.length;
   const cols: Float64Array[] = new Array(nCols);
   for (let j = 0; j < nCols; j++) {
+    const src = matrix.columns[keptIdx[j]];
     const col = new Float64Array(exampleRows.length);
-    for (let k = 0; k < exampleRows.length; k++) col[k] = matrix.columns[j][exampleRows[k]];
+    for (let k = 0; k < exampleRows.length; k++) col[k] = src[exampleRows[k]];
     cols[j] = col;
   }
   const n = exampleRows.length;
 
   const rates: Record<string, Record<GoalieSignal, Float64Array>> = {};
   for (const target of GOALIE_V2_TARGETS) {
+    const hasMlp = !!models.mlp[target];
     const set: Record<GoalieSignal, Float64Array> = {
       gbdt: predictGbdtBatch(models.gbdt[target], cols),
       ridge: new Float64Array(n),
-      mlp: predictMlpBatch(models.mlp[target], cols),
+      mlp: hasMlp ? predictMlpBatch(models.mlp[target], cols) : new Float64Array(n),
       marcel: new Float64Array(n),
       ewma: new Float64Array(n),
       lag1: new Float64Array(n),
       structural: new Float64Array(n),
+      factor: new Float64Array(n),
       market: new Float64Array(n),
     };
     const vec = new Array(nCols);
@@ -1342,7 +1590,6 @@ export function computeGoalieSignals(
         levels,
       );
       set.gbdt[k] = modelDecodeY(target, set.gbdt[k], ex.seasonId, league, levels);
-      set.mlp[k] = modelDecodeY(target, set.mlp[k], ex.seasonId, league, levels);
       const adj = (v: number): number =>
         goalieEraAdjust(target, v, levels, ex.history, ex.seasonId);
       const m = adj(goalieMarcelRate(ex.history, target, league, ex.seasonId));
@@ -1351,8 +1598,19 @@ export function computeGoalieSignals(
       set.ewma[k] = Number.isFinite(e) ? e : set.marcel[k];
       const l = adj(goalieLag1(ex.history, target));
       set.lag1[k] = Number.isFinite(l) ? l : set.marcel[k];
-      set.structural[k] = goalieStructuralSignal(models.structural, ex, target, league, registry);
-      // Synthetic market: Marcel/EWMA/lag1 blend (structural is the opportunist anchor).
+      set.structural[k] = goalieStructuralSignal(
+        models.structural,
+        ex,
+        target,
+        league,
+        registry,
+      );
+      set.factor[k] = goalieFactorSignal(models.structural, ex, target, league, registry);
+      if (hasMlp) {
+        set.mlp[k] = modelDecodeY(target, set.mlp[k], ex.seasonId, league, levels);
+      } else {
+        set.mlp[k] = set.factor[k];
+      }
       set.market[k] =
         0.5 * set.marcel[k] + 0.3 * set.ewma[k] + 0.2 * set.lag1[k];
     }
@@ -1384,7 +1642,6 @@ export function computeGoalieSignals(
     }
     gp.lag1[k] = lag1;
     gp.ewma[k] = ws > 0 ? Math.min(72, ew / ws) : lag1;
-    // Team-share allocation: last season's share of team goalie games × 82.
     const last = eligible.at(-1);
     let share = NaN;
     if (last) {
@@ -1396,7 +1653,37 @@ export function computeGoalieSignals(
     gp.share[k] = Number.isFinite(share) ? share : gp.ewma[k];
   }
 
+  normalizeTandemGp(examples, gp);
+  void keptNames;
   return { rates, gp };
+}
+
+/** Soft team GP budget: goalie GP signals on a team sum toward ~80. */
+function normalizeTandemGp(
+  examples: GoalieExample[],
+  gp: GoalieSignalSet["gp"],
+): void {
+  const keys = ["gbdt", "ridge", "ewma", "lag1", "share"] as const;
+  for (const key of keys) {
+    const groups = new Map<string, number[]>();
+    for (let k = 0; k < examples.length; k++) {
+      const team = primaryTeam(examples[k].targetRow.team);
+      if (!team) continue;
+      const list = groups.get(team) ?? [];
+      list.push(k);
+      groups.set(team, list);
+    }
+    for (const idxs of groups.values()) {
+      if (idxs.length < 2) continue;
+      let sum = 0;
+      for (const i of idxs) sum += gp[key][i];
+      if (!(sum > 40 && sum < 140)) continue;
+      const scale = 80 / sum;
+      for (const i of idxs) {
+        gp[key][i] = Math.max(4, Math.min(72, gp[key][i] * scale));
+      }
+    }
+  }
 }
 
 function clampTarget(target: GoalieV2Target, v: number): number {
@@ -1436,9 +1723,9 @@ export function runGoalieWalkForward(
   const league = buildGoalieLeagueContext(rows, registry);
   const examples = buildGoalieExamples(rows);
   const levels = buildGoalieLevels(rows);
-  onProgress?.(
-    `goalie walk-forward: ${examples.length} examples, ${GOALIE_V2_FEATURES.length} features, MP registry=${registry ? "yes" : "no"}`,
-  );
+    onProgress?.(
+      `goalie walk-forward: ${examples.length} examples, ${GOALIE_V2_FEATURES.length} candidates (prune→${GOALIE_FEATURE_BUDGET}), MP=${registry ? "yes" : "no"}`,
+    );
   const matrix = buildGoalieMatrix(examples, league, registry);
 
   const bySeason = new Map<number, number[]>();
@@ -1494,27 +1781,37 @@ const GOALIE_CALIB_K = 80;
 
 /**
  * Only calibrate targets where the monotone affine shrink robustly improves
- * out-of-sample error. savePct and shutouts need a slope floor near their YoY
- * reliability (~0.2–0.3), not the skater floor of 0.5. wins stays raw (already
- * at ceiling).
+ * out-of-sample error. savePct/shutouts/saves are noise-dominated at the edges.
  */
-const GOALIE_CALIBRATE_TARGETS: ReadonlySet<string> = new Set(["savePct", "shutouts"]);
+const GOALIE_CALIBRATE_TARGETS: ReadonlySet<string> = new Set([
+  "savePct",
+  "shutouts",
+]);
 
-function isLowHistory(ex: GoalieExample): boolean {
-  return goalieEligible(ex.history).length <= 2;
+/** Starter vs backup role split for meta routing (exported for backtests). */
+export function isStarterGoalie(ex: GoalieExample): boolean {
+  const last = goalieEligible(ex.history).at(-1);
+  if (!last) return false;
+  if (last.gamesPlayed >= 40) return true;
+  if ((last.gamesStarted ?? 0) >= 30) return true;
+  return last.gamesPlayed >= 35;
+}
+
+export function isBackupGoalie(ex: GoalieExample): boolean {
+  return !isStarterGoalie(ex);
 }
 
 const GOALIE_GP_SIGNALS = ["gbdt", "ridge", "ewma", "lag1", "structural"] as const;
 
 /**
- * Signals per target after factorized training.
- * MLP joins GBDT/ridge on residual/volume labels; GP stays tree/ridge (stable).
+ * Signals per target: factor (derived intermediates) is first-class;
+ * MLP only where volume/skill labels are dense.
  */
 const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
-  wins: ["gbdt", "ridge", "mlp", "marcel", "ewma", "lag1", "structural", "market"],
-  saves: ["gbdt", "ridge", "mlp", "marcel", "structural"],
-  shutouts: ["structural", "marcel", "mlp"],
-  savePct: ["gbdt", "ridge", "mlp", "marcel", "structural"],
+  wins: ["factor", "gbdt", "ridge", "mlp", "marcel", "structural", "market"],
+  saves: ["factor", "gbdt", "ridge", "mlp", "structural", "marcel"],
+  shutouts: ["factor", "structural", "marcel"],
+  savePct: ["factor", "structural", "marcel", "gbdt", "ridge"],
 };
 
 function goalieSignalRow(
@@ -1545,10 +1842,10 @@ export function fitGoalieCalibrators(
       const sig = cur.signals.rates[t];
       for (let k = 0; k < cur.examples.length; k++) {
         const ex = cur.examples[k];
-        const low = isLowHistory(ex);
+        const low = isBackupGoalie(ex);
         acc[t].p.push(goalieMetaRate(metas, t, sig, k, low, false));
         acc[t].a.push(goalieActual(ex.actualRow, t));
-        acc[t].w.push(Math.min(40, ex.actualRow.gamesPlayed) / 40);
+        acc[t].w.push(goalieSampleWeight(ex.actualRow, t));
       }
     }
   }
@@ -1592,17 +1889,17 @@ export function fitGoalieMetas(
         const ex = season.examples[k];
         const row = goalieSignalRow(target, sig, k);
         const y = goalieActual(ex.actualRow, target);
-        let w = (Math.min(40, ex.actualRow.gamesPlayed) / 40) * recency;
+        let w = goalieSampleWeight(ex.actualRow, target) * recency;
         if (
           useMarket &&
           sig.market &&
           GOALIE_TARGET_SIGNALS[target].includes("market")
         ) {
           const mkt = sig.market[k];
-          const opp = sig.structural?.[k] ?? 0.5 * (sig.gbdt[k] + sig.marcel[k]);
+          const opp = sig.factor?.[k] ?? sig.structural?.[k] ?? 0.5 * (sig.gbdt[k] + sig.marcel[k]);
           w *= disagreementWeight(mkt, opp, statSd, disagreementSigma);
         }
-        if (isLowHistory(ex)) {
+        if (isBackupGoalie(ex)) {
           Xl.push(row);
           yl.push(y);
           wl.push(w);
@@ -1636,7 +1933,7 @@ export function fitGoalieMetas(
       const ex = season.examples[k];
       const row = [gp.gbdt[k], gp.ridge[k], gp.ewma[k], gp.lag1[k], gp.share[k]];
       const y = Math.min(72, gp82(ex.actualRow));
-      if (isLowHistory(ex)) {
+      if (isBackupGoalie(ex)) {
         Xl.push(row);
         yl.push(y);
         wl.push(recency);
@@ -1697,6 +1994,7 @@ export interface GoalieV2Models {
   gbdtGp: GbdtModel;
   ridgeGp: RidgeV2;
   mlpGp?: MlpModel;
+  keptFeatureNames?: string[];
 }
 
 export function inferGoalieForPlayer(
@@ -1710,19 +2008,33 @@ export function inferGoalieForPlayer(
 ): { rates: Record<GoalieV2Target, number>; gamesPlayed: number } | null {
   const eligible = goalieEligible(history);
   if (eligible.length === 0) return null;
-  const low = eligible.length <= 2;
+  const exForRole = {
+    playerId: targetRow.playerId,
+    seasonId: targetRow.seasonId,
+    targetRow,
+    actualRow: targetRow,
+    history,
+  } as GoalieExample;
+  const low = isBackupGoalie(exForRole);
 
-  const vec = goalieFeatureVector(history, targetRow, league, registry);
+  const fullVec = goalieFeatureVector(history, targetRow, league, registry);
   const ex = { history, targetRow, seasonId: targetRow.seasonId };
 
   const rates = {} as Record<GoalieV2Target, number>;
   for (const target of GOALIE_V2_TARGETS) {
+    const modelNames =
+      models.gbdt[target]?.featureNames ??
+      models.keptFeatureNames ??
+      GOALIE_V2_FEATURES;
+    const vec = alignFeatureVector(fullVec, GOALIE_V2_FEATURES, modelNames);
     const adj = (v: number): number =>
       goalieEraAdjust(target, v, levels, history, targetRow.seasonId);
     const m = adj(goalieMarcelRate(history, target, league, targetRow.seasonId));
     const marcel = Number.isFinite(m) ? m : fallbackRate(target);
     const e = adj(goalieEwma(history, target));
     const l = adj(goalieLag1(history, target));
+    const structural = goalieStructuralSignal(models.structural, ex, target, league, registry);
+    const factor = goalieFactorSignal(models.structural, ex, target, league, registry);
     const bySignal: Record<GoalieSignal, number> = {
       gbdt: modelDecodeY(
         target,
@@ -1741,25 +2053,29 @@ export function inferGoalieForPlayer(
       mlp: models.mlp?.[target]
         ? modelDecodeY(
             target,
-            predictMlp(models.mlp[target], vec),
+            predictMlp(
+              models.mlp[target],
+              alignFeatureVector(
+                fullVec,
+                GOALIE_V2_FEATURES,
+                models.mlp[target].featureNames,
+              ),
+            ),
             targetRow.seasonId,
             league,
             levels,
           )
-        : 0,
+        : factor,
       marcel,
       ewma: Number.isFinite(e) ? e : marcel,
       lag1: Number.isFinite(l) ? l : marcel,
-      structural: goalieStructuralSignal(models.structural, ex, target, league, registry),
+      structural,
+      factor,
       market: 0,
     };
-    if (!models.mlp?.[target]) {
-      bySignal.mlp = 0.5 * bySignal.gbdt + 0.5 * bySignal.ridge;
-    }
     bySignal.market =
       0.5 * bySignal.marcel + 0.3 * bySignal.ewma + 0.2 * bySignal.lag1;
     const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
-    // Legacy metas omit "market" — only pass signals the meta was fit on.
     const sigNames = meta.signals.length > 0 ? meta.signals : [...GOALIE_TARGET_SIGNALS[target]];
     const signalRow = sigNames.map((s) => bySignal[s as GoalieSignal] ?? 0);
     const raw = applyMeta(meta, signalRow);
@@ -1769,7 +2085,13 @@ export function inferGoalieForPlayer(
     );
   }
 
-  // GP signals
+  {
+    const leagueSv = trendLevel(league.svPct, targetRow.seasonId, 0.905);
+    const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
+    const saPg = rates.saves / Math.max(volumeSv, 1e-6);
+    rates.saves = Math.max(0, saPg * rates.savePct);
+  }
+
   const gps = eligible.slice(-3).map((r) => gp82(r));
   const lag1 = gps.length > 0 ? Math.min(72, gps[gps.length - 1]) : 20;
   const w = [0.5, 0.3, 0.2];
@@ -1786,9 +2108,20 @@ export function inferGoalieForPlayer(
     const teamGp = league.teamGoalieGp.get(`${primaryTeam(last.team)}:${last.seasonId}`);
     if (teamGp && teamGp > 0) share = Math.min(72, (last.gamesPlayed / teamGp) * 82);
   }
+  const gpNames = models.gbdtGp.featureNames ?? GOALIE_V2_FEATURES;
+  const gpVec = alignFeatureVector(fullVec, GOALIE_V2_FEATURES, gpNames);
   const gpRow = [
-    Math.max(4, Math.min(72, predictGbdt(models.gbdtGp, vec))),
-    Math.max(4, Math.min(72, predictRidgeV2(models.ridgeGp, vec))),
+    Math.max(4, Math.min(72, predictGbdt(models.gbdtGp, gpVec))),
+    Math.max(
+      4,
+      Math.min(
+        72,
+        predictRidgeV2(
+          models.ridgeGp,
+          alignFeatureVector(fullVec, GOALIE_V2_FEATURES, models.ridgeGp.featureNames),
+        ),
+      ),
+    ),
     ewma,
     lag1,
     share,

@@ -164,7 +164,7 @@ async function main() {
     goalie: {
       gbdt: finalGoalie.gbdt,
       ridge: finalGoalie.ridge,
-      mlp: finalGoalie.mlp,
+      mlp: finalGoalie.mlp as Record<string, import("../src/lib/ml/mlp").MlpModel>,
       structural: finalGoalie.structural,
       gbdtGp: finalGoalie.gbdtGp,
       ridgeGp: finalGoalie.ridgeGp,

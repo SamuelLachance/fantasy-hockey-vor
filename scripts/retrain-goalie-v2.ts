@@ -56,7 +56,7 @@ async function main() {
   bundle.goalie = {
     gbdt: final.gbdt,
     ridge: final.ridge,
-    mlp: final.mlp,
+    mlp: final.mlp as V2Bundle["goalie"]["mlp"],
     structural: final.structural,
     gbdtGp: final.gbdtGp,
     ridgeGp: final.ridgeGp,
