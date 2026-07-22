@@ -283,8 +283,36 @@ async function main() {
   const withYahooPositions = raw.map((player) =>
     applyYahooPositionsToPlayer(player, yahooPositions),
   );
+
+  // Team tandem: goalie GP on a club should sum near a full season.
+  const { renormalizeGoalieGamesByTeam } = await import("../src/lib/ml/goalie-v2");
+  const prevGp = new Map(withYahooPositions.map((p) => [p.id, p.gamesPlayed]));
+  const tandemAdjusted = renormalizeGoalieGamesByTeam(withYahooPositions).map((p) => {
+    if (!p.isGoalie) return p;
+    const gp = p.gamesPlayed;
+    const prev = prevGp.get(p.id) ?? gp;
+    if (prev <= 0 || gp === prev) return p;
+    const scale = gp / prev;
+    const proj = p.projection as {
+      wins: number;
+      saves: number;
+      shutouts: number;
+      savePct: number;
+    };
+    return {
+      ...p,
+      gamesPlayed: gp,
+      projection: {
+        wins: Math.max(0, Math.round(proj.wins * scale)),
+        saves: Math.max(0, Math.round(proj.saves * scale)),
+        shutouts: Math.max(0, Math.round(proj.shutouts * scale)),
+        savePct: proj.savePct,
+      },
+    };
+  });
+
   const { players: ranked, categoryWeights, replacementLevels } = applyVor(
-    withYahooPositions,
+    tandemAdjusted,
     DEFAULT_LEAGUE,
   );
 
@@ -292,7 +320,7 @@ async function main() {
   // (model rate − edge), then clamp with the same pipeline before VOR.
   // Players without edges (and goalies) keep model projections so the pool
   // stays complete; their draftValue is forced to 0 below.
-  const marketRaw = withYahooPositions.map((p) => {
+  const marketRaw = tandemAdjusted.map((p) => {
     if (p.isGoalie || !p.marketEdge) return p;
     const edge = p.marketEdge;
     const gp = Math.max(1, p.gamesPlayed);

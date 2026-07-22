@@ -50,7 +50,49 @@ export const GOALIE_SIGNALS = [
 export type GoalieSignal = (typeof GOALIE_SIGNALS)[number];
 
 /** Max features kept after walk-forward univariate screen. */
-const GOALIE_FEATURE_BUDGET = 56;
+let GOALIE_FEATURE_BUDGET = 52;
+
+/** Tunable heuristics — sweep via `setGoalieHeuristics` / iterate script. */
+export interface GoalieHeuristics {
+  featureBudget: number;
+  tandemGpTarget: number;
+  shareBlend: number;
+  teamWinsBlend: number;
+  /** Shrink same-team saves/gp toward team mean (0 = off). */
+  savesTeamBlend: number;
+  ageGp: boolean;
+  dropMlpWins: boolean;
+  /** Starters: factor/structural/marcel only for saves (trees hurt rate R²). */
+  savesStructuralOnly: boolean;
+}
+
+const DEFAULT_HEURISTICS: GoalieHeuristics = {
+  featureBudget: 52,
+  tandemGpTarget: 80,
+  shareBlend: 0,
+  teamWinsBlend: 0,
+  savesTeamBlend: 0,
+  ageGp: false,
+  dropMlpWins: false,
+  savesStructuralOnly: false,
+};
+
+let HEURISTICS: GoalieHeuristics = { ...DEFAULT_HEURISTICS };
+
+export function setGoalieHeuristics(partial: Partial<GoalieHeuristics>): GoalieHeuristics {
+  HEURISTICS = { ...HEURISTICS, ...partial };
+  GOALIE_FEATURE_BUDGET = HEURISTICS.featureBudget;
+  return { ...HEURISTICS };
+}
+
+export function getGoalieHeuristics(): GoalieHeuristics {
+  return { ...HEURISTICS };
+}
+
+export function resetGoalieHeuristics(): void {
+  HEURISTICS = { ...DEFAULT_HEURISTICS };
+  GOALIE_FEATURE_BUDGET = HEURISTICS.featureBudget;
+}
 
 /** Always retain these when present — role, skill, team, injury core. */
 const GOALIE_ANCHOR_FEATURES = new Set([
@@ -1651,18 +1693,46 @@ export function computeGoalieSignals(
       if (teamGp && teamGp > 0) share = Math.min(72, (last.gamesPlayed / teamGp) * 82);
     }
     gp.share[k] = Number.isFinite(share) ? share : gp.ewma[k];
+
+    // Pull learned GP toward role share — public models live or die on starts.
+    const sb = HEURISTICS.shareBlend;
+    gp.gbdt[k] = Math.max(4, Math.min(72, (1 - sb) * gp.gbdt[k] + sb * gp.share[k]));
+    gp.ridge[k] = Math.max(4, Math.min(72, (1 - sb) * gp.ridge[k] + sb * gp.share[k]));
+    gp.ewma[k] = Math.max(4, Math.min(72, (1 - sb * 0.5) * gp.ewma[k] + sb * 0.5 * gp.share[k]));
+
+    if (HEURISTICS.ageGp) {
+      const age = ex.targetRow.age ?? NaN;
+      const am = goalieAgeGpMult(age);
+      gp.gbdt[k] *= am;
+      gp.ridge[k] *= am;
+      gp.ewma[k] *= am;
+      gp.lag1[k] *= am;
+      gp.share[k] *= am;
+    }
   }
 
   normalizeTandemGp(examples, gp);
+  applyTeamCascadeRates(examples, rates, league);
   void keptNames;
   return { rates, gp };
 }
 
-/** Soft team GP budget: goalie GP signals on a team sum toward ~80. */
+/** Age multiplier for expected GP (workload declines after ~32). */
+export function goalieAgeGpMult(age: number): number {
+  if (!Number.isFinite(age) || age <= 0) return 1;
+  if (age <= 32) return 1;
+  if (age <= 34) return 0.96;
+  if (age <= 36) return 0.9;
+  if (age <= 38) return 0.82;
+  return 0.72;
+}
+
+/** Soft team GP budget: goalie GP signals on a team sum toward tandemGpTarget. */
 function normalizeTandemGp(
   examples: GoalieExample[],
   gp: GoalieSignalSet["gp"],
 ): void {
+  const target = HEURISTICS.tandemGpTarget;
   const keys = ["gbdt", "ridge", "ewma", "lag1", "share"] as const;
   for (const key of keys) {
     const groups = new Map<string, number[]>();
@@ -1677,13 +1747,100 @@ function normalizeTandemGp(
       if (idxs.length < 2) continue;
       let sum = 0;
       for (const i of idxs) sum += gp[key][i];
-      if (!(sum > 40 && sum < 140)) continue;
-      const scale = 80 / sum;
+      if (!(sum > 35 && sum < 150)) continue;
+      const scale = target / sum;
       for (const i of idxs) {
         gp[key][i] = Math.max(4, Math.min(72, gp[key][i] * scale));
       }
     }
   }
+}
+
+/**
+ * Pull win rates toward team strength; pull save volume toward team SA mean.
+ * Same-team goalies face similar environments when they play.
+ */
+function applyTeamCascadeRates(
+  examples: GoalieExample[],
+  rates: Record<string, Record<GoalieSignal, Float64Array>>,
+  league: GoalieLeagueContext,
+): void {
+  const tw = HEURISTICS.teamWinsBlend;
+  const groups = new Map<string, number[]>();
+  for (let k = 0; k < examples.length; k++) {
+    const team = primaryTeam(examples[k].targetRow.team);
+    if (!team) continue;
+    const list = groups.get(team) ?? [];
+    list.push(k);
+    groups.set(team, list);
+  }
+
+  for (const idxs of groups.values()) {
+    // Team win environment (shared).
+    for (const k of idxs) {
+      const pp = 0.5 + 0.65 * ((examples[k].targetRow.teamPointPctg ?? 0.5) - 0.5);
+      const blendWin = (arr: Float64Array): void => {
+        arr[k] = clampTarget("wins", (1 - tw) * arr[k] + tw * pp);
+      };
+      blendWin(rates.wins.factor);
+      blendWin(rates.wins.structural);
+      blendWin(rates.wins.marcel);
+    }
+
+    const stb = HEURISTICS.savesTeamBlend;
+    if (stb <= 0 || idxs.length < 2) continue;
+    // Team mean SA volume (saves/gp proxy) — shrink individuals toward team mean.
+    let saSum = 0;
+    let n = 0;
+    for (const k of idxs) {
+      const v = rates.saves.factor[k];
+      if (Number.isFinite(v) && v > 0) {
+        saSum += v;
+        n++;
+      }
+    }
+    if (n < 2) continue;
+    const teamSaves = saSum / n;
+    for (const k of idxs) {
+      rates.saves.factor[k] =
+        (1 - stb) * rates.saves.factor[k] + stb * teamSaves;
+      rates.saves.structural[k] =
+        (1 - stb) * rates.saves.structural[k] + stb * teamSaves;
+      rates.saves.marcel[k] =
+        (1 - stb) * rates.saves.marcel[k] + stb * teamSaves;
+    }
+  }
+  void league;
+}
+
+/**
+ * Post-hoc team GP renormalization for finished projections (generate + backtest).
+ * Scales gamesPlayed so teammates sum to ~tandemGpTarget while preserving ranks.
+ */
+export function renormalizeGoalieGamesByTeam<
+  T extends { team: string; gamesPlayed: number; isGoalie: boolean },
+>(players: T[], teamBudget = HEURISTICS.tandemGpTarget): T[] {
+  const groups = new Map<string, number[]>();
+  for (let i = 0; i < players.length; i++) {
+    if (!players[i].isGoalie) continue;
+    const team = primaryTeam(players[i].team);
+    if (!team) continue;
+    const list = groups.get(team) ?? [];
+    list.push(i);
+    groups.set(team, list);
+  }
+  const out = players.map((p) => ({ ...p }));
+  for (const idxs of groups.values()) {
+    if (idxs.length < 2) continue;
+    let sum = 0;
+    for (const i of idxs) sum += out[i].gamesPlayed;
+    if (!(sum > 35 && sum < 150)) continue;
+    const scale = teamBudget / sum;
+    for (const i of idxs) {
+      out[i].gamesPlayed = Math.max(4, Math.min(72, Math.round(out[i].gamesPlayed * scale)));
+    }
+  }
+  return out;
 }
 
 function clampTarget(target: GoalieV2Target, v: number): number {
@@ -1803,23 +1960,41 @@ export function isBackupGoalie(ex: GoalieExample): boolean {
 
 const GOALIE_GP_SIGNALS = ["gbdt", "ridge", "ewma", "lag1", "structural"] as const;
 
-/**
- * Signals per target: factor (derived intermediates) is first-class;
- * MLP only where volume/skill labels are dense.
- */
-const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
-  wins: ["factor", "gbdt", "ridge", "mlp", "marcel", "structural", "market"],
+/** Starter metas: learned stack + factor. */
+const STARTER_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
+  wins: ["factor", "gbdt", "ridge", "marcel", "structural", "market"],
   saves: ["factor", "gbdt", "ridge", "mlp", "structural", "marcel"],
   shutouts: ["factor", "structural", "marcel"],
-  savePct: ["factor", "structural", "marcel", "gbdt", "ridge"],
+  savePct: ["factor", "structural", "marcel", "gbdt"],
 };
+
+/** Backup metas: derived environment only — trees overfit tiny samples. */
+const BACKUP_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
+  wins: ["factor", "structural", "marcel"],
+  saves: ["factor", "structural", "marcel"],
+  shutouts: ["factor", "structural", "marcel"],
+  savePct: ["factor", "structural", "marcel"],
+};
+
+function signalsForTarget(target: GoalieV2Target, backup: boolean): readonly GoalieSignal[] {
+  if (backup) return BACKUP_TARGET_SIGNALS[target];
+  if (target === "saves" && HEURISTICS.savesStructuralOnly) {
+    return BACKUP_TARGET_SIGNALS.saves;
+  }
+  const starter = STARTER_TARGET_SIGNALS[target];
+  if (HEURISTICS.dropMlpWins && target === "wins") {
+    return starter.filter((s) => s !== "mlp");
+  }
+  return starter;
+}
 
 function goalieSignalRow(
   target: GoalieV2Target,
   sig: Record<GoalieSignal, Float64Array>,
   k: number,
+  backup: boolean,
 ): number[] {
-  return GOALIE_TARGET_SIGNALS[target].map((s) => sig[s][k]);
+  return signalsForTarget(target, backup).map((s) => sig[s][k]);
 }
 
 /**
@@ -1887,19 +2062,21 @@ export function fitGoalieMetas(
       const sig = season.signals.rates[target];
       for (let k = 0; k < season.examples.length; k++) {
         const ex = season.examples[k];
-        const row = goalieSignalRow(target, sig, k);
+        const backup = isBackupGoalie(ex);
+        const row = goalieSignalRow(target, sig, k, backup);
         const y = goalieActual(ex.actualRow, target);
         let w = goalieSampleWeight(ex.actualRow, target) * recency;
         if (
           useMarket &&
+          !backup &&
           sig.market &&
-          GOALIE_TARGET_SIGNALS[target].includes("market")
+          signalsForTarget(target, false).includes("market")
         ) {
           const mkt = sig.market[k];
           const opp = sig.factor?.[k] ?? sig.structural?.[k] ?? 0.5 * (sig.gbdt[k] + sig.marcel[k]);
           w *= disagreementWeight(mkt, opp, statSd, disagreementSigma);
         }
-        if (isBackupGoalie(ex)) {
+        if (backup) {
           Xl.push(row);
           yl.push(y);
           wl.push(w);
@@ -1910,13 +2087,12 @@ export function fitGoalieMetas(
         }
       }
     }
-    const sigs = GOALIE_TARGET_SIGNALS[target];
     // Rare/noisy rates: convex keeps mass on reliable signals.
     const fit =
       target === "savePct" || target === "shutouts" ? fitMetaConvex : fitMetaNnls;
     rateMetas[target] = {
-      established: fit(Xe, ye, we, sigs),
-      low: fit(Xl, yl, wl, sigs),
+      established: fit(Xe, ye, we, signalsForTarget(target, false)),
+      low: fit(Xl, yl, wl, signalsForTarget(target, true)),
     };
   }
 
@@ -1967,7 +2143,7 @@ export function goalieMetaRate(
   useCalibrator = true,
 ): number {
   const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
-  const raw = applyMeta(meta, goalieSignalRow(target, sig, k));
+  const raw = applyMeta(meta, goalieSignalRow(target, sig, k, low));
   const cal = useCalibrator ? applyRateCalibrator(metas.calibrators?.[target], raw) : raw;
   return clampTarget(target, cal);
 }
@@ -2076,7 +2252,8 @@ export function inferGoalieForPlayer(
     bySignal.market =
       0.5 * bySignal.marcel + 0.3 * bySignal.ewma + 0.2 * bySignal.lag1;
     const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
-    const sigNames = meta.signals.length > 0 ? meta.signals : [...GOALIE_TARGET_SIGNALS[target]];
+    const sigNames =
+      meta.signals.length > 0 ? meta.signals : [...signalsForTarget(target, low)];
     const signalRow = sigNames.map((s) => bySignal[s as GoalieSignal] ?? 0);
     const raw = applyMeta(meta, signalRow);
     rates[target] = clampTarget(
@@ -2110,21 +2287,27 @@ export function inferGoalieForPlayer(
   }
   const gpNames = models.gbdtGp.featureNames ?? GOALIE_V2_FEATURES;
   const gpVec = alignFeatureVector(fullVec, GOALIE_V2_FEATURES, gpNames);
-  const gpRow = [
-    Math.max(4, Math.min(72, predictGbdt(models.gbdtGp, gpVec))),
-    Math.max(
-      4,
-      Math.min(
-        72,
-        predictRidgeV2(
-          models.ridgeGp,
-          alignFeatureVector(fullVec, GOALIE_V2_FEATURES, models.ridgeGp.featureNames),
-        ),
+  const am = HEURISTICS.ageGp ? goalieAgeGpMult(targetRow.age ?? NaN) : 1;
+  const sb = HEURISTICS.shareBlend;
+  let gGbdt = Math.max(4, Math.min(72, predictGbdt(models.gbdtGp, gpVec)));
+  let gRidge = Math.max(
+    4,
+    Math.min(
+      72,
+      predictRidgeV2(
+        models.ridgeGp,
+        alignFeatureVector(fullVec, GOALIE_V2_FEATURES, models.ridgeGp.featureNames),
       ),
     ),
-    ewma,
-    lag1,
-    share,
+  );
+  gGbdt = (1 - sb) * gGbdt + sb * share;
+  gRidge = (1 - sb) * gRidge + sb * share;
+  const gpRow = [
+    Math.max(4, Math.min(72, gGbdt * am)),
+    Math.max(4, Math.min(72, gRidge * am)),
+    Math.max(4, Math.min(72, ewma * am)),
+    Math.max(4, Math.min(72, lag1 * am)),
+    Math.max(4, Math.min(72, share * am)),
   ];
   const gpMeta = low ? metas.gpMeta.low : metas.gpMeta.established;
   const gamesPlayed = Math.max(4, Math.min(72, applyMeta(gpMeta, gpRow)));

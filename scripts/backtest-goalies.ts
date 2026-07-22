@@ -8,11 +8,13 @@ import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import { gp82 } from "../src/lib/ml/dataset-view";
 import {
   fitGoalieMetas,
+  getGoalieHeuristics,
   goalieActual,
   goalieMetaGp,
   goalieMetaRate,
   GOALIE_V2_TARGETS,
   isBackupGoalie,
+  renormalizeGoalieGamesByTeam,
   runGoalieWalkForward,
 } from "../src/lib/ml/goalie-v2";
 import type { MlDataset } from "../src/lib/ml/types";
@@ -72,11 +74,12 @@ async function main() {
     .slice(Math.max(3, earliestIdx - 5))
     .filter((s) => s <= Math.max(...TEST_SEASONS));
 
+  console.log(`goalie heuristics: ${JSON.stringify(getGoalieHeuristics())}`);
   console.log(`goalie-only walk-forward: ${wfSeasons.join(", ")}`);
   const gwf = runGoalieWalkForward(rows, wfSeasons, (m) => console.log(m));
 
   const acc: Record<string, { r2: number[]; rho: number[]; calR2: number[] }> = {};
-  for (const t of [...GOALIE_V2_TARGETS, "gamesPlayed"]) {
+  for (const t of [...GOALIE_V2_TARGETS, "gamesPlayed", "winsTot", "savesTot"]) {
     acc[t] = { r2: [], rho: [], calR2: [] };
   }
 
@@ -86,18 +89,44 @@ async function main() {
     const pool = gwf.seasons.filter((s) => s.seasonId < testSeason);
     const metas = fitGoalieMetas(pool, testSeason);
 
+    const yGp: number[] = [];
+    const pGp: number[] = [];
+    const teams: string[] = [];
+    for (let k = 0; k < season.examples.length; k++) {
+      const ex = season.examples[k];
+      yGp.push(Math.min(72, gp82(ex.actualRow)));
+      pGp.push(goalieMetaGp(metas, season.signals.gp, k, isBackupGoalie(ex)));
+      teams.push(ex.targetRow.team);
+    }
+    const renorm = renormalizeGoalieGamesByTeam(
+      pGp.map((gamesPlayed, i) => ({
+        team: teams[i],
+        gamesPlayed,
+        isGoalie: true as const,
+      })),
+    );
+    for (let i = 0; i < renorm.length; i++) pGp[i] = renorm[i].gamesPlayed;
+
     console.log(`\n--- ${testSeason} ---`);
     for (const target of GOALIE_V2_TARGETS) {
       const y: number[] = [];
       const raw: number[] = [];
       const cal: number[] = [];
+      const yTot: number[] = [];
+      const pTot: number[] = [];
       const sig = season.signals.rates[target];
       for (let k = 0; k < season.examples.length; k++) {
         const ex = season.examples[k];
         const low = isBackupGoalie(ex);
+        const rateRaw = goalieMetaRate(metas, target, sig, k, low, false);
+        const rateCal = goalieMetaRate(metas, target, sig, k, low, true);
         y.push(goalieActual(ex.actualRow, target));
-        raw.push(goalieMetaRate(metas, target, sig, k, low, false));
-        cal.push(goalieMetaRate(metas, target, sig, k, low, true));
+        raw.push(rateRaw);
+        cal.push(rateCal);
+        if (target === "wins" || target === "saves") {
+          yTot.push(goalieActual(ex.actualRow, target) * yGp[k]);
+          pTot.push(rateCal * pGp[k]);
+        }
       }
       const mRaw = metrics(y, raw);
       const mCal = metrics(y, cal);
@@ -107,17 +136,17 @@ async function main() {
       console.log(
         `${target.padEnd(10)} raw R²=${mRaw.r2.toFixed(3)} ρ=${mRaw.rho.toFixed(3)} | cal R²=${mCal.r2.toFixed(3)}`,
       );
+      if (target === "wins" || target === "saves") {
+        const mTot = metrics(yTot, pTot);
+        acc[`${target}Tot`].r2.push(mTot.r2);
+        acc[`${target}Tot`].rho.push(mTot.rho);
+        acc[`${target}Tot`].calR2.push(mTot.r2);
+        console.log(
+          `${`${target}Tot`.padEnd(10)} season R²=${mTot.r2.toFixed(3)} ρ=${mTot.rho.toFixed(3)}`,
+        );
+      }
     }
 
-    const yGp: number[] = [];
-    const pGp: number[] = [];
-    for (let k = 0; k < season.examples.length; k++) {
-      const ex = season.examples[k];
-      yGp.push(Math.min(72, gp82(ex.actualRow)));
-      pGp.push(
-        goalieMetaGp(metas, season.signals.gp, k, isBackupGoalie(ex)),
-      );
-    }
     const mGp = metrics(yGp, pGp);
     acc.gamesPlayed.r2.push(mGp.r2);
     acc.gamesPlayed.rho.push(mGp.rho);
@@ -127,8 +156,11 @@ async function main() {
 
   const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
   console.log(`\n=== GOALIE AVERAGE over ${TEST_SEASONS.length} seasons ===`);
-  console.log("BASELINE (pre-fix): wins 0.182, saves 0.037, shutouts -0.069, savePct -0.126, GP 0.309");
-  for (const t of [...GOALIE_V2_TARGETS, "gamesPlayed"]) {
+  console.log(
+    "PUBLIC CEILING (approx): SV% YoY R²≈0.04 | GSAx r≈0.12 | fantasy edge is GP/wins totals",
+  );
+  console.log("PRE-FACTOR BASELINE: wins 0.182, saves 0.037, shutouts -0.069, savePct -0.126, GP 0.309");
+  for (const t of [...GOALIE_V2_TARGETS, "gamesPlayed", "winsTot", "savesTot"]) {
     console.log(
       `${t.padEnd(10)} raw R²=${avg(acc[t].r2).toFixed(3)}  cal R²=${avg(acc[t].calR2).toFixed(3)}  ρ=${avg(acc[t].rho).toFixed(3)}`,
     );
