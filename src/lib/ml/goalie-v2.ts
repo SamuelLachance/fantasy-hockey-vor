@@ -676,8 +676,9 @@ function pushLags(out: number[], vals: number[]): void {
 }
 
 /**
- * EB-shrunk career save%. Prior ≈ 3000 shots matches published GSAx regression
- * constants — YoY skill is tiny, so almost everyone sits near league mean.
+ * EB-shrunk career save%. Smaller prior → more player separation in projections
+ * (fantasy tables need visible SV% gaps; literature priors ~1500–3000 are for
+ * true-talent inference, not draft-board readability).
  */
 function shrunkSavePct(
   eligible: PlayerSeasonRow[],
@@ -695,8 +696,52 @@ function shrunkSavePct(
     shots += w * shotsFaced;
     w *= 0.8;
   }
-  const PRIOR_SHOTS = 1000;
+  const PRIOR_SHOTS = 800;
   return (saves + PRIOR_SHOTS * leagueMean) / Math.max(1, shots + PRIOR_SHOTS);
+}
+
+/**
+ * Production save%: career EB + GSAx tilt, anchored to a stable fantasy prior
+ * (not the depressed in-season league mean that glued everyone to .900).
+ */
+export function projectGoalieSavePctDistinct(
+  history: PlayerSeasonRow[],
+  seasonId: number,
+  team: string,
+  league: GoalieLeagueContext,
+  registry: MoneyPuckGoalieRegistry | null,
+): number {
+  const eligible = goalieEligible(history);
+  // Stable category prior — recent NHL SV% eras sit lower, but fantasy boards
+  // still expect elites near .915 and weak starters near .890.
+  const prior = 0.905;
+  if (eligible.length === 0) {
+    return Math.round((prior - 0.008) * 10000) / 10000;
+  }
+  const career = shrunkSavePct(eligible, prior);
+  const gsax60 = shrunkGsax60(eligible, registry);
+  const prevSeason = seasonId - 10001;
+  const teamXsv =
+    league.teamXsv.get(`${primaryTeam(team)}:${prevSeason}`) ?? prior;
+  let saPg = 30;
+  {
+    let shots = 0;
+    let gp = 0;
+    for (const g of eligible.slice(-3)) {
+      const sv = g.savePct > 1 ? g.savePct / 100 : g.savePct;
+      if (sv > 0 && sv < 1 && g.saves > 0 && g.gamesPlayed > 0) {
+        shots += g.saves / sv;
+        gp += g.gamesPlayed;
+      }
+    }
+    if (gp > 0) saPg = shots / gp;
+  }
+  const skillTilt = Math.max(-0.015, Math.min(0.015, gsax60 / Math.max(saPg, 1)));
+  // Expand career residual so table gaps are obvious (.920 vs .892).
+  const delta = career - prior;
+  const teamDelta = 0.25 * (teamXsv - prior);
+  const blended = prior + 1.55 * delta + teamDelta + 0.55 * skillTilt;
+  return Math.round(Math.max(0.875, Math.min(0.935, blended)) * 10000) / 10000;
 }
 
 /** EB-shrunk GSAx/60 (decay 0.8, prior 2000 minutes at 0). */

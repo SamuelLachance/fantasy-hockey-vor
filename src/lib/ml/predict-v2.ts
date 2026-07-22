@@ -39,6 +39,7 @@ import {
   buildGoalieLeagueContext,
   buildGoalieLevels,
   inferGoalieForPlayer,
+  projectGoalieSavePctDistinct,
   type GoalieLeagueContext,
   type GoalieLevels,
 } from "./goalie-v2";
@@ -331,13 +332,16 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   if (!result) return null;
 
   const gamesPlayed = Math.round(result.gamesPlayed);
-  // Keep model ranking, but stretch residual vs era mean so SV% is readable
-  // in the table (.910 vs .895) instead of a 1-pt blob around league.
+  // Distinct career+GSAx SV% (not the stacked residual, which collapsed the board).
+  const savePct = projectGoalieSavePctDistinct(
+    history,
+    PROJECTION_SEASON_ID,
+    target.team,
+    rt.goalieLeague,
+    rt.registry,
+  );
   const leagueSv =
     rt.goalieLeague.svPct.get(PROJECTION_SEASON_ID - 10001) ?? 0.9;
-  const rawSv = Math.max(0.885, Math.min(0.925, result.rates.savePct));
-  const stretched = leagueSv + 1.8 * (rawSv - leagueSv);
-  const savePct = Math.round(Math.max(0.88, Math.min(0.93, stretched)) * 1000) / 1000;
   const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
   const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {

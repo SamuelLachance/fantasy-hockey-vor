@@ -61,7 +61,8 @@ export function formatStat(
   const value = projectionStatValue(player, category);
   if (value == null) return "—";
   if (category === "savePct") {
-    return "." + String(Math.round(value * 1000)).padStart(3, "0");
+    // Hockey convention: .9124 — four decimals so starters don't look identical.
+    return "." + String(Math.round(value * 10000)).padStart(4, "0");
   }
   if (category === "penaltyMinutes") return value.toFixed(0);
   return formatCount(value);
