@@ -331,12 +331,12 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   if (!result) return null;
 
   const gamesPlayed = Math.round(result.gamesPlayed);
-  // Workload × model SV%; residual-trained SV% already sits near league.
-  const prevSeason = PROJECTION_SEASON_ID - 10001;
-  const leagueSv = rt.goalieLeague.svPct.get(prevSeason) ?? 0.905;
-  const rawSv = Math.max(0.885, Math.min(0.925, result.rates.savePct));
-  // Light final shrink (models already train on quality residual, not raw SV%).
-  const savePct = Math.round((0.7 * leagueSv + 0.3 * rawSv) * 1000) / 1000;
+  // Model SV% is already residual-trained + EB-shrunk in-stack; do not re-blend
+  // toward league here (that collapsed every goalie to ~3 identical buckets).
+  const savePct =
+    Math.round(Math.max(0.885, Math.min(0.925, result.rates.savePct)) * 10000) / 10000;
+  const leagueSv =
+    rt.goalieLeague.svPct.get(PROJECTION_SEASON_ID - 10001) ?? 0.905;
   const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
   const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {

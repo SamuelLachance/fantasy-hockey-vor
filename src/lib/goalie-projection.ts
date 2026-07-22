@@ -5,7 +5,7 @@ import { clampGoalieProjection } from "./projection-sanity";
 
 const FULL_SEASON = 82;
 const LEAGUE_SHUTOUT_RATE = 0.04;
-const LEAGUE_SAVE_PCT = 0.905;
+const LEAGUE_SAVE_PCT = 0.9;
 /** Shrink shutouts toward league rate — holdout-tuned on 2024-25 val. */
 const SHUTOUT_LAG1_WEIGHT = 0.5;
 

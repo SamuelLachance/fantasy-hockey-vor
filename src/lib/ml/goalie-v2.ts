@@ -695,7 +695,7 @@ function shrunkSavePct(
     shots += w * shotsFaced;
     w *= 0.8;
   }
-  const PRIOR_SHOTS = 3000;
+  const PRIOR_SHOTS = 1500;
   return (saves + PRIOR_SHOTS * leagueMean) / Math.max(1, shots + PRIOR_SHOTS);
 }
 
@@ -1139,10 +1139,10 @@ export function goalieStructuralSignal(
       const prevSeason = ex.seasonId - 10001;
       const teamXsv =
         league.teamXsv.get(`${primaryTeam(ex.targetRow.team)}:${prevSeason}`) ?? leagueSv;
-      const skillTilt = saPg > 0 ? gsax60 / saPg : 0;
-      const careerTilt = sv - leagueSv;
+      const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
+      // Career EB SV% + GSAx carry the ranking; league/team set the environment.
       const blended =
-        0.55 * leagueSv + 0.3 * teamXsv + 0.1 * (leagueSv + careerTilt) + 0.05 * (leagueSv + skillTilt);
+        0.22 * leagueSv + 0.38 * sv + 0.25 * teamXsv + 0.15 * (leagueSv + skillTilt);
       return Math.max(0.885, Math.min(0.925, blended));
     }
     case "saves":
@@ -1188,7 +1188,7 @@ export function goalieFactorSignal(
   const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
   const savePct = Math.max(
     0.885,
-    Math.min(0.925, 0.6 * leagueSv + 0.25 * teamXsv + 0.15 * (sv + skillTilt)),
+    Math.min(0.925, 0.2 * leagueSv + 0.45 * sv + 0.2 * teamXsv + 0.15 * (sv + skillTilt)),
   );
 
   switch (target) {
@@ -1941,7 +1941,7 @@ const GOALIE_CALIB_K = 80;
  * out-of-sample error. savePct/shutouts/saves are noise-dominated at the edges.
  */
 const GOALIE_CALIBRATE_TARGETS: ReadonlySet<string> = new Set([
-  "savePct",
+  // savePct intentionally omitted — affine calib flattened production SV%.
   "shutouts",
 ]);
 
@@ -1965,7 +1965,8 @@ const STARTER_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = 
   wins: ["factor", "gbdt", "ridge", "marcel", "structural", "market"],
   saves: ["factor", "gbdt", "ridge", "mlp", "structural", "marcel"],
   shutouts: ["factor", "structural", "marcel"],
-  savePct: ["factor", "structural", "marcel", "gbdt"],
+  // Trees + calibrator collapse SV%; durable career/team signals only.
+  savePct: ["factor", "structural", "marcel"],
 };
 
 /** Backup metas: derived environment only — trees overfit tiny samples. */
@@ -2142,6 +2143,12 @@ export function goalieMetaRate(
   low: boolean,
   useCalibrator = true,
 ): number {
+  if (target === "savePct") {
+    const names = signalsForTarget(target, low);
+    const raw =
+      names.reduce((a, s) => a + sig[s][k], 0) / Math.max(1, names.length);
+    return clampTarget(target, raw);
+  }
   const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
   const raw = applyMeta(meta, goalieSignalRow(target, sig, k, low));
   const cal = useCalibrator ? applyRateCalibrator(metas.calibrators?.[target], raw) : raw;
@@ -2183,7 +2190,21 @@ export function inferGoalieForPlayer(
   levels: GoalieLevels,
 ): { rates: Record<GoalieV2Target, number>; gamesPlayed: number } | null {
   const eligible = goalieEligible(history);
-  if (eligible.length === 0) return null;
+  if (eligible.length === 0) {
+    // Tiny NHL sample: replacement-level rates at the era mean (not a stale 0.905).
+    const leagueSv = trendLevel(league.svPct, targetRow.seasonId, 0.9);
+    const sv = Math.max(0.885, Math.min(0.915, leagueSv - 0.003));
+    const saPg = trendLevel(league.saPerGame, targetRow.seasonId, 29);
+    return {
+      rates: {
+        wins: 0.32,
+        saves: Math.max(0, saPg * sv),
+        shutouts: 0.015,
+        savePct: sv,
+      },
+      gamesPlayed: 8,
+    };
+  }
   const exForRole = {
     playerId: targetRow.playerId,
     seasonId: targetRow.seasonId,
@@ -2252,13 +2273,24 @@ export function inferGoalieForPlayer(
     bySignal.market =
       0.5 * bySignal.marcel + 0.3 * bySignal.ewma + 0.2 * bySignal.lag1;
     const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;
-    const sigNames =
-      meta.signals.length > 0 ? meta.signals : [...signalsForTarget(target, low)];
-    const signalRow = sigNames.map((s) => bySignal[s as GoalieSignal] ?? 0);
-    const raw = applyMeta(meta, signalRow);
+    // For savePct, ignore frozen meta signal list (still includes gbdt) and
+    // equal-weight the durable set — trees + calibrator collapsed rankings.
+    let raw: number;
+    if (target === "savePct") {
+      const names = [...signalsForTarget(target, low)];
+      const vals = names.map((s) => bySignal[s]);
+      raw = vals.reduce((a, b) => a + b, 0) / Math.max(1, vals.length);
+    } else {
+      const sigNames =
+        meta.signals.length > 0 ? meta.signals : [...signalsForTarget(target, low)];
+      const signalRow = sigNames.map((s) => bySignal[s as GoalieSignal] ?? 0);
+      raw = applyMeta(meta, signalRow);
+    }
     rates[target] = clampTarget(
       target,
-      applyRateCalibrator(metas.calibrators?.[target], raw),
+      target === "savePct"
+        ? raw
+        : applyRateCalibrator(metas.calibrators?.[target], raw),
     );
   }
 
