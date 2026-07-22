@@ -60,7 +60,9 @@ export function formatStat(
 ): string {
   const value = projectionStatValue(player, category);
   if (value == null) return "—";
-  if (category === "savePct") return (value * 100).toFixed(1) + "%";
+  if (category === "savePct") {
+    return "." + String(Math.round(value * 1000)).padStart(3, "0");
+  }
   if (category === "penaltyMinutes") return value.toFixed(0);
   return formatCount(value);
 }

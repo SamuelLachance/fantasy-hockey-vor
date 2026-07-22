@@ -331,12 +331,13 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   if (!result) return null;
 
   const gamesPlayed = Math.round(result.gamesPlayed);
-  // Model SV% is already residual-trained + EB-shrunk in-stack; do not re-blend
-  // toward league here (that collapsed every goalie to ~3 identical buckets).
-  const savePct =
-    Math.round(Math.max(0.885, Math.min(0.925, result.rates.savePct)) * 10000) / 10000;
+  // Keep model ranking, but stretch residual vs era mean so SV% is readable
+  // in the table (.910 vs .895) instead of a 1-pt blob around league.
   const leagueSv =
-    rt.goalieLeague.svPct.get(PROJECTION_SEASON_ID - 10001) ?? 0.905;
+    rt.goalieLeague.svPct.get(PROJECTION_SEASON_ID - 10001) ?? 0.9;
+  const rawSv = Math.max(0.885, Math.min(0.925, result.rates.savePct));
+  const stretched = leagueSv + 1.8 * (rawSv - leagueSv);
+  const savePct = Math.round(Math.max(0.88, Math.min(0.93, stretched)) * 1000) / 1000;
   const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
   const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
   const projection: GoalieProjection = {

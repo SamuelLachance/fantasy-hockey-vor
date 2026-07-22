@@ -695,7 +695,7 @@ function shrunkSavePct(
     shots += w * shotsFaced;
     w *= 0.8;
   }
-  const PRIOR_SHOTS = 1500;
+  const PRIOR_SHOTS = 1000;
   return (saves + PRIOR_SHOTS * leagueMean) / Math.max(1, shots + PRIOR_SHOTS);
 }
 
@@ -1142,7 +1142,7 @@ export function goalieStructuralSignal(
       const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
       // Career EB SV% + GSAx carry the ranking; league/team set the environment.
       const blended =
-        0.22 * leagueSv + 0.38 * sv + 0.25 * teamXsv + 0.15 * (leagueSv + skillTilt);
+        0.15 * leagueSv + 0.5 * sv + 0.2 * teamXsv + 0.15 * (leagueSv + skillTilt);
       return Math.max(0.885, Math.min(0.925, blended));
     }
     case "saves":
@@ -1188,7 +1188,7 @@ export function goalieFactorSignal(
   const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
   const savePct = Math.max(
     0.885,
-    Math.min(0.925, 0.2 * leagueSv + 0.45 * sv + 0.2 * teamXsv + 0.15 * (sv + skillTilt)),
+    Math.min(0.925, 0.12 * leagueSv + 0.55 * sv + 0.15 * teamXsv + 0.18 * (sv + skillTilt)),
   );
 
   switch (target) {
@@ -1608,11 +1608,11 @@ export function computeGoalieSignals(
 
   const rates: Record<string, Record<GoalieSignal, Float64Array>> = {};
   for (const target of GOALIE_V2_TARGETS) {
-    const hasMlp = !!models.mlp[target];
+    const mlpModel = models.mlp[target];
     const set: Record<GoalieSignal, Float64Array> = {
       gbdt: predictGbdtBatch(models.gbdt[target], cols),
       ridge: new Float64Array(n),
-      mlp: hasMlp ? predictMlpBatch(models.mlp[target], cols) : new Float64Array(n),
+      mlp: mlpModel ? predictMlpBatch(mlpModel, cols) : new Float64Array(n),
       marcel: new Float64Array(n),
       ewma: new Float64Array(n),
       lag1: new Float64Array(n),
@@ -1648,7 +1648,7 @@ export function computeGoalieSignals(
         registry,
       );
       set.factor[k] = goalieFactorSignal(models.structural, ex, target, league, registry);
-      if (hasMlp) {
+      if (mlpModel) {
         set.mlp[k] = modelDecodeY(target, set.mlp[k], ex.seasonId, league, levels);
       } else {
         set.mlp[k] = set.factor[k];
@@ -2172,7 +2172,7 @@ export function goalieMetaGp(
 export interface GoalieV2Models {
   gbdt: Record<string, GbdtModel>;
   ridge: Record<string, RidgeV2>;
-  mlp?: Record<string, MlpModel>;
+  mlp?: Partial<Record<string, MlpModel>>;
   structural: GoalieStructuralParams;
   gbdtGp: GbdtModel;
   ridgeGp: RidgeV2;
