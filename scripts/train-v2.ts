@@ -164,9 +164,11 @@ async function main() {
     goalie: {
       gbdt: finalGoalie.gbdt,
       ridge: finalGoalie.ridge,
+      mlp: finalGoalie.mlp,
       structural: finalGoalie.structural,
       gbdtGp: finalGoalie.gbdtGp,
       ridgeGp: finalGoalie.ridgeGp,
+      mlpGp: finalGoalie.mlpGp,
       metas: goalieMetas,
       league: {
         svPct: [...gLeague.svPct.entries()],

@@ -1,6 +1,7 @@
 /** Serialized v2 model bundle: everything inference needs, no refitting. */
 
 import type { GbdtModel } from "./gbdt";
+import type { MlpModel } from "./mlp";
 import type { GpMeta, RateCalibrator, RidgeV2, StackedMeta } from "./stack";
 import type { GoalieStackedMetas, GoalieStructuralParams } from "./goalie-v2";
 import type { MarcelParams } from "./marcel";
@@ -26,9 +27,12 @@ export interface V2Bundle {
   goalie: {
     gbdt: Record<string, GbdtModel>;
     ridge: Record<string, RidgeV2>;
+    /** Optional for older bundles — inference falls back if missing. */
+    mlp?: Record<string, MlpModel>;
     structural: GoalieStructuralParams;
     gbdtGp: GbdtModel;
     ridgeGp: RidgeV2;
+    mlpGp?: MlpModel;
     metas: GoalieStackedMetas;
     league: {
       svPct: [number, number][];

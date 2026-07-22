@@ -12,6 +12,7 @@
  */
 
 import { fitGbdt, predictGbdt, predictGbdtBatch, type GbdtModel, type GbdtOptions } from "./gbdt";
+import { fitMlp, predictMlp, predictMlpBatch, type MlpModel, type MlpOptions } from "./mlp";
 import {
   buildTargetLevels,
   gp82,
@@ -34,6 +35,7 @@ export type GoalieV2Target = (typeof GOALIE_V2_TARGETS)[number];
 export const GOALIE_SIGNALS = [
   "gbdt",
   "ridge",
+  "mlp",
   "marcel",
   "ewma",
   "lag1",
@@ -872,9 +874,12 @@ export interface GoalieBoundaryModels {
   boundarySeason: number;
   gbdt: Record<string, GbdtModel>;
   ridge: Record<string, RidgeV2>;
+  mlp: Record<string, MlpModel>;
   structural: GoalieStructuralParams;
   gbdtGp: GbdtModel;
   ridgeGp: RidgeV2;
+  /** Optional; GP meta does not use MLP (unstable on small n). */
+  mlpGp?: MlpModel;
 }
 
 const GBDT_OPTS: GbdtOptions = {
@@ -886,6 +891,16 @@ const GBDT_OPTS: GbdtOptions = {
   subsample: 0.85,
   colsampleByTree: 0.8,
   earlyStoppingRounds: 20,
+};
+
+const MLP_OPTS: MlpOptions = {
+  hidden: [24, 8],
+  learningRate: 0.005,
+  l2: 5e-3,
+  batchSize: 32,
+  maxEpochs: 120,
+  earlyStoppingRounds: 15,
+  seed: 42,
 };
 
 const RIDGE_LAMBDA_G = 80;
@@ -926,6 +941,7 @@ export function trainGoalieBoundary(
 
   const gbdt: Record<string, GbdtModel> = {};
   const ridge: Record<string, RidgeV2> = {};
+  const mlp: Record<string, MlpModel> = {};
 
   for (const target of GOALIE_V2_TARGETS) {
     // Factorized labels: savePct→quality residual, saves→SA/gp, else rates.
@@ -954,6 +970,19 @@ export function trainGoalieBoundary(
       wF[k] = goalieSampleWeight(ex.actualRow, target);
     }
     ridge[target] = fitRidgeV2(matrix.columns, matrix.featureNames, fitIdx, yF, wF, RIDGE_LAMBDA_G);
+    mlp[target] = fitMlp(
+      matrix.columns,
+      matrix.featureNames,
+      trainIdx,
+      yT,
+      wT,
+      target,
+      MLP_OPTS,
+      matrix.columns,
+      yV,
+      wV,
+      valIdx,
+    );
   }
 
   const structural = fitGoalieStructural(
@@ -970,8 +999,10 @@ export function trainGoalieBoundary(
     wGpT[k] = 1;
   }
   const yGpV = new Float64Array(valIdx.length);
+  const wGpV = new Float64Array(valIdx.length);
   for (let k = 0; k < valIdx.length; k++) {
     yGpV[k] = Math.min(72, gp82(examples[valIdx[k]].actualRow));
+    wGpV[k] = 1;
   }
   const gbdtGp = fitGbdt(trainCols, yGpT, matrix.featureNames, "gamesPlayed", wGpT, GBDT_OPTS, valCols, yGpV);
 
@@ -984,7 +1015,7 @@ export function trainGoalieBoundary(
   }
   const ridgeGp = fitRidgeV2(matrix.columns, matrix.featureNames, fitIdx, yGpF, wGpF, RIDGE_LAMBDA_G);
 
-  return { boundarySeason, gbdt, ridge, structural, gbdtGp, ridgeGp };
+  return { boundarySeason, gbdt, ridge, mlp, structural, gbdtGp, ridgeGp };
 }
 
 export interface GoalieSignalSet {
@@ -1015,6 +1046,7 @@ export function computeGoalieSignals(
     const set: Record<GoalieSignal, Float64Array> = {
       gbdt: predictGbdtBatch(models.gbdt[target], cols),
       ridge: new Float64Array(n),
+      mlp: predictMlpBatch(models.mlp[target], cols),
       marcel: new Float64Array(n),
       ewma: new Float64Array(n),
       lag1: new Float64Array(n),
@@ -1033,6 +1065,7 @@ export function computeGoalieSignals(
         levels,
       );
       set.gbdt[k] = modelDecodeY(target, set.gbdt[k], ex.seasonId, league, levels);
+      set.mlp[k] = modelDecodeY(target, set.mlp[k], ex.seasonId, league, levels);
       const adj = (v: number): number =>
         goalieEraAdjust(target, v, levels, ex.history, ex.seasonId);
       const m = adj(goalieMarcelRate(ex.history, target, league, ex.seasonId));
@@ -1198,15 +1231,13 @@ const GOALIE_GP_SIGNALS = ["gbdt", "ridge", "ewma", "lag1", "structural"] as con
 
 /**
  * Signals per target after factorized training.
- * savePct/saves: residual/volume models + structural + Marcel.
- * Shutouts: Poisson structural + Marcel (rare events).
- * Wins: full stack.
+ * MLP joins GBDT/ridge on residual/volume labels; GP stays tree/ridge (stable).
  */
 const GOALIE_TARGET_SIGNALS: Record<GoalieV2Target, readonly GoalieSignal[]> = {
-  wins: ["gbdt", "ridge", "marcel", "ewma", "lag1", "structural", "market"],
-  saves: ["gbdt", "ridge", "marcel", "structural"],
-  shutouts: ["structural", "marcel"],
-  savePct: ["gbdt", "ridge", "marcel", "structural"],
+  wins: ["gbdt", "ridge", "mlp", "marcel", "ewma", "lag1", "structural", "market"],
+  saves: ["gbdt", "ridge", "mlp", "marcel", "structural"],
+  shutouts: ["structural", "marcel", "mlp"],
+  savePct: ["gbdt", "ridge", "mlp", "marcel", "structural"],
 };
 
 function goalieSignalRow(
@@ -1384,9 +1415,11 @@ export function goalieMetaGp(
 export interface GoalieV2Models {
   gbdt: Record<string, GbdtModel>;
   ridge: Record<string, RidgeV2>;
+  mlp?: Record<string, MlpModel>;
   structural: GoalieStructuralParams;
   gbdtGp: GbdtModel;
   ridgeGp: RidgeV2;
+  mlpGp?: MlpModel;
 }
 
 export function inferGoalieForPlayer(
@@ -1428,12 +1461,24 @@ export function inferGoalieForPlayer(
         league,
         levels,
       ),
+      mlp: models.mlp?.[target]
+        ? modelDecodeY(
+            target,
+            predictMlp(models.mlp[target], vec),
+            targetRow.seasonId,
+            league,
+            levels,
+          )
+        : 0,
       marcel,
       ewma: Number.isFinite(e) ? e : marcel,
       lag1: Number.isFinite(l) ? l : marcel,
       structural: goalieStructuralSignal(models.structural, ex, target, league, registry),
       market: 0,
     };
+    if (!models.mlp?.[target]) {
+      bySignal.mlp = 0.5 * bySignal.gbdt + 0.5 * bySignal.ridge;
+    }
     bySignal.market =
       0.5 * bySignal.marcel + 0.3 * bySignal.ewma + 0.2 * bySignal.lag1;
     const meta = low ? metas.rateMetas[target].low : metas.rateMetas[target].established;

@@ -56,9 +56,11 @@ async function main() {
   bundle.goalie = {
     gbdt: final.gbdt,
     ridge: final.ridge,
+    mlp: final.mlp,
     structural: final.structural,
     gbdtGp: final.gbdtGp,
     ridgeGp: final.ridgeGp,
+    mlpGp: final.mlpGp,
     metas,
     league: {
       svPct: [...league.svPct.entries()],

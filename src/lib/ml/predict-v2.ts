@@ -314,9 +314,11 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
     {
       gbdt: rt.bundle.goalie.gbdt,
       ridge: rt.bundle.goalie.ridge,
+      mlp: rt.bundle.goalie.mlp,
       structural: rt.bundle.goalie.structural,
       gbdtGp: rt.bundle.goalie.gbdtGp,
       ridgeGp: rt.bundle.goalie.ridgeGp,
+      mlpGp: rt.bundle.goalie.mlpGp,
     },
     rt.bundle.goalie.metas,
     history,
@@ -346,6 +348,6 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
   return {
     gamesPlayed,
     projection,
-    reasoning: `v2 goalie (factorized: SA volume + xSV residual + team xGA). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
+    reasoning: `v2 goalie (GBDT+ridge+MLP on SA/xSV residual). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }
