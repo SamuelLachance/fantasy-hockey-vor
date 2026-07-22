@@ -9,7 +9,6 @@ import { gp82 } from "../src/lib/ml/dataset-view";
 import {
   fitGoalieMetas,
   goalieActual,
-  goalieEligible,
   goalieMetaGp,
   goalieMetaRate,
   GOALIE_V2_TARGETS,
