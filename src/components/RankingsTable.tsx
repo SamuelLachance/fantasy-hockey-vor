@@ -513,6 +513,20 @@ export function RankingsTable({ players }: RankingsTableProps) {
                                 Confidence: {(player.confidence * 100).toFixed(0)}%
                               </span>
                             )}
+                            {player.uncertainty && (
+                              <span
+                                className="text-xs text-slate-400"
+                                title="1σ season-total uncertainty. Aleatoric share = irreducible noise vs model disagreement."
+                              >
+                                ±{player.uncertainty.gamesPlayedSigma.toFixed(0)} GP
+                                {player.uncertainty.total?.sigma != null
+                                  ? ` · Σσ ${player.uncertainty.total.sigma.toFixed(1)}`
+                                  : ""}
+                                {" · "}
+                                {(player.uncertainty.aleatoricShare * 100).toFixed(0)}%
+                                irreducible
+                              </span>
+                            )}
                           </div>
                           {playerDetails?.reasoning && (
                             <p className="mb-3 text-sm leading-relaxed text-slate-300">
@@ -562,6 +576,22 @@ export function RankingsTable({ players }: RankingsTableProps) {
                                   </div>
                                   <div className="mt-1 text-sm font-medium text-white">
                                     Proj: {formatStat(player, cat)}
+                                    {player.uncertainty?.perStat?.[cat]?.sigma !=
+                                      null &&
+                                      cat !== "savePct" && (
+                                        <span className="ml-1 text-xs font-normal text-slate-500">
+                                          ±
+                                          {player.uncertainty.perStat[
+                                            cat
+                                          ]!.sigma.toFixed(
+                                            cat === "goals" ||
+                                              cat === "assists" ||
+                                              cat === "powerplayPoints"
+                                              ? 1
+                                              : 0,
+                                          )}
+                                        </span>
+                                      )}
                                   </div>
                                 </div>
                               );
