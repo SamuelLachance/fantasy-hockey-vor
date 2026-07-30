@@ -43,6 +43,9 @@ jobs:
       - name: Validate data & team continuity
         run: npm run check
 
+      - name: Unit checks
+        run: npm run test:unit
+
       - name: Build static site
         run: npm run build:pages
         env:
