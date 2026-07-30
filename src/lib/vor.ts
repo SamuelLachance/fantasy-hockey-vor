@@ -126,6 +126,23 @@ export function computeCategoryZScores(
  * lists no D+forward dual-eligible players, so the case is unreachable; if
  * one appears, score per-position values against per-position replacement.
  */
+/**
+ * Peripheral counting cats: extreme outliers (200+ hits/blocks) should not
+ * outrank elite scorers in a balanced H2H categories league. Soft-cap with
+ * tanh so ranking within peripherals is preserved but contribution saturates.
+ */
+const PERIPHERAL_SOFT_CAP_Z = 2.75;
+const PERIPHERAL_CATEGORIES = new Set<Category>([
+  "hits",
+  "blocks",
+  "penaltyMinutes",
+]);
+
+export function softCapCategoryZ(category: Category, z: number): number {
+  if (!PERIPHERAL_CATEGORIES.has(category) || !Number.isFinite(z)) return z;
+  return PERIPHERAL_SOFT_CAP_Z * Math.tanh(z / PERIPHERAL_SOFT_CAP_Z);
+}
+
 export function fantasyValueFromZScores(
   zScores: Partial<Record<Category, number>>,
   isGoalie: boolean,
@@ -138,7 +155,7 @@ export function fantasyValueFromZScores(
       ? DEFENSE_SKATER_CATEGORIES
       : SKATER_CATEGORIES;
   return categories.reduce((sum, cat) => {
-    const z = zScores[cat] ?? 0;
+    const z = softCapCategoryZ(cat, zScores[cat] ?? 0);
     const w = difficultyWeights
       ? categoryWeight(difficultyWeights, cat, isGoalie)
       : 1;
