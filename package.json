@@ -16,7 +16,7 @@
     "check:teams": "tsx scripts/check-team-abbreviations.ts",
     "check:bundle": "tsx scripts/check-v2-bundle.ts",
     "check": "npm run check:data && npm run check:teams && npm run check:bundle",
-    "test:unit": "tsx scripts/check-team-abbreviations.ts && tsx scripts/test-vor-baselines.ts && tsx scripts/test-rankings-filters.ts",
+    "test:unit": "tsx scripts/check-team-abbreviations.ts && tsx scripts/test-vor-baselines.ts && tsx scripts/test-rankings-filters.ts && tsx scripts/test-rankings-url.ts",
     "collect": "tsx scripts/collect-profiles.ts",
     "ai-project": "tsx scripts/ai-project.ts",
     "ml:dataset": "tsx scripts/build-ml-dataset.ts",

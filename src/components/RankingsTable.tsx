@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  Suspense,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, Filter, X } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
@@ -27,6 +35,7 @@ import {
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
+import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { PositionBadges } from "./PositionBadge";
 
 interface RankingsTableProps {
@@ -72,12 +81,16 @@ function fetchPlayerDetails(): Promise<Record<string, PlayerDetails>> {
   return detailsPromise;
 }
 
-export function RankingsTable({ players }: RankingsTableProps) {
-  const [query, setQuery] = useState("");
+function RankingsTableInner({ players }: RankingsTableProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [seed] = useState(() => parseRankingsUrl(searchParams));
+  const [query, setQuery] = useState(seed.query);
   const deferredQuery = useDeferredValue(query);
-  const [position, setPosition] = useState<Position | "ALL">("ALL");
-  const [sortKey, setSortKey] = useState<SortKey>("vor");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [position, setPosition] = useState<Position | "ALL">(seed.position);
+  const [sortKey, setSortKey] = useState<SortKey>(seed.sortKey);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(seed.sortDir);
   const [statRanges, setStatRanges] = useState<StatRanges>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -85,6 +98,18 @@ export function RankingsTable({ players }: RankingsTableProps) {
   const [details, setDetails] = useState<Record<string, PlayerDetails> | null>(
     null,
   );
+
+  useEffect(() => {
+    const next = rankingsUrlSearch({
+      position,
+      query: deferredQuery,
+      sortKey,
+      sortDir,
+    });
+    const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
+    if (next === current) return;
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  }, [position, deferredQuery, sortKey, sortDir, pathname, router, searchParams]);
 
   const filterRangeKeys = useMemo((): RangeKey[] => {
     const cats =
@@ -612,5 +637,19 @@ export function RankingsTable({ players }: RankingsTableProps) {
         breakdown. Click column headers to sort.
       </p>
     </div>
+  );
+}
+
+export function RankingsTable({ players }: RankingsTableProps) {
+  return (
+    <Suspense
+      fallback={
+        <div className="rounded-2xl border border-white/10 bg-slate-950/40 px-6 py-16 text-center text-slate-400">
+          Loading rankings…
+        </div>
+      }
+    >
+      <RankingsTableInner players={players} />
+    </Suspense>
   );
 }
