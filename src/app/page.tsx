@@ -30,6 +30,13 @@ export default function HomePage() {
         {new Date(data.generatedAt).toISOString().slice(0, 10)} · {data.season}{" "}
         · {(data.projectionEngine ?? "contextual").replace(/-/g, " ")} · NHL
         API
+        {" · "}
+        <a
+          href="https://github.com/SamuelLachance/fantasy-hockey-vor"
+          className="text-cyan-500/80 underline-offset-2 hover:text-cyan-400 hover:underline"
+        >
+          source
+        </a>
       </footer>
     </main>
   );
