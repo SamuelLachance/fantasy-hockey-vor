@@ -104,8 +104,47 @@ if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.5) {
   );
 }
 
+// Board payload contract: heavy fields belong in player-details.json.
+const boardBloat = players.filter(
+  (p) =>
+    p.reasoning != null ||
+    p.profileSummary != null ||
+    p.marketEdge != null ||
+    (p.uncertainty?.perStat != null &&
+      Object.keys(p.uncertainty.perStat).length > 0),
+).length;
+if (boardBloat > 0) {
+  errors.push(
+    `${boardBloat} players still carry reasoning/profileSummary/marketEdge/perStat on the board — run slim-players-json or regenerate`,
+  );
+}
+
+const playersBytes = readFileSync(PLAYERS_PATH).length;
+if (playersBytes > 1.8e6) {
+  warnings.push(
+    `players.json is ${(playersBytes / 1e6).toFixed(2)}MB (target ≤1.3MB slim board)`,
+  );
+}
+
 if (!existsSync(DETAILS_PATH)) {
   errors.push("public/player-details.json is missing (run npm run generate)");
+} else {
+  try {
+    const details = JSON.parse(readFileSync(DETAILS_PATH, "utf8")) as Record<
+      string,
+      { perStatUncertainty?: Record<string, unknown> }
+    >;
+    const withPerStat = Object.values(details).filter(
+      (d) => d.perStatUncertainty && Object.keys(d.perStatUncertainty).length > 0,
+    ).length;
+    if (mlSkaters > 100 && withPerStat < mlSkaters * 0.5) {
+      warnings.push(
+        `only ${withPerStat}/${mlSkaters} detail records carry perStatUncertainty`,
+      );
+    }
+  } catch (e) {
+    errors.push(`player-details.json is not valid JSON: ${e}`);
+  }
 }
 
 for (const w of warnings) console.warn(`WARN: ${w}`);
