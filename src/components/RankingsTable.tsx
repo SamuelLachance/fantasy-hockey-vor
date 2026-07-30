@@ -357,7 +357,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-white/10 bg-slate-950/60 text-xs uppercase tracking-wider text-slate-400">
+            <thead className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm">
               <tr>
                 <th className="px-4 py-3">
                   <button
