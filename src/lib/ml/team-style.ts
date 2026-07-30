@@ -1,3 +1,4 @@
+import { normalizeTeamAbbrev, primaryTeam } from "../team-abbreviations";
 import type { PlayerSeasonRow } from "./types";
 import { teamSeasonKey } from "./context-types";
 
@@ -20,7 +21,7 @@ export function buildTeamStyleBySeasonTeam(
 
   for (const row of rows) {
     if (row.isGoalie || row.gamesPlayed < 5) continue;
-    const team = row.team.split(",")[0].trim().toUpperCase();
+    const team = primaryTeam(row.team);
     const key = teamSeasonKey(row.seasonId, team);
     const b = buckets.get(key) ?? {
       hits: 0,
@@ -48,7 +49,7 @@ export function buildTeamStyleBySeasonTeam(
     // source (e.g. the goalsForAgainst report) or the default without
     // retraining the committed bundle would skew inference. Fix at the next
     // full retrain.
-    b.shGa += (row.shGoalsPer60 ?? 0) * (shToi / 60);
+    b.shGa += ((row.shGoalsPer60 ?? 0) * shToi) / 60;
     buckets.set(key, b);
   }
 
@@ -67,13 +68,17 @@ export function buildTeamStyleBySeasonTeam(
   return out;
 }
 
+/** Same franchise across renames (ARI→UTA) counts as continuity. */
+function franchiseKey(team: string): string {
+  return normalizeTeamAbbrev(team);
+}
+
 export function yearsOnCurrentTeam(history: PlayerSeasonRow[]): number {
   if (history.length === 0) return 0;
-  const current = history[history.length - 1]?.team.split(",")[0].trim().toUpperCase();
+  const current = franchiseKey(history[history.length - 1]?.team ?? "");
   let years = 0;
   for (let i = history.length - 1; i >= 0; i--) {
-    const team = history[i].team.split(",")[0].trim().toUpperCase();
-    if (team !== current) break;
+    if (franchiseKey(history[i].team) !== current) break;
     if (history[i].gamesPlayed >= 10) years++;
   }
   return years;
@@ -82,7 +87,7 @@ export function yearsOnCurrentTeam(history: PlayerSeasonRow[]): number {
 export function teamChangedFlag(history: PlayerSeasonRow[]): number {
   const eligible = history.filter((h) => h.gamesPlayed >= 10);
   if (eligible.length < 2) return 0;
-  const last = eligible[eligible.length - 1].team.split(",")[0].trim().toUpperCase();
-  const prev = eligible[eligible.length - 2].team.split(",")[0].trim().toUpperCase();
+  const last = franchiseKey(eligible[eligible.length - 1].team);
+  const prev = franchiseKey(eligible[eligible.length - 2].team);
   return last !== prev ? 1 : 0;
 }

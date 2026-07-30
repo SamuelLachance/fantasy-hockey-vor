@@ -27,4 +27,16 @@ assert.equal(teamSeasonKey(20232024, "UTA"), "20232024|ARI");
 assert.equal(teamSeasonKey(20232024, "ARI"), "20232024|ARI");
 assert.equal(teamSeasonKey(20242025, "UTA"), "20242025|UTA");
 
+// Franchise continuity must not look like a free-agent move
+import { teamChangedFlag, yearsOnCurrentTeam } from "../src/lib/ml/team-style";
+import type { PlayerSeasonRow } from "../src/lib/ml/types";
+
+const coyotesHistory = [
+  { team: "ARI", seasonId: 20222023, gamesPlayed: 70 },
+  { team: "ARI", seasonId: 20232024, gamesPlayed: 70 },
+  { team: "UTA", seasonId: 20242025, gamesPlayed: 70 },
+] as PlayerSeasonRow[];
+assert.equal(teamChangedFlag(coyotesHistory), 0);
+assert.equal(yearsOnCurrentTeam(coyotesHistory), 3);
+
 console.log("check-team-abbreviations: ok");
