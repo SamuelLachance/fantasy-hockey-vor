@@ -38,7 +38,8 @@ interface PlayerDetails {
 }
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
-const PAGE_SIZE = 100;
+/** Initial paint budget — “Load more” still grows by this step. */
+const PAGE_SIZE = 50;
 
 function SortIcon({
   column,
