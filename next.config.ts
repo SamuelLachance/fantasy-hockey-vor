@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   images: { unoptimized: true },
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
+    // Baked at build so React purity lint allows age comparisons without Date.now().
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },
 };
 

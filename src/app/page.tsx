@@ -3,11 +3,18 @@ import { RankingsTable } from "@/components/RankingsTable";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
 
+function ageDaysAtBuild(generatedAt: string): number {
+  const buildMs = Date.parse(
+    process.env.NEXT_PUBLIC_BUILD_TIME ?? generatedAt,
+  );
+  const generatedMs = Date.parse(generatedAt);
+  if (!Number.isFinite(buildMs) || !Number.isFinite(generatedMs)) return 0;
+  return (buildMs - generatedMs) / (24 * 60 * 60 * 1000);
+}
+
 export default function HomePage() {
   const data = getProjections();
-  const projectionAgeDays =
-    (Date.now() - new Date(data.generatedAt).getTime()) /
-    (24 * 60 * 60 * 1000);
+  const projectionAgeDays = ageDaysAtBuild(data.generatedAt);
 
   return (
     <main className="min-h-screen pb-16">
