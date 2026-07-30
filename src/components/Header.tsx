@@ -37,8 +37,9 @@ export function Header({
             <p className="mt-3 max-w-2xl text-lg text-slate-400">
               {season} projections from a stacked ML ensemble — gradient
               boosting, ridge and Marcel models blended per stat, with game-log
-              durability, xG and team context — ranked by VOR for your
-              head-to-head categories league.
+              durability, xG and team context — ranked by VOR. Edge is consensus
+              rank minus model rank (undervalued when positive); expand a row
+              for per-stat ±1σ uncertainty.
             </p>
             {projectionEngine && (
               <p className="mt-2 text-sm text-cyan-400/80">
