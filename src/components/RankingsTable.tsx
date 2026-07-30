@@ -11,7 +11,15 @@ import {
   type KeyboardEvent,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, Download, Filter, X } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  Filter,
+  Link2,
+  X,
+} from "lucide-react";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -92,6 +100,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [sortDir, setSortDir] = useState<"asc" | "desc">(seed.sortDir);
   const [statRanges, setStatRanges] = useState<StatRanges>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [details, setDetails] = useState<Record<
@@ -350,6 +359,27 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           >
             <Download className="h-4 w-4" />
             CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              const qs = rankingsUrlSearch({
+                position,
+                query: deferredQuery,
+                sortKey,
+                sortDir,
+              });
+              const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
+              void navigator.clipboard.writeText(url).then(() => {
+                setLinkCopied(true);
+                window.setTimeout(() => setLinkCopied(false), 1600);
+              });
+            }}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10"
+            title="Copy link to this board view"
+          >
+            <Link2 className="h-4 w-4" />
+            {linkCopied ? "Copied" : "Link"}
           </button>
         </div>
       </div>
