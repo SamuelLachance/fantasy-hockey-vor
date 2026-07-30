@@ -42,20 +42,29 @@ import {
 import type { Category, PlayerProjection } from "../src/lib/types";
 
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
-const MAX_PROFILE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+/** Hard rebuild after this; warn-but-reuse between soft and hard (matches site stale banner). */
+const PROFILE_SOFT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+const PROFILE_HARD_AGE_MS = 21 * 24 * 60 * 60 * 1000;
 
 async function loadProfiles(): Promise<{
   profiles: PlayerProfile[];
   collectedAt: string;
 }> {
-  if (existsSync(PROFILES_PATH)) {
+  if (existsSync(PROFILES_PATH) && process.env.FORCE_PROFILES !== "1") {
     const data = JSON.parse(readFileSync(PROFILES_PATH, "utf8")) as {
       collectedAt: string;
       profiles: PlayerProfile[];
     };
     const age = Date.now() - new Date(data.collectedAt).getTime();
-    if (age < MAX_PROFILE_AGE_MS && data.profiles.length > 0) {
-      console.log(`Using cached profiles (${data.profiles.length} players)`);
+    if (data.profiles.length > 0 && age < PROFILE_HARD_AGE_MS) {
+      const days = age / (24 * 60 * 60 * 1000);
+      if (age >= PROFILE_SOFT_AGE_MS) {
+        console.warn(
+          `WARN: using profiles ${days.toFixed(0)}d old (force refresh with FORCE_PROFILES=1)`,
+        );
+      } else {
+        console.log(`Using cached profiles (${data.profiles.length} players)`);
+      }
       return { profiles: data.profiles, collectedAt: data.collectedAt };
     }
   }
