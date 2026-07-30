@@ -451,12 +451,11 @@ async function main() {
   };
 
   const outPath = join(process.cwd(), "src", "data", "players.json");
+  // Compact JSON: ~half the bytes of indent-2, faster Pages / client parse.
   writeFileAtomic(
     outPath,
-    JSON.stringify(
-      dataset,
-      (_k, v) => (typeof v === "number" && !Number.isFinite(v) ? 0 : v),
-      2,
+    JSON.stringify(dataset, (_k, v) =>
+      typeof v === "number" && !Number.isFinite(v) ? 0 : v,
     ),
   );
 
