@@ -10,6 +10,7 @@ import {
 } from "@/lib/types";
 import {
   CATEGORY_LABELS,
+  edgeColor,
   formatCount,
   formatStat,
   playerCategories,
@@ -449,13 +450,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
                         {vorForFilter(player, position).toFixed(2)}
                       </td>
                       <td
-                        className={`px-4 py-3 font-mono text-sm ${
-                          (player.draftValue ?? 0) > 0
-                            ? "text-emerald-400"
-                            : (player.draftValue ?? 0) < 0
-                              ? "text-rose-400"
-                              : "text-slate-500"
-                        }`}
+                        className={`px-4 py-3 font-mono text-sm ${edgeColor(player.draftValue ?? 0)}`}
                         title={
                           player.syntheticMarketRank != null
                             ? `Consensus rank ${player.syntheticMarketRank} − model rank ${player.rank}`

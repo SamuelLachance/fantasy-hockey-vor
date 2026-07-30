@@ -113,3 +113,10 @@ export function vorColor(vor: number): string {
   if (vor >= 0) return "text-slate-200";
   return "text-rose-400";
 }
+
+/** Color for consensus-minus-model Edge (draftValue). */
+export function edgeColor(edge: number): string {
+  if (edge > 0) return "text-emerald-400";
+  if (edge < 0) return "text-rose-400";
+  return "text-slate-500";
+}
