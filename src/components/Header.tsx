@@ -7,6 +7,7 @@ interface HeaderProps {
   season: string;
   playerCount: number;
   leagueTeams?: number;
+  generatedAt?: string;
   projectionEngine?: string;
   aiModel?: string;
 }
@@ -15,9 +16,13 @@ export function Header({
   season,
   playerCount,
   leagueTeams = 12,
+  generatedAt,
   projectionEngine,
   aiModel,
 }: HeaderProps) {
+  const generatedLabel = generatedAt
+    ? new Date(generatedAt).toISOString().slice(0, 10)
+    : null;
   return (
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.15),_transparent_55%)]" />
@@ -41,10 +46,13 @@ export function Header({
               rank minus model rank (undervalued when positive); expand a row
               for per-stat ±1σ uncertainty.
             </p>
-            {projectionEngine && (
+            {(projectionEngine || generatedLabel) && (
               <p className="mt-2 text-sm text-cyan-400/80">
-                Engine: {projectionEngine.replace(/-/g, " ")}
+                {projectionEngine
+                  ? `Engine: ${projectionEngine.replace(/-/g, " ")}`
+                  : null}
                 {aiModel ? ` · ${aiModel}` : ""}
+                {generatedLabel ? ` · Generated ${generatedLabel}` : ""}
               </p>
             )}
           </div>
