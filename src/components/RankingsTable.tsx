@@ -257,10 +257,17 @@ export function RankingsTable({ players }: RankingsTableProps) {
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2">
+        <div
+          className="flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Filter by position"
+        >
           {POSITIONS.map((pos) => (
             <button
               key={pos}
+              type="button"
+              role="tab"
+              aria-selected={position === pos}
               onClick={() => setPosition(pos)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 position === pos

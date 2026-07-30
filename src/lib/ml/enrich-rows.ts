@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../atomic-write";
 import { HISTORICAL_SEASON_IDS, seasonIdToLabel } from "../nhl-api";
+import { primaryTeam } from "../team-abbreviations";
 import type { MlContextCaches } from "./context-types";
 import {
   ageAtSeasonStart,
@@ -138,9 +139,9 @@ export function enrichPlayerSeasonRow(
   teamStyle?: Map<string, TeamStyleContext>,
   mpRegistry: MoneyPuckSkaterRegistry | null = loadMoneyPuckSkaterRegistrySync(),
 ): PlayerSeasonRow {
-  const primaryTeam = row.team.split(",")[0].trim().toUpperCase();
-  const teamCtx = caches.teamBySeasonTeam[teamSeasonKey(row.seasonId, primaryTeam)];
-  const style = teamStyle?.get(teamSeasonKey(row.seasonId, primaryTeam));
+  const teamAbbrev = primaryTeam(row.team);
+  const teamCtx = caches.teamBySeasonTeam[teamSeasonKey(row.seasonId, teamAbbrev)];
+  const style = teamStyle?.get(teamSeasonKey(row.seasonId, teamAbbrev));
   const bio = caches.playerBio[row.playerId];
   const registry = loadDraftRegistrySync();
   const draftFromRegistry =
