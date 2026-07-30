@@ -8,6 +8,8 @@ interface HeaderProps {
   playerCount: number;
   leagueTeams?: number;
   generatedAt?: string;
+  /** Precomputed age in days (from server) — avoids impure Date.now in render. */
+  projectionAgeDays?: number;
   projectionEngine?: string;
   aiModel?: string;
 }
@@ -17,15 +19,14 @@ export function Header({
   playerCount,
   leagueTeams = 12,
   generatedAt,
+  projectionAgeDays = 0,
   projectionEngine,
   aiModel,
 }: HeaderProps) {
   const generatedLabel = generatedAt
     ? new Date(generatedAt).toISOString().slice(0, 10)
     : null;
-  const ageDays = generatedAt
-    ? (Date.now() - new Date(generatedAt).getTime()) / (24 * 60 * 60 * 1000)
-    : 0;
+  const ageDays = projectionAgeDays;
   const stale = ageDays > 21;
   return (
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">

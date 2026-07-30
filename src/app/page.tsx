@@ -5,6 +5,9 @@ import { getProjections } from "@/lib/data";
 
 export default function HomePage() {
   const data = getProjections();
+  const projectionAgeDays =
+    (Date.now() - new Date(data.generatedAt).getTime()) /
+    (24 * 60 * 60 * 1000);
 
   return (
     <main className="min-h-screen pb-16">
@@ -13,6 +16,7 @@ export default function HomePage() {
         playerCount={data.players.length}
         leagueTeams={data.league?.teams}
         generatedAt={data.generatedAt}
+        projectionAgeDays={projectionAgeDays}
         projectionEngine={data.projectionEngine}
         aiModel={data.aiModel}
       />
