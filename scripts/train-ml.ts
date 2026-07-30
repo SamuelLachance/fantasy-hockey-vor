@@ -10,6 +10,11 @@ import type { MlDataset } from "../src/lib/ml/types";
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
 
 async function main() {
+  console.warn(
+    "DEPRECATED: npm run ml:train builds the legacy v1 ridge/GBM fallback. " +
+      "Production rankings use npm run ml:train-v2.",
+  );
+
   if (!existsSync(DATA_PATH)) {
     console.error("ML dataset not found. Run: npm run ml:dataset");
     process.exit(1);
