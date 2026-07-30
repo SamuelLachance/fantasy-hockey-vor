@@ -45,6 +45,8 @@ export default function HomePage() {
         {" · "}
         <a
           href="https://github.com/SamuelLachance/fantasy-hockey-vor"
+          target="_blank"
+          rel="noopener noreferrer"
           className="text-cyan-500/80 underline-offset-2 hover:text-cyan-400 hover:underline"
         >
           source
