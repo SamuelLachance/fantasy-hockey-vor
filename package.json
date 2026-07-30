@@ -21,6 +21,8 @@
     "ml:backtest": "tsx scripts/backtest.ts",
     "ml:backtest:market": "tsx scripts/backtest.ts",
     "ml:train-v2": "tsx scripts/train-v2.ts",
+    "ml:benchmark:goalie": "tsx scripts/benchmark-goalie-rates.ts",
+    "ml:benchmark:goalie-gp": "tsx scripts/benchmark-goalie-gp.ts",
     "ml:sanity-market": "tsx scripts/sanity-market-training.ts",
     "ml:gamelogs": "tsx scripts/build-gamelogs.ts",
     "prospect:cache": "tsx scripts/build-prospect-cache.ts",

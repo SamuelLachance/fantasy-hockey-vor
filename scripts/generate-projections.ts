@@ -313,15 +313,21 @@ async function main() {
     };
   });
 
-  const { players: ranked, categoryWeights, replacementLevels } = applyVor(
-    tandemAdjusted,
-    DEFAULT_LEAGUE,
-  );
+  const {
+    players: ranked,
+    categoryWeights,
+    replacementLevels,
+    draftableIds,
+  } = applyVor(tandemAdjusted, DEFAULT_LEAGUE);
 
   // Synthetic-market ranks: rebuild market season totals from per-game rates
   // (model rate − edge), then clamp with the same pipeline before VOR.
   // Players without edges (and goalies) keep model projections so the pool
   // stays complete; their draftValue is forced to 0 below.
+  // Reuse model draftable baselines so Edge is apples-to-apples and we skip
+  // a second full pass-1 pool selection.
+  const draftableIdSet = new Set(draftableIds);
+  const modelDraftable = tandemAdjusted.filter((p) => draftableIdSet.has(p.id));
   const marketRaw = tandemAdjusted.map((p) => {
     if (p.isGoalie || !p.marketEdge) return p;
     const edge = p.marketEdge;
@@ -351,7 +357,11 @@ async function main() {
       projection: clampSkaterProjection(uncapped as never, gp, p.position),
     };
   });
-  const { players: marketRanked } = applyVor(marketRaw, DEFAULT_LEAGUE);
+  const { players: marketRanked } = applyVor(marketRaw, DEFAULT_LEAGUE, {
+    categoryWeights,
+    replacementLevels,
+    zReference: modelDraftable,
+  });
   const marketRankById = new Map<number, number>();
   for (const p of marketRanked) marketRankById.set(p.id, p.rank);
   for (const p of ranked) {

@@ -150,6 +150,7 @@ export interface VorResult {
   players: PlayerProjection[];
   categoryWeights: CategoryDifficultyWeights;
   replacementLevels: Partial<Record<Position, number>>;
+  draftableIds: number[];
 }
 
 export function computeReplacementLevels(
@@ -244,37 +245,74 @@ function selectDraftableIds(
   return ids;
 }
 
+export interface VorBaselines {
+  categoryWeights: CategoryDifficultyWeights;
+  replacementLevels: Partial<Record<Position, number>>;
+  /**
+   * Draftable-pool projections used as the z-score reference distribution.
+   * For synthetic-market Edge, pass the *model* draftable rows so market
+   * totals are scored against the same category means/SDs as the model rank.
+   */
+  zReference: RawPlayer[];
+}
+
 export function applyVor(
   players: RawPlayer[],
   league: LeagueSettings = DEFAULT_LEAGUE,
+  /** When set, skip pass-1 pool selection and reuse prior scarcity/replacement. */
+  reuse?: VorBaselines,
 ): VorResult {
   const goalieFactor = league.goalieVorFactor ?? 1;
 
-  // Pass 1: unweighted z-scores over the full pool, only to identify the
-  // draftable pool at each position.
-  const passOne = computeFantasyValues(
-    players,
-    computeCategoryZScores(players),
-    goalieFactor,
-  );
-  const draftableIds = selectDraftableIds(passOne, league);
-  const draftable = players.filter((p) => draftableIds.has(p.id));
+  let categoryWeights: CategoryDifficultyWeights;
+  let replacementLevels: Partial<Record<Position, number>>;
+  let draftable: RawPlayer[];
+  let withValues: ValuedPlayer[];
 
-  // Pass 2: scarcity weights and z-score baselines come from the draftable
-  // pool; every player is then scored against those baselines.
-  const categoryWeights = computeCategoryDifficultyWeights(draftable, league);
-  const zScores = computeCategoryZScores(players, draftable);
-  const withValues = computeFantasyValues(
-    players,
-    zScores,
-    goalieFactor,
-    categoryWeights,
-  );
+  if (reuse) {
+    // Synthetic-market Edge: score alternate projections against the *same*
+    // draftable baselines as the model ranking (skip pass-1 pool selection;
+    // Edge isn't polluted by a second independent pool / mean-SD).
+    if (reuse.zReference.length === 0) {
+      return applyVor(players, league);
+    }
+    draftable = reuse.zReference;
+    categoryWeights = reuse.categoryWeights;
+    const zScores = computeCategoryZScores(players, draftable);
+    withValues = computeFantasyValues(
+      players,
+      zScores,
+      goalieFactor,
+      categoryWeights,
+    );
+    replacementLevels = reuse.replacementLevels;
+  } else {
+    // Pass 1: unweighted z-scores over the full pool, only to identify the
+    // draftable pool at each position.
+    const passOne = computeFantasyValues(
+      players,
+      computeCategoryZScores(players),
+      goalieFactor,
+    );
+    const draftableIds = selectDraftableIds(passOne, league);
+    draftable = players.filter((p) => draftableIds.has(p.id));
 
-  const replacementLevels = computeReplacementLevels(
-    withValues as PlayerProjection[],
-    league,
-  );
+    // Pass 2: scarcity weights and z-score baselines come from the draftable
+    // pool; every player is then scored against those baselines.
+    categoryWeights = computeCategoryDifficultyWeights(draftable, league);
+    const zScores = computeCategoryZScores(players, draftable);
+    withValues = computeFantasyValues(
+      players,
+      zScores,
+      goalieFactor,
+      categoryWeights,
+    );
+
+    replacementLevels = computeReplacementLevels(
+      withValues as PlayerProjection[],
+      league,
+    );
+  }
 
   const withVor = withValues.map((player) => {
     const eligible = player.positions.length > 0 ? player.positions : [player.position];
@@ -297,6 +335,8 @@ export function applyVor(
 
   const positionCounters: Partial<Record<Position, number>> = {};
 
+  const draftableIds = draftable.map((p) => p.id);
+
   return {
     players: sorted.map((player, index) => {
       const posCount = (positionCounters[player.position] ?? 0) + 1;
@@ -309,5 +349,6 @@ export function applyVor(
     }),
     categoryWeights,
     replacementLevels,
+    draftableIds,
   };
 }
