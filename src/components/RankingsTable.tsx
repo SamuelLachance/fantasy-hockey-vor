@@ -48,7 +48,10 @@ import {
 } from "@/lib/rankings-filters";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
-import type { PlayerDetailRecord } from "@/lib/publish-players";
+import {
+  detailStatSigma,
+  type PlayerDetailRecord,
+} from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
 
 interface RankingsTableProps {
@@ -674,14 +677,15 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                                   </div>
                                   <div className="mt-1 text-sm font-medium text-white">
                                     Proj: {formatStat(player, cat)}
-                                    {playerDetails?.perStatUncertainty?.[cat]
-                                      ?.sigma != null &&
+                                    {detailStatSigma(playerDetails, cat) !=
+                                      null &&
                                       cat !== "savePct" && (
                                         <span className="ml-1 text-xs font-normal text-slate-500">
                                           ±
-                                          {playerDetails.perStatUncertainty[
-                                            cat
-                                          ]!.sigma.toFixed(
+                                          {detailStatSigma(
+                                            playerDetails,
+                                            cat,
+                                          )!.toFixed(
                                             cat === "goals" ||
                                               cat === "assists" ||
                                               cat === "powerplayPoints"

@@ -2,7 +2,11 @@
  * Unit checks for published player split/slim.
  * Run: npx tsx scripts/test-publish-players.ts
  */
-import { slimUncertainty, splitPublishedPlayer } from "../src/lib/publish-players";
+import {
+  detailStatSigma,
+  slimUncertainty,
+  splitPublishedPlayer,
+} from "../src/lib/publish-players";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -52,7 +56,8 @@ assert(board.marketEdge === undefined, "marketEdge off board");
 assert(board.reasoning === undefined, "reasoning off board");
 assert(board.uncertainty?.perStat === undefined, "no perStat on board");
 assert(detail.reasoning === "note", "reasoning in detail");
-assert(detail.perStatUncertainty?.goals?.sigma === 4, "perStat in detail");
+assert(detail.perStatSigma?.goals === 4, "perStatSigma in detail");
+assert(detailStatSigma(detail, "goals") === 4, "detailStatSigma");
 assert(detail.marketEdge?.goals === 0.1, "marketEdge in detail");
 
 if (failed) process.exit(1);

@@ -132,14 +132,19 @@ if (!existsSync(DETAILS_PATH)) {
   try {
     const details = JSON.parse(readFileSync(DETAILS_PATH, "utf8")) as Record<
       string,
-      { perStatUncertainty?: Record<string, unknown> }
+      {
+        perStatSigma?: Record<string, unknown>;
+        perStatUncertainty?: Record<string, unknown>;
+      }
     >;
     const withPerStat = Object.values(details).filter(
-      (d) => d.perStatUncertainty && Object.keys(d.perStatUncertainty).length > 0,
+      (d) =>
+        (d.perStatSigma && Object.keys(d.perStatSigma).length > 0) ||
+        (d.perStatUncertainty && Object.keys(d.perStatUncertainty).length > 0),
     ).length;
     if (mlSkaters > 100 && withPerStat < mlSkaters * 0.5) {
       warnings.push(
-        `only ${withPerStat}/${mlSkaters} detail records carry perStatUncertainty`,
+        `only ${withPerStat}/${mlSkaters} detail records carry per-stat σ`,
       );
     }
   } catch (e) {

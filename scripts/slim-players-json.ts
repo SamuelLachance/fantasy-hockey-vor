@@ -17,13 +17,31 @@ const data = JSON.parse(readFileSync(PLAYERS, "utf8")) as ProjectionsDataset;
 type ExistingDetail = {
   reasoning?: string;
   profileSummary?: string;
-  perStatUncertainty?: PlayerProjection["uncertainty"] extends infer U
-    ? U extends { perStat?: infer P }
-      ? P
-      : never
-    : never;
+  perStatSigma?: Partial<Record<string, number>>;
+  perStatUncertainty?: Partial<
+    Record<string, { sigma?: number; modelSpread?: number; aleatoric?: number }>
+  >;
   marketEdge?: PlayerProjection["marketEdge"];
 };
+
+function existingPerStat(
+  prev: ExistingDetail | undefined,
+): PlayerProjection["uncertainty"] extends infer U
+  ? U extends { perStat?: infer P }
+    ? P
+    : never
+  : never {
+  if (!prev) return undefined;
+  if (prev.perStatSigma && Object.keys(prev.perStatSigma).length > 0) {
+    const out: Record<string, { sigma: number; modelSpread: number; aleatoric: number }> =
+      {};
+    for (const [cat, sigma] of Object.entries(prev.perStatSigma)) {
+      if (sigma != null) out[cat] = { sigma, modelSpread: 0, aleatoric: sigma };
+    }
+    return out as never;
+  }
+  return prev.perStatUncertainty as never;
+}
 
 const existingDetails: Record<string, ExistingDetail> = existsSync(DETAILS)
   ? (JSON.parse(readFileSync(DETAILS, "utf8")) as Record<string, ExistingDetail>)
@@ -48,7 +66,7 @@ for (const p of data.players) {
             (p.uncertainty.perStat &&
             Object.keys(p.uncertainty.perStat).length > 0
               ? p.uncertainty.perStat
-              : prev?.perStatUncertainty) ?? p.uncertainty.perStat,
+              : existingPerStat(prev)) ?? p.uncertainty.perStat,
         }
       : p.uncertainty,
   };
@@ -57,8 +75,15 @@ for (const p of data.players) {
   if (!detail.profileSummary && prev?.profileSummary) {
     detail.profileSummary = prev.profileSummary;
   }
-  if (!detail.perStatUncertainty && prev?.perStatUncertainty) {
-    detail.perStatUncertainty = prev.perStatUncertainty;
+  if (!detail.perStatSigma) {
+    if (prev?.perStatSigma) detail.perStatSigma = prev.perStatSigma;
+    else if (prev?.perStatUncertainty) {
+      const sigma: Partial<Record<string, number>> = {};
+      for (const [cat, u] of Object.entries(prev.perStatUncertainty)) {
+        if (u?.sigma != null) sigma[cat] = u.sigma;
+      }
+      if (Object.keys(sigma).length) detail.perStatSigma = sigma;
+    }
   }
   if (!detail.marketEdge && prev?.marketEdge) {
     detail.marketEdge = prev.marketEdge;

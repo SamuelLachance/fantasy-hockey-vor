@@ -8,9 +8,24 @@ import type {
 export interface PlayerDetailRecord {
   reasoning: string;
   profileSummary: string;
-  /** Full per-stat σ — kept out of the table payload. */
+  /** Per-stat 1σ totals for expand UI (numbers only — no modelSpread blob). */
+  perStatSigma?: Partial<Record<Category, number>>;
+  /**
+   * @deprecated Prefer perStatSigma. Kept so older detail files still parse.
+   */
   perStatUncertainty?: Partial<Record<Category, StatUncertainty>>;
   marketEdge?: Partial<Record<Category, number>>;
+}
+
+/** Resolve per-stat σ from slim or legacy detail shapes. */
+export function detailStatSigma(
+  detail: PlayerDetailRecord | undefined,
+  cat: Category,
+): number | undefined {
+  if (!detail) return undefined;
+  const slim = detail.perStatSigma?.[cat];
+  if (slim != null) return slim;
+  return detail.perStatUncertainty?.[cat]?.sigma;
 }
 
 /** Summary uncertainty for the board (no perStat blob). */
@@ -49,7 +64,11 @@ export function splitPublishedPlayer(p: PlayerProjection): {
     profileSummary: profileSummary ?? "",
   };
   if (uncertainty?.perStat && Object.keys(uncertainty.perStat).length > 0) {
-    detail.perStatUncertainty = uncertainty.perStat;
+    const perStatSigma: Partial<Record<Category, number>> = {};
+    for (const [cat, u] of Object.entries(uncertainty.perStat)) {
+      if (u?.sigma != null) perStatSigma[cat as Category] = u.sigma;
+    }
+    if (Object.keys(perStatSigma).length > 0) detail.perStatSigma = perStatSigma;
   }
   if (marketEdge && Object.keys(marketEdge).length > 0) {
     detail.marketEdge = marketEdge;
