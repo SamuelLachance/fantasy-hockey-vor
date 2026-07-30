@@ -4,63 +4,74 @@
 
 **Repository:** https://github.com/SamuelLachance/fantasy-hockey-vor
 
-**Value Over Replacement** rankings for a head-to-head categories fantasy hockey league, powered by a stacked machine-learning projection system trained on 20 seasons of NHL data.
+**Value Over Replacement** rankings for a head-to-head categories fantasy hockey league, powered by a stacked machine-learning projection system trained on NHL history (back to 2005-06 where feeds allow).
 
 ## Projection Engine (v2 stacked ensemble)
 
 Every player with NHL history is projected by a walk-forward-validated stacked ensemble:
 
-1. **Data** — NHL API player/team stats back to 2005-06, per-player game logs (injury spells, ironman streaks, roster timing), MoneyPuck xG/GSAx, entry-draft registry, contracts, team Elo/standings context.
+1. **Data** — NHL API player/team stats, per-player game logs (injury spells, ironman streaks, roster timing), MoneyPuck xG/GSAx, entry-draft registry, contracts, team Elo/standings context. Franchise moves (ARI→UTA, ATL→WPG) are remapped for team-season lookups.
 
-2. **Base signals per stat** — gradient-boosted trees (histogram GBDT), ridge regression on a shared feature matrix, Marcel (age-adjusted weighted career rates), EWMA, last-season persistence, a contextual heuristic, and a shots×shooting% component model for goals. All persistence signals are era-normalized so league-wide scoring drift doesn't bias projections.
+2. **Base signals per stat** — gradient-boosted trees (histogram GBDT), ridge regression on a shared feature matrix, Marcel (age-adjusted weighted career rates), EWMA, last-season persistence, a contextual heuristic, and a shots×shooting% component model for goals. Persistence signals are era-normalized.
 
-3. **Meta-learner** — non-negative least squares blends the base signals per stat, fit only on out-of-sample walk-forward predictions (no leakage), segmented by veteran/young and forward/defense. Goalie save% uses a convex meta (weights sum to 1) over GSAx-structural, Marcel and EWMA signals so elite goalies stay separated from the league mean.
+3. **Meta-learner** — non-negative least squares blends the base signals per stat, fit only on out-of-sample walk-forward predictions (no leakage), segmented by veteran/young and forward/defense. Goalie save% uses a convex meta over structural / Marcel / EWMA signals.
 
-4. **Synthetic-market / edge training** — GBDT and ridge train on residuals vs a walk-forward “market” (Marcel 50% + EWMA 30% + lag-1 20%). Meta sample weights upweight disagreement zones and Kelly-inspired draft-capital overlays. Optional adversarial feature noise hardens usage/context columns. The **Value** column is `consensusRank − modelRank` (positive = undervalued vs that synthetic consensus). No external ADP feed yet — upgrade path is swapping the market blend for real ADP when available. Disable with `ML_MARKET_TRAINING=0` / `ML_ADVERSARIAL=0`.
+4. **Synthetic-market / edge training** — GBDT and ridge train on residuals vs a walk-forward “market” (Marcel 50% + EWMA 30% + lag-1 20%). The **Edge** column is `consensusRank − modelRank` (positive = undervalued vs that synthetic consensus). Disable with `ML_MARKET_TRAINING=0` / `ML_ADVERSARIAL=0`.
 
-5. **Games played** — dedicated GBDT + ridge + a game-log durability signal (injury spells vs. healthy scratches vs. call-up timing, ending ironman streaks, late-season rest on contenders, physical wear from TOI × hits/blocks, goalie back-to-back workload).
+5. **Games played** — dedicated GBDT + ridge + game-log durability (injury spells vs healthy scratches, ironman, B2B goalie workload).
 
-6. **VOR rank** — per-category z-scores measured against the draftable pool (top ~1.5× rosterable players per position, so fringe players don't distort category spreads), weighted by a bounded scarcity tilt (shrunk halfway toward the equal-weight H2H baseline, clamped to [0.7, 1.4]), compared to replacement level at each position in a 12-team league. Goalie SV% is scored as volume-weighted saves above average, and total goalie value is discounted (`goalieVorFactor`, default 0.25) for weekly start volatility and streamability in head-to-head play. Position eligibility comes from Yahoo Fantasy.
+6. **VOR rank** — per-category z-scores against the draftable pool, scarcity-tilted weights, replacement level in a 12-team league. Goalie SV% is volume-weighted saves above average; total goalie value is discounted (`goalieVorFactor`). Position eligibility comes from Yahoo Fantasy when configured.
 
-Players without NHL history fall back to a contextual dossier model (prospect stats, draft pedigree, team depth). An optional OpenAI dossier engine exists (`npm run ai-project`) but is not used for the published rankings.
+Players without NHL history fall back to a contextual dossier model. Optional OpenAI dossiers (`npm run ai-project`) are not used for published rankings.
 
-## Quick Start
+## Quick Start (browse committed rankings)
 
-Projections, trained models, and all data artifacts are committed — the site builds without any API calls:
+Committed artifacts (`players.json`, `v2-bundle.json`, context caches) let you run the site without calling the NHL API:
 
 ```bash
 npm install
-npm run dev          # local dev server with committed rankings
+npm run dev
 ```
+
+**Note:** `src/data/ml/dataset.json` is **gitignored** (large). Retraining or `npm run generate` on a fresh clone requires rebuilding the dataset locally first (see below). CI builds the static site from committed `players.json` and does not re-run generate.
 
 ## Refreshing Data & Retraining
 
+Order matters — durability and MoneyPuck enrichment expect an existing dataset:
+
 ```bash
-npm run collect              # fetch all player dossiers (~15 min)
-npm run yahoo:fetch          # optional: Yahoo position eligibility (needs OAuth)
+npm run collect              # player dossiers (~15 min)
+npm run yahoo:fetch          # optional: Yahoo eligibility (OAuth)
 
-npm run ml:dataset           # build player-season training dataset (long)
-npm run ml:gamelogs          # fetch game logs, derive durability features
-npm run ml:context           # age/draft/team context caches
-npm run moneypuck:skaters    # MoneyPuck skater xG registry
-npm run moneypuck:goalies    # MoneyPuck goalie GSAx registry
-npm run ml:enrich-moneypuck  # merge MoneyPuck data into the dataset
+npm run ml:dataset           # player-season training rows (long; writes gitignored dataset.json)
+npm run ml:gamelogs          # game logs → durability features
+npm run ml:context           # age/draft/team context cache
+npm run draft:registry       # entry draft registry
+npm run refresh:draft        # refresh draft-linked fields
+npm run moneypuck:skaters
+npm run moneypuck:goalies
+npm run ml:enrich-moneypuck  # merge MoneyPuck into dataset
+npm run ml:re-enrich         # re-apply context enrichment if caches changed
 
-npm run ml:train-v2          # train the production stacked ensemble
-npm run generate             # produce players.json rankings
+npm run ml:train-v2          # production stacked ensemble → v2-bundle.json
+npm run generate             # players.json + public/player-details.json
 ```
 
-Evaluation tooling: `npm run ml:backtest` runs a multi-season rolling-origin backtest against Marcel/EWMA/persistence baselines (includes agreement/disagreement market zones); `npm run ml:sanity-market` checks synthetic-market helpers; `scripts/benchmark-*.ts` cover segment-level holdout metrics.
+Legacy ridge/GBM (`npm run ml:train`) is fallback-only; production is **`ml:train-v2`**.
+
+Checks: `npm run check:data`, `npm run check:teams` (franchise abbrev continuity), `npm run typecheck`, `npm run lint`.
+
+Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmark-*.ts` for segment holdouts.
 
 ## League Settings
 
-- **Roster:** 2C · 2LW · 2RW · 4D · 2G
-- **Skater cats:** G, A, SOG, BLK, HIT, PPP, PIM, FOW
+- **Roster:** 2C · 2LW · 2RW · 4D · 2G (12 teams)
+- **Skater cats:** G, A, SOG, BLK, HIT, PPP, PIM, FOW (FOW = 0 for D)
 - **Goalie cats:** W, SO, SV, SV%
 
 ## Deploy
 
-Auto-deploys to GitHub Pages on push to `master` (lint → typecheck → data validation → static export).
+Auto-deploys to GitHub Pages on push to `master` (lint → typecheck → data validation → static export). Deploy retries on transient Pages failures.
 
 ## Data Sources
 

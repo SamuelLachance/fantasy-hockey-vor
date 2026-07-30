@@ -1,7 +1,8 @@
-import type { ProjectionsDataset } from "@/lib/types";
+import type { LeagueSettings, ProjectionsDataset } from "@/lib/types";
 import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
 import { CATEGORY_FULL_LABELS } from "@/lib/format";
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
+import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap } from "lucide-react";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
 import { vorColor } from "@/lib/format";
@@ -9,6 +10,7 @@ import { vorColor } from "@/lib/format";
 interface TopPlayersProps {
   players: ProjectionsDataset["players"];
   categoryWeights?: CategoryDifficultyWeights;
+  league?: LeagueSettings;
 }
 
 function vorAtPosition(
@@ -18,8 +20,13 @@ function vorAtPosition(
   return player.vorByPosition?.[position] ?? player.vor;
 }
 
-export function TopPlayers({ players, categoryWeights }: TopPlayersProps) {
+export function TopPlayers({
+  players,
+  categoryWeights,
+  league = DEFAULT_LEAGUE,
+}: TopPlayersProps) {
   const topOverall = players.slice(0, 5);
+  const teams = league.teams;
   const topByPosition = (["C", "LW", "RW", "D", "G"] as const).map((pos) => ({
     position: pos,
     players: players
@@ -113,8 +120,10 @@ export function TopPlayers({ players, categoryWeights }: TopPlayersProps) {
             <Target className="mb-2 h-5 w-5 text-cyan-400" />
             <h3 className="font-medium text-white">Replacement Level</h3>
             <p className="mt-1 text-sm text-slate-400">
-              Based on a 12-team league: C/LW/RW rank 24, D rank 48, G rank
-              24 at each position.
+              Based on a {teams}-team league: C/LW/RW rank{" "}
+              {replacementRank("C", teams, league.roster)}, D rank{" "}
+              {replacementRank("D", teams, league.roster)}, G rank{" "}
+              {replacementRank("G", teams, league.roster)} at each position.
             </p>
           </div>
           <div className="rounded-xl border border-white/5 bg-white/5 p-4">

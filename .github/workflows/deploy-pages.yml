@@ -40,8 +40,8 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Validate players data
-        run: npm run check:data
+      - name: Validate data & team continuity
+        run: npm run check
 
       - name: Build static site
         run: npm run build:pages

@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "check:data": "tsx scripts/check-players-data.ts",
     "check:teams": "tsx scripts/check-team-abbreviations.ts",
+    "check": "npm run check:data && npm run check:teams",
     "collect": "tsx scripts/collect-profiles.ts",
     "ai-project": "tsx scripts/ai-project.ts",
     "ml:dataset": "tsx scripts/build-ml-dataset.ts",

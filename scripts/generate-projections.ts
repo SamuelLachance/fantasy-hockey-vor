@@ -224,11 +224,14 @@ async function main() {
   const profiles = rawProfiles.map(normalizeProfile);
   const goalieRoleMap = buildGoalieRoleMap(profiles);
   const aiCache = loadAiCache();
-  const mlModels = getMlModels();
   const aiCount =
     Object.keys(aiCache?.skaters ?? {}).length +
     Object.keys(aiCache?.goalies ?? {}).length;
 
+  // Prefer v2 — skip parsing the legacy v1 models.json when the stacked
+  // ensemble is available (cold-start generate is dataset-bound, not v1-bound).
+  const v2Runtime = getV2Runtime();
+  const mlModels = v2Runtime ? null : getMlModels();
   const contextCaches = loadContextCaches();
   if (mlModels && !contextCaches) {
     throw new Error(
@@ -238,7 +241,6 @@ async function main() {
     );
   }
 
-  const v2Runtime = getV2Runtime();
   if (v2Runtime) {
     console.log(
       `Using v2 stacked ensemble (trained ${v2Runtime.bundle.trainedAt}, dataset ${v2Runtime.bundle.datasetBuiltAt})`,
@@ -260,7 +262,7 @@ async function main() {
     );
   } else if (!v2Runtime) {
     console.log(
-      "No ML models — run npm run ml:dataset && npm run ml:train. Falling back to contextual engine.",
+      "No ML models — run npm run ml:dataset && npm run ml:train-v2. Falling back to contextual engine.",
     );
   }
 
