@@ -26,21 +26,36 @@ type ExistingDetail = {
 
 function existingPerStat(
   prev: ExistingDetail | undefined,
-): PlayerProjection["uncertainty"] extends infer U
-  ? U extends { perStat?: infer P }
-    ? P
-    : never
-  : never {
+):
+  | Partial<
+      Record<string, { sigma: number; modelSpread: number; aleatoric: number }>
+    >
+  | undefined {
   if (!prev) return undefined;
   if (prev.perStatSigma && Object.keys(prev.perStatSigma).length > 0) {
-    const out: Record<string, { sigma: number; modelSpread: number; aleatoric: number }> =
-      {};
+    const out: Record<
+      string,
+      { sigma: number; modelSpread: number; aleatoric: number }
+    > = {};
     for (const [cat, sigma] of Object.entries(prev.perStatSigma)) {
       if (sigma != null) out[cat] = { sigma, modelSpread: 0, aleatoric: sigma };
     }
-    return out as never;
+    return out;
   }
-  return prev.perStatUncertainty as never;
+  if (!prev.perStatUncertainty) return undefined;
+  const out: Record<
+    string,
+    { sigma: number; modelSpread: number; aleatoric: number }
+  > = {};
+  for (const [cat, u] of Object.entries(prev.perStatUncertainty)) {
+    if (u?.sigma == null) continue;
+    out[cat] = {
+      sigma: u.sigma,
+      modelSpread: u.modelSpread ?? 0,
+      aleatoric: u.aleatoric ?? u.sigma,
+    };
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 const existingDetails: Record<string, ExistingDetail> = existsSync(DETAILS)

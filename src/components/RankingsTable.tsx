@@ -9,18 +9,9 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Download,
-  Filter,
-  Link2,
-  X,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -46,20 +37,19 @@ import {
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
-import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import {
   detailStatSigma,
   type PlayerDetailRecord,
 } from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
+import { RankingsToolbar } from "./RankingsToolbar";
 
 interface RankingsTableProps {
   players: PlayerProjection[];
 }
 
-const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
-/** Initial paint budget — “Load more” still grows by this step. */
+/** Initial paint budget — infinite scroll grows by this step. */
 const PAGE_SIZE = 50;
 
 function SortIcon({
@@ -280,24 +270,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }
 
-  function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
-    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") {
-      return;
-    }
-    e.preventDefault();
-    let next = index;
-    if (e.key === "ArrowRight") next = (index + 1) % POSITIONS.length;
-    else if (e.key === "ArrowLeft") next = (index - 1 + POSITIONS.length) % POSITIONS.length;
-    else if (e.key === "Home") next = 0;
-    else next = POSITIONS.length - 1;
-    startTransition(() => setPosition(POSITIONS[next]!));
-    const tabs = (e.currentTarget.parentElement as HTMLElement | null)?.querySelectorAll(
-      '[role="tab"]',
-    );
-    const el = tabs?.[next] as HTMLElement | undefined;
-    el?.focus();
-  }
-
   function updateRange(key: RangeKey, field: "min" | "max", value: string) {
     setStatRanges((prev) => ({
       ...prev,
@@ -314,98 +286,26 @@ function RankingsTableInner({ players }: RankingsTableProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div
-          className="flex flex-wrap gap-2"
-          role="tablist"
-          aria-label="Filter by position"
-        >
-          {POSITIONS.map((pos, index) => (
-            <button
-              key={pos}
-              type="button"
-              role="tab"
-              aria-selected={position === pos}
-              tabIndex={position === pos ? 0 : -1}
-              onClick={() => startTransition(() => setPosition(pos))}
-              onKeyDown={(e) => onPositionTabKeyDown(e, index)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
-                position === pos
-                  ? "bg-cyan-500 text-slate-950"
-                  : "bg-white/5 text-slate-300 hover:bg-white/10"
-              }`}
-            >
-              {pos}
-            </button>
-          ))}
-        </div>
-        <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row">
-          <input
-            type="search"
-            aria-label="Search players or teams"
-            placeholder="Search players or teams..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
-          />
-          <button
-            type="button"
-            onClick={() => setFiltersOpen((o) => !o)}
-            className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
-              filtersOpen || activeFilterCount > 0
-                ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
-                : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-            }`}
-          >
-            <Filter className="h-4 w-4" />
-            Stats
-            {activeFilterCount > 0 && (
-              <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-bold text-slate-950">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-          <button
-            type="button"
-            disabled={filtered.length === 0}
-            onClick={() => {
-              const csv = rankingsToCsv(filtered, position, tableCategories);
-              const stamp = new Date().toISOString().slice(0, 10);
-              downloadTextFile(
-                `vor-rankings-${position.toLowerCase()}-${stamp}.csv`,
-                csv,
-                "text/csv;charset=utf-8",
-              );
-            }}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Download filtered rankings as CSV"
-          >
-            <Download className="h-4 w-4" />
-            CSV
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              const qs = rankingsUrlSearch({
-                position,
-                query: deferredQuery,
-                sortKey,
-                sortDir,
-              });
-              const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
-              void navigator.clipboard.writeText(url).then(() => {
-                setLinkCopied(true);
-                window.setTimeout(() => setLinkCopied(false), 1600);
-              });
-            }}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10"
-            title="Copy link to this board view"
-          >
-            <Link2 className="h-4 w-4" />
-            {linkCopied ? "Copied" : "Link"}
-          </button>
-        </div>
-      </div>
+      <RankingsToolbar
+        position={position}
+        setPosition={setPosition}
+        query={query}
+        setQuery={setQuery}
+        deferredQuery={deferredQuery}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        pathname={pathname}
+        filtersOpen={filtersOpen}
+        setFiltersOpen={setFiltersOpen}
+        activeFilterCount={activeFilterCount}
+        filtered={filtered}
+        tableCategories={tableCategories}
+        linkCopied={linkCopied}
+        onLinkCopied={() => {
+          setLinkCopied(true);
+          window.setTimeout(() => setLinkCopied(false), 1600);
+        }}
+      />
 
       {filtersOpen && (
         <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-lg">
