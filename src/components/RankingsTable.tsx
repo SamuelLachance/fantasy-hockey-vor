@@ -3,10 +3,12 @@
 import {
   Fragment,
   Suspense,
+  startTransition,
   useDeferredValue,
   useEffect,
   useMemo,
   useState,
+  type KeyboardEvent,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, ArrowUpDown, Download, Filter, X } from "lucide-react";
@@ -236,12 +238,32 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }, [players, deferredQuery, position, sortKey, sortDir, statRanges, filterRangeKeys]);
 
   function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(defaultSortDir(key));
+    startTransition(() => {
+      if (sortKey === key) {
+        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      } else {
+        setSortKey(key);
+        setSortDir(defaultSortDir(key));
+      }
+    });
+  }
+
+  function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") {
+      return;
     }
+    e.preventDefault();
+    let next = index;
+    if (e.key === "ArrowRight") next = (index + 1) % POSITIONS.length;
+    else if (e.key === "ArrowLeft") next = (index - 1 + POSITIONS.length) % POSITIONS.length;
+    else if (e.key === "Home") next = 0;
+    else next = POSITIONS.length - 1;
+    startTransition(() => setPosition(POSITIONS[next]!));
+    const tabs = (e.currentTarget.parentElement as HTMLElement | null)?.querySelectorAll(
+      '[role="tab"]',
+    );
+    const el = tabs?.[next] as HTMLElement | undefined;
+    el?.focus();
   }
 
   function updateRange(key: RangeKey, field: "min" | "max", value: string) {
@@ -266,13 +288,15 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           role="tablist"
           aria-label="Filter by position"
         >
-          {POSITIONS.map((pos) => (
+          {POSITIONS.map((pos, index) => (
             <button
               key={pos}
               type="button"
               role="tab"
               aria-selected={position === pos}
-              onClick={() => setPosition(pos)}
+              tabIndex={position === pos ? 0 : -1}
+              onClick={() => startTransition(() => setPosition(pos))}
+              onKeyDown={(e) => onPositionTabKeyDown(e, index)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
                 position === pos
                   ? "bg-cyan-500 text-slate-950"
