@@ -27,6 +27,10 @@ export function TopPlayers({
 }: TopPlayersProps) {
   const topOverall = players.slice(0, 5);
   const teams = league.teams;
+  const topEdge = [...players]
+    .filter((p) => !p.isGoalie && (p.draftValue ?? 0) > 0)
+    .sort((a, b) => (b.draftValue ?? 0) - (a.draftValue ?? 0))
+    .slice(0, 5);
   const topByPosition = (["C", "LW", "RW", "D", "G"] as const).map((pos) => ({
     position: pos,
     players: players
@@ -71,6 +75,43 @@ export function TopPlayers({
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6">
+        <div className="mb-4 flex items-center gap-2 text-emerald-400">
+          <Zap className="h-5 w-5" />
+          <h2 className="text-lg font-semibold text-white">Top Edge (undervalued)</h2>
+        </div>
+        <p className="mb-3 text-xs text-slate-500">
+          Consensus rank − model rank. Positive = model likes them more than
+          the synthetic market.
+        </p>
+        <ul className="space-y-3">
+          {topEdge.map((player) => (
+            <li
+              key={player.id}
+              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm text-slate-500">
+                  #{player.rank}
+                </span>
+                <div>
+                  <div className="font-medium text-white">{player.name}</div>
+                  <div className="text-xs text-slate-400">
+                    {player.team}
+                    {player.syntheticMarketRank != null
+                      ? ` · mkt #${player.syntheticMarketRank}`
+                      : ""}
+                  </div>
+                </div>
+              </div>
+              <span className="font-mono font-bold text-emerald-400">
+                +{player.draftValue}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6 lg:col-span-2">
         <div className="mb-4 flex items-center gap-2 text-cyan-400">
           <Target className="h-5 w-5" />
           <h2 className="text-lg font-semibold text-white">By Position</h2>
