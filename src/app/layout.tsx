@@ -13,9 +13,23 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fantasy Hockey VOR | ML Player Rankings",
+  title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
   description:
-    "Value Over Replacement fantasy hockey rankings powered by a stacked machine-learning ensemble (gradient boosting + ridge + Marcel) for every NHL player. Head-to-head categories league.",
+    "2026-27 NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble (GBDT + ridge + Marcel), with draft Edge vs synthetic consensus and calibrated uncertainty.",
+  openGraph: {
+    title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
+    description:
+      "Stacked-ensemble VOR rankings for H2H categories — Edge, uncertainty, Yahoo positions.",
+    url: "https://samuellachance.github.io/fantasy-hockey-vor/",
+    siteName: "Fantasy Hockey VOR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
+    description:
+      "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
+  },
 };
 
 export default function RootLayout({
