@@ -198,6 +198,15 @@ export function RankingsTable({ players }: RankingsTableProps) {
     }
   }, [expandedId, details]);
 
+  useEffect(() => {
+    if (expandedId == null) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setExpandedId(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expandedId]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = players;
