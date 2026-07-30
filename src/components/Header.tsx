@@ -23,6 +23,10 @@ export function Header({
   const generatedLabel = generatedAt
     ? new Date(generatedAt).toISOString().slice(0, 10)
     : null;
+  const ageDays = generatedAt
+    ? (Date.now() - new Date(generatedAt).getTime()) / (24 * 60 * 60 * 1000)
+    : 0;
+  const stale = ageDays > 21;
   return (
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.15),_transparent_55%)]" />
@@ -73,6 +77,13 @@ export function Header({
             </div>
           </div>
         </div>
+        {stale && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/90">
+            Rankings data is {Math.floor(ageDays)} days old — re-run{" "}
+            <code className="text-amber-200">npm run generate</code> after
+            refresh/train for current projections.
+          </div>
+        )}
         <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
           <Search className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
           <p>
