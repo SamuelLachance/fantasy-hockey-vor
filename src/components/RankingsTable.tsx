@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, ArrowUpDown, Filter, X } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
@@ -134,6 +134,7 @@ function defaultSortDir(key: SortKey): "asc" | "desc" {
 
 export function RankingsTable({ players }: RankingsTableProps) {
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [position, setPosition] = useState<Position | "ALL">("ALL");
   const [sortKey, setSortKey] = useState<SortKey>("vor");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -160,7 +161,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
     return n;
   }, [statRanges, filterRangeKeys]);
 
-  const filterKey = `${position}|${query.trim().toLowerCase()}|${JSON.stringify(statRanges)}`;
+  const filterKey = `${position}|${deferredQuery.trim().toLowerCase()}|${JSON.stringify(statRanges)}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   const [prevPosition, setPrevPosition] = useState(position);
   if (filterKey !== prevFilterKey) {
@@ -208,7 +209,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
   }, [expandedId]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = deferredQuery.trim().toLowerCase();
     let list = players;
 
     if (position !== "ALL") {
@@ -257,7 +258,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
         ? Number(av) - Number(bv)
         : Number(bv) - Number(av);
     });
-  }, [players, query, position, sortKey, sortDir, statRanges, filterRangeKeys]);
+  }, [players, deferredQuery, position, sortKey, sortDir, statRanges, filterRangeKeys]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
