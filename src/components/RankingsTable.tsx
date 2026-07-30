@@ -7,6 +7,7 @@ import {
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type KeyboardEvent,
 } from "react";
@@ -187,12 +188,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
 
   useEffect(() => {
     if (expandedId == null) return;
-    function onKey(e: KeyboardEvent) {
+    function onKey(e: globalThis.KeyboardEvent) {
       if (e.key === "Escape") setExpandedId(null);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [expandedId]);
+
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
@@ -245,6 +248,23 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         : Number(bv) - Number(av);
     });
   }, [players, deferredQuery, position, sortKey, sortDir, statRanges, filterRangeKeys]);
+
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el || filtered.length <= visibleCount) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          startTransition(() => {
+            setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
+          });
+        }
+      },
+      { rootMargin: "240px 0px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [filtered.length, visibleCount]);
 
   function toggleSort(key: SortKey) {
     startTransition(() => {
@@ -690,13 +710,12 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           </div>
         )}
         {filtered.length > visibleCount && (
-          <div className="border-t border-white/5 px-6 py-4 text-center">
-            <button
-              onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
-              className="rounded-full bg-white/5 px-6 py-2 text-sm font-medium text-slate-300 transition hover:bg-white/10"
-            >
-              Show {Math.min(PAGE_SIZE, filtered.length - visibleCount)} more
-            </button>
+          <div
+            ref={loadMoreRef}
+            className="border-t border-white/5 px-6 py-4 text-center text-xs text-slate-500"
+            aria-hidden
+          >
+            Loading more…
           </div>
         )}
       </div>
