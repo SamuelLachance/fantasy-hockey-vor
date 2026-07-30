@@ -64,6 +64,35 @@ if (ranks.size !== players.length) {
   errors.push("duplicate or missing ranks detected");
 }
 
+const dWithFow = players.filter((p) => {
+  if (p.position !== "D" || p.isGoalie) return false;
+  const fow = (p.projection as { faceoffWins?: number }).faceoffWins ?? 0;
+  return fow > 0;
+}).length;
+if (dWithFow > 0) {
+  errors.push(`${dWithFow} defensemen have FOW > 0`);
+}
+
+const goalieSavePcts = players
+  .filter((p) => p.isGoalie)
+  .map((p) => (p.projection as { savePct?: number }).savePct ?? 0);
+const uniqueSv = new Set(goalieSavePcts.map((v) => Math.round(v * 1000)));
+if (goalieSavePcts.length >= 20 && uniqueSv.size < 5) {
+  errors.push(
+    `goalie SV% collapsed (${uniqueSv.size} distinct thousandths) — check projection path`,
+  );
+}
+
+const mlWithUnc = players.filter((p) => p.projectionMethod === "ml" && p.uncertainty)
+  .length;
+const mlSkaters = players.filter((p) => p.projectionMethod === "ml" && !p.isGoalie)
+  .length;
+if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.5) {
+  warnings.push(
+    `only ${mlWithUnc}/${mlSkaters} ML skaters carry uncertainty — regenerate after train-v2`,
+  );
+}
+
 if (!existsSync(DETAILS_PATH)) {
   errors.push("public/player-details.json is missing (run npm run generate)");
 }
