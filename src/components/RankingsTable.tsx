@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, Filter, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Filter, X } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -35,6 +35,7 @@ import {
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
+import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { PositionBadges } from "./PositionBadge";
 
@@ -310,6 +311,24 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 {activeFilterCount}
               </span>
             )}
+          </button>
+          <button
+            type="button"
+            disabled={filtered.length === 0}
+            onClick={() => {
+              const csv = rankingsToCsv(filtered, position, tableCategories);
+              const stamp = new Date().toISOString().slice(0, 10);
+              downloadTextFile(
+                `vor-rankings-${position.toLowerCase()}-${stamp}.csv`,
+                csv,
+                "text/csv;charset=utf-8",
+              );
+            }}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Download filtered rankings as CSV"
+          >
+            <Download className="h-4 w-4" />
+            CSV
           </button>
         </div>
       </div>
