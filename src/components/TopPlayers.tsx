@@ -1,11 +1,14 @@
 import type { LeagueSettings, ProjectionsDataset } from "@/lib/types";
 import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
-import { CATEGORY_FULL_LABELS } from "@/lib/format";
+import { CATEGORY_FULL_LABELS, edgeColor, vorColor } from "@/lib/format";
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
 import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap } from "lucide-react";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
-import { vorColor } from "@/lib/format";
+
+function playerHref(id: number): string {
+  return `?player=${id}`;
+}
 
 interface TopPlayersProps {
   players: ProjectionsDataset["players"];
@@ -48,27 +51,29 @@ export function TopPlayers({
         </div>
         <ul className="space-y-3">
           {topOverall.map((player) => (
-            <li
-              key={player.id}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-sm text-slate-500">
-                  {player.rank}
-                </span>
-                <div>
-                  <div className="font-medium text-white">{player.name}</div>
-                  <div className="text-xs text-slate-400">{player.team}</div>
+            <li key={player.id}>
+              <a
+                href={playerHref(player.id)}
+                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm text-slate-500">
+                    {player.rank}
+                  </span>
+                  <div>
+                    <div className="font-medium text-white">{player.name}</div>
+                    <div className="text-xs text-slate-400">{player.team}</div>
+                  </div>
+                  <PositionBadges
+                    positions={player.positions}
+                    vorPosition={player.vorPosition ?? player.position}
+                  />
                 </div>
-                <PositionBadges
-                  positions={player.positions}
-                  vorPosition={player.vorPosition ?? player.position}
-                />
-              </div>
-              <span className={`font-mono font-bold ${vorColor(player.vor)}`}>
-                {player.vor >= 0 ? "+" : ""}
-                {player.vor.toFixed(2)}
-              </span>
+                <span className={`font-mono font-bold ${vorColor(player.vor)}`}>
+                  {player.vor >= 0 ? "+" : ""}
+                  {player.vor.toFixed(2)}
+                </span>
+              </a>
             </li>
           ))}
         </ul>
@@ -85,27 +90,31 @@ export function TopPlayers({
         </p>
         <ul className="space-y-3">
           {topEdge.map((player) => (
-            <li
-              key={player.id}
-              className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-sm text-slate-500">
-                  #{player.rank}
-                </span>
-                <div>
-                  <div className="font-medium text-white">{player.name}</div>
-                  <div className="text-xs text-slate-400">
-                    {player.team}
-                    {player.syntheticMarketRank != null
-                      ? ` · mkt #${player.syntheticMarketRank}`
-                      : ""}
+            <li key={player.id}>
+              <a
+                href={playerHref(player.id)}
+                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-emerald-500/30 hover:bg-white/[0.07]"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm text-slate-500">
+                    #{player.rank}
+                  </span>
+                  <div>
+                    <div className="font-medium text-white">{player.name}</div>
+                    <div className="text-xs text-slate-400">
+                      {player.team}
+                      {player.syntheticMarketRank != null
+                        ? ` · mkt #${player.syntheticMarketRank}`
+                        : ""}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <span className="font-mono font-bold text-emerald-400">
-                +{player.draftValue}
-              </span>
+                <span
+                  className={`font-mono font-bold ${edgeColor(player.draftValue ?? 0)}`}
+                >
+                  +{player.draftValue}
+                </span>
+              </a>
             </li>
           ))}
         </ul>
@@ -125,14 +134,18 @@ export function TopPlayers({
               </div>
               <ul className="space-y-2">
                 {posPlayers.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex justify-between text-sm text-slate-300"
-                  >
-                    <span className="truncate pr-2">{p.name}</span>
-                    <span className={`font-mono ${vorColor(vorAtPosition(p, position))}`}>
-                      {vorAtPosition(p, position).toFixed(1)}
-                    </span>
+                  <li key={p.id}>
+                    <a
+                      href={playerHref(p.id)}
+                      className="flex justify-between text-sm text-slate-300 transition hover:text-white"
+                    >
+                      <span className="truncate pr-2">{p.name}</span>
+                      <span
+                        className={`font-mono ${vorColor(vorAtPosition(p, position))}`}
+                      >
+                        {vorAtPosition(p, position).toFixed(1)}
+                      </span>
+                    </a>
                   </li>
                 ))}
               </ul>
