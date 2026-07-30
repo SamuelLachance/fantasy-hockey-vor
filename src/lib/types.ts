@@ -73,8 +73,8 @@ export interface StatUncertainty {
 export interface ProjectionUncertainty {
   /** 1σ on games played (games). */
   gamesPlayedSigma: number;
-  /** 1σ on each projected season-total stat. */
-  perStat: Partial<Record<Category, StatUncertainty>>;
+  /** 1σ on each projected season-total stat (omitted on the board payload). */
+  perStat?: Partial<Record<Category, StatUncertainty>>;
   /** Quadrature aggregate across the player's scored categories. */
   total: StatUncertainty;
   /**

@@ -19,7 +19,7 @@ const u = slimUncertainty({
   total: { sigma: 12, modelSpread: 3, aleatoric: 11 },
   perStat: { goals: { sigma: 5, modelSpread: 1, aleatoric: 4 } },
 });
-assert(u?.perStat && Object.keys(u.perStat).length === 0, "perStat cleared");
+assert(u?.perStat === undefined, "perStat omitted");
 assert(u?.gamesPlayedSigma === 8, "gp sigma kept");
 
 const p = {
@@ -50,7 +50,7 @@ const p = {
 const { board, detail } = splitPublishedPlayer(p);
 assert(board.marketEdge === undefined, "marketEdge off board");
 assert(board.reasoning === undefined, "reasoning off board");
-assert(Object.keys(board.uncertainty?.perStat ?? {}).length === 0, "no perStat on board");
+assert(board.uncertainty?.perStat === undefined, "no perStat on board");
 assert(detail.reasoning === "note", "reasoning in detail");
 assert(detail.perStatUncertainty?.goals?.sigma === 4, "perStat in detail");
 assert(detail.marketEdge?.goals === 0.1, "marketEdge in detail");

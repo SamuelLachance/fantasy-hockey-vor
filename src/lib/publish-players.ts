@@ -22,7 +22,6 @@ export function slimUncertainty(
     gamesPlayedSigma: u.gamesPlayedSigma,
     total: u.total,
     aleatoricShare: u.aleatoricShare,
-    perStat: {},
   };
 }
 
