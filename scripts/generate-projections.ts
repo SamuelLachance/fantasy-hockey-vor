@@ -24,6 +24,7 @@ import { PROJECTION_SEASON } from "../src/lib/nhl-api";
 import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
+import { splitPublishedPlayer } from "../src/lib/publish-players";
 import {
   findProjectionIssues,
   clampGoalieProjection,
@@ -399,20 +400,16 @@ async function main() {
             ? "hybrid-ml-contextual"
             : "contextual-dossier";
 
-  // Long-form text lives in a separate lazily-fetched file so the table
-  // payload shipped to the client stays small.
-  const playerDetails = Object.fromEntries(
-    ranked.map((p) => [
-      p.id,
-      {
-        reasoning: p.reasoning ?? "",
-        profileSummary: p.profileSummary ?? "",
-      },
-    ]),
-  );
+  // Long-form text + per-stat uncertainty live in a lazily-fetched file so
+  // the table payload shipped to the client stays small (~half the bytes).
+  const playerDetails: Record<
+    string,
+    ReturnType<typeof splitPublishedPlayer>["detail"]
+  > = {};
   const slimPlayers = ranked.map((p) => {
-    const { reasoning: _reasoning, profileSummary: _profileSummary, ...rest } = p;
-    return rest;
+    const { board, detail } = splitPublishedPlayer(p);
+    playerDetails[String(p.id)] = detail;
+    return board;
   });
 
   // Provenance manifest: which upstream artifacts fed this dataset, and how

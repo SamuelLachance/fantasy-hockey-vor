@@ -37,15 +37,11 @@ import {
 } from "@/lib/rankings-filters";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
+import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
 
 interface RankingsTableProps {
   players: PlayerProjection[];
-}
-
-interface PlayerDetails {
-  reasoning: string;
-  profileSummary: string;
 }
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
@@ -71,9 +67,9 @@ function SortIcon({
   );
 }
 
-let detailsPromise: Promise<Record<string, PlayerDetails>> | null = null;
+let detailsPromise: Promise<Record<string, PlayerDetailRecord>> | null = null;
 
-function fetchPlayerDetails(): Promise<Record<string, PlayerDetails>> {
+function fetchPlayerDetails(): Promise<Record<string, PlayerDetailRecord>> {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   const url = `${base}/player-details.json`.replace(/\/{2,}/g, "/");
   detailsPromise ??= fetch(url)
@@ -96,9 +92,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [details, setDetails] = useState<Record<string, PlayerDetails> | null>(
-    null,
-  );
+  const [details, setDetails] = useState<Record<
+    string,
+    PlayerDetailRecord
+  > | null>(null);
 
   useEffect(() => {
     const next = rankingsUrlSearch({
@@ -603,12 +600,12 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                                   </div>
                                   <div className="mt-1 text-sm font-medium text-white">
                                     Proj: {formatStat(player, cat)}
-                                    {player.uncertainty?.perStat?.[cat]?.sigma !=
-                                      null &&
+                                    {playerDetails?.perStatUncertainty?.[cat]
+                                      ?.sigma != null &&
                                       cat !== "savePct" && (
                                         <span className="ml-1 text-xs font-normal text-slate-500">
                                           ±
-                                          {player.uncertainty.perStat[
+                                          {playerDetails.perStatUncertainty[
                                             cat
                                           ]!.sigma.toFixed(
                                             cat === "goals" ||
