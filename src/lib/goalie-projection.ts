@@ -5,7 +5,6 @@ import { clampGoalieProjection } from "./projection-sanity";
 import {
   franchiseTeamForSeason,
   normalizeTeamAbbrev,
-  primaryTeam,
 } from "./team-abbreviations";
 
 const FULL_SEASON = 82;
