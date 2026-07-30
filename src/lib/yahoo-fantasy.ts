@@ -342,19 +342,9 @@ export function normalizePlayerName(name: string): string {
     .trim();
 }
 
-const TEAM_ALIASES: Record<string, string> = {
-  ARI: "UTA",
-  PHX: "UTA",
-  SJ: "SJS",
-  LA: "LAK",
-  NJ: "NJD",
-  TB: "TBL",
-};
+import { normalizeTeamAbbrev } from "./team-abbreviations";
 
-export function normalizeTeam(team: string): string {
-  const t = team.toUpperCase();
-  return TEAM_ALIASES[t] ?? t;
-}
+export const normalizeTeam = normalizeTeamAbbrev;
 
 export function matchYahooToNhlIds(
   yahooPlayers: YahooPlayerRecord[],

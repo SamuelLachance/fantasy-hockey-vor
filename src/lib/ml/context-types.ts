@@ -1,3 +1,5 @@
+import { franchiseTeamForSeason, primaryTeam } from "../team-abbreviations";
+
 /** Team-level context for one NHL season (cached during ML dataset build). */
 export interface TeamSeasonContext {
   seasonId: number;
@@ -39,8 +41,10 @@ export interface MlContextCaches {
   contractByPlayerSeason: Record<string, PlayerContractSeason>;
 }
 
+/** Cache key using the abbrev that existed for that season (ARI before UTA). */
 export function teamSeasonKey(seasonId: number, team: string): string {
-  return `${seasonId}|${team.split(",")[0].trim().toUpperCase()}`;
+  const abbrev = franchiseTeamForSeason(team || primaryTeam(team), seasonId);
+  return `${seasonId}|${abbrev}`;
 }
 
 export function contractSeasonKey(playerId: number, seasonLabel: string): string {

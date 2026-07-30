@@ -12,16 +12,13 @@ import {
   predictGoalieGpFromStrategy,
   predictSkaterGpFromStrategy,
 } from "./ml/gp-predict";
+import { normalizeTeamAbbrev } from "./team-abbreviations";
 
 const FULL_SEASON = 82;
 export const GOALIE_STARTER_GP = 60;
 export const GOALIE_BACKUP_GP = 22;
 
 export type GoalieRole = "starter" | "backup";
-
-function primaryTeam(team: string): string {
-  return team.split(",")[0].trim().toUpperCase();
-}
 
 /** Most recent season GP (goalie seasons only). */
 export function lastSeasonGoalieGp(profile: PlayerProfile): number {
@@ -40,7 +37,7 @@ export function buildGoalieRoleMap(
 
   for (const profile of profiles) {
     if (!profile.isGoalie) continue;
-    const team = primaryTeam(profile.team);
+    const team = normalizeTeamAbbrev(profile.team);
     const list = byTeam.get(team) ?? [];
     list.push(profile);
     byTeam.set(team, list);

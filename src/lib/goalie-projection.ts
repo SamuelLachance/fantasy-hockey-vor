@@ -2,16 +2,17 @@ import type { PlayerProfile } from "./profile-types";
 import type { GoalieProjection } from "./types";
 import type { PlayerSeasonRow } from "./ml/types";
 import { clampGoalieProjection } from "./projection-sanity";
+import {
+  franchiseTeamForSeason,
+  normalizeTeamAbbrev,
+  primaryTeam,
+} from "./team-abbreviations";
 
 const FULL_SEASON = 82;
 const LEAGUE_SHUTOUT_RATE = 0.04;
 const LEAGUE_SAVE_PCT = 0.9;
 /** Shrink shutouts toward league rate — holdout-tuned on 2024-25 val. */
 const SHUTOUT_LAG1_WEIGHT = 0.5;
-
-function primaryTeam(team: string): string {
-  return team.split(",")[0].trim().toUpperCase();
-}
 
 function lastGoalieSeason(prior: PlayerSeasonRow[]): PlayerSeasonRow | undefined {
   return prior.filter((r) => r.isGoalie && r.gamesPlayed >= 5).at(-1);
@@ -49,12 +50,12 @@ export function goalieLag1PeersFromRows(
   rows: PlayerSeasonRow[],
   historyMap: Map<number, PlayerSeasonRow[]>,
 ): GoalieLag1Peer[] {
-  const teamKey = primaryTeam(team);
+  const teamKey = franchiseTeamForSeason(team, seasonId);
   const seasonGoalies = rows.filter(
     (r) =>
       r.isGoalie &&
       r.seasonId === seasonId &&
-      primaryTeam(r.team) === teamKey,
+      franchiseTeamForSeason(r.team, seasonId) === teamKey,
   );
   return seasonGoalies.map((row) => {
     const prior =
@@ -74,9 +75,9 @@ export function goalieLag1PeersFromProfiles(
   profile: PlayerProfile,
   teamGoalies: PlayerProfile[],
 ): GoalieLag1Peer[] {
-  const team = primaryTeam(profile.team);
+  const team = normalizeTeamAbbrev(profile.team);
   return teamGoalies
-    .filter((p) => p.isGoalie && primaryTeam(p.team) === team)
+    .filter((p) => p.isGoalie && normalizeTeamAbbrev(p.team) === team)
     .map((p) => {
       const seasons = p.teamHistory.filter((s) => s.isGoalie && s.gamesPlayed >= 5);
       const last = seasons.at(-1);

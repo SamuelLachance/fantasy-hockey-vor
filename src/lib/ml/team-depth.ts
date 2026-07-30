@@ -1,4 +1,5 @@
 import type { PlayerProfile } from "../profile-types";
+import { primaryTeam } from "../team-abbreviations";
 import { priorNhlSeasons } from "./features";
 import type { PlayerSeasonRow } from "./types";
 
@@ -39,10 +40,6 @@ export function lookupTeamDepth(
 
 export function prevSeasonId(seasonId: number): number {
   return seasonId - 10001;
-}
-
-function primaryTeam(team: string): string {
-  return team.split(",")[0].trim().toUpperCase();
 }
 
 function positionBucket(position: string): string {

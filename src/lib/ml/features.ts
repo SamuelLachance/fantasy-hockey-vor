@@ -1,4 +1,5 @@
 import { ML_FEATURE_LAGS, ML_MIN_SEASON_GP, scheduledGamesForSeason } from "../nhl-api";
+import { franchiseTeamSeasonKey } from "../team-abbreviations";
 import { positionCode } from "./season-collector";
 import {
   LOW_HISTORY_MAX_PRIOR_SEASONS,
@@ -218,10 +219,6 @@ const teamContextMapCache = new WeakMap<
   Map<string, TeamContextSnapshot>
 >();
 
-function primaryTeamOfRow(team: string): string {
-  return team.split(",")[0].trim().toUpperCase();
-}
-
 function buildTeamSeasonContextMap(
   rows: PlayerSeasonRow[],
 ): Map<string, TeamContextSnapshot> {
@@ -229,7 +226,7 @@ function buildTeamSeasonContextMap(
   if (cached) return cached;
   const map = new Map<string, TeamContextSnapshot>();
   for (const row of rows) {
-    const key = `${primaryTeamOfRow(row.team)}:${row.seasonId}`;
+    const key = franchiseTeamSeasonKey(row.team, row.seasonId);
     if (map.has(key)) continue;
     const snapshot: TeamContextSnapshot = {};
     for (const field of TEAM_CONTEXT_FIELDS) {
@@ -253,7 +250,10 @@ export function sanitizeTargetSeasonRow(
   rows: PlayerSeasonRow[],
 ): PlayerSeasonRow {
   const map = buildTeamSeasonContextMap(rows);
-  const prevKey = `${primaryTeamOfRow(targetSeason.team)}:${targetSeason.seasonId - 10001}`;
+  const prevKey = franchiseTeamSeasonKey(
+    targetSeason.team,
+    targetSeason.seasonId - 10001,
+  );
   const prev = map.get(prevKey);
   const sanitized: PlayerSeasonRow = { ...targetSeason };
   for (const field of TEAM_CONTEXT_FIELDS) {

@@ -32,6 +32,11 @@ import {
 import { applyRateCalibrator, fitAffineCalibrator, fitMetaConvex, fitMetaNnls, fitRidgeV2, predictRidgeV2, applyMeta, marketTrainingEnabled, type MetaWeights, type RateCalibrator, type RidgeV2 } from "./stack";
 import { DISAGREEMENT_SIGMA, disagreementWeight, sampleStd } from "./market-training";
 import type { PlayerSeasonRow } from "./types";
+import {
+  franchiseTeamForSeason,
+  franchiseTeamSeasonKey,
+  primaryTeam,
+} from "../team-abbreviations";
 
 export const GOALIE_V2_TARGETS = ["wins", "saves", "shutouts", "savePct"] as const;
 export type GoalieV2Target = (typeof GOALIE_V2_TARGETS)[number];
@@ -268,10 +273,6 @@ export interface GoalieLeagueContext {
   teamXsv: Map<string, number>;
 }
 
-function primaryTeam(team: string): string {
-  return team.split(",")[0].trim().toUpperCase();
-}
-
 /** Damped-trend estimate over a seasonId→value map (pre-season information only). */
 function trendLevel(m: Map<number, number>, seasonId: number, fallback: number): number {
   const rec: Record<number, number> = {};
@@ -468,7 +469,7 @@ export function buildGoalieLeagueContext(
       const shotsFaced = g.saves / sv;
       saves += g.saves;
       shots += shotsFaced;
-      const team = primaryTeam(g.team);
+      const team = franchiseTeamForSeason(g.team, seasonId);
       const agg = teamAgg.get(team) ?? { sa: 0, gp: 0 };
       agg.sa += shotsFaced;
       agg.gp += g.gamesPlayed;
@@ -620,7 +621,7 @@ function rowStartShare(r: PlayerSeasonRow, league: GoalieLeagueContext): number 
     // Starts as share of appearances when GS known; else fall back to team GP share.
     return Math.min(1, gs / Math.max(r.gamesPlayed, gs));
   }
-  const teamGp = league.teamGoalieGp.get(`${primaryTeam(r.team)}:${r.seasonId}`);
+  const teamGp = league.teamGoalieGp.get(franchiseTeamSeasonKey(r.team, r.seasonId));
   return teamGp && teamGp > 0 ? r.gamesPlayed / teamGp : NaN;
 }
 
@@ -722,7 +723,7 @@ export function projectGoalieSavePctDistinct(
   const gsax60 = shrunkGsax60(eligible, registry);
   const prevSeason = seasonId - 10001;
   const teamXsv =
-    league.teamXsv.get(`${primaryTeam(team)}:${prevSeason}`) ?? prior;
+    league.teamXsv.get(franchiseTeamSeasonKey(team, prevSeason)) ?? prior;
   let saPg = 30;
   {
     let shots = 0;
@@ -779,7 +780,9 @@ export function goalieFeatureVector(
   pushLags(
     out,
     eligible.map((r) => {
-      const teamGp = league.teamGoalieGp.get(`${primaryTeam(r.team)}:${r.seasonId}`);
+      const teamGp = league.teamGoalieGp.get(
+        franchiseTeamSeasonKey(r.team, r.seasonId),
+      );
       return teamGp && teamGp > 0 ? r.gamesPlayed / teamGp : NaN;
     }),
   );
@@ -859,7 +862,7 @@ export function goalieFeatureVector(
   if (lastDur && lastDur.teamGames > 0) {
     const lastRow = history.at(-1)!;
     const teamGp = league.teamGoalieGp.get(
-      `${primaryTeam(lastRow.team)}:${lastRow.seasonId}`,
+      franchiseTeamSeasonKey(lastRow.team, lastRow.seasonId),
     );
     const share =
       teamGp && teamGp > 0 ? lastRow.gamesPlayed / teamGp : lastDur.played / lastDur.teamGames;
@@ -971,11 +974,16 @@ export function goalieFeatureVector(
   out.push(target.teamBlocksPerGame ?? NaN);
   out.push(target.teamPpGoalShare ?? NaN);
   out.push(target.teamPkGaPer60 ?? NaN);
-  const targetTeam = primaryTeam(target.team);
-  out.push(league.teamSaPerGame.get(`${targetTeam}:${prevSeason}`) ?? NaN);
-  out.push(league.teamXsv.get(`${targetTeam}:${prevSeason}`) ?? NaN);
+  const targetTeam = franchiseTeamForSeason(target.team, prevSeason);
+  out.push(league.teamSaPerGame.get(franchiseTeamSeasonKey(target.team, prevSeason)) ?? NaN);
+  out.push(league.teamXsv.get(franchiseTeamSeasonKey(target.team, prevSeason)) ?? NaN);
   const lastTeam =
-    history.length > 0 ? primaryTeam(history[history.length - 1].team) : "";
+    history.length > 0
+      ? franchiseTeamForSeason(
+          history[history.length - 1].team,
+          history[history.length - 1].seasonId,
+        )
+      : "";
   out.push(lastTeam && targetTeam ? (lastTeam === targetTeam ? 0 : 1) : NaN);
   out.push(target.coachTenureSeasons ?? NaN);
 
@@ -983,8 +991,8 @@ export function goalieFeatureVector(
   {
     const last = eligible.at(-1);
     if (last) {
-      const team = primaryTeam(last.team);
-      const teamGp = league.teamGoalieGp.get(`${team}:${last.seasonId}`) ?? 0;
+      const teamGp =
+        league.teamGoalieGp.get(franchiseTeamSeasonKey(last.team, last.seasonId)) ?? 0;
       const share = teamGp > 0 ? last.gamesPlayed / teamGp : NaN;
       // Approximate rank: 1 if share≥0.55, 2 if ≥0.25, else 3.
       const depthRank = Number.isFinite(share)
@@ -1136,7 +1144,7 @@ function goalieWorkloadContext(
   const leagueSaPg = trendLevel(league.saPerGame, ex.seasonId, 30);
   const sv = shrunkSavePct(eligible, leagueSv);
   const teamSaRaw = league.teamSaPerGame.get(
-    `${primaryTeam(ex.targetRow.team)}:${prevSeason}`,
+    franchiseTeamSeasonKey(ex.targetRow.team, prevSeason),
   );
   const teamSa =
     teamSaRaw != null ? 0.6 * teamSaRaw + 0.4 * leagueSaPg : leagueSaPg;
@@ -1172,7 +1180,7 @@ export function goalieStructuralSignal(
   const last = eligible.at(-1);
   let startShare = 0.5;
   if (last) {
-    const teamGp = league.teamGoalieGp.get(`${primaryTeam(last.team)}:${last.seasonId}`);
+    const teamGp = league.teamGoalieGp.get(franchiseTeamSeasonKey(last.team, last.seasonId));
     if (teamGp && teamGp > 0) startShare = last.gamesPlayed / teamGp;
     else if (last.gamesStarted != null && last.gamesPlayed > 0) {
       startShare = Math.min(1, last.gamesStarted / Math.max(last.gamesPlayed, last.gamesStarted));
@@ -1183,7 +1191,7 @@ export function goalieStructuralSignal(
     case "savePct": {
       const prevSeason = ex.seasonId - 10001;
       const teamXsv =
-        league.teamXsv.get(`${primaryTeam(ex.targetRow.team)}:${prevSeason}`) ?? leagueSv;
+        league.teamXsv.get(franchiseTeamSeasonKey(ex.targetRow.team, prevSeason)) ?? leagueSv;
       const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
       // Career EB SV% + GSAx carry the ranking; league/team set the environment.
       const blended =
@@ -1229,7 +1237,7 @@ export function goalieFactorSignal(
   const gsax60 = shrunkGsax60(eligible, registry);
   const prevSeason = ex.seasonId - 10001;
   const teamXsv =
-    league.teamXsv.get(`${primaryTeam(ex.targetRow.team)}:${prevSeason}`) ?? leagueSv;
+    league.teamXsv.get(franchiseTeamSeasonKey(ex.targetRow.team, prevSeason)) ?? leagueSv;
   const skillTilt = saPg > 0 ? Math.max(-0.012, Math.min(0.012, gsax60 / Math.max(saPg, 1))) : 0;
   const savePct = Math.max(
     0.885,
@@ -1733,7 +1741,7 @@ export function computeGoalieSignals(
     let share = NaN;
     if (last) {
       const teamGp = league.teamGoalieGp.get(
-        `${primaryTeam(last.team)}:${last.seasonId}`,
+        franchiseTeamSeasonKey(last.team, last.seasonId),
       );
       if (teamGp && teamGp > 0) share = Math.min(72, (last.gamesPlayed / teamGp) * 82);
     }
@@ -2359,7 +2367,9 @@ export function inferGoalieForPlayer(
   const last = eligible.at(-1);
   let share = ewma;
   if (last) {
-    const teamGp = league.teamGoalieGp.get(`${primaryTeam(last.team)}:${last.seasonId}`);
+    const teamGp = league.teamGoalieGp.get(
+      franchiseTeamSeasonKey(last.team, last.seasonId),
+    );
     if (teamGp && teamGp > 0) share = Math.min(72, (last.gamesPlayed / teamGp) * 82);
   }
   const gpNames = models.gbdtGp.featureNames ?? GOALIE_V2_FEATURES;

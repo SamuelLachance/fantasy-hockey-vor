@@ -1,4 +1,5 @@
 import type { PlayerProfile } from "../profile-types";
+import { normalizeTeamAbbrev, primaryTeam } from "../team-abbreviations";
 import type { TrainingExample } from "./features";
 import { lookupTeamDepth, type TeamDepthContext } from "./team-depth";
 import type { PlayerSeasonRow } from "./types";
@@ -10,10 +11,6 @@ export interface GoalieAllocatorInput {
   lastGp: number;
   strength: number;
   depthRank: number;
-}
-
-function primaryTeam(team: string): string {
-  return team.split(",")[0].trim().toUpperCase();
 }
 
 function goalieStrengthFromPrior(prior: PlayerSeasonRow[]): number {
@@ -128,9 +125,9 @@ export function allocateGoalieGpFromProfiles(
   profile: PlayerProfile,
   teamGoalies: PlayerProfile[],
 ): number {
-  const team = primaryTeam(profile.team);
+  const team = normalizeTeamAbbrev(profile.team);
   const peers = teamGoalies.filter(
-    (p) => p.isGoalie && primaryTeam(p.team) === team,
+    (p) => p.isGoalie && normalizeTeamAbbrev(p.team) === team,
   );
   const inputs: GoalieAllocatorInput[] = peers.map((p) => {
     const seasons = p.teamHistory.filter((s) => s.isGoalie && s.gamesPlayed >= 5);
