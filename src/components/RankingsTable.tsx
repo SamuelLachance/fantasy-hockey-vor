@@ -95,7 +95,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [statRanges, setStatRanges] = useState<StatRanges>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [details, setDetails] = useState<Record<
     string,
@@ -108,11 +108,21 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       query: deferredQuery,
       sortKey,
       sortDir,
+      playerId: expandedId,
     });
     const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
     if (next === current) return;
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [position, deferredQuery, sortKey, sortDir, pathname, router, searchParams]);
+  }, [
+    position,
+    deferredQuery,
+    sortKey,
+    sortDir,
+    expandedId,
+    pathname,
+    router,
+    searchParams,
+  ]);
 
   const filterRangeKeys = useMemo((): RangeKey[] => {
     const cats =
@@ -242,9 +252,19 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }, [players, deferredQuery, position, sortKey, sortDir, statRanges, filterRangeKeys]);
 
+  const renderCount = useMemo(() => {
+    if (expandedId == null) return visibleCount;
+    const idx = filtered.findIndex((p) => p.id === expandedId);
+    if (idx < 0) return visibleCount;
+    return Math.max(
+      visibleCount,
+      Math.min(filtered.length, idx + 1 + PAGE_SIZE),
+    );
+  }, [expandedId, filtered, visibleCount]);
+
   useEffect(() => {
     const el = loadMoreRef.current;
-    if (!el || filtered.length <= visibleCount) return;
+    if (!el || filtered.length <= renderCount) return;
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
@@ -257,7 +277,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [filtered.length, visibleCount]);
+  }, [filtered.length, renderCount]);
+
+  useEffect(() => {
+    if (expandedId == null) return;
+    const row = document.getElementById(`player-row-${expandedId}`);
+    if (!row) return;
+    row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [expandedId, renderCount]);
 
   function toggleSort(key: SortKey) {
     startTransition(() => {
@@ -305,6 +332,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           setLinkCopied(true);
           window.setTimeout(() => setLinkCopied(false), 1600);
         }}
+        expandedId={expandedId}
       />
 
       {filtersOpen && (
@@ -432,13 +460,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filtered.slice(0, visibleCount).map((player, idx) => {
+              {filtered.slice(0, renderCount).map((player, idx) => {
                 const isExpanded = expandedId === player.id;
                 const cats = playerCategories(player);
                 const playerDetails = details?.[String(player.id)];
                 return (
                   <Fragment key={player.id}>
                     <tr
+                      id={`player-row-${player.id}`}
                       onClick={() =>
                         setExpandedId(isExpanded ? null : player.id)
                       }
@@ -613,7 +642,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             No players match your filters.
           </div>
         )}
-        {filtered.length > visibleCount && (
+        {filtered.length > renderCount && (
           <div
             ref={loadMoreRef}
             className="border-t border-white/5 px-6 py-4 text-center text-xs text-slate-500"
@@ -624,7 +653,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         )}
       </div>
       <p className="text-center text-xs text-slate-500">
-        Showing {formatCount(Math.min(visibleCount, filtered.length))} of{" "}
+        Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
         breakdown. Click column headers to sort.

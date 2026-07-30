@@ -28,6 +28,8 @@ export interface RankingsUrlState {
   query: string;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
+  /** Expanded player id when deep-linking a row. */
+  playerId: number | null;
 }
 
 export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
@@ -40,7 +42,13 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
   const sortKey = (SORT_KEYS.has(sortRaw) ? sortRaw : "vor") as SortKey;
   const dirRaw = params.get("dir");
   const sortDir = dirRaw === "asc" || dirRaw === "desc" ? dirRaw : "desc";
-  return { position, query, sortKey, sortDir };
+  const playerRaw = params.get("player");
+  const playerParsed = playerRaw != null ? Number(playerRaw) : NaN;
+  const playerId =
+    Number.isFinite(playerParsed) && playerParsed > 0
+      ? Math.trunc(playerParsed)
+      : null;
+  return { position, query, sortKey, sortDir, playerId };
 }
 
 /** Build query string omitting defaults so URLs stay short. */
@@ -50,5 +58,6 @@ export function rankingsUrlSearch(state: RankingsUrlState): string {
   if (state.query.trim()) p.set("q", state.query.trim());
   if (state.sortKey !== "vor") p.set("sort", state.sortKey);
   if (state.sortDir !== "desc") p.set("dir", state.sortDir);
+  if (state.playerId != null) p.set("player", String(state.playerId));
   return p.toString();
 }

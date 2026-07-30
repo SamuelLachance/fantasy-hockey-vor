@@ -20,17 +20,22 @@ assert(defaults.position === "ALL", "default pos ALL");
 assert(defaults.query === "", "default q empty");
 assert(defaults.sortKey === "vor", "default sort vor");
 assert(defaults.sortDir === "desc", "default dir desc");
+assert(defaults.playerId === null, "default no player");
 assert(rankingsUrlSearch(defaults) === "", "defaults omit from URL");
 
 const round = parseRankingsUrl(
-  new URLSearchParams("pos=D&q=mcdavid&sort=draftValue&dir=asc"),
+  new URLSearchParams(
+    "pos=D&q=mcdavid&sort=draftValue&dir=asc&player=8478402",
+  ),
 );
 assert(round.position === "D", "pos D");
 assert(round.query === "mcdavid", "q");
 assert(round.sortKey === "draftValue", "sort draftValue");
 assert(round.sortDir === "asc", "dir asc");
+assert(round.playerId === 8478402, "player id");
 assert(
-  rankingsUrlSearch(round) === "pos=D&q=mcdavid&sort=draftValue&dir=asc",
+  rankingsUrlSearch(round) ===
+    "pos=D&q=mcdavid&sort=draftValue&dir=asc&player=8478402",
   "serialize round-trip",
 );
 

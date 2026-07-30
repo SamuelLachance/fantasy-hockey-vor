@@ -25,6 +25,7 @@ interface RankingsToolbarProps {
   tableCategories: readonly Category[];
   linkCopied: boolean;
   onLinkCopied: () => void;
+  expandedId: number | null;
 }
 
 export function RankingsToolbar({
@@ -43,6 +44,7 @@ export function RankingsToolbar({
   tableCategories,
   linkCopied,
   onLinkCopied,
+  expandedId,
 }: RankingsToolbarProps) {
   function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
     if (
@@ -146,6 +148,7 @@ export function RankingsToolbar({
               query: deferredQuery,
               sortKey,
               sortDir,
+              playerId: expandedId,
             });
             const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
             void navigator.clipboard.writeText(url).then(onLinkCopied);
