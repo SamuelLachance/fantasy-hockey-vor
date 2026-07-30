@@ -58,15 +58,18 @@ const model = applyVor(pool, DEFAULT_LEAGUE);
 assert.ok(model.draftableIds.length > 0, "draftable pool non-empty");
 assert.equal(model.players[0].rank, 1);
 
-const marketPool = pool.map((p, i) => {
-  if (i >= 10) return p;
+const topModelId = model.players[0].id;
+const marketPool = pool.map((p) => {
+  if (p.id !== topModelId) return p;
   const proj = p.projection as SkaterProjection;
   return {
     ...p,
     projection: {
       ...proj,
-      goals: Math.max(0, proj.goals - 8),
-      assists: Math.max(0, proj.assists - 8),
+      goals: 1,
+      assists: 1,
+      shots: 40,
+      powerplayPoints: 0,
     },
   };
 });
@@ -79,12 +82,11 @@ const market = applyVor(marketPool, DEFAULT_LEAGUE, {
 });
 
 assert.equal(market.players.length, model.players.length);
-// Top scorer who was demoted in market pool should not keep model rank 1
-const topModelId = model.players[0].id;
 const marketRankOfTop = market.players.find((p) => p.id === topModelId)?.rank;
+assert.ok(marketRankOfTop != null, "market rank exists for model #1");
 assert.ok(
-  marketRankOfTop != null && marketRankOfTop >= 1,
-  "market rank exists for model #1",
+  marketRankOfTop > 1,
+  `crushing model #1 totals must drop market rank (got ${marketRankOfTop})`,
 );
 
 console.log(

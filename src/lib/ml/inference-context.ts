@@ -1,18 +1,18 @@
-import { PROJECTION_SEASON_ID } from "../nhl-api";
+import { PROJECTION_SEASON_ID, seasonIdToLabel } from "../nhl-api";
 import type { PlayerProfile } from "../profile-types";
 import { lookupDraftByName } from "../draft-registry";
+import { primaryTeam } from "../team-abbreviations";
+import {
+  loadMoneyPuckSkaterRegistrySync,
+  lookupMoneyPuckSkaterSeason,
+  moneyPuckToSkaterFields,
+} from "../moneypuck-skaters";
 import { ageAtSeasonStart, loadDraftRegistrySync } from "./player-context";
 import type { MlContextCaches } from "./context-types";
 import { contractSeasonKey, teamSeasonKey } from "./context-types";
 import { enrichPlayerSeasonRow } from "./enrich-rows";
 import type { PlayerSeasonRow } from "./types";
 import { SKATER_AUX_LAG_STATS } from "./types";
-import { seasonIdToLabel } from "../nhl-api";
-import {
-  loadMoneyPuckSkaterRegistrySync,
-  lookupMoneyPuckSkaterSeason,
-  moneyPuckToSkaterFields,
-} from "../moneypuck-skaters";
 
 function adv(s: PlayerProfile["teamHistory"][number], key: string): number {
   return s.advanced[key] ?? s.stats[key] ?? 0;
@@ -98,8 +98,8 @@ export function buildProjectionTargetRow(
 ): PlayerSeasonRow {
   const seasonId = PROJECTION_SEASON_ID;
   const seasonLabel = seasonIdToLabel(seasonId);
-  const primaryTeam = profile.team.split(",")[0].trim().toUpperCase();
-  const teamCtx = caches?.teamBySeasonTeam[teamSeasonKey(seasonId, primaryTeam)];
+  const teamAbbrev = primaryTeam(profile.team);
+  const teamCtx = caches?.teamBySeasonTeam[teamSeasonKey(seasonId, teamAbbrev)];
   const contract = caches?.contractByPlayerSeason[
     contractSeasonKey(profile.id, seasonLabel)
   ];

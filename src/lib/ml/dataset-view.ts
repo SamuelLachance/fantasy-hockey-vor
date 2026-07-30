@@ -7,6 +7,7 @@
  */
 
 import { scheduledGamesForSeason } from "../nhl-api";
+import { primaryTeam } from "../team-abbreviations";
 import { sanitizeTargetSeasonRow } from "./features";
 import { lookupTeamDepth } from "./team-depth";
 import type { PlayerSeasonRow } from "./types";
@@ -453,7 +454,7 @@ export function durabilityGpSignal(history: PlayerSeasonRow[]): number {
 }
 
 function primaryTeamOf(row: PlayerSeasonRow): string {
-  return row.team.split(",")[0].trim().toUpperCase();
+  return primaryTeam(row.team);
 }
 
 /**
