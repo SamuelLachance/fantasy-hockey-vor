@@ -35,6 +35,7 @@ import type { PlayerSeasonRow } from "./types";
 import {
   franchiseTeamForSeason,
   franchiseTeamSeasonKey,
+  normalizeTeamAbbrev,
   primaryTeam,
 } from "../team-abbreviations";
 
@@ -1789,11 +1790,13 @@ function normalizeTandemGp(
   for (const key of keys) {
     const groups = new Map<string, number[]>();
     for (let k = 0; k < examples.length; k++) {
-      const team = primaryTeam(examples[k].targetRow.team);
+      const team = normalizeTeamAbbrev(examples[k].targetRow.team);
       if (!team) continue;
-      const list = groups.get(team) ?? [];
+      // Season-scoped so ARI 2023-24 and UTA 2024-25 never share a tandem pool.
+      const groupKey = `${team}:${examples[k].seasonId}`;
+      const list = groups.get(groupKey) ?? [];
       list.push(k);
-      groups.set(team, list);
+      groups.set(groupKey, list);
     }
     for (const idxs of groups.values()) {
       if (idxs.length < 2) continue;
@@ -1820,11 +1823,12 @@ function applyTeamCascadeRates(
   const tw = HEURISTICS.teamWinsBlend;
   const groups = new Map<string, number[]>();
   for (let k = 0; k < examples.length; k++) {
-    const team = primaryTeam(examples[k].targetRow.team);
+    const team = normalizeTeamAbbrev(examples[k].targetRow.team);
     if (!team) continue;
-    const list = groups.get(team) ?? [];
+    const groupKey = `${team}:${examples[k].seasonId}`;
+    const list = groups.get(groupKey) ?? [];
     list.push(k);
-    groups.set(team, list);
+    groups.set(groupKey, list);
   }
 
   for (const idxs of groups.values()) {
@@ -1875,7 +1879,7 @@ export function renormalizeGoalieGamesByTeam<
   const groups = new Map<string, number[]>();
   for (let i = 0; i < players.length; i++) {
     if (!players[i].isGoalie) continue;
-    const team = primaryTeam(players[i].team);
+    const team = normalizeTeamAbbrev(players[i].team);
     if (!team) continue;
     const list = groups.get(team) ?? [];
     list.push(i);
