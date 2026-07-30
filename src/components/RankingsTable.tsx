@@ -188,6 +188,18 @@ export function RankingsTable({ players }: RankingsTableProps) {
   }
 
   useEffect(() => {
+    // Prefetch notes on idle so the first expand isn't network-bound.
+    const ric = window.requestIdleCallback ?? ((cb: IdleRequestCallback) =>
+      window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 200));
+    const cancel =
+      window.cancelIdleCallback ?? ((id: number) => window.clearTimeout(id));
+    const id = ric(() => {
+      void fetchPlayerDetails().then(setDetails);
+    });
+    return () => cancel(id as number);
+  }, []);
+
+  useEffect(() => {
     if (expandedId != null && details === null) {
       let cancelled = false;
       fetchPlayerDetails().then((d) => {
