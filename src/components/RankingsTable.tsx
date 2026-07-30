@@ -162,9 +162,28 @@ export function RankingsTable({ players }: RankingsTableProps) {
 
   const filterKey = `${position}|${query.trim().toLowerCase()}|${JSON.stringify(statRanges)}`;
   const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  const [prevPosition, setPrevPosition] = useState(position);
   if (filterKey !== prevFilterKey) {
     setPrevFilterKey(filterKey);
     setVisibleCount(PAGE_SIZE);
+  }
+  if (position !== prevPosition) {
+    setPrevPosition(position);
+    // Drop sorts on categories that disappear under the new filter (e.g. FOW on D).
+    const cats =
+      position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
+    if (
+      sortKey !== "rank" &&
+      sortKey !== "vor" &&
+      sortKey !== "name" &&
+      sortKey !== "team" &&
+      sortKey !== "gamesPlayed" &&
+      sortKey !== "draftValue" &&
+      !(cats as readonly string[]).includes(sortKey)
+    ) {
+      setSortKey("vor");
+      setSortDir("desc");
+    }
   }
 
   useEffect(() => {
