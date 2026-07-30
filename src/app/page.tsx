@@ -11,6 +11,7 @@ export default function HomePage() {
       <Header
         season={data.season}
         playerCount={data.players.length}
+        leagueTeams={data.league?.teams}
         projectionEngine={data.projectionEngine}
         aiModel={data.aiModel}
       />

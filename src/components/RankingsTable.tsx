@@ -123,7 +123,7 @@ function passesRanges(
 function rangeLabel(key: RangeKey): string {
   if (key === "gamesPlayed") return "Games Played";
   if (key === "vor") return "VOR";
-  if (key === "draftValue") return "Value (vs consensus)";
+  if (key === "draftValue") return "Edge vs consensus";
   return CATEGORY_FULL_LABELS[key];
 }
 
@@ -204,8 +204,10 @@ export function RankingsTable({ players }: RankingsTableProps) {
       if (sortKey === "vor") {
         av = vorForFilter(a, position);
         bv = vorForFilter(b, position);
+      } else if (sortKey === "rank") {
+        av = position === "ALL" ? a.rank : (a.positionRank ?? a.rank);
+        bv = position === "ALL" ? b.rank : (b.positionRank ?? b.rank);
       } else if (
-        sortKey === "rank" ||
         sortKey === "name" ||
         sortKey === "team" ||
         sortKey === "gamesPlayed" ||
@@ -390,12 +392,15 @@ export function RankingsTable({ players }: RankingsTableProps) {
                     VOR <SortIcon column="vor" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
-                <th className="px-4 py-3" title="Model rank vs synthetic consensus (Marcel/EWMA/lag1). Positive = undervalued.">
+                <th
+                  className="px-4 py-3"
+                  title="Consensus rank − model rank. Positive = undervalued vs synthetic market (Marcel/EWMA/lag1)."
+                >
                   <button
                     onClick={() => toggleSort("draftValue")}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
-                    Value <SortIcon column="draftValue" sortKey={sortKey} sortDir={sortDir} />
+                    Edge <SortIcon column="draftValue" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
                 <th className="px-4 py-3">
@@ -433,7 +438,9 @@ export function RankingsTable({ players }: RankingsTableProps) {
                       className="cursor-pointer transition hover:bg-cyan-500/5"
                     >
                       <td className="px-4 py-3 font-mono text-slate-400">
-                        {position === "ALL" ? player.rank : idx + 1}
+                        {position === "ALL"
+                          ? player.rank
+                          : (player.positionRank ?? idx + 1)}
                       </td>
                       <td className="px-4 py-3 font-medium text-white">
                         {player.name}

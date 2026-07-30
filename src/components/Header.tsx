@@ -6,6 +6,7 @@ import { formatCount } from "@/lib/format";
 interface HeaderProps {
   season: string;
   playerCount: number;
+  leagueTeams?: number;
   projectionEngine?: string;
   aiModel?: string;
 }
@@ -13,6 +14,7 @@ interface HeaderProps {
 export function Header({
   season,
   playerCount,
+  leagueTeams = 12,
   projectionEngine,
   aiModel,
 }: HeaderProps) {
@@ -55,7 +57,7 @@ export function Header({
               </div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center">
-              <div className="text-2xl font-bold text-white">12</div>
+              <div className="text-2xl font-bold text-white">{leagueTeams}</div>
               <div className="text-xs uppercase tracking-wider text-slate-400">
                 Team League
               </div>
