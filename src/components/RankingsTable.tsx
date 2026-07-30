@@ -301,6 +301,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
         <div className="flex w-full flex-col gap-2 sm:max-w-md sm:flex-row">
           <input
             type="search"
+            aria-label="Search players or teams"
             placeholder="Search players or teams..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}

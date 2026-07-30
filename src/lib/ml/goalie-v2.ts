@@ -494,9 +494,8 @@ export function buildGoalieLeagueContext(
     const agg = new Map<string, { xga: number; sog: number }>();
     for (const mp of Object.values(registry.byKey)) {
       if (mp.shotsOnGoalAgainst < 50) continue;
-      const team = primaryTeam(mp.team);
-      if (!team) continue;
-      const key = `${team}:${mp.seasonId}`;
+      if (!primaryTeam(mp.team)) continue;
+      const key = franchiseTeamSeasonKey(mp.team, mp.seasonId);
       const cur = agg.get(key) ?? { xga: 0, sog: 0 };
       cur.xga += mp.xGoalsAgainst;
       cur.sog += mp.shotsOnGoalAgainst;
