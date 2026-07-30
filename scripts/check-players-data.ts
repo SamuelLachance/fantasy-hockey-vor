@@ -45,6 +45,17 @@ if (!Number.isFinite(generatedAt)) {
 
 if (!data.season) errors.push("season is missing");
 
+if (
+  data.projectionEngine &&
+  !["stacked-ensemble", "hybrid-ml-contextual", "ml-timeseries"].includes(
+    data.projectionEngine,
+  )
+) {
+  warnings.push(
+    `projectionEngine is "${data.projectionEngine}" (expected stacked-ensemble for published ranks)`,
+  );
+}
+
 const players = data.players ?? [];
 const badVor = players.filter((p) => !Number.isFinite(p.vor)).length;
 if (badVor > 0) errors.push(`${badVor} players with non-finite VOR`);
