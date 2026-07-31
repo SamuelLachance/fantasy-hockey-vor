@@ -7,7 +7,7 @@ import { Trophy, Target, Shield, Zap } from "lucide-react";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
 
 function playerHref(id: number): string {
-  return `?player=${id}`;
+  return `?player=${id}#rankings`;
 }
 
 interface TopPlayersProps {
@@ -88,7 +88,7 @@ export function TopPlayers({
             </h2>
           </div>
           <a
-            href="?sort=draftValue"
+            href="?sort=draftValue#rankings"
             className="text-xs text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline"
           >
             Sort board

@@ -332,7 +332,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
 
   return (
-    <div className="space-y-4">
+    <div id="rankings" className="space-y-4 scroll-mt-6">
       <RankingsToolbar
         position={position}
         setPosition={setPosition}
