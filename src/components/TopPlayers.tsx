@@ -38,6 +38,7 @@ export function TopPlayers({
     position: pos,
     players: players
       .filter((p) => p.positions.includes(pos))
+      .filter((p) => pos !== "G" || p.gamesPlayed > 8)
       .sort((a, b) => vorAtPosition(b, pos) - vorAtPosition(a, pos))
       .slice(0, 3),
   }));
