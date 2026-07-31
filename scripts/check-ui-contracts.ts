@@ -114,6 +114,7 @@ const files: Record<string, string[]> = {
     "Loading player notes",
     "Consensus #",
     "sr-only",
+    'aria-live="polite"',
   ],
   "src/components/RankingsToolbar.tsx": [
     "CSV",
@@ -123,6 +124,7 @@ const files: Record<string, string[]> = {
     'aria-controls="rankings-stat-filters"',
     "onCopyBoardLink",
     'aria-keyshortcuts="l"',
+    'aria-live="polite"',
     "HIGHLIGHT_QUERY_MAX",
     "PositionFilterTabs",
   ],
