@@ -1014,8 +1014,7 @@ const files: Record<string, string[]> = {
     "Goalie cats",
   ],
   "src/components/HeaderStaleBanner.tsx": [
-    "npm run generate",
-    "refresh urgently",
+    "staleBannerParts",
     "aria-live",
     "aria-label",
     "staleBannerMessage",
@@ -1024,7 +1023,10 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/stale-banner.ts": [
     "staleBannerMessage",
+    "staleBannerParts",
     "staleBannerRole",
+    "npm run generate",
+    "refresh urgently",
   ],
   "src/components/SortIcon.tsx": [
     "ArrowUpDown",

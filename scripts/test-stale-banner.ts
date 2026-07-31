@@ -4,6 +4,7 @@
  */
 import {
   staleBannerMessage,
+  staleBannerParts,
   staleBannerRole,
 } from "../src/lib/stale-banner";
 
@@ -29,6 +30,16 @@ assert(
 assert(
   staleBannerMessage(12.9, true).includes("npm run generate"),
   "mentions generate",
+);
+assert(staleBannerParts(1, false).unit === "day", "parts singular");
+assert(staleBannerParts(2, false).unit === "days", "parts plural");
+assert(
+  staleBannerParts(12, true).urgency === " (refresh urgently)",
+  "parts urgency",
+);
+assert(
+  staleBannerParts(1, false).command === "npm run generate",
+  "parts command",
 );
 
 if (failed) process.exit(1);

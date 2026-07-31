@@ -1,5 +1,6 @@
 import {
   staleBannerMessage,
+  staleBannerParts,
   staleBannerRole,
 } from "@/lib/stale-banner";
 
@@ -13,7 +14,7 @@ export function HeaderStaleBanner({
   ageDays,
   veryStale,
 }: HeaderStaleBannerProps) {
-  const days = Math.floor(ageDays);
+  const { days, unit, urgency, command } = staleBannerParts(ageDays, veryStale);
   return (
     <div
       role={staleBannerRole(veryStale)}
@@ -26,11 +27,10 @@ export function HeaderStaleBanner({
       }`}
     >
       Rankings data is{" "}
-      <span className="tabular-nums">{days}</span>{" "}
-      {days === 1 ? "day" : "days"} old
-      {veryStale ? " (refresh urgently)" : ""} — re-run{" "}
+      <span className="tabular-nums">{days}</span> {unit} old
+      {urgency} — re-run{" "}
       <code className={veryStale ? "text-rose-200" : "text-amber-200"}>
-        npm run generate
+        {command}
       </code>{" "}
       after refresh/train for current projections.
     </div>
