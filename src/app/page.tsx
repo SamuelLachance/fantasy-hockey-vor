@@ -57,7 +57,10 @@ export default function HomePage() {
 
       <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
         Projections generated{" "}
-        {new Date(data.generatedAt).toISOString().slice(0, 10)} · {data.season}{" "}
+        <time dateTime={data.generatedAt}>
+          {new Date(data.generatedAt).toISOString().slice(0, 10)}
+        </time>{" "}
+        · {data.season}{" "}
         · {(data.projectionEngine ?? "contextual").replace(/-/g, " ")} · NHL
         API
         {" · "}

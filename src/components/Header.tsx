@@ -64,7 +64,12 @@ export function Header({
                   ? `Engine: ${projectionEngine.replace(/-/g, " ")}`
                   : null}
                 {aiModel ? ` · ${aiModel}` : ""}
-                {generatedLabel ? ` · Generated ${generatedLabel}` : ""}
+                {generatedLabel ? (
+                  <>
+                    {" · Generated "}
+                    <time dateTime={generatedAt}>{generatedLabel}</time>
+                  </>
+                ) : null}
               </p>
             )}
           </div>
