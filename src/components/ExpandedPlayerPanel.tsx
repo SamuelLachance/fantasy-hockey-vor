@@ -59,6 +59,14 @@ export function ExpandedPlayerPanel({
             Confidence: {(player.confidence * 100).toFixed(0)}%
           </span>
         )}
+        {player.syntheticMarketRank != null && (
+          <span className="text-xs text-slate-400">
+            Consensus #{player.syntheticMarketRank} · model #{player.rank}
+            {player.draftValue != null
+              ? ` · Edge ${player.draftValue > 0 ? "+" : ""}${player.draftValue}`
+              : ""}
+          </span>
+        )}
         {player.uncertainty && (
           <span
             className="text-xs text-slate-400"

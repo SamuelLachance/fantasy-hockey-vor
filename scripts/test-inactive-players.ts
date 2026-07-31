@@ -14,6 +14,7 @@ function assert(cond: boolean, msg: string) {
 
 const ids = loadInactivePlayerIds();
 assert(ids.has(8474053), "Couture id listed");
+assert(ids.has(8476346), "Gaudreau id listed");
 const kept = filterActivePlayers([
   { id: 8474053 },
   { id: 8480014 },
