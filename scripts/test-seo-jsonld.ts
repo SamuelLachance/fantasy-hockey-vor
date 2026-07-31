@@ -25,6 +25,9 @@ assert(Array.isArray(graph) && graph.length === 2, "graph has 2 nodes");
 assert(graph[0]?.["@type"] === "WebApplication", "WebApplication node");
 assert(graph[1]?.["@type"] === "Dataset", "Dataset node");
 assert(graph[1]?.dateModified === data.generatedAt, "dateModified wired");
+assert(graph[1]?.license === "https://opensource.org/licenses/MIT", "license");
+assert(graph[1]?.isAccessibleForFree === true, "free");
+assert(Array.isArray(graph[1]?.keywords), "keywords");
 
 if (failed) process.exit(1);
 console.log("OK: seo-jsonld");

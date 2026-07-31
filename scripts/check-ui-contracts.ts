@@ -119,7 +119,12 @@ const files: Record<string, string[]> = {
     "scrollPageTop",
   ],
   "src/app/not-found.tsx": ["Page not found", "Back to rankings"],
-  "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
+  "src/lib/seo-jsonld.ts": [
+    "WebApplication",
+    "Dataset",
+    "isAccessibleForFree",
+    "keywords",
+  ],
   "src/lib/site.ts": ["SITE_ORIGIN", "SITE_URL"],
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],

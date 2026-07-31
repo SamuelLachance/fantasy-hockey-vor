@@ -32,6 +32,16 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           name: "Samuel Lachance",
           url: "https://github.com/SamuelLachance",
         },
+        license: "https://opensource.org/licenses/MIT",
+        isAccessibleForFree: true,
+        keywords: [
+          "fantasy hockey",
+          "VOR",
+          "NHL rankings",
+          data.season,
+          `${data.players.length} players`,
+        ],
+        measurementTechnique: data.projectionEngine ?? "stacked-ensemble",
         distribution: [
           {
             "@type": "DataDownload",
@@ -42,6 +52,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
         variableMeasured: [
           "VOR",
           "draft Edge",
+          "Σσ uncertainty",
           "games played",
           "skater and goalie counting stats",
         ],
