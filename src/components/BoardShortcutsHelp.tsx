@@ -25,7 +25,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
   return createPortal(
     <div
       data-dialog-portal={BOARD_SHORTCUTS_DIALOG_ID}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm motion-reduce:backdrop-blur-none"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm motion-reduce:backdrop-blur-none pt-[max(1rem,env(safe-area-inset-top,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))] pb-[max(1rem,env(safe-area-inset-bottom,0px))] pl-[max(1rem,env(safe-area-inset-left,0px))]"
       onClick={onClose}
     >
       <div
@@ -35,7 +35,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
         aria-labelledby="board-shortcuts-title"
         aria-describedby="board-shortcuts-list"
         tabIndex={-1}
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-xl focus:outline-none"
+        className="max-h-[min(85dvh,calc(100dvh-2rem))] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">

@@ -420,6 +420,10 @@ const files: Record<string, string[]> = {
     "tabIndex={-1}",
     'aria-describedby="board-shortcuts-list"',
     'id="board-shortcuts-list"',
+    "safe-area-inset-top",
+    "safe-area-inset-bottom",
+    "85dvh",
+    "overscroll-contain",
   ],
   "src/hooks/useDialogFocusTrap.ts": [
     "useDialogFocusTrap",
