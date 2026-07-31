@@ -22,7 +22,10 @@ export function RankingsEmptyState({
   onResetBoard,
 }: RankingsEmptyStateProps) {
   return (
-    <div className="px-6 py-16 text-center text-slate-400">
+    <div
+      className="px-6 py-16 text-center text-slate-400"
+      role="status"
+    >
       <p>No players match your filters.</p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         {query.trim() !== "" && (

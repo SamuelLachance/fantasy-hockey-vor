@@ -25,6 +25,7 @@ const sample = {
   team: "EDM",
   positions: ["C"],
   vor: 3.14159,
+  vorByPosition: { C: 1.23456, LW: 0.5 },
   draftValue: 4,
   gamesPlayed: 80,
   uncertainty: { total: { sigma: 41.2 } },
@@ -32,9 +33,13 @@ const sample = {
 
 const rows = rankingsToJsonRows([sample], "C");
 assert(rows[0]!.rank === 2, "position rank");
-assert(rows[0]!.vor === 3.142, "vor rounded");
+assert(rows[0]!.vor === 1.235, "position VOR not overall");
 assert(rows[0]!.sigma === 41.2, "sigma");
 assert(rows[0]!.edge === 4, "edge");
+assert(
+  rankingsToJsonRows([sample], "ALL")[0]!.vor === 3.142,
+  "ALL uses overall VOR",
+);
 assert(typeof downloadRankingsCsv === "function", "csv download helper");
 assert(typeof downloadRankingsJson === "function", "json download helper");
 

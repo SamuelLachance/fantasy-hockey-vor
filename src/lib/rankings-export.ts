@@ -1,4 +1,5 @@
 import type { Category, PlayerProjection, Position } from "@/lib/types";
+import { vorForFilter } from "@/lib/rankings-filters";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 
 export interface BoardExportRow {
@@ -23,7 +24,7 @@ export function rankingsToJsonRows(
     name: p.name,
     team: p.team,
     positions: p.positions,
-    vor: Number(p.vor.toFixed(3)),
+    vor: Number(vorForFilter(p, position).toFixed(3)),
     edge: p.draftValue ?? 0,
     sigma: p.uncertainty?.total?.sigma ?? null,
     gamesPlayed: p.gamesPlayed,

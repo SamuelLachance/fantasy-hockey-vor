@@ -17,8 +17,9 @@ const ROWS: Array<{ keys: string; action: string }> = [
   { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
   { keys: "?", action: "Toggle this help" },
   { keys: "Esc", action: "Close help / filters / row" },
-  { keys: "j / ↓", action: "Next expanded player" },
-  { keys: "k / ↑", action: "Previous expanded player" },
+  { keys: "j / ↓", action: "Next player (opens first if none)" },
+  { keys: "k / ↑", action: "Previous player (opens last if none)" },
+  { keys: "Enter / Space", action: "Expand / collapse focused row" },
   { keys: "Double-click header", action: "Reset sort to VOR" },
 ];
 

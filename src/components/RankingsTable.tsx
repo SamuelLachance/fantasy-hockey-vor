@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  Fragment,
   Suspense,
   startTransition,
   useDeferredValue,
@@ -13,17 +12,9 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection, Position } from "@/lib/types";
-import {
-  CATEGORY_LABELS,
-  edgeColor,
-  formatStat,
-  playerCategories,
-  sigmaColor,
-  vorColor,
-} from "@/lib/format";
+import { CATEGORY_LABELS } from "@/lib/format";
 import {
   defaultSortDir,
-  vorForFilter,
   type RangeKey,
   type SortKey,
   type StatRanges,
@@ -33,18 +24,24 @@ import {
   boardFilterKeys,
   filterAndSortBoard,
 } from "@/lib/rankings-board";
-import { highlightMatch } from "@/lib/highlight-match";
+import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
-import { focusStatsFilterButton, STICKY_NAME_BASE, STICKY_NAME_SHADOW, scrollExpandedRowIntoView, scrollToRankings } from "@/lib/board-dom";
+import {
+  focusStatsFilterButton,
+  STICKY_NAME_BASE,
+  STICKY_NAME_SHADOW,
+  scrollExpandedRowIntoView,
+  scrollToRankings,
+} from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { BoardActiveFilters } from "./BoardActiveFilters";
-import { PositionBadges } from "./PositionBadge";
 import { RankingsEmptyState } from "./RankingsEmptyState";
+import { RankingsPlayerRow } from "./RankingsPlayerRow";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsStatusBar } from "./RankingsStatusBar";
 import { RankingsToolbar } from "./RankingsToolbar";
@@ -53,11 +50,6 @@ import { SortHeader } from "./SortHeader";
 const BoardShortcutsHelp = dynamic(
   () =>
     import("./BoardShortcutsHelp").then((m) => m.BoardShortcutsHelp),
-  { ssr: false },
-);
-const ExpandedPlayerPanel = dynamic(
-  () =>
-    import("./ExpandedPlayerPanel").then((m) => m.ExpandedPlayerPanel),
   { ssr: false },
 );
 
@@ -126,7 +118,12 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     return n;
   }, [statRanges, filterRangeKeys]);
 
-  const filterKey = `${position}|${deferredQuery.trim().toLowerCase()}|${JSON.stringify(statRanges)}`;
+  const filterKey = boardFilterResetToken(
+    position,
+    deferredQuery,
+    statRanges,
+    hideDepthGoalies,
+  );
   const [prevPosition, setPrevPosition] = useState(position);
   if (position !== prevPosition) {
     setPrevPosition(position);
@@ -431,128 +428,41 @@ function RankingsTableInner({ players }: RankingsTableProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {filtered.slice(0, renderCount).map((player, idx) => {
-                const isExpanded = expandedId === player.id;
-                const cats = playerCategories(player);
-                const playerDetails = details?.[String(player.id)];
-                return (
-                  <Fragment key={player.id}>
-                    <tr
-                      id={`player-row-${player.id}`}
-                      onClick={() =>
-                        setExpandedId(isExpanded ? null : player.id)
-                      }
-                      className={`cursor-pointer transition hover:bg-cyan-500/5 ${
-                        isExpanded ? "bg-cyan-500/10" : ""
-                      }`}
-                    >
-                      <td
-                        className={`sticky left-0 z-[1] px-4 py-3 font-mono text-slate-400 ${
-                          isExpanded ? "bg-slate-900" : "bg-slate-950/95"
-                        }`}
-                      >
-                        {position === "ALL"
-                          ? player.rank
-                          : (player.positionRank ?? idx + 1)}
-                      </td>
-                      <td
-                        className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${STICKY_NAME_BASE} ${
-                          showStickyShadow ? STICKY_NAME_SHADOW : ""
-                        } ${
-                          isExpanded ? "bg-slate-900" : "bg-slate-950/95"
-                        }`}
-                        title={player.name}
-                      >
-                        {highlightMatch(player.name, deferredQuery)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <PositionBadges
-                          positions={player.positions}
-                          vorPosition={player.vorPosition ?? player.position}
-                        />
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-300">
-                        {highlightMatch(player.team, deferredQuery)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 font-mono font-semibold ${vorColor(vorForFilter(player, position))}`}
-                      >
-                        {vorForFilter(player, position) >= 0 ? "+" : ""}
-                        {vorForFilter(player, position).toFixed(2)}
-                      </td>
-                      <td
-                        className={`px-4 py-3 font-mono text-sm ${edgeColor(player.draftValue ?? 0)}`}
-                        title={
-                          player.syntheticMarketRank != null
-                            ? `Consensus rank ${player.syntheticMarketRank} − model rank ${player.rank}`
-                            : undefined
-                        }
-                      >
-                        {(player.draftValue ?? 0) > 0 ? "+" : ""}
-                        {player.draftValue ?? 0}
-                      </td>
-                      <td
-                        className={`px-3 py-3 font-mono text-sm ${
-                          player.uncertainty?.total?.sigma != null
-                            ? sigmaColor(player.uncertainty.total.sigma)
-                            : "text-slate-500"
-                        }`}
-                        title={
-                          player.uncertainty?.total?.sigma != null
-                            ? `Σσ ${player.uncertainty.total.sigma.toFixed(1)} (lower = more confident)`
-                            : "No calibrated uncertainty"
-                        }
-                      >
-                        {player.uncertainty?.total?.sigma != null
-                          ? player.uncertainty.total.sigma.toFixed(0)
-                          : "—"}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-slate-400">
-                        {player.gamesPlayed}
-                      </td>
-                      {tableCategories.map((cat) => (
-                        <td
-                          key={cat}
-                          className="px-3 py-3 text-center font-mono text-slate-300"
-                        >
-                          {formatStat(player, cat)}
-                        </td>
-                      ))}
-                    </tr>
-                    {isExpanded && (
-                      <tr className="bg-slate-950/40">
-                        <td
-                          colSpan={8 + tableCategories.length}
-                          className="px-6 py-4"
-                        >
-                          <ExpandedPlayerPanel
-                            player={player}
-                            cats={cats}
-                            playerDetails={playerDetails}
-                            detailsLoading={details === null && !detailsError}
-                            detailsError={detailsError && details === null}
-                            linkCopied={
-                              playerLinkStatus.id === player.id &&
-                              playerLinkStatus.status === "ok"
-                            }
-                            linkCopyFailed={
-                              playerLinkStatus.id === player.id &&
-                              playerLinkStatus.status === "err"
-                            }
-                            onCopyLink={() => copyPlayerLink(player.id)}
-                            onDetailsLoaded={(d) => {
-                              setDetailsError(false);
-                              setDetails(d);
-                            }}
-                            onDetailsError={() => setDetailsError(true)}
-                            onClearDetailsError={() => setDetailsError(false)}
-                          />
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                );
-              })}
+              {filtered.slice(0, renderCount).map((player, idx) => (
+                <RankingsPlayerRow
+                  key={player.id}
+                  player={player}
+                  idx={idx}
+                  position={position}
+                  deferredQuery={deferredQuery}
+                  isExpanded={expandedId === player.id}
+                  showStickyShadow={showStickyShadow}
+                  tableCategories={tableCategories}
+                  playerDetails={details?.[String(player.id)]}
+                  detailsLoading={details === null && !detailsError}
+                  detailsError={detailsError && details === null}
+                  linkCopied={
+                    playerLinkStatus.id === player.id &&
+                    playerLinkStatus.status === "ok"
+                  }
+                  linkCopyFailed={
+                    playerLinkStatus.id === player.id &&
+                    playerLinkStatus.status === "err"
+                  }
+                  onToggle={() =>
+                    setExpandedId(
+                      expandedId === player.id ? null : player.id,
+                    )
+                  }
+                  onCopyLink={() => copyPlayerLink(player.id)}
+                  onDetailsLoaded={(d) => {
+                    setDetailsError(false);
+                    setDetails(d);
+                  }}
+                  onDetailsError={() => setDetailsError(true)}
+                  onClearDetailsError={() => setDetailsError(false)}
+                />
+              ))}
             </tbody>
           </table>
         </div>

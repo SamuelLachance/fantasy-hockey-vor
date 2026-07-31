@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
+import { nextExpandedPlayerId } from "@/lib/board-keyboard";
 import { focusStatsFilterButton, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
@@ -195,7 +196,7 @@ export function useRankingsKeyboard({
           return;
         }
       }
-      if (inField || helpOpenNow || expandedIdNow == null) return;
+      if (inField || helpOpenNow) return;
       if (
         e.key !== "j" &&
         e.key !== "k" &&
@@ -205,13 +206,11 @@ export function useRankingsKeyboard({
         return;
       }
       e.preventDefault();
-      const list = filteredRef.current;
-      const idx = list.findIndex((p) => p.id === expandedIdNow);
-      if (idx < 0) return;
-      const next =
-        e.key === "j" || e.key === "ArrowDown" ? idx + 1 : idx - 1;
-      if (next < 0 || next >= list.length) return;
-      setExpandedIdRef.current(list[next]!.id);
+      const ids = filteredRef.current.map((p) => p.id);
+      const direction =
+        e.key === "j" || e.key === "ArrowDown" ? (1 as const) : (-1 as const);
+      const nextId = nextExpandedPlayerId(ids, expandedIdNow, direction);
+      if (nextId != null) setExpandedIdRef.current(nextId);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
