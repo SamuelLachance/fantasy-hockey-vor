@@ -47,12 +47,12 @@ assert(
   "meta comment",
 );
 assert(
-  lines[1] === "rank,name,team,positions,vor,edge,sigma,gp,G,A",
+  lines[1] === "rank,id,name,team,positions,vor,edge,sigma,gp,G,A",
   "header",
 );
 const dataLine = lines[2] ?? "";
 assert(dataLine.includes('"A, ""Test"""'), "escaped name");
-assert(dataLine.startsWith("1,"), "positionRank when pos=C");
+assert(dataLine.startsWith("1,1,"), "positionRank + id when pos=C");
 assert(dataLine.includes(",2.250,"), "CSV uses position VOR");
 assert(
   rankingsToCsv([sample], "ALL", ["goals"])

@@ -18,6 +18,7 @@ export function rankingsToCsv(
   const meta = `# fantasy-hockey-vor;filter=${position};vorScope=${vorScope};count=${players.length}`;
   const headers = [
     "rank",
+    "id",
     "name",
     "team",
     "positions",
@@ -32,6 +33,7 @@ export function rankingsToCsv(
     const rank = position === "ALL" ? p.rank : (p.positionRank ?? p.rank);
     const cells: Array<string | number> = [
       rank,
+      p.id,
       p.name,
       p.team,
       p.positions.join("/"),
