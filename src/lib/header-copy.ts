@@ -1,5 +1,10 @@
 import { SITE_BRAND } from "@/lib/site";
 
+/** Skip-link visible on keyboard focus. */
+export function skipToRankingsCopy(): string {
+  return "Skip to rankings";
+}
+
 /** Uppercase eyebrow above the hero H1. */
 export function headerEyebrowCopy(): string {
   return "Value Over Replacement";

@@ -7,6 +7,7 @@ import {
   headerHeroTitle,
   headerJumpCtaCopy,
   headerLeadCopy,
+  skipToRankingsCopy,
 } from "../src/lib/header-copy";
 
 let failed = 0;
@@ -22,6 +23,7 @@ assert(headerHeroTitle() === "Fantasy Hockey VOR", "hero brand");
 assert(headerJumpCtaCopy() === "Jump to board", "cta");
 assert(headerLeadCopy("2026-27").startsWith("2026-27 projections"), "lead");
 assert(headerLeadCopy("2026-27").includes("±1σ"), "lead uncertainty");
+assert(skipToRankingsCopy() === "Skip to rankings", "skip link");
 
 if (failed) process.exit(1);
 console.log("OK: header-copy");

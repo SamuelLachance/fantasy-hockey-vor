@@ -505,6 +505,7 @@ const files: Record<string, string[]> = {
     "headerLeadCopy",
     "headerJumpCtaCopy",
     "headerEyebrowCopy",
+    "skipToRankingsCopy",
     "dateTime",
     "scrollToRankings",
     "focusSearch: true",
@@ -518,6 +519,7 @@ const files: Record<string, string[]> = {
     "headerHeroTitle",
     "headerLeadCopy",
     "headerJumpCtaCopy",
+    "skipToRankingsCopy",
     "SITE_BRAND",
   ],
   "src/components/HeaderRosterNote.tsx": [

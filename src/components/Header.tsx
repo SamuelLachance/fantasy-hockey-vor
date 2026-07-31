@@ -13,6 +13,7 @@ import {
   headerHeroTitle,
   headerJumpCtaCopy,
   headerLeadCopy,
+  skipToRankingsCopy,
 } from "@/lib/header-copy";
 import { HeaderRosterNote } from "./HeaderRosterNote";
 import { HeaderStaleBanner } from "./HeaderStaleBanner";
@@ -53,7 +54,7 @@ export function Header({
         }}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
       >
-        Skip to rankings
+        {skipToRankingsCopy()}
       </a>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.15),_transparent_55%)]" />
       <div className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
