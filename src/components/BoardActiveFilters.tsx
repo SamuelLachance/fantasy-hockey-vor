@@ -14,6 +14,7 @@ interface BoardActiveFiltersProps {
   query: string;
   statRanges: StatRanges;
   showStatChips: boolean;
+  hasStatFilters: boolean;
   onClearPosition: () => void;
   onClearQuery: () => void;
   onOpenStats: () => void;
@@ -26,6 +27,7 @@ export function BoardActiveFilters({
   query,
   statRanges,
   showStatChips,
+  hasStatFilters,
   onClearPosition,
   onClearQuery,
   onOpenStats,
@@ -41,7 +43,8 @@ export function BoardActiveFilters({
       ).filter(([, b]) => b && (b.min.trim() !== "" || b.max.trim() !== ""))
     : [];
 
-  const hasAnything = position !== "ALL" || q !== "" || chips.length > 0;
+  const hasAnything =
+    position !== "ALL" || q !== "" || hasStatFilters || chips.length > 0;
   if (!hasAnything) return null;
 
   return (
@@ -103,13 +106,13 @@ export function BoardActiveFilters({
           </span>
         );
       })}
-      {(chips.length > 0 || position !== "ALL" || q !== "") && (
+      {(hasStatFilters || position !== "ALL" || q !== "") && (
         <button
           type="button"
           onClick={() => {
             if (position !== "ALL") onClearPosition();
             if (q !== "") onClearQuery();
-            if (chips.length > 0) onClearStats();
+            if (hasStatFilters) onClearStats();
           }}
           className="rounded-full px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >

@@ -27,6 +27,7 @@ const files: Record<string, string[]> = {
     "Active board filters",
     "Clear filters",
     "formatRangeChip",
+    "hasStatFilters",
   ],
   "src/components/RankingsEmptyState.tsx": [
     "No players match your filters",

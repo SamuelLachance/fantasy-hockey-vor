@@ -370,6 +370,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             query={query}
             statRanges={statRanges}
             showStatChips={!filtersOpen && activeFilterCount > 0}
+            hasStatFilters={activeFilterCount > 0}
             onClearPosition={() =>
               startTransition(() => setPosition("ALL"))
             }
