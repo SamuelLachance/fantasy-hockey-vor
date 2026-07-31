@@ -384,7 +384,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm">
               <tr>
-                <th className="px-4 py-3">
+                <th className="sticky left-0 z-[5] bg-slate-950/95 px-4 py-3">
                   <button
                     onClick={() => toggleSort("rank")}
                     onDoubleClick={resetSortToVor}
@@ -394,7 +394,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                     # <SortIcon column="rank" sortKey={sortKey} sortDir={sortDir} />
                   </button>
                 </th>
-                <th className="px-4 py-3">
+                <th className="sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12">
                   <button
                     onClick={() => toggleSort("name")}
                     onDoubleClick={resetSortToVor}
@@ -474,12 +474,20 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                         isExpanded ? "bg-cyan-500/10" : ""
                       }`}
                     >
-                      <td className="px-4 py-3 font-mono text-slate-400">
+                      <td
+                        className={`sticky left-0 z-[1] px-4 py-3 font-mono text-slate-400 ${
+                          isExpanded ? "bg-slate-900" : "bg-slate-950/95"
+                        }`}
+                      >
                         {position === "ALL"
                           ? player.rank
                           : (player.positionRank ?? idx + 1)}
                       </td>
-                      <td className="px-4 py-3 font-medium text-white">
+                      <td
+                        className={`sticky left-10 z-[1] px-4 py-3 font-medium text-white shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12 ${
+                          isExpanded ? "bg-slate-900" : "bg-slate-950/95"
+                        }`}
+                      >
                         {player.name}
                       </td>
                       <td className="px-4 py-3">
