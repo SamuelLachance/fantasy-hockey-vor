@@ -347,6 +347,8 @@ const files: Record<string, string[]> = {
     "Try again",
     "Back to rankings",
     "homeRankingsHref",
+    "Fantasy Hockey VOR",
+    "focus-visible:ring-2",
   ],
   "src/app/loading.tsx": [
     "Loading rankings",
