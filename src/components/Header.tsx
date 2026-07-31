@@ -37,7 +37,7 @@ export function Header({
   const stale = isProjectionStale(ageDays);
   const veryStale = isProjectionVeryStale(ageDays);
   return (
-    <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
+    <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl motion-reduce:backdrop-blur-none">
       <a
         href="#rankings"
         onClick={(e) => {

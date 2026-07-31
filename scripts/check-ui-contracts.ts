@@ -26,6 +26,7 @@ const files: Record<string, string[]> = {
     "Drop deep-linked expand ids",
     "boardHasPlayerId",
     "countActiveStatFilters",
+    "motion-reduce:backdrop-blur-none",
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId"],
   "src/lib/board-active-filters.ts": ["countActiveStatFilters"],

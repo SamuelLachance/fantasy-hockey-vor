@@ -280,7 +280,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
       <BoardShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <div className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md">
+      <div className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md motion-reduce:backdrop-blur-none">
         <RankingsToolbar
           position={position}
           setPosition={setPosition}
