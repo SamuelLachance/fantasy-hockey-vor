@@ -297,7 +297,7 @@ if (players.length > 500 && yahooPos < players.length * 0.9) {
 
 const top100 = players.filter((p) => p.rank <= 100);
 const yahooTop100 = top100.filter((p) => p.positionSource === "yahoo").length;
-if (top100.length >= 100 && yahooTop100 < 95) {
+if (top100.length >= 100 && yahooTop100 < 98) {
   errors.push(
     `only ${yahooTop100}/100 top-ranked players have Yahoo positions — eligibility drift`,
   );
