@@ -73,5 +73,23 @@ assert(
   "row allows shortcuts",
 );
 
+const panelBtn = {
+  tagName: "BUTTON",
+  isContentEditable: false,
+  closest(sel: string) {
+    if (sel.includes("player-panel")) return this as unknown as Element;
+    if (sel.includes("player-row")) return null;
+    return sel.includes("button") ? (this as unknown as Element) : null;
+  },
+};
+assert(
+  !isBoardChromeTarget(panelBtn as unknown as EventTarget),
+  "expand panel not chrome",
+);
+assert(
+  !shouldIgnoreBoardShortcut(false, panelBtn as unknown as EventTarget),
+  "expand panel allows shortcuts",
+);
+
 if (failed) process.exit(1);
 console.log("OK: board-keyboard");

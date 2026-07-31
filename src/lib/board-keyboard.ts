@@ -52,6 +52,7 @@ export function isBoardChromeTarget(target: EventTarget | null): boolean {
   if (isBoardTypingTarget(target)) return true;
   if (typeof el.closest !== "function") return false;
   if (el.closest('tr[id^="player-row-"]')) return false;
+  if (el.closest('[id^="player-panel-"]')) return false;
   return Boolean(
     el.closest(
       'button, a[href], summary, [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="slider"], [role="combobox"], [role="option"], [role="menuitem"], [role="dialog"]',
