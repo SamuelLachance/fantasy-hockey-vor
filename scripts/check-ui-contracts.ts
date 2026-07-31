@@ -433,8 +433,10 @@ const files: Record<string, string[]> = {
     "onDone",
     "Done",
     'aria-keyshortcuts="Enter"',
-    'step="any"',
+    "normalizeRangeInput",
+    'type="text"',
     "inputMode",
+    "tabular-nums",
   ],
 };
 

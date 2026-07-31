@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import {
+  normalizeRangeInput,
   rangeLabel,
   type RangeKey,
   type StatRanges,
@@ -71,31 +72,41 @@ export function RankingsStatFilters({
             </div>
             <div className="flex items-center gap-2">
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="any"
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Min"
                 aria-label={`${rangeLabel(key)} minimum`}
                 value={statRanges[key]?.min ?? ""}
                 onChange={(e) => onUpdateRange(key, "min", e.target.value)}
+                onBlur={(e) => {
+                  const next = normalizeRangeInput(e.target.value);
+                  if (next !== e.target.value) onUpdateRange(key, "min", next);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") onDone?.();
                 }}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
+                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
               />
               <span className="text-slate-600">–</span>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
-                step="any"
+                autoComplete="off"
+                spellCheck={false}
                 placeholder="Max"
                 aria-label={`${rangeLabel(key)} maximum`}
                 value={statRanges[key]?.max ?? ""}
                 onChange={(e) => onUpdateRange(key, "max", e.target.value)}
+                onBlur={(e) => {
+                  const next = normalizeRangeInput(e.target.value);
+                  if (next !== e.target.value) onUpdateRange(key, "max", next);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") onDone?.();
                 }}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
+                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
               />
             </div>
           </div>
