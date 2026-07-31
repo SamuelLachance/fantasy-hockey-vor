@@ -5,7 +5,7 @@ import { SiteFooter } from "@/components/SiteFooter";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
 import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
-import { rankingsJsonLd } from "@/lib/seo-jsonld";
+import { rankingsJsonLd, serializeJsonLd } from "@/lib/seo-jsonld";
 
 export default function HomePage() {
   const data = getProjections();
@@ -20,7 +20,7 @@ export default function HomePage() {
     <main className="min-h-screen pb-16">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
       <Header
         season={data.season}

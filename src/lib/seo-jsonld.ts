@@ -153,3 +153,8 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
     ],
   };
 }
+
+/** Safe JSON-LD text for `<script>` (Next.js json-ld guide). */
+export function serializeJsonLd(data: unknown): string {
+  return JSON.stringify(data).replace(/</g, "\\u003c");
+}

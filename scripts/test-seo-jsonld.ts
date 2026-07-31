@@ -2,7 +2,7 @@
  * Unit check: rankings JSON-LD graph shape.
  * Run: npx tsx scripts/test-seo-jsonld.ts
  */
-import { rankingsJsonLd } from "../src/lib/seo-jsonld";
+import { rankingsJsonLd, serializeJsonLd } from "../src/lib/seo-jsonld";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 let failed = 0;
@@ -68,6 +68,9 @@ assert(
     "National Hockey League",
   "about NHL",
 );
+const hostile = serializeJsonLd({ x: "</script><img onerror=1>" });
+assert(hostile.includes("\\u003c"), "escapes angle brackets");
+assert(!hostile.includes("<"), "no raw < in script payload");
 
 if (failed) process.exit(1);
 console.log("OK: seo-jsonld");

@@ -697,6 +697,9 @@ const files: Record<string, string[]> = {
     "sameAs",
     "boardShortcutsFaqAnswer",
     "SITE_BRAND",
+    "serializeJsonLd",
+    "replace(/</g",
+    "\\u003c",
   ],
   "src/lib/site.ts": [
     "SITE_ORIGIN",
@@ -948,6 +951,7 @@ const files: Record<string, string[]> = {
     "SiteFooter",
     "ScrollToTop",
     "rankingsJsonLd",
+    "serializeJsonLd",
   ],
   "src/components/SiteFooter.tsx": [
     "boardShortcutsFooterChip",
