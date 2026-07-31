@@ -111,7 +111,7 @@ export function RankingsToolbar({
           </button>
         ))}
       </div>
-      <div className="flex w-full flex-col gap-2 sm:max-w-xl sm:flex-row">
+      <div className="flex w-full flex-col gap-2 sm:max-w-3xl sm:flex-row sm:flex-wrap lg:max-w-none">
         <div className="relative w-full">
           <input
             type="search"
