@@ -16,11 +16,12 @@ const files: Record<string, string[]> = {
     "truncate",
     "Reset board view",
     "useRankingsUrlSync",
+    "useRankingsKeyboard",
     "ExpandedPlayerPanel",
-    'e.key === "/"',
     'column="sigma"',
     "BoardShortcutsHelp",
   ],
+  "src/hooks/useRankingsKeyboard.ts": ['e.key === "/"', "ArrowDown"],
   "src/components/BoardShortcutsHelp.tsx": ["Board shortcuts", "Focus search"],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",
