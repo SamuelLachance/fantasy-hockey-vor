@@ -2,8 +2,11 @@
 
 import type { RefObject } from "react";
 import type { Position } from "@/lib/types";
-import { formatCount } from "@/lib/format";
-import { remainingBoardRows } from "@/lib/board-remaining";
+import {
+  loadMoreAriaLabel,
+  loadMoreLabel,
+  remainingBoardRows,
+} from "@/lib/board-remaining";
 import { RankingsEmptyState } from "./RankingsEmptyState";
 
 interface RankingsBoardFooterProps {
@@ -66,10 +69,10 @@ export function RankingsBoardFooter({
             type="button"
             onClick={onLoadMore}
             aria-keyshortcuts="m"
-            aria-label={`Load more players, ${formatCount(remaining)} remaining`}
+            aria-label={loadMoreAriaLabel(remaining)}
             className="rounded-lg px-3 py-1.5 text-xs tabular-nums text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
-            Load more · {formatCount(remaining)} left
+            {loadMoreLabel(remaining)}
           </button>
         </div>
       )}

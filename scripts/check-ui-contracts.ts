@@ -93,8 +93,8 @@ const files: Record<string, string[]> = {
     "RankingsToolbar",
   ],
   "src/components/RankingsBoardFooter.tsx": [
-    "Load more",
-    "remaining",
+    "loadMoreLabel",
+    "loadMoreAriaLabel",
     "remainingBoardRows",
     "RankingsEmptyState",
     'aria-keyshortcuts="m"',
@@ -468,7 +468,11 @@ const files: Record<string, string[]> = {
     "ArrowUpDown",
     'aria-hidden="true"',
   ],
-  "src/lib/board-remaining.ts": ["remainingBoardRows"],
+  "src/lib/board-remaining.ts": [
+    "remainingBoardRows",
+    "loadMoreLabel",
+    "loadMoreAriaLabel",
+  ],
   "src/lib/clipboard.ts": ["copyText", "execCommand"],
   "src/lib/projection-age.ts": [
     "projectionAgeDays",
