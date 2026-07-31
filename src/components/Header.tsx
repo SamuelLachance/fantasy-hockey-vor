@@ -36,7 +36,7 @@ export function Header({
         href="#rankings"
         onClick={(e) => {
           e.preventDefault();
-          scrollToRankings();
+          scrollToRankings({ focusSearch: true });
         }}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
       >
@@ -81,10 +81,10 @@ export function Header({
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <a
               href="#rankings"
-              title="Jump to board (End)"
+              title="Jump to board + focus search (End)"
               onClick={(e) => {
                 e.preventDefault();
-                scrollToRankings();
+                scrollToRankings({ focusSearch: true });
               }}
               className="inline-flex items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-400/60 hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
