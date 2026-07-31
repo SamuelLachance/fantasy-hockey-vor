@@ -108,7 +108,11 @@ const files: Record<string, string[]> = {
   "src/lib/site.ts": ["SITE_ORIGIN", "SITE_URL"],
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
-  "src/components/Header.tsx": ["Jump to board", "dateTime"],
+  "src/components/Header.tsx": [
+    "Jump to board",
+    "dateTime",
+    "scrollToRankings",
+  ],
   "src/app/page.tsx": [
     "RankingsTable",
     "TopPlayers",
