@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import {
@@ -51,10 +51,25 @@ export function RankingsToolbar({
   const [exportFlash, setExportFlash] = useState<"idle" | "csv" | "json">(
     "idle",
   );
+  const exportFlashTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (exportFlashTimer.current != null) {
+        window.clearTimeout(exportFlashTimer.current);
+      }
+    };
+  }, []);
 
   function flashExport(kind: "csv" | "json") {
+    if (exportFlashTimer.current != null) {
+      window.clearTimeout(exportFlashTimer.current);
+    }
     setExportFlash(kind);
-    window.setTimeout(() => setExportFlash("idle"), 1400);
+    exportFlashTimer.current = window.setTimeout(() => {
+      setExportFlash("idle");
+      exportFlashTimer.current = null;
+    }, 1400);
   }
 
   return (
