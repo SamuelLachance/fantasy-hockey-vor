@@ -95,6 +95,25 @@ if (!Number.isFinite(yahooFetched)) {
   }
 }
 
+if (!data.league) {
+  errors.push("league settings missing");
+} else {
+  if (data.league.teams !== 12) {
+    errors.push(`league.teams is ${data.league.teams} (expected 12)`);
+  }
+  const r = data.league.roster;
+  if (!r || r.C !== 2 || r.LW !== 2 || r.RW !== 2 || r.D !== 4 || r.G !== 2) {
+    errors.push(
+      `league.roster is ${JSON.stringify(r)} (expected 2C/2LW/2RW/4D/2G)`,
+    );
+  }
+  if (data.league.goalieVorFactor !== 0.2) {
+    warnings.push(
+      `league.goalieVorFactor is ${data.league.goalieVorFactor} (default 0.2)`,
+    );
+  }
+}
+
 const players = data.players ?? [];
 const badVor = players.filter((p) => !Number.isFinite(p.vor)).length;
 if (badVor > 0) errors.push(`${badVor} players with non-finite VOR`);
