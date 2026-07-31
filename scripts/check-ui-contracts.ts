@@ -331,6 +331,10 @@ const files: Record<string, string[]> = {
     "aria-live",
     "veryStale",
   ],
+  "src/components/SortIcon.tsx": [
+    "ArrowUpDown",
+    'aria-hidden="true"',
+  ],
   "src/lib/board-remaining.ts": ["remainingBoardRows"],
   "src/lib/clipboard.ts": ["copyText", "execCommand"],
   "src/lib/projection-age.ts": [
