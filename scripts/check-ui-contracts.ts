@@ -281,6 +281,8 @@ const files: Record<string, string[]> = {
     "showingAllGoalies",
     "focusAfterActiveFilterClear",
     'aria-hidden="true"',
+    "min-h-11",
+    "min-w-11",
   ],
   "src/lib/board-active-filter-chips.ts": [
     "boardActiveStatChips",

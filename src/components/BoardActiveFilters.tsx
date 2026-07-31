@@ -82,7 +82,7 @@ export function BoardActiveFilters({
               onClearPosition();
               focusAfterActiveFilterClear();
             }}
-            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -97,7 +97,7 @@ export function BoardActiveFilters({
             type="button"
             aria-label={boardActiveClearSearchAriaLabel()}
             onClick={onClearQuery}
-            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -115,7 +115,7 @@ export function BoardActiveFilters({
               onShowStarterGoalies();
               focusAfterActiveFilterClear();
             }}
-            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -141,7 +141,7 @@ export function BoardActiveFilters({
               onRemoveStat(chip.key);
               focusAfterActiveFilterClear();
             }}
-            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full p-1.5 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" aria-hidden="true" />
           </button>
@@ -162,7 +162,7 @@ export function BoardActiveFilters({
             if (preferSearch) queueMicrotask(focusBoardSearch);
             else focusAfterActiveFilterClear();
           }}
-          className="rounded-full px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+          className="inline-flex min-h-11 items-center rounded-full px-3 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >
           {clearBoardFiltersCopy()}
         </button>
