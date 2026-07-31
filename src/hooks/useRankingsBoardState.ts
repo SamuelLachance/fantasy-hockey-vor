@@ -178,10 +178,16 @@ export function useRankingsBoardState(
 
   function updateRange(key: RangeKey, field: "min" | "max", value: string) {
     startTransition(() => {
-      setStatRanges((prev) => ({
-        ...prev,
-        [key]: { min: "", max: "", ...prev[key], [field]: value },
-      }));
+      setStatRanges((prev) => {
+        const bound = { min: "", max: "", ...prev[key], [field]: value };
+        const next = { ...prev };
+        if (!bound.min.trim() && !bound.max.trim()) {
+          delete next[key];
+        } else {
+          next[key] = bound;
+        }
+        return next;
+      });
     });
   }
 
