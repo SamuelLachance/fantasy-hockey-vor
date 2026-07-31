@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   defaultSortDir,
   formatRangeChip,
+  isInvertedRangeBound,
   normalizeRangeInput,
   parseRangeValue,
   passesRanges,
@@ -19,6 +20,10 @@ assert.equal(normalizeRangeInput("%"), "");
 assert.equal(normalizeRangeInput(","), "");
 assert.equal(parseRangeValue("goals", "40"), 40);
 assert.equal(parseRangeValue("goals", ""), undefined);
+assert.equal(isInvertedRangeBound("vor", "10", "5"), true);
+assert.equal(isInvertedRangeBound("vor", "5", "10"), false);
+assert.equal(isInvertedRangeBound("vor", "10", ""), false);
+assert.equal(isInvertedRangeBound("vor", "", "5"), false);
 
 assert.equal(defaultSortDir("rank"), "asc");
 assert.equal(defaultSortDir("vor"), "desc");

@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import {
+  isInvertedRangeBound,
   normalizeRangeInput,
   rangeLabel,
   type RangeKey,
@@ -78,55 +79,82 @@ export function RankingsStatFilters({
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filterRangeKeys.map((key) => (
-          <div
-            key={key}
-            className="rounded-xl border border-white/5 bg-white/5 p-3"
-          >
-            <div className="mb-2 text-xs font-medium text-slate-300">
-              {rangeLabel(key)}
+        {filterRangeKeys.map((key) => {
+          const bounds = statRanges[key];
+          const inverted = isInvertedRangeBound(
+            key,
+            bounds?.min,
+            bounds?.max,
+          );
+          const errorId = `range-error-${key}`;
+          const inputClass = inverted
+            ? "w-full rounded-lg border border-rose-500/50 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-rose-400/60 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+            : "w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25";
+          return (
+            <div
+              key={key}
+              className={`rounded-xl border bg-white/5 p-3 ${
+                inverted ? "border-rose-500/40" : "border-white/5"
+              }`}
+            >
+              <div className="mb-2 text-xs font-medium text-slate-300">
+                {rangeLabel(key)}
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Min"
+                  aria-label={`${rangeLabel(key)} minimum`}
+                  aria-invalid={inverted || undefined}
+                  aria-describedby={inverted ? errorId : undefined}
+                  value={bounds?.min ?? ""}
+                  onChange={(e) => onUpdateRange(key, "min", e.target.value)}
+                  onBlur={(e) => {
+                    const next = normalizeRangeInput(e.target.value);
+                    if (next !== e.target.value) onUpdateRange(key, "min", next);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onDone?.();
+                  }}
+                  className={inputClass}
+                />
+                <span className="text-slate-600">–</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Max"
+                  aria-label={`${rangeLabel(key)} maximum`}
+                  aria-invalid={inverted || undefined}
+                  aria-describedby={inverted ? errorId : undefined}
+                  value={bounds?.max ?? ""}
+                  onChange={(e) => onUpdateRange(key, "max", e.target.value)}
+                  onBlur={(e) => {
+                    const next = normalizeRangeInput(e.target.value);
+                    if (next !== e.target.value) onUpdateRange(key, "max", next);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") onDone?.();
+                  }}
+                  className={inputClass}
+                />
+              </div>
+              {inverted && (
+                <p
+                  id={errorId}
+                  role="alert"
+                  className="mt-1.5 text-[11px] text-rose-300/90"
+                >
+                  Min is greater than max
+                </p>
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="Min"
-                aria-label={`${rangeLabel(key)} minimum`}
-                value={statRanges[key]?.min ?? ""}
-                onChange={(e) => onUpdateRange(key, "min", e.target.value)}
-                onBlur={(e) => {
-                  const next = normalizeRangeInput(e.target.value);
-                  if (next !== e.target.value) onUpdateRange(key, "min", next);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onDone?.();
-                }}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
-              />
-              <span className="text-slate-600">–</span>
-              <input
-                type="text"
-                inputMode="decimal"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="Max"
-                aria-label={`${rangeLabel(key)} maximum`}
-                value={statRanges[key]?.max ?? ""}
-                onChange={(e) => onUpdateRange(key, "max", e.target.value)}
-                onBlur={(e) => {
-                  const next = normalizeRangeInput(e.target.value);
-                  if (next !== e.target.value) onUpdateRange(key, "max", next);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") onDone?.();
-                }}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
