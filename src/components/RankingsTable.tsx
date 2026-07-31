@@ -189,15 +189,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     }
   }, [expandedId, details]);
 
-  useEffect(() => {
-    if (expandedId == null) return;
-    function onKey(e: globalThis.KeyboardEvent) {
-      if (e.key === "Escape") setExpandedId(null);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [expandedId]);
-
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo(() => {
@@ -285,6 +276,35 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     if (!row) return;
     row.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [expandedId, renderCount]);
+
+  useEffect(() => {
+    function onKey(e: globalThis.KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.key === "Escape") {
+        setExpandedId(null);
+        return;
+      }
+      if (expandedId == null) return;
+      if (
+        e.key !== "j" &&
+        e.key !== "k" &&
+        e.key !== "ArrowDown" &&
+        e.key !== "ArrowUp"
+      ) {
+        return;
+      }
+      e.preventDefault();
+      const idx = filtered.findIndex((p) => p.id === expandedId);
+      if (idx < 0) return;
+      const next =
+        e.key === "j" || e.key === "ArrowDown" ? idx + 1 : idx - 1;
+      if (next < 0 || next >= filtered.length) return;
+      setExpandedId(filtered[next]!.id);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [expandedId, filtered]);
 
   function toggleSort(key: SortKey) {
     startTransition(() => {
@@ -656,7 +676,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
-        breakdown. Click column headers to sort.
+        breakdown. Click column headers to sort. With a row open: j/k or
+        ↑/↓ to move, Esc to close.
       </p>
     </div>
   );
