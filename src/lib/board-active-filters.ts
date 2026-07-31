@@ -1,6 +1,10 @@
-import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
+import {
+  parseRangeValue,
+  type RangeKey,
+  type StatRanges,
+} from "@/lib/rankings-filters";
 
-/** Count non-empty min/max bounds among the keys shown for the current board. */
+/** Count parseable min/max bounds among the keys shown for the current board. */
 export function countActiveStatFilters(
   statRanges: StatRanges,
   filterRangeKeys: readonly RangeKey[],
@@ -8,7 +12,12 @@ export function countActiveStatFilters(
   let n = 0;
   for (const key of filterRangeKeys) {
     const b = statRanges[key];
-    if (b?.min?.trim() || b?.max?.trim()) n++;
+    if (
+      parseRangeValue(key, b?.min ?? "") != null ||
+      parseRangeValue(key, b?.max ?? "") != null
+    ) {
+      n++;
+    }
   }
   return n;
 }

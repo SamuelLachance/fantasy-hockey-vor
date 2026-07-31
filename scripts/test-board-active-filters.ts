@@ -36,6 +36,10 @@ assert(
   countActiveStatFilters({ vor: { min: "  ", max: "  " } }, keys) === 0,
   "whitespace-only ignored",
 );
+assert(
+  countActiveStatFilters({ vor: { min: "%", max: "," } }, keys) === 0,
+  "punctuation-only ignored after normalize",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-active-filters");
