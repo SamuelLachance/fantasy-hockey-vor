@@ -144,7 +144,10 @@ const files: Record<string, string[]> = {
     "Loading player notes",
     "sr-only",
     "Retry",
+    "Retrying",
     "resetPlayerDetailsCache",
+    'role="alert"',
+    'aria-busy="true"',
   ],
   "src/components/ExpandedPlayerCategories.tsx": [
     "categoryZBarWidth",

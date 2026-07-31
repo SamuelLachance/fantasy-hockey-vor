@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import {
   fetchPlayerDetails,
@@ -24,6 +25,21 @@ export function ExpandedPlayerNotes({
   onDetailsError,
   onClearDetailsError,
 }: ExpandedPlayerNotesProps) {
+  const [retrying, setRetrying] = useState(false);
+
+  function retryDetails() {
+    if (retrying) return;
+    setRetrying(true);
+    resetPlayerDetailsCache();
+    onClearDetailsError();
+    void fetchPlayerDetails()
+      .then((d) => {
+        onDetailsLoaded(d);
+      })
+      .catch(onDetailsError)
+      .finally(() => setRetrying(false));
+  }
+
   return (
     <>
       {playerDetails?.reasoning && (
@@ -40,6 +56,7 @@ export function ExpandedPlayerNotes({
         <div
           className="mb-3 space-y-2"
           role="status"
+          aria-busy="true"
           aria-label="Loading player notes"
         >
           <div className="h-3 w-full animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
@@ -49,20 +66,16 @@ export function ExpandedPlayerNotes({
         </div>
       )}
       {detailsError && (
-        <p className="mb-3 text-xs text-amber-400/90">
-          Player notes unavailable — expand again to retry.
+        <p className="mb-3 text-xs text-amber-400/90" role="alert">
+          Player notes unavailable.
           <button
             type="button"
-            className="ml-2 underline decoration-amber-400/50 hover:text-amber-300"
-            onClick={() => {
-              resetPlayerDetailsCache();
-              onClearDetailsError();
-              void fetchPlayerDetails()
-                .then(onDetailsLoaded)
-                .catch(onDetailsError);
-            }}
+            disabled={retrying}
+            aria-busy={retrying || undefined}
+            className="ml-2 underline decoration-amber-400/50 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-wait disabled:opacity-70"
+            onClick={retryDetails}
           >
-            Retry
+            {retrying ? "Retrying…" : "Retry"}
           </button>
         </p>
       )}
