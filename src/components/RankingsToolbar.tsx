@@ -1,11 +1,12 @@
 "use client";
 
-import { CircleHelp, Filter, Link2 } from "lucide-react";
+import { Filter } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import { boardLinkButtonLabel } from "@/lib/copy-flash";
 import { PositionFilterTabs } from "./PositionFilterTabs";
+import { RankingsBoardLinkButton } from "./RankingsBoardLinkButton";
 import { RankingsExportButtons } from "./RankingsExportButtons";
 import { RankingsGoalieDepthToggle } from "./RankingsGoalieDepthToggle";
+import { RankingsHelpButton } from "./RankingsHelpButton";
 import { RankingsSearchField } from "./RankingsSearchField";
 
 interface RankingsToolbarProps {
@@ -75,33 +76,18 @@ export function RankingsToolbar({
           position={position}
           tableCategories={tableCategories}
         />
-        <button
-          type="button"
-          onClick={onCopyBoardLink}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          title="Copy link to this board view (l)"
-          aria-keyshortcuts="l"
-          aria-live="polite"
-        >
-          <Link2 className="h-4 w-4" aria-hidden />
-          {boardLinkButtonLabel(linkCopied, linkCopyFailed)}
-        </button>
+        <RankingsBoardLinkButton
+          linkCopied={linkCopied}
+          linkCopyFailed={linkCopyFailed}
+          onCopyBoardLink={onCopyBoardLink}
+        />
         {showDepthToggle && (
           <RankingsGoalieDepthToggle
             hideDepthGoalies={hideDepthGoalies}
             setHideDepthGoalies={setHideDepthGoalies}
           />
         )}
-        <button
-          type="button"
-          onClick={onOpenHelp}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          title="Keyboard shortcuts (?)"
-          aria-label="Keyboard shortcuts"
-          aria-keyshortcuts="Shift+Slash"
-        >
-          <CircleHelp className="h-4 w-4" />
-        </button>
+        <RankingsHelpButton onOpenHelp={onOpenHelp} />
       </div>
     </div>
   );
