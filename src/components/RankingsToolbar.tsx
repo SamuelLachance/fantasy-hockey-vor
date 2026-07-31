@@ -165,6 +165,33 @@ export function RankingsToolbar({
         </button>
         <button
           type="button"
+          disabled={filtered.length === 0}
+          onClick={() => {
+            const stamp = new Date().toISOString().slice(0, 10);
+            const payload = filtered.map((p) => ({
+              rank: position === "ALL" ? p.rank : (p.positionRank ?? p.rank),
+              id: p.id,
+              name: p.name,
+              team: p.team,
+              positions: p.positions,
+              vor: Number(p.vor.toFixed(3)),
+              edge: p.draftValue ?? 0,
+              sigma: p.uncertainty?.total?.sigma ?? null,
+              gamesPlayed: p.gamesPlayed,
+            }));
+            downloadTextFile(
+              `vor-rankings-${position.toLowerCase()}-${stamp}.json`,
+              `${JSON.stringify(payload, null, 2)}\n`,
+              "application/json;charset=utf-8",
+            );
+          }}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
+          title="Download filtered rankings as JSON"
+        >
+          JSON
+        </button>
+        <button
+          type="button"
           onClick={() => {
             const qs = rankingsUrlSearch({
               position,

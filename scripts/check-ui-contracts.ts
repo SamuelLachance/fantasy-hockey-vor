@@ -29,7 +29,7 @@ const files: Record<string, string[]> = {
     "Loading player notes",
     "Consensus #",
   ],
-  "src/components/RankingsToolbar.tsx": ["CSV", "Link", "Starters"],
+  "src/components/RankingsToolbar.tsx": ["CSV", "JSON", "Link", "Starters"],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],
   "src/lib/rankings-url.ts": [
