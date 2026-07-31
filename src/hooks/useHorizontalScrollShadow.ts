@@ -27,10 +27,14 @@ export function useHorizontalScrollShadow(
     };
     update();
     el.addEventListener("scroll", onScroll, { passive: true });
+    // Window resize can change clientWidth / scrollbar gutters without a
+    // content-box ResizeObserver fire in some browsers.
+    window.addEventListener("resize", update);
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => {
       el.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", update);
       if (raf) cancelAnimationFrame(raf);
       ro.disconnect();
     };

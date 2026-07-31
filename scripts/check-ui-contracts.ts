@@ -755,6 +755,7 @@ const files: Record<string, string[]> = {
     "useLayoutEffect",
     "requestAnimationFrame",
     "cancelAnimationFrame",
+    'addEventListener("resize"',
   ],
   "src/lib/horizontal-scroll-shadow.ts": [
     "HORIZONTAL_SCROLL_SHADOW_PX",
