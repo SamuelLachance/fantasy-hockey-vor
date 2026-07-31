@@ -2,7 +2,7 @@
  * Unit checks for rankings CSV export.
  * Run: npx tsx scripts/test-rankings-csv.ts
  */
-import { rankingsToCsv } from "../src/lib/rankings-csv";
+import { downloadTextFile, rankingsToCsv } from "../src/lib/rankings-csv";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -69,6 +69,76 @@ assert(
   "ALL CSV uses overall VOR",
 );
 assert(lines.length === 3, "meta + header + one data row");
+
+{
+  const calls: string[] = [];
+  const fakeA = {
+    href: "",
+    download: "",
+    rel: "",
+    style: { display: "" },
+    click() {
+      calls.push("click");
+    },
+    remove() {
+      calls.push("remove");
+    },
+  };
+  const g = globalThis as {
+    document?: unknown;
+    Blob?: unknown;
+    URL?: {
+      createObjectURL?: (b: unknown) => string;
+      revokeObjectURL?: (u: string) => void;
+    };
+    setTimeout: typeof setTimeout;
+  };
+  const prevDoc = g.document;
+  const prevBlob = g.Blob;
+  const prevURL = g.URL;
+  const prevTimeout = g.setTimeout;
+  let revoked = false;
+  let revokeDelay: number | undefined;
+  g.document = {
+    body: {
+      appendChild(node: unknown) {
+        calls.push("append");
+        return node;
+      },
+    },
+    createElement(tag: string) {
+      assert(tag === "a", "creates anchor");
+      return fakeA;
+    },
+  };
+  g.Blob = class {
+    constructor(_parts: unknown[]) {}
+  };
+  g.URL = {
+    createObjectURL() {
+      return "blob:test";
+    },
+    revokeObjectURL() {
+      revoked = true;
+    },
+  };
+  g.setTimeout = ((fn: () => void, ms?: number) => {
+    revokeDelay = ms;
+    fn();
+    return 0 as unknown as ReturnType<typeof setTimeout>;
+  }) as typeof setTimeout;
+
+  downloadTextFile("t.csv", "x", "text/csv");
+  assert(calls.join(",") === "append,click,remove", "mount-click-remove");
+  assert(revokeDelay === 1000, "deferred revoke");
+  assert(revoked, "revokes blob URL");
+  assert(fakeA.download === "t.csv", "download filename");
+
+  g.document = prevDoc;
+  g.Blob = prevBlob;
+  g.URL = prevURL;
+  g.setTimeout = prevTimeout;
+}
 
 if (failed) process.exit(1);
 console.log("OK: rankings-csv");

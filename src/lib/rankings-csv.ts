@@ -52,11 +52,17 @@ export function rankingsToCsv(
 }
 
 export function downloadTextFile(filename: string, text: string, mime: string) {
+  if (typeof document === "undefined") return;
   const blob = new Blob([text], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Defer revoke — Safari/Firefox can drop the download if revoked in the same turn.
+  globalThis.setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
