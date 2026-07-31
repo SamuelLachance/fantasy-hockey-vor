@@ -114,7 +114,7 @@ export function BoardActiveFilters({
             <button
               type="button"
               onClick={onOpenStats}
-              className="py-1 pr-0.5 font-medium transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+              className="py-1 pr-0.5 font-medium tabular-nums transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
               title="Edit filters"
             >
               {rangeLabel(key)} {text}
