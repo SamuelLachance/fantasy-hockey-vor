@@ -17,6 +17,7 @@ const files: Record<string, string[]> = {
     "Reset board view",
     "useRankingsUrlSync",
     "ExpandedPlayerPanel",
+    'e.key === "/"',
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",

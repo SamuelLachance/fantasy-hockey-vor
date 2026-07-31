@@ -71,7 +71,8 @@ export default function HomePage() {
         </a>
         <span className="mx-2 text-slate-700">·</span>
         <span className="text-slate-600">
-          board: j/k navigate · Esc closes filters/row · CSV/Link export
+          board: / search · j/k navigate · Esc closes filters/row · CSV/Link
+          export
         </span>
       </footer>
       <ScrollToTop />

@@ -26,6 +26,7 @@
     "ml:context": "tsx scripts/build-ml-context.ts",
     "ml:re-enrich": "tsx scripts/re-enrich-dataset.ts",
     "ml:train": "tsx scripts/train-ml.ts",
+    "ml:train:legacy": "tsx scripts/train-ml.ts",
     "ml:backtest": "tsx scripts/backtest.ts",
     "ml:backtest:market": "tsx scripts/backtest.ts",
     "ml:train-v2": "tsx scripts/train-v2.ts",

@@ -57,7 +57,7 @@ npm run ml:train-v2          # production stacked ensemble → v2-bundle.json
 npm run generate             # players.json + public/player-details.json
 ```
 
-Legacy ridge/GBM (`npm run ml:train`) is fallback-only; production is **`ml:train-v2`**.
+Legacy ridge/GBM (`npm run ml:train` / `ml:train:legacy`) is fallback-only and skipped when a v2 runtime is present; production is **`ml:train-v2`**.
 
 Checks: `npm run check:data`, `npm run check:teams` (franchise abbrev continuity), `npm run typecheck`, `npm run lint`.
 

@@ -89,7 +89,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash !== "#rankings") return;
-    document.getElementById("rankings")?.scrollIntoView({ block: "start" });
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.getElementById("rankings")?.scrollIntoView({
+      block: "start",
+      behavior: reduce ? "auto" : "smooth",
+    });
   }, []);
 
   const filterRangeKeys = useMemo((): RangeKey[] => {
@@ -267,7 +271,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     if (expandedId == null) return;
     const row = document.getElementById(`player-row-${expandedId}`);
     if (!row) return;
-    row.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    row.scrollIntoView({
+      block: "nearest",
+      behavior: reduce ? "auto" : "smooth",
+    });
   }, [expandedId, renderCount]);
 
   useEffect(() => {
@@ -282,6 +290,21 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         }
         if (inField) return;
         setExpandedId(null);
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        e.key === "/"
+      ) {
+        e.preventDefault();
+        document
+          .querySelector<HTMLInputElement>(
+            '#rankings input[type="search"]',
+          )
+          ?.focus();
         return;
       }
       if (inField || expandedId == null) return;
@@ -640,8 +663,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
-        breakdown. Click column headers to sort. Esc closes filters then
-        the open row; with a row open use j/k or ↑/↓.
+        breakdown. Click column headers to sort. Press / to focus search.
+        Esc closes filters then the open row; with a row open use j/k or ↑/↓.
       </p>
     </div>
   );
