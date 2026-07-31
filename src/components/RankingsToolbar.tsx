@@ -93,7 +93,7 @@ export function RankingsToolbar({
             tabIndex={position === pos ? 0 : -1}
             onClick={() => startTransition(() => setPosition(pos))}
             onKeyDown={(e) => onPositionTabKeyDown(e, index)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition ${
+            className={`rounded-full px-4 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
               position === pos
                 ? "bg-cyan-500 text-slate-950"
                 : "bg-white/5 text-slate-300 hover:bg-white/10"
@@ -111,14 +111,14 @@ export function RankingsToolbar({
             placeholder="Search players or teams..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus-visible:ring-cyan-300/70"
           />
           {query.trim() !== "" && (
             <button
               type="button"
               aria-label="Clear search"
               onClick={() => setQuery("")}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:bg-white/10 hover:text-slate-200"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:bg-white/10 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               <X className="h-4 w-4" />
             </button>
@@ -127,7 +127,7 @@ export function RankingsToolbar({
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+          className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
             filtersOpen || activeFilterCount > 0
               ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
               : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
@@ -153,7 +153,7 @@ export function RankingsToolbar({
               "text/csv;charset=utf-8",
             );
           }}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
           title="Download filtered rankings as CSV"
         >
           <Download className="h-4 w-4" />
@@ -175,7 +175,7 @@ export function RankingsToolbar({
               if (ok) onLinkCopied();
             });
           }}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           title="Copy link to this board view"
         >
           <Link2 className="h-4 w-4" />
@@ -186,7 +186,7 @@ export function RankingsToolbar({
             type="button"
             aria-pressed={hideDepthGoalies}
             onClick={() => startTransition(() => setHideDepthGoalies((v) => !v))}
-            className={`inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+            className={`inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
               hideDepthGoalies
                 ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
                 : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"

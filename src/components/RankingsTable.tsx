@@ -298,12 +298,18 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
       const tag = (e.target as HTMLElement | null)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const inField =
+        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
       if (e.key === "Escape") {
+        if (filtersOpen) {
+          setFiltersOpen(false);
+          return;
+        }
+        if (inField) return;
         setExpandedId(null);
         return;
       }
-      if (expandedId == null) return;
+      if (inField || expandedId == null) return;
       if (
         e.key !== "j" &&
         e.key !== "k" &&
@@ -322,7 +328,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [expandedId, filtered]);
+  }, [expandedId, filtered, filtersOpen]);
 
   function toggleSort(key: SortKey) {
     startTransition(() => {

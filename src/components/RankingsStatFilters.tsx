@@ -35,7 +35,7 @@ export function RankingsStatFilters({
           <button
             type="button"
             onClick={onClear}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3.5 w-3.5" />
             Clear all
@@ -56,18 +56,20 @@ export function RankingsStatFilters({
                 type="number"
                 inputMode="decimal"
                 placeholder="Min"
+                aria-label={`${rangeLabel(key)} minimum`}
                 value={statRanges[key]?.min ?? ""}
                 onChange={(e) => onUpdateRange(key, "min", e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
               />
               <span className="text-slate-600">–</span>
               <input
                 type="number"
                 inputMode="decimal"
                 placeholder="Max"
+                aria-label={`${rangeLabel(key)} maximum`}
                 value={statRanges[key]?.max ?? ""}
                 onChange={(e) => onUpdateRange(key, "max", e.target.value)}
-                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
+                className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
               />
             </div>
           </div>

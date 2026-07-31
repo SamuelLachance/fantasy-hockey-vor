@@ -134,7 +134,11 @@ if (topGoalie && topGoalieGpTooLow(topGoalie.gamesPlayed)) {
 }
 
 const yahooPos = players.filter((p) => p.positionSource === "yahoo").length;
-if (players.length > 500 && yahooPos < players.length * 0.9) {
+if (players.length > 500 && yahooPos < players.length * 0.85) {
+  errors.push(
+    `Yahoo position coverage ${yahooPos}/${players.length} (${((100 * yahooPos) / players.length).toFixed(0)}%) below 85%`,
+  );
+} else if (players.length > 500 && yahooPos < players.length * 0.92) {
   warnings.push(
     `only ${yahooPos}/${players.length} players have Yahoo positions (${((100 * yahooPos) / players.length).toFixed(0)}%)`,
   );
