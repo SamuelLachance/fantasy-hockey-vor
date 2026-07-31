@@ -33,3 +33,14 @@ export function scrollToRankings(): void {
     block: "start",
   });
 }
+
+/** Keep an expanded player row in view without jumping the page harshly. */
+export function scrollExpandedRowIntoView(playerId: number): void {
+  if (typeof document === "undefined") return;
+  const row = document.getElementById(`player-row-${playerId}`);
+  if (!row) return;
+  row.scrollIntoView({
+    block: "nearest",
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+  });
+}

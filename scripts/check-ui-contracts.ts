@@ -57,6 +57,7 @@ const files: Record<string, string[]> = {
     "STICKY_NAME_SHADOW",
     "scrollPageTop",
     "scrollToRankings",
+    "scrollExpandedRowIntoView",
   ],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": [

@@ -5,6 +5,7 @@
 import {
   STICKY_NAME_SHADOW,
   focusStatsFilterButton,
+  scrollExpandedRowIntoView,
   scrollPageTop,
   scrollToRankings,
 } from "../src/lib/board-dom";
@@ -31,6 +32,7 @@ try {
   focusStatsFilterButton();
   scrollPageTop();
   scrollToRankings();
+  scrollExpandedRowIntoView(1);
 } catch (e) {
   assert(false, `board-dom helpers threw in Node: ${e}`);
 }
