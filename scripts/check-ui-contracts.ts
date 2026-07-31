@@ -424,6 +424,8 @@ const files: Record<string, string[]> = {
     "safe-area-inset-bottom",
     "85dvh",
     "overscroll-contain",
+    "min-h-11",
+    "min-w-11",
   ],
   "src/hooks/useDialogFocusTrap.ts": [
     "useDialogFocusTrap",

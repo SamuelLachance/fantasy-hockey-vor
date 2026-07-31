@@ -50,7 +50,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
             onClick={onClose}
             aria-label={boardShortcutsCloseAriaLabel()}
             aria-keyshortcuts="Escape"
-            className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             {boardShortcutsEscLabel()}
           </button>
