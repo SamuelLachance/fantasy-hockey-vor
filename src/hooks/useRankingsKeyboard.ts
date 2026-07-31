@@ -199,6 +199,36 @@ export function useRankingsKeyboard({
         return;
       }
 
+      // r / Shift+G also work from empty-state recovery chrome (aria-keyshortcuts).
+      if (
+        !typing &&
+        !helpOpenNow &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        (e.key === "r" || e.key === "R") &&
+        onResetBoardRef.current
+      ) {
+        e.preventDefault();
+        focusPlayerRowIfPanelFocused(expandedIdNow);
+        onResetBoardRef.current();
+        return;
+      }
+      if (
+        !typing &&
+        !helpOpenNow &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        e.shiftKey &&
+        (e.key === "G" || e.key === "g") &&
+        onToggleDepthGoaliesRef.current
+      ) {
+        e.preventDefault();
+        onToggleDepthGoaliesRef.current();
+        return;
+      }
+
       if (ignoreBoard || e.metaKey || e.ctrlKey || e.altKey) return;
 
       if (e.key === "Home" || e.key === "End") {
@@ -235,12 +265,6 @@ export function useRankingsKeyboard({
         else scrollToRankings({ focusSearch: true });
         return;
       }
-      if ((e.key === "r" || e.key === "R") && onResetBoardRef.current) {
-        e.preventDefault();
-        focusPlayerRowIfPanelFocused(expandedIdNow);
-        onResetBoardRef.current();
-        return;
-      }
       if ((e.key === "l" || e.key === "L") && onCopyBoardLinkRef.current) {
         e.preventDefault();
         onCopyBoardLinkRef.current();
@@ -263,15 +287,6 @@ export function useRankingsKeyboard({
       if ((e.key === "[" || e.key === "]") && onCyclePositionRef.current) {
         e.preventDefault();
         onCyclePositionRef.current(e.key === "]" ? 1 : -1);
-        return;
-      }
-      if (
-        e.shiftKey &&
-        (e.key === "G" || e.key === "g") &&
-        onToggleDepthGoaliesRef.current
-      ) {
-        e.preventDefault();
-        onToggleDepthGoaliesRef.current();
         return;
       }
       if (!e.shiftKey) {
