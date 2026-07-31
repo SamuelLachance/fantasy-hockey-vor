@@ -75,6 +75,7 @@ const files: Record<string, string[]> = {
     "remaining",
     "remainingBoardRows",
     "RankingsEmptyState",
+    'aria-keyshortcuts="m"',
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId"],
   "src/lib/board-active-filters.ts": ["countActiveStatFilters"],
@@ -135,7 +136,9 @@ const files: Record<string, string[]> = {
     'e.key === "End"',
     "nextExpandedPlayerId",
     "onToggleDepthGoalies",
+    "onLoadMore",
     'e.key === "G"',
+    'e.key === "m"',
   ],
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",
@@ -149,6 +152,7 @@ const files: Record<string, string[]> = {
     "boardShortcutsStatusCopy",
     "boardShortcutsFooterChip",
     "Shift+G",
+    "Load more rows",
   ],
   "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
   "src/lib/board-dom.ts": [

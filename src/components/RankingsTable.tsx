@@ -91,6 +91,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     onResetBoard: board.resetBoardView,
     onCopyBoardLink: copyBoardLink,
     onToggleDepthGoalies: board.toggleDepthGoalies,
+    onLoadMore: () => {
+      if (canLoadMore) loadMore();
+    },
   });
 
   return (

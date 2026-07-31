@@ -17,10 +17,14 @@ function assert(cond: boolean, msg: string) {
   }
 }
 
-assert(BOARD_SHORTCUT_ROWS.length >= 12, "enough shortcut rows");
 assert(
-  BOARD_SHORTCUT_ROWS.some((r) => r.keys === "Shift+G"),
-  "Shift+G documented",
+  BOARD_SHORTCUT_ROWS.some((r) => r.keys === "m"),
+  "m load more documented",
+);
+assert(boardShortcutsStatusCopy().includes("m load more"), "status mentions m");
+assert(
+  boardShortcutsFooterChip().includes(" · m · "),
+  "footer chip mentions m",
 );
 assert(BOARD_SORT_HOTKEYS.v === "vor", "v → vor");
 assert(BOARD_SORT_HOTKEYS.e === "draftValue", "e → edge");

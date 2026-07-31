@@ -20,9 +20,10 @@ interface RankingsKeyboardInput {
   onResetBoard?: () => void;
   onCopyBoardLink?: () => void;
   onToggleDepthGoalies?: () => void;
+  onLoadMore?: () => void;
 }
 
-/** Global board shortcuts: Esc, /, ?, j/k, r, l. */
+/** Global board shortcuts: Esc, /, ?, j/k, r, l, m. */
 export function useRankingsKeyboard({
   filtered,
   expandedId,
@@ -36,6 +37,7 @@ export function useRankingsKeyboard({
   onResetBoard,
   onCopyBoardLink,
   onToggleDepthGoalies,
+  onLoadMore,
 }: RankingsKeyboardInput): void {
   // Keep latest handlers/state without rebinding the window listener every render.
   const filteredRef = useRef(filtered);
@@ -50,6 +52,7 @@ export function useRankingsKeyboard({
   const onResetBoardRef = useRef(onResetBoard);
   const onCopyBoardLinkRef = useRef(onCopyBoardLink);
   const onToggleDepthGoaliesRef = useRef(onToggleDepthGoalies);
+  const onLoadMoreRef = useRef(onLoadMore);
 
   useEffect(() => {
     filteredRef.current = filtered;
@@ -64,6 +67,7 @@ export function useRankingsKeyboard({
     onResetBoardRef.current = onResetBoard;
     onCopyBoardLinkRef.current = onCopyBoardLink;
     onToggleDepthGoaliesRef.current = onToggleDepthGoalies;
+    onLoadMoreRef.current = onLoadMore;
   });
 
   useEffect(() => {
@@ -184,6 +188,19 @@ export function useRankingsKeyboard({
       ) {
         e.preventDefault();
         onCopyBoardLinkRef.current();
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
+        (e.key === "m" || e.key === "M") &&
+        onLoadMoreRef.current
+      ) {
+        e.preventDefault();
+        onLoadMoreRef.current();
         return;
       }
       if (
