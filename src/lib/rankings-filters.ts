@@ -104,8 +104,8 @@ export function rangeLabel(key: RangeKey): string {
 
 /** Compact min/max label for filter chips (e.g. ≥2, ≤50, 1–10). */
 export function formatRangeChip(min: string, max: string): string {
-  const a = min.trim();
-  const b = max.trim();
+  const a = normalizeRangeInput(min);
+  const b = normalizeRangeInput(max);
   if (a && b) return `${a}–${b}`;
   if (a) return `≥${a}`;
   if (b) return `≤${b}`;
