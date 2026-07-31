@@ -2,6 +2,7 @@
 
 import { Search, Snowflake } from "lucide-react";
 import { formatCount } from "@/lib/format";
+import { scrollToRankings } from "@/lib/board-dom";
 
 interface HeaderProps {
   season: string;
@@ -33,6 +34,10 @@ export function Header({
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <a
         href="#rankings"
+        onClick={(e) => {
+          e.preventDefault();
+          scrollToRankings();
+        }}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-cyan-500 focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-slate-950"
       >
         Skip to rankings
@@ -76,7 +81,12 @@ export function Header({
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <a
               href="#rankings"
-              className="inline-flex items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-400/60 hover:bg-cyan-500/20 hover:text-white focus-visible:ring-2 focus-visible:ring-cyan-400"
+              title="Jump to board (End)"
+              onClick={(e) => {
+                e.preventDefault();
+                scrollToRankings();
+              }}
+              className="inline-flex items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-400/60 hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               Jump to board
             </a>
