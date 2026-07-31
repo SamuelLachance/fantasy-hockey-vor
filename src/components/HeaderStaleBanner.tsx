@@ -1,3 +1,8 @@
+import {
+  staleBannerMessage,
+  staleBannerRole,
+} from "@/lib/stale-banner";
+
 interface HeaderStaleBannerProps {
   ageDays: number;
   veryStale: boolean;
@@ -11,8 +16,9 @@ export function HeaderStaleBanner({
   const days = Math.floor(ageDays);
   return (
     <div
-      role={veryStale ? "alert" : "status"}
+      role={staleBannerRole(veryStale)}
       aria-live={veryStale ? "assertive" : "polite"}
+      aria-label={staleBannerMessage(ageDays, veryStale)}
       className={`rounded-xl px-4 py-3 text-sm ${
         veryStale
           ? "border border-rose-500/40 bg-rose-500/10 text-rose-100/90"

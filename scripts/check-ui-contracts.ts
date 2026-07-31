@@ -453,7 +453,14 @@ const files: Record<string, string[]> = {
     "npm run generate",
     "refresh urgently",
     "aria-live",
+    "aria-label",
+    "staleBannerMessage",
+    "staleBannerRole",
     "veryStale",
+  ],
+  "src/lib/stale-banner.ts": [
+    "staleBannerMessage",
+    "staleBannerRole",
   ],
   "src/components/SortIcon.tsx": [
     "ArrowUpDown",
