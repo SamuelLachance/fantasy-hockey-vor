@@ -25,6 +25,7 @@ const files: Record<string, string[]> = {
     "Drop deep-linked expand ids",
     "boardHasPlayerId",
     "countActiveStatFilters",
+    'position !== "G"',
   ],
   "src/components/RankingsBoardChrome.tsx": [
     'aria-label="Board filters"',

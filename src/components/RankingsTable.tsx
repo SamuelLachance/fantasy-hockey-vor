@@ -241,8 +241,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     setSortDir: (dir) => startTransition(() => setSortDir(dir)),
     onResetBoard: resetBoardView,
     onCopyBoardLink: copyBoardLink,
-    onToggleDepthGoalies: () =>
-      startTransition(() => setHideDepthGoalies((v) => !v)),
+    onToggleDepthGoalies: () => {
+      if (position !== "G" && position !== "ALL") return;
+      startTransition(() => setHideDepthGoalies((v) => !v));
+    },
   });
 
   function toggleSort(key: SortKey) {
