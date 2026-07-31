@@ -59,6 +59,11 @@ if (!Number.isFinite(generatedAt)) {
 }
 
 if (!data.season) errors.push("season is missing");
+else if (data.season !== "2026-27") {
+  errors.push(
+    `season is "${data.season}" (expected 2026-27 — update check when rolling seasons)`,
+  );
+}
 
 if (
   data.projectionEngine &&
