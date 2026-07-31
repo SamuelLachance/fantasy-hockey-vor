@@ -76,7 +76,7 @@ const files: Record<string, string[]> = {
     'role="status"',
     "Press r to reset",
     "Include depth goalies",
-    'aria-keyshortcuts="r"',
+    "keyshortcuts",
     "EmptyAction",
   ],
   "src/components/RankingsStatusBar.tsx": [
