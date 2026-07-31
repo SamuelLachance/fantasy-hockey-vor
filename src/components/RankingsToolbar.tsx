@@ -153,39 +153,41 @@ export function RankingsToolbar({
             </span>
           )}
         </button>
-        <button
-          type="button"
-          disabled={filtered.length === 0}
-          onClick={() => {
-            const stamp = new Date().toISOString().slice(0, 10);
-            downloadTextFile(
-              `vor-rankings-${position.toLowerCase()}-${stamp}.csv`,
-              rankingsCsvString(filtered, position, tableCategories),
-              "text/csv;charset=utf-8",
-            );
-          }}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-          title="Download filtered rankings as CSV"
-        >
-          <Download className="h-4 w-4" />
-          CSV
-        </button>
-        <button
-          type="button"
-          disabled={filtered.length === 0}
-          onClick={() => {
-            const stamp = new Date().toISOString().slice(0, 10);
-            downloadTextFile(
-              `vor-rankings-${position.toLowerCase()}-${stamp}.json`,
-              rankingsJsonString(filtered, position),
-              "application/json;charset=utf-8",
-            );
-          }}
-          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 disabled:cursor-not-allowed disabled:opacity-40"
-          title="Download filtered rankings as JSON"
-        >
-          JSON
-        </button>
+        <div className="inline-flex shrink-0 overflow-hidden rounded-xl border border-white/10">
+          <button
+            type="button"
+            disabled={filtered.length === 0}
+            onClick={() => {
+              const stamp = new Date().toISOString().slice(0, 10);
+              downloadTextFile(
+                `vor-rankings-${position.toLowerCase()}-${stamp}.csv`,
+                rankingsCsvString(filtered, position, tableCategories),
+                "text/csv;charset=utf-8",
+              );
+            }}
+            className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Download filtered rankings as CSV"
+          >
+            <Download className="h-4 w-4" />
+            CSV
+          </button>
+          <button
+            type="button"
+            disabled={filtered.length === 0}
+            onClick={() => {
+              const stamp = new Date().toISOString().slice(0, 10);
+              downloadTextFile(
+                `vor-rankings-${position.toLowerCase()}-${stamp}.json`,
+                rankingsJsonString(filtered, position),
+                "application/json;charset=utf-8",
+              );
+            }}
+            className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Download filtered rankings as JSON"
+          >
+            JSON
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => {
