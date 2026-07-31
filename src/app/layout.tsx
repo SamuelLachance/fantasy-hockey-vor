@@ -38,6 +38,9 @@ export const metadata: Metadata = {
       "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
   },
   applicationName: "Fantasy Hockey VOR",
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function RootLayout({
