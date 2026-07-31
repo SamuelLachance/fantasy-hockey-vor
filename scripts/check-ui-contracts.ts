@@ -18,6 +18,7 @@ const files: Record<string, string[]> = {
     "useRankingsUrlSync",
     "ExpandedPlayerPanel",
     'e.key === "/"',
+    'column="sigma"',
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",

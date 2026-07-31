@@ -10,7 +10,8 @@ export type CoreSortKey =
   | "name"
   | "team"
   | "gamesPlayed"
-  | "draftValue";
+  | "draftValue"
+  | "sigma";
 export type SortKey = CoreSortKey | Category;
 
 export type CoreRangeKey = "gamesPlayed" | "vor" | "draftValue" | "sigma";
@@ -95,5 +96,8 @@ export function rangeLabel(key: RangeKey): string {
 }
 
 export function defaultSortDir(key: SortKey): "asc" | "desc" {
-  return key === "name" || key === "team" || key === "rank" ? "asc" : "desc";
+  // Lower uncertainty is better → ascending default for sigma.
+  return key === "name" || key === "team" || key === "rank" || key === "sigma"
+    ? "asc"
+    : "desc";
 }

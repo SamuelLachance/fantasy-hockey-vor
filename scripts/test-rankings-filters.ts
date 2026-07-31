@@ -15,6 +15,7 @@ assert.equal(parseRangeValue("goals", ""), undefined);
 
 assert.equal(defaultSortDir("rank"), "asc");
 assert.equal(defaultSortDir("vor"), "desc");
+assert.equal(defaultSortDir("sigma"), "asc");
 assert.equal(rangeLabel("draftValue"), "Edge vs consensus");
 assert.equal(rangeLabel("sigma"), "Uncertainty Σσ");
 

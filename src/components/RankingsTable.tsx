@@ -130,6 +130,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       sortKey !== "team" &&
       sortKey !== "gamesPlayed" &&
       sortKey !== "draftValue" &&
+      sortKey !== "sigma" &&
       !(cats as readonly string[]).includes(sortKey)
     ) {
       setSortKey("vor");
@@ -207,6 +208,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       } else if (sortKey === "rank") {
         av = position === "ALL" ? a.rank : (a.positionRank ?? a.rank);
         bv = position === "ALL" ? b.rank : (b.positionRank ?? b.rank);
+      } else if (sortKey === "sigma") {
+        av = a.uncertainty?.total?.sigma ?? Number.POSITIVE_INFINITY;
+        bv = b.uncertainty?.total?.sigma ?? Number.POSITIVE_INFINITY;
       } else if (
         sortKey === "name" ||
         sortKey === "team" ||
@@ -452,6 +456,16 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                   title="Consensus rank − model rank. Positive = undervalued vs synthetic market (Marcel/EWMA/lag1)."
                 />
                 <SortHeader
+                  column="sigma"
+                  label="Σσ"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
+                  className="px-3 py-3"
+                  title="Calibrated aggregate uncertainty (1σ). Lower is more confident. Default sort ascending."
+                />
+                <SortHeader
                   column="gamesPlayed"
                   label="GP"
                   sortKey={sortKey}
@@ -534,6 +548,18 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                         {(player.draftValue ?? 0) > 0 ? "+" : ""}
                         {player.draftValue ?? 0}
                       </td>
+                      <td
+                        className="px-3 py-3 font-mono text-sm text-slate-400"
+                        title={
+                          player.uncertainty?.total?.sigma != null
+                            ? `Σσ ${player.uncertainty.total.sigma.toFixed(1)}`
+                            : "No calibrated uncertainty"
+                        }
+                      >
+                        {player.uncertainty?.total?.sigma != null
+                          ? player.uncertainty.total.sigma.toFixed(0)
+                          : "—"}
+                      </td>
                       <td className="px-4 py-3 font-mono text-slate-400">
                         {player.gamesPlayed}
                       </td>
@@ -549,7 +575,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                     {isExpanded && (
                       <tr className="bg-slate-950/40">
                         <td
-                          colSpan={7 + tableCategories.length}
+                          colSpan={8 + tableCategories.length}
                           className="px-6 py-4"
                         >
                           <ExpandedPlayerPanel

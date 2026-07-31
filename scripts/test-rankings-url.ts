@@ -49,6 +49,30 @@ assert(
   parseRankingsUrl(new URLSearchParams("pos=ZZ&sort=nope")).sortKey === "vor",
   "invalid sort → vor",
 );
+assert(
+  parseRankingsUrl(new URLSearchParams("sort=sigma")).sortKey === "sigma",
+  "sort sigma",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("sort=sigma")).sortDir === "asc",
+  "sigma defaults to asc dir",
+);
+assert(
+  rankingsUrlSearch({
+    ...defaults,
+    sortKey: "sigma",
+    sortDir: "asc",
+  }) === "sort=sigma",
+  "serialize sigma omits default asc dir",
+);
+assert(
+  rankingsUrlSearch({
+    ...defaults,
+    sortKey: "sigma",
+    sortDir: "desc",
+  }) === "sort=sigma&dir=desc",
+  "serialize sigma keeps non-default dir",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-url");
