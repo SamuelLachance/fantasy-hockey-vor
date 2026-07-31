@@ -224,6 +224,9 @@ export type RankingsUrlSyncAction =
 /**
  * Decide whether local board state should write the URL, or the URL
  * (Back/Forward / external) should hydrate board state.
+ *
+ * When local state and the address bar both diverge from `lastPushed`, prefer
+ * push — `router.replace` may still be in flight and `searchParams` can lag.
  */
 export function nextRankingsUrlSyncAction(
   lastPushed: string | null,
@@ -233,10 +236,17 @@ export function nextRankingsUrlSyncAction(
   if (stateSearch === urlSearch) {
     return { type: "noop", search: urlSearch };
   }
-  // URL diverged from what we last wrote → browser history / paste.
-  if (lastPushed === null || urlSearch !== lastPushed) {
+  if (lastPushed === null) {
+    // First sync: if URL already differs from seed state, trust the URL.
     return { type: "hydrate", search: urlSearch };
   }
+  if (urlSearch === lastPushed) {
+    return { type: "push", search: stateSearch };
+  }
+  if (stateSearch === lastPushed) {
+    return { type: "hydrate", search: urlSearch };
+  }
+  // Local advanced while URL still shows the previous push target.
   return { type: "push", search: stateSearch };
 }
 

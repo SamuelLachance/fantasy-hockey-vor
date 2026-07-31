@@ -165,6 +165,14 @@ assert(
   nextRankingsUrlSyncAction(null, "pos=C", "").type === "hydrate",
   "sync hydrate when first URL differs",
 );
+assert(
+  nextRankingsUrlSyncAction("q=a", "", "q=ab").type === "push",
+  "sync push while replace still in flight",
+);
+assert(
+  nextRankingsUrlSyncAction("q=a", "q=old", "q=ab").type === "push",
+  "sync push when both diverge from lastPushed",
+);
 
 assert(
   parseRankingsUrl(new URLSearchParams("pos=D&sort=faceoffWins")).sortKey ===
