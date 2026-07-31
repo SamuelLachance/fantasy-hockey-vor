@@ -4,7 +4,9 @@
  */
 import {
   clearAllStatFiltersCopy,
+  clearAllStatFiltersTitle,
   doneStatFiltersCopy,
+  doneStatFiltersTitle,
   statFiltersHintCopy,
   statFiltersPanelTitle,
   statsFilterButtonLabel,
@@ -26,7 +28,12 @@ assert(hint.includes("0.915"), "mentions decimal form");
 assert(hint.includes("91,5"), "mentions comma form");
 assert(statFiltersPanelTitle() === "Filter by stats", "panel title");
 assert(clearAllStatFiltersCopy() === "Clear all", "clear all");
+assert(
+  clearAllStatFiltersTitle() === "Clear all stat range filters",
+  "clear title",
+);
 assert(doneStatFiltersCopy() === "Done", "done");
+assert(doneStatFiltersTitle() === "Close filters (Enter)", "done title");
 assert(statsFilterButtonLabel() === "Stats", "toolbar label");
 assert(boardFiltersRegionLabel() === "Board filters", "chrome region");
 

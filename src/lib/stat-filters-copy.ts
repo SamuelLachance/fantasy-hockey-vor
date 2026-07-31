@@ -14,8 +14,18 @@ export function clearAllStatFiltersCopy(): string {
   return "Clear all";
 }
 
+/** Tooltip for Clear all in the stats filter panel. */
+export function clearAllStatFiltersTitle(): string {
+  return "Clear all stat range filters";
+}
+
 export function doneStatFiltersCopy(): string {
   return "Done";
+}
+
+/** Tooltip for Done in the stats filter panel. */
+export function doneStatFiltersTitle(): string {
+  return "Close filters (Enter)";
 }
 
 export function statsFilterButtonLabel(): string {

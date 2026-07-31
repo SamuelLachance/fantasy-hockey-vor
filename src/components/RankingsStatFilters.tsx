@@ -11,7 +11,9 @@ import {
 } from "@/lib/rankings-filters";
 import {
   clearAllStatFiltersCopy,
+  clearAllStatFiltersTitle,
   doneStatFiltersCopy,
+  doneStatFiltersTitle,
   statFiltersHintCopy,
   statFiltersPanelTitle,
 } from "@/lib/stat-filters-copy";
@@ -64,6 +66,7 @@ export function RankingsStatFilters({
                 onClear();
                 queueMicrotask(focusFirstStatFilterInput);
               }}
+              title={clearAllStatFiltersTitle()}
               className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -74,6 +77,7 @@ export function RankingsStatFilters({
             <button
               type="button"
               onClick={onDone}
+              title={doneStatFiltersTitle()}
               aria-keyshortcuts="Enter"
               className="inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-lg bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
