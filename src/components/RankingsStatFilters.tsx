@@ -51,7 +51,7 @@ export function RankingsStatFilters({
           </h3>
           <p
             id="rankings-stat-filters-hint"
-            className="text-xs text-slate-500"
+            className="text-xs text-slate-400"
           >
             {statFiltersHintCopy()}
           </p>

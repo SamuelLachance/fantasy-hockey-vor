@@ -1055,6 +1055,7 @@ const files: Record<string, string[]> = {
     "aria-invalid",
     "Min is greater than max",
     "statFiltersHintCopy",
+    "text-slate-400",
     'role="region"',
     "rankings-stat-filters-hint",
     'type="text"',
