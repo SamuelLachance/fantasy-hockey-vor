@@ -48,6 +48,17 @@ export function parseRangeValue(
   return v;
 }
 
+/** True when both bounds parse and min is strictly greater than max. */
+export function isInvertedRangeBound(
+  key: RangeKey,
+  minRaw: string | undefined,
+  maxRaw: string | undefined,
+): boolean {
+  const min = minRaw ? parseRangeValue(key, minRaw) : undefined;
+  const max = maxRaw ? parseRangeValue(key, maxRaw) : undefined;
+  return min != null && max != null && min > max;
+}
+
 function coreValue(
   player: PlayerProjection,
   key: CoreRangeKey,
