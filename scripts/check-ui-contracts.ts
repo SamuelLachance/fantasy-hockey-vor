@@ -295,11 +295,19 @@ const files: Record<string, string[]> = {
   "src/components/ExpandedPlayerMeta.tsx": [
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
+    "confidenceChipCopy",
+    "marketEdgeChipCopy",
+    "uncertaintyChipCopy",
     'aria-keyshortcuts="p"',
     "Copy player link (p)",
-    "Consensus #",
     'aria-live="polite"',
     "projectionMethodLabel",
+  ],
+  "src/lib/expanded-meta-copy.ts": [
+    "confidenceChipCopy",
+    "marketEdgeChipCopy",
+    "uncertaintyChipCopy",
+    "uncertaintyChipTitle",
   ],
   "src/lib/projection-method.ts": [
     "projectionMethodLabel",

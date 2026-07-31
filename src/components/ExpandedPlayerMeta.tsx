@@ -3,7 +3,12 @@ import {
   playerLinkAriaLabel,
   playerLinkButtonLabel,
 } from "@/lib/copy-flash";
-import { formatSigned } from "@/lib/format";
+import {
+  confidenceChipCopy,
+  marketEdgeChipCopy,
+  uncertaintyChipCopy,
+  uncertaintyChipTitle,
+} from "@/lib/expanded-meta-copy";
 import {
   projectionMethodLabel,
   projectionMethodTone,
@@ -32,28 +37,28 @@ export function ExpandedPlayerMeta({
       </span>
       {player.confidence != null && (
         <span className="text-xs tabular-nums text-slate-400">
-          Confidence: {(player.confidence * 100).toFixed(0)}%
+          {confidenceChipCopy(player.confidence)}
         </span>
       )}
       {player.syntheticMarketRank != null && (
         <span className="text-xs tabular-nums text-slate-400">
-          Consensus #{player.syntheticMarketRank} · model #{player.rank}
-          {player.draftValue != null
-            ? ` · Edge ${formatSigned(player.draftValue)}`
-            : ""}
+          {marketEdgeChipCopy({
+            consensusRank: player.syntheticMarketRank,
+            modelRank: player.rank,
+            draftValue: player.draftValue,
+          })}
         </span>
       )}
       {player.uncertainty && (
         <span
           className="text-xs tabular-nums text-slate-400"
-          title="1σ season-total uncertainty. Aleatoric share = irreducible noise vs model disagreement."
+          title={uncertaintyChipTitle()}
         >
-          ±{player.uncertainty.gamesPlayedSigma.toFixed(0)} GP
-          {player.uncertainty.total?.sigma != null
-            ? ` · Σσ ${player.uncertainty.total.sigma.toFixed(1)}`
-            : ""}
-          {" · "}
-          {(player.uncertainty.aleatoricShare * 100).toFixed(0)}% irreducible
+          {uncertaintyChipCopy({
+            gamesPlayedSigma: player.uncertainty.gamesPlayedSigma,
+            totalSigma: player.uncertainty.total?.sigma,
+            aleatoricShare: player.uncertainty.aleatoricShare,
+          })}
         </span>
       )}
       <button
