@@ -60,6 +60,8 @@ const files: Record<string, string[]> = {
     "ResizeObserver",
     "player-panel-",
     "requestAnimationFrame(attach)",
+    "document.fonts",
+    "fonts.ready",
     "focus: false",
     "Intentionally ignores load-more",
     "details panel",

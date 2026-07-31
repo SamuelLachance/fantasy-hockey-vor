@@ -35,6 +35,23 @@ export function useExpandedRowScroll(
 
   useEffect(() => {
     if (expandedId == null) return;
+    // Webfont swap can change sticky chrome/thead height after expand scroll.
+    const fonts = document.fonts;
+    let fontsCancelled = false;
+    if (fonts?.ready) {
+      fonts.ready.then(() => {
+        if (!fontsCancelled) {
+          scrollExpandedRowIntoView(expandedId, { focus: false });
+        }
+      });
+    }
+    return () => {
+      fontsCancelled = true;
+    };
+  }, [expandedId]);
+
+  useEffect(() => {
+    if (expandedId == null) return;
     let cancelled = false;
     let lastHeight = 0;
     let scrollRaf = 0;
