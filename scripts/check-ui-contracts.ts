@@ -236,11 +236,15 @@ const files: Record<string, string[]> = {
     "useDialogFocusTrap",
     "trapDialogTabKey",
     "dialogFocusableElements",
+    "useLayoutEffect",
+    "previouslyFocused",
+    "isConnected",
     "Escape",
   ],
   "src/lib/dialog-focus.ts": [
     "dialogFocusableElements",
     "trapDialogTabKey",
+    "pull it back",
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",

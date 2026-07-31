@@ -24,6 +24,11 @@ export function useDialogFocusTrap(
 
   useLayoutEffect(() => {
     if (!open) return;
+    // Capture opener before moving focus into the dialog.
+    previouslyFocused.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const root = document.getElementById(rootId);
     if (!root) return;
     dialogFocusableElements(root)[0]?.focus();
@@ -31,10 +36,6 @@ export function useDialogFocusTrap(
 
   useEffect(() => {
     if (!open) return;
-    previouslyFocused.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
@@ -56,7 +57,8 @@ export function useDialogFocusTrap(
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
-      previouslyFocused.current?.focus?.();
+      const restore = previouslyFocused.current;
+      if (restore?.isConnected) restore.focus();
     };
   }, [open, rootId]);
 }
