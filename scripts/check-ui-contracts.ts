@@ -534,6 +534,16 @@ const files: Record<string, string[]> = {
     "ArrowUpDown",
     'aria-hidden="true"',
   ],
+  "src/components/SortHeader.tsx": [
+    "sortHeaderAriaSort",
+    "sortHeaderAriaLabel",
+    "Double-click to reset sort to VOR",
+    "aria-sort",
+  ],
+  "src/lib/sort-header.ts": [
+    "sortHeaderAriaSort",
+    "sortHeaderAriaLabel",
+  ],
   "src/lib/board-remaining.ts": [
     "remainingBoardRows",
     "loadMoreLabel",
