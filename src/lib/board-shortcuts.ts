@@ -36,9 +36,10 @@ export const BOARD_SORT_HOTKEYS: Readonly<Record<string, SortKey>> = {
 /** Compact FAQ answer for keyboard shortcuts (JSON-LD + docs). */
 export function boardShortcutsFaqAnswer(): string {
   return (
-    "Press ? for the full list. Highlights: / search, f filters, r reset, l copy board link, " +
+    "Press ? for the full list. Highlights: / search, f opens filters (Esc closes), r reset, l copy board link, " +
     "p copy expanded player link, m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
-    "j/k move rows, PageUp/PageDown jump 10, Enter/Space expand, v/e/u/g sort, Shift+G toggle starter goalies."
+    "j/k move rows, PageUp/PageDown jump 10, Home/End jump to first/last while on a row, Enter/Space expand, " +
+    "v/e/u/g sort, Shift+G toggle starter goalies."
   );
 }
 
