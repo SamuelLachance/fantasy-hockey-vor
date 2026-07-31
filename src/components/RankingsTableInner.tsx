@@ -117,14 +117,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   });
 
   return (
-    <section
-      id="rankings"
-      aria-labelledby="rankings-heading"
-      className="space-y-4 scroll-mt-6"
-    >
-      <h2 id="rankings-heading" className="sr-only">
-        VOR rankings
-      </h2>
+    <div className="space-y-4">
       <BoardShortcutsHelp
         open={board.helpOpen}
         onClose={() => board.setHelpOpen(false)}
@@ -210,6 +203,6 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         totalCount={players.length}
         searchPending={board.query !== board.deferredQuery}
       />
-    </section>
+    </div>
   );
 }

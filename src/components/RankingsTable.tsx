@@ -11,18 +11,27 @@ interface RankingsTableProps {
 
 export function RankingsTable({ players }: RankingsTableProps) {
   return (
-    <Suspense
-      fallback={
-        <div
-          className="rounded-2xl border border-white/10 bg-slate-950/40 px-6 py-16 text-center text-slate-400"
-          role="status"
-          aria-busy="true"
-        >
-          {loadingRankingsCopy()}
-        </div>
-      }
+    <section
+      id="rankings"
+      aria-labelledby="rankings-heading"
+      className="space-y-4 scroll-mt-6"
     >
-      <RankingsTableInner players={players} />
-    </Suspense>
+      <h2 id="rankings-heading" className="sr-only">
+        VOR rankings
+      </h2>
+      <Suspense
+        fallback={
+          <div
+            className="rounded-2xl border border-white/10 bg-slate-950/40 px-6 py-16 text-center text-slate-400"
+            role="status"
+            aria-busy="true"
+          >
+            {loadingRankingsCopy()}
+          </div>
+        }
+      >
+        <RankingsTableInner players={players} />
+      </Suspense>
+    </section>
   );
 }

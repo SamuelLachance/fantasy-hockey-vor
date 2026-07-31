@@ -13,11 +13,11 @@ const files: Record<string, string[]> = {
     "loadingRankingsCopy",
     'role="status"',
     'aria-busy="true"',
-  ],
-  "src/components/RankingsTableInner.tsx": [
     'id="rankings"',
     "rankings-heading",
     "VOR rankings",
+  ],
+  "src/components/RankingsTableInner.tsx": [
     "usePlayerDetails",
     "useRankingsBoardState",
     "useRankingsUrlSync",
