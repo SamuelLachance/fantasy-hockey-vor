@@ -5,6 +5,7 @@ import type { PlayerProjection } from "@/lib/types";
 import {
   boardKeyboardNavIds,
   isBoardTypingTarget,
+  nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
   shouldIgnoreBoardShortcut,
 } from "@/lib/board-keyboard";
@@ -110,17 +111,20 @@ export function useRankingsKeyboard({
           return;
         }
         if (typing) {
-          const el = e.target as HTMLInputElement | HTMLTextAreaElement;
-          if (
-            el instanceof HTMLInputElement &&
-            el.type === "search" &&
-            el.value !== "" &&
-            onClearSearchRef.current
-          ) {
+          const action = nextBoardEscapeTypingAction(e.target);
+          if (action.type === "clear-search" && onClearSearchRef.current) {
             e.preventDefault();
             onClearSearchRef.current();
+            return;
           }
-          return;
+          if (action.type === "noop-typing") return;
+          if (
+            action.type === "dismiss-row" &&
+            action.blurSearch &&
+            e.target instanceof HTMLElement
+          ) {
+            e.target.blur();
+          }
         }
         focusPlayerRowIfPanelFocused(expandedIdNow);
         setExpandedIdRef.current(null);

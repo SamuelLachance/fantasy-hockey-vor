@@ -83,3 +83,27 @@ export function shouldIgnoreBoardShortcut(
   if (helpOpen) return true;
   return isBoardChromeTarget(target);
 }
+
+export type BoardEscapeAction =
+  | { type: "clear-search" }
+  | { type: "dismiss-row"; blurSearch: boolean }
+  | { type: "noop-typing" };
+
+/**
+ * Escape while typing: clear non-empty search, otherwise dismiss the expanded
+ * row (blur empty search so focus leaves the field).
+ */
+export function nextBoardEscapeTypingAction(
+  target: EventTarget | null,
+): BoardEscapeAction {
+  const el = asFocusEl(target);
+  if (!el?.tagName) return { type: "dismiss-row", blurSearch: false };
+  if (el.tagName === "INPUT") {
+    const input = target as { type?: string; value?: string };
+    if (input.type === "search") {
+      if ((input.value ?? "") !== "") return { type: "clear-search" };
+      return { type: "dismiss-row", blurSearch: true };
+    }
+  }
+  return { type: "noop-typing" };
+}

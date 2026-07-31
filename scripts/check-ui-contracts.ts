@@ -144,6 +144,7 @@ const files: Record<string, string[]> = {
     "isBoardChromeTarget",
     "shouldIgnoreBoardShortcut",
     "boardKeyboardNavIds",
+    "nextBoardEscapeTypingAction",
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
@@ -212,6 +213,7 @@ const files: Record<string, string[]> = {
     'e.key === "End"',
     "nextExpandedPlayerId",
     "boardKeyboardNavIds",
+    "nextBoardEscapeTypingAction",
     "shouldIgnoreBoardShortcut",
     "isBoardTypingTarget",
     "focusPlayerRowIfPanelFocused",

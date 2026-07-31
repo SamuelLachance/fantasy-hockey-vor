@@ -7,6 +7,7 @@ import {
   isBoardChromeTarget,
   isBoardRowToggleKey,
   isBoardTypingTarget,
+  nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
   shouldIgnoreBoardShortcut,
 } from "../src/lib/board-keyboard";
@@ -104,6 +105,30 @@ assert(
 assert(
   !shouldIgnoreBoardShortcut(false, panelBtn as unknown as EventTarget),
   "expand panel allows shortcuts",
+);
+
+assert(
+  nextBoardEscapeTypingAction({
+    tagName: "INPUT",
+    type: "search",
+    value: "mcd",
+  } as unknown as EventTarget).type === "clear-search",
+  "Esc clears non-empty search",
+);
+assert(
+  nextBoardEscapeTypingAction({
+    tagName: "INPUT",
+    type: "search",
+    value: "",
+  } as unknown as EventTarget).type === "dismiss-row",
+  "Esc on empty search dismisses row",
+);
+assert(
+  nextBoardEscapeTypingAction({
+    tagName: "TEXTAREA",
+    value: "",
+  } as unknown as EventTarget).type === "noop-typing",
+  "Esc in textarea stays typing",
 );
 
 if (failed) process.exit(1);
