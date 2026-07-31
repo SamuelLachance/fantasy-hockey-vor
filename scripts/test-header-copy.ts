@@ -28,7 +28,11 @@ assert(
 );
 assert(headerLeadCopy("2026-27").startsWith("2026-27 projections"), "lead");
 assert(headerLeadCopy("2026-27").includes("±1σ"), "lead uncertainty");
-assert(skipToRankingsCopy() === "Skip to rankings", "skip link");
+assert(
+  skipToRankingsCopy() === "Skip to rankings and focus search",
+  "skip link",
+);
+assert(skipToRankingsCopy().includes("focus search"), "skip mentions search");
 
 if (failed) process.exit(1);
 console.log("OK: header-copy");

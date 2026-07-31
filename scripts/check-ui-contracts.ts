@@ -959,6 +959,7 @@ const files: Record<string, string[]> = {
     "headerJumpCtaTitle",
     "Jump to board + focus search",
     "skipToRankingsCopy",
+    "Skip to rankings and focus search",
     "SITE_BRAND",
   ],
   "src/components/HeaderRosterNote.tsx": [

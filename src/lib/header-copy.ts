@@ -1,8 +1,8 @@
 import { SITE_BRAND } from "@/lib/site";
 
-/** Skip-link visible on keyboard focus. */
+/** Skip-link visible on keyboard focus (also focuses board search). */
 export function skipToRankingsCopy(): string {
-  return "Skip to rankings";
+  return "Skip to rankings and focus search";
 }
 
 /** Uppercase eyebrow above the hero H1. */
