@@ -117,11 +117,14 @@ export function decodeStatRanges(raw: string | null | undefined): StatRanges {
   for (const part of raw.split(",").slice(0, RANGE_KEYS.size)) {
     const m = /^([A-Za-z]+):(.*)$/.exec(part.trim());
     if (!m) continue;
-    const key = m[1]!;
-    if (!RANGE_KEYS.has(key)) continue;
+    const keyRaw = m[1]!;
+    const keyMatched = ([...RANGE_KEYS] as RangeKey[]).find(
+      (k) => k.toLowerCase() === keyRaw.toLowerCase(),
+    );
+    if (!keyMatched) continue;
     const bounds = splitStatRangeBounds(m[2] ?? "");
     if (!bounds) continue;
-    out[key as RangeKey] = {
+    out[keyMatched] = {
       min: bounds.min.slice(0, RANGE_BOUND_MAX),
       max: bounds.max.slice(0, RANGE_BOUND_MAX),
     };

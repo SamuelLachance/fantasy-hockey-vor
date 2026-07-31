@@ -71,6 +71,16 @@ assert(
   decodeStatRanges("vor:1.5-,sigma:-80").vor?.min === "1.5",
   "decode decimal min",
 );
+assert(decodeStatRanges("VOR:2-").vor?.min === "2", "decode uppercase VOR key");
+assert(
+  decodeStatRanges("DraftValue:1-").draftValue?.min === "1",
+  "decode PascalCase draftValue key",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("rf=Sigma:-50")).statRanges.sigma
+    ?.max === "50",
+  "parse rf case-insensitive Sigma",
+);
 assert(
   encodeStatRanges({
     vor: { min: "1.5", max: "" },

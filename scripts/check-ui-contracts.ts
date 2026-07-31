@@ -699,6 +699,7 @@ const files: Record<string, string[]> = {
     "isInvertedRangeBound",
     'toLowerCase() !== "all"',
     "params.get(\"dir\")?.toLowerCase()",
+    "k.toLowerCase() === keyRaw.toLowerCase()",
     "rf",
     "steadiestBoardHref",
     "playerBoardHref",
