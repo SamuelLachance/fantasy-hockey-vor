@@ -26,12 +26,12 @@ export function ExpandedPlayerMeta({
         {projectionMethodLabel(player.projectionMethod)}
       </span>
       {player.confidence != null && (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs tabular-nums text-slate-400">
           Confidence: {(player.confidence * 100).toFixed(0)}%
         </span>
       )}
       {player.syntheticMarketRank != null && (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs tabular-nums text-slate-400">
           Consensus #{player.syntheticMarketRank} · model #{player.rank}
           {player.draftValue != null
             ? ` · Edge ${player.draftValue > 0 ? "+" : ""}${player.draftValue}`
@@ -40,7 +40,7 @@ export function ExpandedPlayerMeta({
       )}
       {player.uncertainty && (
         <span
-          className="text-xs text-slate-400"
+          className="text-xs tabular-nums text-slate-400"
           title="1σ season-total uncertainty. Aleatoric share = irreducible noise vs model disagreement."
         >
           ±{player.uncertainty.gamesPlayedSigma.toFixed(0)} GP
