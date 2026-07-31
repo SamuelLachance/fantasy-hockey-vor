@@ -36,7 +36,7 @@ import {
 import { highlightMatch } from "@/lib/highlight-match";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
-import { focusStatsFilterButton, STICKY_NAME_SHADOW } from "@/lib/board-dom";
+import { focusStatsFilterButton, STICKY_NAME_SHADOW, scrollToRankings } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
@@ -112,11 +112,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash !== "#rankings") return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    document.getElementById("rankings")?.scrollIntoView({
-      block: "start",
-      behavior: reduce ? "auto" : "smooth",
-    });
+    scrollToRankings();
   }, []);
 
   const filterRangeKeys = useMemo(
