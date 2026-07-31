@@ -25,7 +25,10 @@ import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile"
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
 import { attachDraftEdge } from "../src/lib/draft-edge";
-import { filterActivePlayers } from "../src/lib/inactive-players";
+import {
+  filterActivePlayers,
+  loadInactivePlayerIds,
+} from "../src/lib/inactive-players";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import {
   findProjectionIssues,
@@ -325,13 +328,12 @@ async function main() {
     };
   });
 
+  const inactiveIds = loadInactivePlayerIds();
+  const droppedInactive = tandemAdjusted.filter((p) => inactiveIds.has(p.id));
   const activePool = filterActivePlayers(tandemAdjusted);
-  if (activePool.length < tandemAdjusted.length) {
-    const dropped = tandemAdjusted.filter(
-      (p) => !activePool.some((a) => a.id === p.id),
-    );
+  if (droppedInactive.length > 0) {
     console.log(
-      `Dropped ${dropped.length} curated inactive player(s): ${dropped
+      `Dropped ${droppedInactive.length} curated inactive player(s): ${droppedInactive
         .map((p) => p.name)
         .join(", ")}`,
     );
