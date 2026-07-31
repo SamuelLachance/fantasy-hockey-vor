@@ -10,6 +10,21 @@ export function nextExpandedPlayerId(
 /** Rows skipped by PageUp / PageDown on the board. */
 export const BOARD_PAGE_JUMP = 10;
 
+/**
+ * Whether keyboard nav is close enough to the mounted window edge that we
+ * should grow the progressive list (load more).
+ */
+export function shouldPrefetchBoardPage(
+  nextIndex: number,
+  visibleCount: number,
+  totalCount: number,
+  threshold = BOARD_PAGE_JUMP,
+): boolean {
+  if (!(visibleCount < totalCount)) return false;
+  if (!(nextIndex >= 0)) return false;
+  return nextIndex >= Math.max(0, visibleCount - threshold);
+}
+
 /** Jump several rows for PageUp / PageDown (clamped to list ends). */
 export function nextExpandedPlayerIdByStep(
   playerIds: readonly number[],

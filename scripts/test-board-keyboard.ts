@@ -13,6 +13,7 @@ import {
   nextExpandedPlayerId,
   nextExpandedPlayerIdByStep,
   shouldIgnoreBoardShortcut,
+  shouldPrefetchBoardPage,
 } from "../src/lib/board-keyboard";
 
 let failed = 0;
@@ -48,6 +49,18 @@ assert(
 assert(
   nextExpandedPlayerIdByStep(ids, 10, 1, 10) === 30,
   "PageDown clamps to last",
+);
+assert(
+  shouldPrefetchBoardPage(95, 100, 500) === true,
+  "prefetch near visible end",
+);
+assert(
+  shouldPrefetchBoardPage(50, 100, 500) === false,
+  "no prefetch mid-window",
+);
+assert(
+  shouldPrefetchBoardPage(99, 100, 100) === false,
+  "no prefetch when fully loaded",
 );
 assert(isBoardRowToggleKey("Enter"), "Enter toggles");
 assert(isBoardRowToggleKey(" "), "Space toggles");

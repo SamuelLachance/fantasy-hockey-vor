@@ -11,6 +11,7 @@ import {
   nextExpandedPlayerId,
   nextExpandedPlayerIdByStep,
   shouldIgnoreBoardShortcut,
+  shouldPrefetchBoardPage,
 } from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
 import { focusBoardSearch, focusFirstStatFilterInput, focusStatsFilterButton, focusPlayerRow, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
@@ -274,7 +275,20 @@ export function useRankingsKeyboard({
             BOARD_PAGE_JUMP,
           )
         : nextExpandedPlayerId(ids, expandedIdNow, direction);
-      if (nextId != null) setExpandedIdRef.current(nextId);
+      if (nextId != null) {
+        setExpandedIdRef.current(nextId);
+        const nextIdx = ids.indexOf(nextId);
+        if (
+          onLoadMoreRef.current &&
+          shouldPrefetchBoardPage(
+            nextIdx,
+            renderCountRef.current,
+            filteredRef.current.length,
+          )
+        ) {
+          onLoadMoreRef.current();
+        }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
