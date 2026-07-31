@@ -5,6 +5,9 @@
 import {
   boardRowAriaLabel,
   boardRowDetailsAriaLabel,
+  edgeCellTitle,
+  sigmaCellDisplay,
+  sigmaCellTitle,
 } from "../src/lib/board-row-a11y";
 
 let failed = 0;
@@ -37,6 +40,18 @@ assert(
   boardRowDetailsAriaLabel("McDavid") === "McDavid details",
   "details region",
 );
+assert(
+  edgeCellTitle(10, 3) === "Consensus rank 10 − model rank 3",
+  "edge title",
+);
+assert(edgeCellTitle(null, 3) === undefined, "edge no consensus");
+assert(
+  sigmaCellTitle(41.2) === "Σσ 41.2 (lower = more confident)",
+  "sigma title",
+);
+assert(sigmaCellTitle(null) === "No calibrated uncertainty", "sigma missing");
+assert(sigmaCellDisplay(41.2) === "41", "sigma display");
+assert(sigmaCellDisplay(null) === "—", "sigma em dash");
 
 if (failed) process.exit(1);
 console.log("OK: board-row-a11y");

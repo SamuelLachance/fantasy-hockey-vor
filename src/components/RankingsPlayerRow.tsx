@@ -18,6 +18,9 @@ import { isBoardRowToggleKey } from "@/lib/board-keyboard";
 import {
   boardRowAriaLabel,
   boardRowDetailsAriaLabel,
+  edgeCellTitle,
+  sigmaCellDisplay,
+  sigmaCellTitle,
 } from "@/lib/board-row-a11y";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
@@ -121,11 +124,7 @@ export function RankingsPlayerRow({
         </td>
         <td
           className={`px-4 py-3 font-mono tabular-nums text-sm ${edgeColor(player.draftValue ?? 0)}`}
-          title={
-            player.syntheticMarketRank != null
-              ? `Consensus rank ${player.syntheticMarketRank} − model rank ${player.rank}`
-              : undefined
-          }
+          title={edgeCellTitle(player.syntheticMarketRank, player.rank)}
         >
           {formatSigned(player.draftValue ?? 0)}
         </td>
@@ -135,15 +134,9 @@ export function RankingsPlayerRow({
               ? sigmaColor(player.uncertainty.total.sigma)
               : "text-slate-500"
           }`}
-          title={
-            player.uncertainty?.total?.sigma != null
-              ? `Σσ ${player.uncertainty.total.sigma.toFixed(1)} (lower = more confident)`
-              : "No calibrated uncertainty"
-          }
+          title={sigmaCellTitle(player.uncertainty?.total?.sigma)}
         >
-          {player.uncertainty?.total?.sigma != null
-            ? player.uncertainty.total.sigma.toFixed(0)
-            : "—"}
+          {sigmaCellDisplay(player.uncertainty?.total?.sigma)}
         </td>
         <td className="px-4 py-3 font-mono tabular-nums text-slate-400">
           {player.gamesPlayed}

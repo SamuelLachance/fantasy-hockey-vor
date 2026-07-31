@@ -109,11 +109,17 @@ const files: Record<string, string[]> = {
     "isBoardRowToggleKey",
     "boardRowAriaLabel",
     "boardRowDetailsAriaLabel",
+    "edgeCellTitle",
+    "sigmaCellTitle",
+    "sigmaCellDisplay",
     "tabular-nums",
   ],
   "src/lib/board-row-a11y.ts": [
     "boardRowAriaLabel",
     "boardRowDetailsAriaLabel",
+    "edgeCellTitle",
+    "sigmaCellTitle",
+    "sigmaCellDisplay",
   ],
   "src/lib/board-reset-token.ts": ["boardFilterResetToken", "g1"],
   "src/lib/board-keyboard.ts": [
