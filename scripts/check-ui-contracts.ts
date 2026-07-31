@@ -912,6 +912,8 @@ const files: Record<string, string[]> = {
     "How VOR Works",
     "how-vor-works-title",
     "aria-labelledby",
+    "content-visibility:auto",
+    "contain-intrinsic-size",
     "howVorZScoreCopy",
     "howVorReplacementCopy",
     "howVorYahooPositionsCopy",
