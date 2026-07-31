@@ -4,6 +4,7 @@ import { ScrollToTop } from "@/components/ScrollToTop";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
 import { boardShortcutsFooterChip } from "@/lib/board-shortcuts";
+import { formatCount } from "@/lib/format";
 import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
 import { rankingsJsonLd } from "@/lib/seo-jsonld";
 import { playerDetailsHref } from "@/lib/site";
@@ -72,7 +73,7 @@ export default function HomePage() {
         </span>
         <span className="mx-2 text-slate-700">·</span>
         <span className="tabular-nums text-slate-600">
-          {data.players.length.toLocaleString()} draftable
+          {formatCount(data.players.length)} draftable
         </span>
       </footer>
       <ScrollToTop />
