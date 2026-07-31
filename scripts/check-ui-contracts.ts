@@ -157,6 +157,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-active-filter-chips.ts": [
     "boardActiveStatChips",
     "boardActiveFiltersVisible",
+    "formatActiveRangeChip",
     "formatRangeChip",
   ],
   "src/components/RankingsTableHead.tsx": [

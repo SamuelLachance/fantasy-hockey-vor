@@ -5,6 +5,7 @@
 import {
   boardActiveFiltersVisible,
   boardActiveStatChips,
+  formatActiveRangeChip,
 } from "../src/lib/board-active-filter-chips";
 
 let failed = 0;
@@ -26,6 +27,22 @@ const chips = boardActiveStatChips(
 assert(chips.length === 1, "skips empty bounds");
 assert(chips[0]!.key === "vor", "vor chip");
 assert(chips[0]!.bounds === "1–5", "bounds label");
+
+assert(
+  boardActiveStatChips({ goals: { min: "abc", max: "x" } }, true).length === 0,
+  "invalid-only skipped",
+);
+assert(
+  formatActiveRangeChip("goals", "2", "abc") === "≥2",
+  "mixed valid+junk keeps parseable side",
+);
+assert(
+  boardActiveStatChips(
+    { vor: { min: "1", max: "" }, goals: { min: "abc", max: "" } },
+    true,
+  ).length === 1,
+  "junk sibling does not add chip",
+);
 
 assert(
   !boardActiveFiltersVisible({

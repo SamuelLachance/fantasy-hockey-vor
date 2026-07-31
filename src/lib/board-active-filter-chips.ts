@@ -1,5 +1,6 @@
 import {
   formatRangeChip,
+  parseRangeValue,
   rangeLabel,
   type RangeKey,
   type StatRanges,
@@ -12,6 +13,19 @@ export type BoardStatChip = {
   bounds: string;
 };
 
+/** Chip label using only parseable min/max sides. */
+export function formatActiveRangeChip(
+  key: RangeKey,
+  min: string,
+  max: string,
+): string {
+  const minOk =
+    min.trim() && parseRangeValue(key, min) != null ? min : "";
+  const maxOk =
+    max.trim() && parseRangeValue(key, max) != null ? max : "";
+  return formatRangeChip(minOk, maxOk);
+}
+
 /** Stat range chips currently active on the board chrome. */
 export function boardActiveStatChips(
   statRanges: StatRanges,
@@ -23,7 +37,7 @@ export function boardActiveStatChips(
     [RangeKey, { min: string; max: string } | undefined]
   >) {
     if (!bounds) continue;
-    const chip = formatRangeChip(bounds.min ?? "", bounds.max ?? "");
+    const chip = formatActiveRangeChip(key, bounds.min ?? "", bounds.max ?? "");
     if (!chip) continue;
     out.push({ key, label: rangeLabel(key), bounds: chip });
   }

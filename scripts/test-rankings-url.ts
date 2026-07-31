@@ -236,5 +236,14 @@ assert(
   "URL prune keeps vor on C",
 );
 
+assert(
+  encodeStatRanges({ goals: { min: "abc", max: "" } }) === "",
+  "encode skips invalid-only",
+);
+assert(
+  encodeStatRanges({ goals: { min: "2", max: "abc" } }) === "goals:2-",
+  "encode keeps parseable side only",
+);
+
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

@@ -4,6 +4,7 @@ import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 import { coerceSortKeyForPosition, pruneStatRangesForPosition } from "@/lib/rankings-board";
 import {
   defaultSortDir,
+  parseRangeValue,
   type RangeKey,
   type SortKey,
   type StatRanges,
@@ -67,7 +68,7 @@ export interface RankingsUrlState {
   statRanges: StatRanges;
 }
 
-/** Encode `key:min-max` segments (empty side allowed). */
+/** Encode `key:min-max` segments (only parseable bounds). */
 export function encodeStatRanges(ranges: StatRanges): string {
   const parts: string[] = [];
   for (const [key, b] of Object.entries(ranges) as [
@@ -75,8 +76,12 @@ export function encodeStatRanges(ranges: StatRanges): string {
     { min: string; max: string } | undefined,
   ][]) {
     if (!b || !RANGE_KEYS.has(key)) continue;
-    const min = (b.min?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
-    const max = (b.max?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
+    const minRaw = (b.min?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
+    const maxRaw = (b.max?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
+    const min =
+      minRaw && parseRangeValue(key, minRaw) != null ? minRaw : "";
+    const max =
+      maxRaw && parseRangeValue(key, maxRaw) != null ? maxRaw : "";
     if (!min && !max) continue;
     parts.push(`${key}:${min}-${max}`);
   }
