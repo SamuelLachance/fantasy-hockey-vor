@@ -18,7 +18,7 @@ import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
 const DETAILS_PATH = join(process.cwd(), "public", "player-details.json");
-const MIN_PLAYERS = 1000;
+const MIN_PLAYERS = 1200;
 const STALE_WARN_DAYS = 30;
 const STALE_FAIL_DAYS = 60;
 
