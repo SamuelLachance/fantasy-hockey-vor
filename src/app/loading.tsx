@@ -1,9 +1,9 @@
+import { BrandEyebrow } from "@/components/BrandEyebrow";
+
 export default function Loading() {
   return (
     <main className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4 py-20">
-      <p className="text-xs font-medium uppercase tracking-[0.2em] text-cyan-400/80">
-        Fantasy Hockey VOR
-      </p>
+      <BrandEyebrow className="text-xs text-cyan-400/80" />
       <div
         className="h-1 w-40 overflow-hidden rounded-full bg-white/10"
         aria-hidden

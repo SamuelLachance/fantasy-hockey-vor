@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandEyebrow } from "@/components/BrandEyebrow";
 import { homeRankingsHref } from "@/lib/site";
 
 export default function GlobalError({
@@ -14,9 +15,7 @@ export default function GlobalError({
     <html lang="en">
       <body className="bg-slate-950 text-slate-100">
         <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-          <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
-            Fantasy Hockey VOR
-          </p>
+          <BrandEyebrow />
           <h1 className="text-2xl font-semibold">App error</h1>
           <p className="max-w-md text-sm text-slate-400">
             A root-level failure occurred. Retry to remount the application.
