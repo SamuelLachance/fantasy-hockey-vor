@@ -12,12 +12,24 @@ export async function copyText(text: string): Promise<boolean> {
   const ta = document.createElement("textarea");
   ta.value = text;
   ta.setAttribute("readonly", "");
+  ta.setAttribute("aria-hidden", "true");
   ta.style.position = "fixed";
-  ta.style.left = "-9999px";
+  ta.style.top = "0";
+  ta.style.left = "0";
+  ta.style.opacity = "0";
+  ta.style.pointerEvents = "none";
   document.body.appendChild(ta);
   try {
     ta.focus();
     ta.select();
+    // iOS Safari often ignores setSelectionRange on readonly; Range API helps.
+    const selection = window.getSelection?.();
+    if (selection) {
+      const range = document.createRange();
+      range.selectNodeContents(ta);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
     ta.setSelectionRange(0, text.length);
     return document.execCommand("copy");
   } catch {

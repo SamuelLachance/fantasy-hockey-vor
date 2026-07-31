@@ -1095,7 +1095,13 @@ const files: Record<string, string[]> = {
     "loadMoreTitle",
     "Load more rows (m)",
   ],
-  "src/lib/clipboard.ts": ["copyText", "execCommand"],
+  "src/lib/clipboard.ts": [
+    "copyText",
+    "execCommand",
+    "aria-hidden",
+    "selectNodeContents",
+    "getSelection",
+  ],
   "src/lib/projection-age.ts": [
     "projectionAgeDays",
     "isProjectionVeryStale",

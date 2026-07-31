@@ -56,7 +56,9 @@ async function main() {
   const fakeTa = {
     value: "",
     style: {} as Record<string, string>,
-    setAttribute() {},
+    setAttribute(name: string) {
+      calls.push(`attr:${name}`);
+    },
     focus() {
       calls.push("focus");
     },
@@ -70,6 +72,22 @@ async function main() {
       calls.push("remove");
     },
   };
+  Object.defineProperty(globalThis, "window", {
+    value: {
+      getSelection() {
+        calls.push("getSelection");
+        return {
+          removeAllRanges() {
+            calls.push("removeAllRanges");
+          },
+          addRange() {
+            calls.push("addRange");
+          },
+        };
+      },
+    },
+    configurable: true,
+  });
   Object.defineProperty(globalThis, "document", {
     value: {
       body: {
@@ -82,6 +100,14 @@ async function main() {
         assert(tag === "textarea", "creates textarea");
         return fakeTa;
       },
+      createRange() {
+        calls.push("createRange");
+        return {
+          selectNodeContents() {
+            calls.push("selectNodeContents");
+          },
+        };
+      },
       execCommand(cmd: string) {
         assert(cmd === "copy", "execCommand copy");
         calls.push("copy");
@@ -92,7 +118,8 @@ async function main() {
   });
   assert((await copyText("link")) === true, "DOM fallback ok");
   assert(
-    calls.join(",") === "append,focus,select,range:0-4,copy,remove",
+    calls.join(",") ===
+      "attr:readonly,attr:aria-hidden,append,focus,select,getSelection,createRange,selectNodeContents,removeAllRanges,addRange,range:0-4,copy,remove",
     `DOM fallback sequence got ${calls.join(",")}`,
   );
 
