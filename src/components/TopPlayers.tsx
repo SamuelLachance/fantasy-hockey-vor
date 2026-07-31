@@ -74,10 +74,19 @@ export function TopPlayers({
                     vorPosition={player.vorPosition ?? player.position}
                   />
                 </div>
-                <span className={`font-mono font-bold ${vorColor(player.vor)}`}>
-                  {player.vor >= 0 ? "+" : ""}
-                  {player.vor.toFixed(2)}
-                </span>
+                <div className="text-right">
+                  <div className={`font-mono font-bold ${vorColor(player.vor)}`}>
+                    {player.vor >= 0 ? "+" : ""}
+                    {player.vor.toFixed(2)}
+                  </div>
+                  {player.uncertainty?.total?.sigma != null && (
+                    <div
+                      className={`font-mono text-xs ${sigmaColor(player.uncertainty.total.sigma)}`}
+                    >
+                      Σσ {player.uncertainty.total.sigma.toFixed(0)}
+                    </div>
+                  )}
+                </div>
               </a>
             </li>
           ))}
