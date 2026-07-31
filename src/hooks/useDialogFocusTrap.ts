@@ -31,6 +31,12 @@ export function useDialogFocusTrap(
         : null;
     const root = document.getElementById(rootId);
     if (!root) return;
+    // Prefer the dialog panel when it is programmatically focusable so AT
+    // hears the title/description before the first control (e.g. Close).
+    if (root.hasAttribute("tabindex")) {
+      root.focus();
+      return;
+    }
     dialogFocusableElements(root)[0]?.focus();
   }, [open, rootId]);
 

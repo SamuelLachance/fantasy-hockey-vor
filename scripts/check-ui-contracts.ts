@@ -359,6 +359,9 @@ const files: Record<string, string[]> = {
     "useDialogFocusTrap",
     "boardShortcutsCloseAriaLabel",
     'aria-keyshortcuts="Escape"',
+    "tabIndex={-1}",
+    'aria-describedby="board-shortcuts-list"',
+    'id="board-shortcuts-list"',
   ],
   "src/hooks/useDialogFocusTrap.ts": [
     "useDialogFocusTrap",
@@ -370,6 +373,8 @@ const files: Record<string, string[]> = {
     "dataset.dialogPortal",
     'setAttribute("inert"',
     "Escape",
+    'hasAttribute("tabindex")',
+    "root.focus()",
   ],
   "src/lib/dialog-focus.ts": [
     "dialogFocusableElements",

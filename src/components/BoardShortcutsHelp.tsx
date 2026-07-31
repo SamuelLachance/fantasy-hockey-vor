@@ -29,7 +29,9 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="board-shortcuts-title"
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-xl"
+        aria-describedby="board-shortcuts-list"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-start justify-between gap-3">
@@ -49,7 +51,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
             Esc
           </button>
         </div>
-        <ul className="space-y-2 text-sm">
+        <ul id="board-shortcuts-list" className="space-y-2 text-sm">
           {BOARD_SHORTCUT_ROWS.map((row) => (
             <li
               key={row.keys}
