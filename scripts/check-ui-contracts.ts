@@ -13,7 +13,7 @@ const files: Record<string, string[]> = {
     "RankingsLoadingStatus",
     'id="rankings"',
     "rankings-heading",
-    "VOR rankings",
+    "rankingsSectionHeadingCopy",
   ],
   "src/components/RankingsLoadingStatus.tsx": [
     "BrandEyebrow",
@@ -352,6 +352,8 @@ const files: Record<string, string[]> = {
   "src/lib/board-status.ts": [
     "boardShowingSummary",
     "boardInteractionTipCopy",
+    "rankingsSectionHeadingCopy",
+    "VOR rankings",
     "Enter/Space",
     "column headers",
     "formatCount",

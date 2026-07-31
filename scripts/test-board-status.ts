@@ -5,6 +5,7 @@
 import {
   boardInteractionTipCopy,
   boardShowingSummary,
+  rankingsSectionHeadingCopy,
 } from "../src/lib/board-status";
 
 let failed = 0;
@@ -50,6 +51,7 @@ assert(
   boardInteractionTipCopy().includes("column headers"),
   "tip mentions sort headers",
 );
+assert(rankingsSectionHeadingCopy() === "VOR rankings", "section heading");
 
 if (failed) process.exit(1);
 console.log("OK: board-status");

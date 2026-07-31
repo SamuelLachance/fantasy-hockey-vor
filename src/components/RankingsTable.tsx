@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import type { PlayerProjection } from "@/lib/types";
+import { rankingsSectionHeadingCopy } from "@/lib/board-status";
 import { RankingsLoadingStatus } from "./RankingsLoadingStatus";
 import { RankingsTableInner } from "./RankingsTableInner";
 
@@ -17,7 +18,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
       className="space-y-4 scroll-mt-6"
     >
       <h2 id="rankings-heading" className="sr-only">
-        VOR rankings
+        {rankingsSectionHeadingCopy()}
       </h2>
       <Suspense
         fallback={

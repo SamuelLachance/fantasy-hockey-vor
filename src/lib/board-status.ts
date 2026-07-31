@@ -1,5 +1,10 @@
 import { formatCount } from "@/lib/format";
 
+/** Sr-only section heading for the rankings board landmark. */
+export function rankingsSectionHeadingCopy(): string {
+  return "VOR rankings";
+}
+
 /** Static tip after the live showing summary (expand + sort affordances). */
 export function boardInteractionTipCopy(): string {
   return (
