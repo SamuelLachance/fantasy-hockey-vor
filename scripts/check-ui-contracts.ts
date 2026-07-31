@@ -237,6 +237,7 @@ const files: Record<string, string[]> = {
     "SITE_URL",
     "homeRankingsHref",
     "playerDetailsHref",
+    "NEXT_PUBLIC_BUILD_TIME",
   ],
   "src/lib/player-details-client.ts": [
     "fetchPlayerDetails",
