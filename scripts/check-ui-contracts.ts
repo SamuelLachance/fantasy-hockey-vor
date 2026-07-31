@@ -682,6 +682,8 @@ const files: Record<string, string[]> = {
     "decodeStatRanges",
     "splitStatRangeBounds",
     "isInvertedRangeBound",
+    'toLowerCase() !== "all"',
+    "params.get(\"dir\")?.toLowerCase()",
     "rf",
     "steadiestBoardHref",
     "playerBoardHref",

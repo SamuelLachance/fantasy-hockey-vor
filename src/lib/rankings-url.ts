@@ -128,9 +128,12 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
     : "ALL";
   const query = (params.get("q") ?? "").slice(0, HIGHLIGHT_QUERY_MAX);
   const sortRaw = params.get("sort") ?? "vor";
-  const sortParsed = (SORT_KEYS.has(sortRaw) ? sortRaw : "vor") as SortKey;
+  const sortMatched = [...SORT_KEYS].find(
+    (k) => k.toLowerCase() === sortRaw.toLowerCase(),
+  );
+  const sortParsed = (sortMatched ?? "vor") as SortKey;
   const sortKey = coerceSortKeyForPosition(sortParsed, position);
-  const dirRaw = params.get("dir");
+  const dirRaw = params.get("dir")?.toLowerCase();
   const sortDir =
     dirRaw === "asc" || dirRaw === "desc"
       ? dirRaw
@@ -141,7 +144,7 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
     Number.isFinite(playerParsed) && playerParsed > 0
       ? Math.trunc(playerParsed)
       : null;
-  const hideDepthGoalies = params.get("g") !== "all";
+  const hideDepthGoalies = (params.get("g") ?? "").toLowerCase() !== "all";
   const statRanges = pruneStatRangesForPosition(
     decodeStatRanges(params.get("rf")),
     position,

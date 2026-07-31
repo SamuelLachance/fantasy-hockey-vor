@@ -321,6 +321,28 @@ assert(
     splitStatRangeBounds("-2-5")?.max === "5",
   "splitStatRangeBounds negative min",
 );
+assert(
+  parseRankingsUrl(new URLSearchParams("g=ALL")).hideDepthGoalies === false,
+  "g=ALL shows all goalies",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("g=All")).hideDepthGoalies === false,
+  "g=All shows all goalies",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("sort=sigma&dir=DESC")).sortDir ===
+    "desc",
+  "dir=DESC case-insensitive",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("sort=vor&dir=ASC")).sortDir === "asc",
+  "dir=ASC case-insensitive",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("sort=DraftValue")).sortKey ===
+    "draftValue",
+  "sort case-insensitive",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-url");
