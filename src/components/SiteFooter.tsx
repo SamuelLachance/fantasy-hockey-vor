@@ -38,7 +38,7 @@ export function SiteFooter({
         href={FOOTER_SOURCE_HREF}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-cyan-500/80 underline-offset-2 hover:text-cyan-400 hover:underline"
+        className="rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
       >
         source
       </a>

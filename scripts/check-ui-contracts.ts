@@ -1160,6 +1160,8 @@ const files: Record<string, string[]> = {
     "formatProjectionEngine",
     "Projections generated",
     "safe-area-inset-bottom",
+    "focus-visible:ring-2",
+    "focus-visible:ring-cyan-300/80",
   ],
   "src/lib/site-footer.ts": [
     "footerDraftableCopy",
