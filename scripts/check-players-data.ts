@@ -93,14 +93,24 @@ for (const p of players) {
   goaliesByTeam.set(p.team, list);
 }
 const overloadedTeams: string[] = [];
+const underloadedTeams: string[] = [];
 for (const [team, gps] of goaliesByTeam) {
   const top3 = [...gps].sort((a, b) => b - a).slice(0, 3);
   const sum = top3.reduce((s, g) => s + g, 0);
   if (sum > 100) overloadedTeams.push(`${team}=${sum}`);
+  // Teams with a real tandem (≥2 projected G) should still cover most of a season.
+  if (gps.length >= 2 && sum < 60) underloadedTeams.push(`${team}=${sum}`);
 }
 if (overloadedTeams.length > 0) {
   errors.push(
     `top-3 goalie GP sum >100 on ${overloadedTeams.length} team(s): ${overloadedTeams
+      .slice(0, 5)
+      .join(", ")}`,
+  );
+}
+if (underloadedTeams.length > 0) {
+  errors.push(
+    `top-3 goalie GP sum <60 on ${underloadedTeams.length} team(s): ${underloadedTeams
       .slice(0, 5)
       .join(", ")}`,
   );
@@ -119,9 +129,9 @@ if (goalieSavePcts.length >= 20 && uniqueSv.size < 5) {
 const topGoalie = [...players]
   .filter((p) => p.isGoalie)
   .sort((a, b) => b.vor - a.vor)[0];
-if (topGoalie && topGoalie.gamesPlayed < 35) {
-  warnings.push(
-    `top goalie ${topGoalie.name} has only ${topGoalie.gamesPlayed} GP — check tandem allocation`,
+if (topGoalie && topGoalie.gamesPlayed < 40) {
+  errors.push(
+    `top goalie ${topGoalie.name} has only ${topGoalie.gamesPlayed} GP (expected ≥40) — check tandem allocation`,
   );
 }
 
