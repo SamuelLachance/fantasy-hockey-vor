@@ -10,6 +10,7 @@ import {
   statFiltersHintCopy,
   statFiltersPanelTitle,
   statsFilterButtonLabel,
+  statsFilterButtonTitle,
   boardFiltersRegionLabel,
 } from "../src/lib/stat-filters-copy";
 
@@ -35,6 +36,10 @@ assert(
 assert(doneStatFiltersCopy() === "Done", "done");
 assert(doneStatFiltersTitle() === "Close filters (Enter)", "done title");
 assert(statsFilterButtonLabel() === "Stats", "toolbar label");
+assert(
+  statsFilterButtonTitle() === "Open or close stat filters (f)",
+  "toolbar title",
+);
 assert(boardFiltersRegionLabel() === "Board filters", "chrome region");
 
 if (failed) process.exit(1);

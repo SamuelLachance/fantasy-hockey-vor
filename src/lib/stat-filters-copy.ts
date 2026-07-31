@@ -32,6 +32,11 @@ export function statsFilterButtonLabel(): string {
   return "Stats";
 }
 
+/** Tooltip for the toolbar Stats filter control. */
+export function statsFilterButtonTitle(): string {
+  return "Open or close stat filters (f)";
+}
+
 /** Landmark label for the sticky board filters chrome. */
 export function boardFiltersRegionLabel(): string {
   return "Board filters";
