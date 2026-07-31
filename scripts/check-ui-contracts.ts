@@ -432,6 +432,7 @@ const files: Record<string, string[]> = {
     "TopPlayerLink",
     "dense",
     "tabular-nums",
+    "Top fantasy hockey leaders",
   ],
   "src/components/HowVorWorks.tsx": [
     "How VOR Works",

@@ -40,7 +40,10 @@ export function TopPlayers({
   const topByPosition = topByPositionLeaders(players);
 
   return (
-    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+    <section
+      aria-label="Top fantasy hockey leaders"
+      className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3"
+    >
       <TopLeadersCard
         icon={<Trophy className="h-5 w-5" />}
         title="Overall VOR Leaders"
