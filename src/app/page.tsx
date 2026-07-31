@@ -3,20 +3,15 @@ import { RankingsTable } from "@/components/RankingsTable";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
+import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
 import { rankingsJsonLd } from "@/lib/seo-jsonld";
-
-function ageDaysAtBuild(generatedAt: string): number {
-  const buildMs = Date.parse(
-    process.env.NEXT_PUBLIC_BUILD_TIME ?? generatedAt,
-  );
-  const generatedMs = Date.parse(generatedAt);
-  if (!Number.isFinite(buildMs) || !Number.isFinite(generatedMs)) return 0;
-  return (buildMs - generatedMs) / (24 * 60 * 60 * 1000);
-}
 
 export default function HomePage() {
   const data = getProjections();
-  const projectionAgeDays = ageDaysAtBuild(data.generatedAt);
+  const projectionAgeDays = daysSinceProjection(
+    data.generatedAt,
+    process.env.NEXT_PUBLIC_BUILD_TIME,
+  );
   const detailsHref = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/player-details.json`.replace(
     /\/{2,}/g,
     "/",

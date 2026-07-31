@@ -176,6 +176,11 @@ const files: Record<string, string[]> = {
     "dateTime",
     "scrollToRankings",
     "focusSearch: true",
+    "isProjectionStale",
+  ],
+  "src/lib/projection-age.ts": [
+    "projectionAgeDays",
+    "isProjectionVeryStale",
   ],
   "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],

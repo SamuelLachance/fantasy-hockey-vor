@@ -1,0 +1,39 @@
+/**
+ * Unit checks for projection freshness helpers.
+ * Run: npx tsx scripts/test-projection-age.ts
+ */
+import {
+  isProjectionStale,
+  isProjectionVeryStale,
+  projectionAgeDays,
+} from "../src/lib/projection-age";
+
+let failed = 0;
+function assert(cond: boolean, msg: string) {
+  if (!cond) {
+    console.error(`FAIL: ${msg}`);
+    failed++;
+  }
+}
+
+assert(
+  projectionAgeDays("2026-07-01T00:00:00.000Z", "2026-07-11T00:00:00.000Z") ===
+    10,
+  "10 day gap",
+);
+assert(
+  projectionAgeDays("not-a-date", "2026-07-11T00:00:00.000Z") === 0,
+  "invalid → 0",
+);
+assert(
+  projectionAgeDays("2026-07-20T00:00:00.000Z", "2026-07-10T00:00:00.000Z") ===
+    0,
+  "negative clamped",
+);
+assert(!isProjectionStale(21), "21 not stale");
+assert(isProjectionStale(21.01), "just over 21 stale");
+assert(!isProjectionVeryStale(45), "45 not very");
+assert(isProjectionVeryStale(45.01), "just over 45 very");
+
+if (failed) process.exit(1);
+console.log("OK: projection-age");

@@ -3,6 +3,10 @@
 import { Search, Snowflake } from "lucide-react";
 import { formatCount } from "@/lib/format";
 import { scrollToRankings } from "@/lib/board-dom";
+import {
+  isProjectionStale,
+  isProjectionVeryStale,
+} from "@/lib/projection-age";
 
 interface HeaderProps {
   season: string;
@@ -28,8 +32,8 @@ export function Header({
     ? new Date(generatedAt).toISOString().slice(0, 10)
     : null;
   const ageDays = projectionAgeDays;
-  const stale = ageDays > 21;
-  const veryStale = ageDays > 45;
+  const stale = isProjectionStale(ageDays);
+  const veryStale = isProjectionVeryStale(ageDays);
   return (
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <a
