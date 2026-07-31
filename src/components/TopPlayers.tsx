@@ -12,6 +12,10 @@ import { steadiestSkaters, topEdgeSkaters } from "@/lib/top-lists";
 import { vorForFilter } from "@/lib/rankings-filters";
 import { topByPositionLeaders } from "@/lib/goalie-depth";
 import {
+  TOP_LEADERS_COPY,
+  topLeadersSectionLabel,
+} from "@/lib/top-leaders-copy";
+import {
   edgeBoardHref,
   playerBoardHref,
   sigmaBoardHref,
@@ -41,12 +45,12 @@ export function TopPlayers({
 
   return (
     <section
-      aria-label="Top fantasy hockey leaders"
+      aria-label={topLeadersSectionLabel()}
       className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3"
     >
       <TopLeadersCard
         icon={<Trophy className="h-5 w-5" />}
-        title="Overall VOR Leaders"
+        title={TOP_LEADERS_COPY.overallVor.title}
         accentClass="text-amber-400"
       >
         <ul className="space-y-3">
@@ -91,22 +95,22 @@ export function TopPlayers({
 
       <TopLeadersCard
         icon={<Zap className="h-5 w-5" />}
-        title="Top Edge (undervalued)"
+        title={TOP_LEADERS_COPY.topEdge.title}
         accentClass="text-emerald-400"
-        description="Consensus rank − model rank. Positive = model likes them more than the synthetic market."
+        description={TOP_LEADERS_COPY.topEdge.description}
         headerExtra={
           <div className="flex items-center gap-3 text-xs">
             <a
               href={edgeBoardHref()}
               className="text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
             >
-              Sort by Edge
+              {TOP_LEADERS_COPY.sortByEdge}
             </a>
             <a
               href={sigmaBoardHref()}
               className="text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
-              Sort by Σσ
+              {TOP_LEADERS_COPY.sortBySigma}
             </a>
           </div>
         }
@@ -146,16 +150,16 @@ export function TopPlayers({
       {steadiest.length > 0 && (
         <TopLeadersCard
           icon={<Gauge className="h-5 w-5" />}
-          title="Steadiest (low Σσ)"
+          title={TOP_LEADERS_COPY.steadiest.title}
           accentClass="text-cyan-400"
           className="lg:col-span-2 xl:col-span-1"
-          description="Among skaters with VOR ≥ 2, the five with the tightest Σσ bands."
+          description={TOP_LEADERS_COPY.steadiest.description}
           headerExtra={
             <a
               href={steadiestBoardHref()}
               className="text-xs text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
-              Board view
+              {TOP_LEADERS_COPY.boardView}
             </a>
           }
         >
@@ -191,7 +195,7 @@ export function TopPlayers({
 
       <TopLeadersCard
         icon={<Target className="h-5 w-5" />}
-        title="By Position"
+        title={TOP_LEADERS_COPY.byPosition.title}
         accentClass="text-cyan-400"
         className="lg:col-span-2 xl:col-span-3"
       >
@@ -200,7 +204,9 @@ export function TopPlayers({
             <div key={position} className="rounded-xl border border-white/5 p-3">
               <div className="mb-2 flex items-center gap-2">
                 <PositionBadge position={position} />
-                <span className="text-xs text-slate-500">Top 3</span>
+                <span className="text-xs text-slate-500">
+                  {TOP_LEADERS_COPY.top3}
+                </span>
               </div>
               <ul className="space-y-2">
                 {posPlayers.map((p) => (
