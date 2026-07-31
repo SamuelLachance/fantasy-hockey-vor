@@ -433,6 +433,9 @@ const files: Record<string, string[]> = {
     "Escape",
     'hasAttribute("tabindex")',
     "root.focus()",
+    'position = "fixed"',
+    "scrollY",
+    "scrollTo(0, scrollY)",
   ],
   "src/lib/dialog-focus.ts": [
     "dialogFocusableElements",

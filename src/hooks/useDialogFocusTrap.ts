@@ -42,13 +42,22 @@ export function useDialogFocusTrap(
 
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const body = document.body;
+    const scrollY = window.scrollY;
+    const prevOverflow = body.style.overflow;
+    const prevPosition = body.style.position;
+    const prevTop = body.style.top;
+    const prevWidth = body.style.width;
+    // position:fixed + top offset stops iOS background scroll under the modal.
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
 
     // Mark other body children inert so browse-mode AT cannot reach behind
     // the modal (Tab trap alone is not enough).
     const inerted: HTMLElement[] = [];
-    for (const child of Array.from(document.body.children)) {
+    for (const child of Array.from(body.children)) {
       if (!(child instanceof HTMLElement)) continue;
       if (child.dataset.dialogPortal === rootId) continue;
       if (child.hasAttribute("inert")) continue;
@@ -72,7 +81,11 @@ export function useDialogFocusTrap(
     }
     window.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = prev;
+      body.style.overflow = prevOverflow;
+      body.style.position = prevPosition;
+      body.style.top = prevTop;
+      body.style.width = prevWidth;
+      window.scrollTo(0, scrollY);
       for (const el of inerted) el.removeAttribute("inert");
       window.removeEventListener("keydown", onKey);
       const restore = previouslyFocused.current;
