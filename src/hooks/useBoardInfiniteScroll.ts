@@ -9,7 +9,7 @@ import {
   type RefObject,
 } from "react";
 
-export const BOARD_PAGE_SIZE = 80;
+export const BOARD_PAGE_SIZE = 100;
 
 interface BoardInfiniteScrollResult {
   loadMoreRef: RefObject<HTMLDivElement | null>;
