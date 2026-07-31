@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type RefObject } from "react";
+import { horizontalScrollShadowVisible } from "@/lib/horizontal-scroll-shadow";
 
 /** True once a horizontally scrollable element has scrolled past the left edge. */
 export function useHorizontalScrollShadow(
@@ -11,7 +12,8 @@ export function useHorizontalScrollShadow(
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const update = () => setScrolled(el.scrollLeft > 2);
+    const update = () =>
+      setScrolled(horizontalScrollShadowVisible(el.scrollLeft));
     update();
     el.addEventListener("scroll", update, { passive: true });
     const ro = new ResizeObserver(update);
