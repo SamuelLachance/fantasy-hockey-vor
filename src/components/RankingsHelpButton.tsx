@@ -1,7 +1,11 @@
 "use client";
 
 import { CircleHelp } from "lucide-react";
-import { boardHelpAriaLabel, boardHelpTitle } from "@/lib/board-help-copy";
+import {
+  boardHelpAriaLabel,
+  boardHelpButtonGlyph,
+  boardHelpTitle,
+} from "@/lib/board-help-copy";
 import { BOARD_SHORTCUTS_DIALOG_ID } from "@/lib/board-shortcuts";
 
 interface RankingsHelpButtonProps {
@@ -27,6 +31,9 @@ export function RankingsHelpButton({
       aria-controls={helpOpen ? BOARD_SHORTCUTS_DIALOG_ID : undefined}
     >
       <CircleHelp className="h-4 w-4" aria-hidden="true" />
+      <span aria-hidden="true" className="font-mono text-xs">
+        {boardHelpButtonGlyph()}
+      </span>
     </button>
   );
 }

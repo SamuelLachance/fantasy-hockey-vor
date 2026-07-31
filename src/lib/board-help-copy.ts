@@ -8,6 +8,11 @@ export function boardHelpAriaLabel(): string {
   return "Keyboard shortcuts";
 }
 
+/** Visible glyph on the help control (matches ? hotkey). */
+export function boardHelpButtonGlyph(): string {
+  return "?";
+}
+
 /** Shortcuts dialog close control accessible name. */
 export function boardShortcutsCloseAriaLabel(): string {
   return "Close shortcuts";

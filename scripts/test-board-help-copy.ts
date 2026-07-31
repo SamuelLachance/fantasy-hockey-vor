@@ -4,6 +4,7 @@
  */
 import {
   boardHelpAriaLabel,
+  boardHelpButtonGlyph,
   boardHelpTitle,
   boardShortcutsCloseAriaLabel,
   boardShortcutsDialogTitle,
@@ -24,6 +25,7 @@ assert(
   "close aria",
 );
 assert(boardShortcutsDialogTitle() === "Board shortcuts", "dialog title");
+assert(boardHelpButtonGlyph() === "?", "help glyph");
 
 if (failed) process.exit(1);
 console.log("OK: board-help-copy");

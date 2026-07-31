@@ -635,6 +635,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsHelpButton.tsx": [
     "boardHelpTitle",
     "boardHelpAriaLabel",
+    "boardHelpButtonGlyph",
     'aria-keyshortcuts="Shift+Slash"',
     'aria-haspopup="dialog"',
     "aria-expanded",
@@ -647,6 +648,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-help-copy.ts": [
     "boardHelpTitle",
     "boardHelpAriaLabel",
+    "boardHelpButtonGlyph",
     "boardShortcutsCloseAriaLabel",
     "boardShortcutsDialogTitle",
     "Board shortcuts",
