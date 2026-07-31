@@ -88,6 +88,7 @@ const files: Record<string, string[]> = {
   "src/components/Header.tsx": ["Jump to board", "dateTime"],
   "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],
+  "src/app/loading.tsx": ["Loading rankings", "role=\"status\""],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
   "src/lib/format.ts": ["sigmaColor", "edgeColor"],

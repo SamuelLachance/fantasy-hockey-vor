@@ -259,6 +259,22 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     copyTextWithFlash(url, setBoardLinkStatus);
   }
 
+  function copyPlayerLink(playerId: number) {
+    const url = rankingsShareUrl(window.location.origin, pathname, {
+      position,
+      query: deferredQuery,
+      sortKey,
+      sortDir,
+      playerId,
+      hideDepthGoalies,
+      statRanges,
+    });
+    setPlayerLinkStatus({ id: playerId, status: "idle" });
+    copyTextWithFlash(url, (status) => {
+      setPlayerLinkStatus({ id: playerId, status });
+    });
+  }
+
   useRankingsKeyboard({
     filtered,
     expandedId,
@@ -550,31 +566,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                               playerLinkStatus.id === player.id &&
                               playerLinkStatus.status === "err"
                             }
-                            onCopyLink={() => {
-                              const url = rankingsShareUrl(
-                                window.location.origin,
-                                pathname,
-                                {
-                                  position,
-                                  query: deferredQuery,
-                                  sortKey,
-                                  sortDir,
-                                  playerId: player.id,
-                                  hideDepthGoalies,
-                                  statRanges,
-                                },
-                              );
-                              setPlayerLinkStatus({
-                                id: player.id,
-                                status: "idle",
-                              });
-                              copyTextWithFlash(url, (status) => {
-                                setPlayerLinkStatus({
-                                  id: player.id,
-                                  status,
-                                });
-                              });
-                            }}
+                            onCopyLink={() => copyPlayerLink(player.id)}
                             onDetailsLoaded={(d) => {
                               setDetailsError(false);
                               setDetails(d);
