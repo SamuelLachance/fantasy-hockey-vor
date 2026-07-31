@@ -40,7 +40,7 @@ import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { BoardActiveFilters } from "./BoardActiveFilters";
-import { RankingsEmptyState } from "./RankingsEmptyState";
+import { RankingsBoardFooter } from "./RankingsBoardFooter";
 import { RankingsPlayerRow } from "./RankingsPlayerRow";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsStatusBar } from "./RankingsStatusBar";
@@ -388,33 +388,21 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <RankingsEmptyState
-            query={query}
-            activeFilterCount={activeFilterCount}
-            position={position}
-            onClearSearch={() => setQuery("")}
-            onClearStatFilters={clearStatFilters}
-            onShowAllPositions={() =>
-              startTransition(() => setPosition("ALL"))
-            }
-            onResetBoard={resetBoardView}
-          />
-        )}
-        {canLoadMore && (
-          <div
-            ref={loadMoreRef}
-            className="border-t border-white/5 px-6 py-4 text-center"
-          >
-            <button
-              type="button"
-              onClick={loadMore}
-              className="rounded-lg px-3 py-1.5 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-            >
-              Load more players
-            </button>
-          </div>
-        )}
+        <RankingsBoardFooter
+          query={query}
+          activeFilterCount={activeFilterCount}
+          position={position}
+          filteredCount={filtered.length}
+          canLoadMore={canLoadMore}
+          loadMoreRef={loadMoreRef}
+          onLoadMore={loadMore}
+          onClearSearch={() => setQuery("")}
+          onClearStatFilters={clearStatFilters}
+          onShowAllPositions={() =>
+            startTransition(() => setPosition("ALL"))
+          }
+          onResetBoard={resetBoardView}
+        />
       </div>
       <RankingsStatusBar
         renderCount={renderCount}
