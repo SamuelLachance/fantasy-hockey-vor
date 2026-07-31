@@ -51,6 +51,8 @@ export function PositionFilterTabs({
           type="button"
           role="tab"
           aria-selected={position === pos}
+          aria-controls="rankings-board-table"
+          id={`board-pos-tab-${pos}`}
           tabIndex={position === pos ? 0 : -1}
           onClick={() => startTransition(() => setPosition(pos))}
           onKeyDown={(e) => onPositionTabKeyDown(e, index)}

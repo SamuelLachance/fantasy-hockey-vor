@@ -164,7 +164,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div ref={tableScrollRef} className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
+          <table
+            id="rankings-board-table"
+            aria-label="Fantasy hockey VOR rankings"
+            className="min-w-full text-left text-sm"
+          >
             <RankingsTableHead
               sortKey={board.sortKey}
               sortDir={board.sortDir}

@@ -9,6 +9,7 @@ const root = process.cwd();
 const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
     'id="rankings"',
+    'id="rankings-board-table"',
     "usePlayerDetails",
     "useRankingsBoardState",
     "useRankingsUrlSync",
@@ -215,6 +216,8 @@ const files: Record<string, string[]> = {
     "Filter by position",
     "BOARD_POSITIONS",
     "nextBoardPositionIndex",
+    "aria-controls",
+    "rankings-board-table",
   ],
   "src/lib/board-positions.ts": ["BOARD_POSITIONS", "nextBoardPositionIndex"],
   "src/lib/rankings-url.ts": [
