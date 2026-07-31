@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { PlayerProjection } from "@/lib/types";
+import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
   filtered: PlayerProjection[];
@@ -11,6 +12,8 @@ interface RankingsKeyboardInput {
   setFiltersOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   helpOpen: boolean;
   setHelpOpen: (open: boolean | ((o: boolean) => boolean)) => void;
+  setSortKey: (key: SortKey) => void;
+  setSortDir: (dir: "asc" | "desc") => void;
 }
 
 /** Global board shortcuts: Esc, /, ?, j/k. */
@@ -22,6 +25,8 @@ export function useRankingsKeyboard({
   setFiltersOpen,
   helpOpen,
   setHelpOpen,
+  setSortKey,
+  setSortDir,
 }: RankingsKeyboardInput): void {
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
@@ -88,6 +93,21 @@ export function useRankingsKeyboard({
         });
         return;
       }
+      if (!inField && !e.metaKey && !e.ctrlKey && !e.altKey && !helpOpen) {
+        const sortHotkeys: Record<string, SortKey> = {
+          v: "vor",
+          e: "draftValue",
+          u: "sigma",
+          g: "gamesPlayed",
+        };
+        const sortKey = sortHotkeys[e.key.toLowerCase()];
+        if (sortKey) {
+          e.preventDefault();
+          setSortKey(sortKey);
+          setSortDir(defaultSortDir(sortKey));
+          return;
+        }
+      }
       if (inField || helpOpen || expandedId == null) return;
       if (
         e.key !== "j" &&
@@ -115,5 +135,7 @@ export function useRankingsKeyboard({
     setExpandedId,
     setFiltersOpen,
     setHelpOpen,
+    setSortKey,
+    setSortDir,
   ]);
 }

@@ -219,6 +219,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     setFiltersOpen,
     helpOpen,
     setHelpOpen,
+    setSortKey,
+    setSortDir,
   });
 
   function toggleSort(key: SortKey) {

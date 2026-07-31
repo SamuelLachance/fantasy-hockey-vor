@@ -10,6 +10,7 @@ interface BoardShortcutsHelpProps {
 const ROWS: Array<{ keys: string; action: string }> = [
   { keys: "/", action: "Focus search" },
   { keys: "f", action: "Toggle stat filters" },
+  { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
   { keys: "?", action: "Toggle this help" },
   { keys: "Esc", action: "Close help / filters / row" },
   { keys: "j / ↓", action: "Next expanded player" },
