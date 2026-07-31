@@ -918,6 +918,8 @@ const files: Record<string, string[]> = {
     "homeRankingsHref",
     "error.digest",
     "BrandEyebrow",
+    "focus-visible:outline-none",
+    "focus-visible:ring-2",
   ],
   "src/app/global-error.tsx": [
     "errorTryAgainCopy",
