@@ -2,6 +2,8 @@
  * Unit checks for TopPlayers list helpers.
  * Run: npx tsx scripts/test-top-lists.ts
  */
+import { readFileSync } from "fs";
+import { join } from "path";
 import { steadiestSkaters, topEdgeSkaters } from "../src/lib/top-lists";
 import type { PlayerProjection } from "../src/lib/types";
 
@@ -56,6 +58,15 @@ assert(edge.every((p) => !p.isGoalie), "edge skips goalies");
 const steady = steadiestSkaters(players, { minVor: 2, limit: 2 });
 assert(steady[0]!.name === "B", "steadiest prefers low sigma among VOR≥2");
 assert(steady.every((p) => p.vor >= 2), "respects minVor");
+
+const topPlayersSrc = readFileSync(
+  join(process.cwd(), "src/components/TopPlayers.tsx"),
+  "utf8",
+);
+assert(
+  (topPlayersSrc.match(/<PositionBadges/g) ?? []).length >= 3,
+  "PositionBadges on Overall, Edge, and Steadiest",
+);
 
 if (failed) process.exit(1);
 console.log("OK: top-lists");

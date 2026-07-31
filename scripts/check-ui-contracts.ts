@@ -1035,6 +1035,8 @@ const files: Record<string, string[]> = {
     "edgeBoardHref",
     "vorForFilter",
     "TopPlayerLink",
+    "PositionBadges",
+    "vorPosition={player.vorPosition ?? player.position}",
     "dense",
     "tabular-nums",
   ],

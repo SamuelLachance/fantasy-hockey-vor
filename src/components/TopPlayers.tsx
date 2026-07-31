@@ -141,6 +141,10 @@ export function TopPlayers({
                       : ""}
                   </div>
                 </div>
+                <PositionBadges
+                  positions={player.positions}
+                  vorPosition={player.vorPosition ?? player.position}
+                />
               </TopPlayerLink>
             </li>
           ))}
@@ -186,6 +190,10 @@ export function TopPlayers({
                       {formatSigned(player.vor, { digits: 1, plusZero: true })}
                     </div>
                   </div>
+                  <PositionBadges
+                    positions={player.positions}
+                    vorPosition={player.vorPosition ?? player.position}
+                  />
                 </TopPlayerLink>
               </li>
             ))}
