@@ -92,6 +92,12 @@ const files: Record<string, string[]> = {
     "playerBoardHref",
     "rf=${rf}",
   ],
+  "src/components/ScrollToTop.tsx": [
+    "Scroll to top",
+    "requestAnimationFrame",
+    "prefers-reduced-motion",
+  ],
+  "src/app/not-found.tsx": ["Page not found", "Back to rankings"],
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
   "src/lib/site.ts": ["SITE_ORIGIN", "SITE_URL"],
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
