@@ -68,7 +68,7 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: Wandalen/wretry.action@v3.8.0
+        uses: Wandalen/wretry.action@master
         with:
           action: actions/deploy-pages@v4
           attempt_limit: 5

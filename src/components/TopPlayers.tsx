@@ -88,12 +88,20 @@ export function TopPlayers({
               Top Edge (undervalued)
             </h2>
           </div>
-          <a
-            href="?sort=draftValue#rankings"
-            className="text-xs text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
-          >
-            Sort by Edge
-          </a>
+          <div className="flex items-center gap-3 text-xs">
+            <a
+              href="?sort=draftValue#rankings"
+              className="text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
+            >
+              Sort by Edge
+            </a>
+            <a
+              href="?sort=sigma#rankings"
+              className="text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            >
+              Sort by Σσ
+            </a>
+          </div>
         </div>
         <p className="mb-3 text-xs text-slate-500">
           Consensus rank − model rank. Positive = model likes them more than
