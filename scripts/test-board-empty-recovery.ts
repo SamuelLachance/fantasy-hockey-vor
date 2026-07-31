@@ -4,6 +4,7 @@
  */
 import {
   EMPTY_BOARD_ACTION_LABELS,
+  clearBoardFiltersCopy,
   emptyBoardHintCopy,
   emptyBoardRecoveryFlags,
   emptyBoardStatusCopy,
@@ -52,6 +53,7 @@ assert(
   EMPTY_BOARD_ACTION_LABELS.showAllGoalies === "Include depth goalies",
   "depth label",
 );
+assert(clearBoardFiltersCopy() === "Clear filters", "clear filters chip");
 
 if (failed) process.exit(1);
 console.log("OK: board-empty-recovery");

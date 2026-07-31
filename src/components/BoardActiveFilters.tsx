@@ -6,6 +6,7 @@ import {
   boardActiveFiltersVisible,
   boardActiveStatChips,
 } from "@/lib/board-active-filter-chips";
+import { clearBoardFiltersCopy } from "@/lib/board-empty-recovery";
 import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
 
 interface BoardActiveFiltersProps {
@@ -135,7 +136,7 @@ export function BoardActiveFilters({
           }}
           className="rounded-full px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >
-          Clear filters
+          {clearBoardFiltersCopy()}
         </button>
       )}
     </div>

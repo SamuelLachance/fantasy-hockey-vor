@@ -29,6 +29,11 @@ export const EMPTY_BOARD_ACTION_LABELS = {
   resetBoard: "Reset board view",
 } as const;
 
+/** Clear-all chip on the active-filters strip. */
+export function clearBoardFiltersCopy(): string {
+  return "Clear filters";
+}
+
 /** Primary empty-board status line. */
 export function emptyBoardStatusCopy(): string {
   return "No players match your filters.";

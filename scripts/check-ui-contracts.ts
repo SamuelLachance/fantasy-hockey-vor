@@ -116,7 +116,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
-    "Clear filters",
+    "clearBoardFiltersCopy",
     "boardActiveStatChips",
     "boardActiveFiltersVisible",
     "hasStatFilters",
@@ -155,6 +155,7 @@ const files: Record<string, string[]> = {
     "emptyBoardStatusCopy",
     "emptyBoardHintCopy",
     "EMPTY_BOARD_ACTION_LABELS",
+    "clearBoardFiltersCopy",
     "canShowAllGoalies",
   ],
   "src/components/RankingsStatusBar.tsx": [
