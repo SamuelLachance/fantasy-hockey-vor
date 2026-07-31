@@ -1,6 +1,8 @@
 import type { Category, PlayerProjection } from "@/lib/types";
 import { CATEGORY_LABELS, formatStat } from "@/lib/format";
 import {
+  CATEGORY_Z_METER_MAX,
+  CATEGORY_Z_METER_MIN,
   categoryProjectionPrefix,
   categorySigmaDigits,
   categoryZBarFillClass,
@@ -48,8 +50,8 @@ export function ExpandedPlayerCategories({
               className="h-2 overflow-hidden rounded-full bg-slate-800"
               role="meter"
               aria-label={categoryZMeterAriaLabel(CATEGORY_LABELS[cat])}
-              aria-valuemin={-4}
-              aria-valuemax={4}
+              aria-valuemin={CATEGORY_Z_METER_MIN}
+              aria-valuemax={CATEGORY_Z_METER_MAX}
               aria-valuenow={categoryZMeterValue(z)}
               aria-valuetext={categoryZScoreLabel(z)}
             >

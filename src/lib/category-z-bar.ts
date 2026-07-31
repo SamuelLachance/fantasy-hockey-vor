@@ -1,5 +1,14 @@
 import { formatSigned } from "@/lib/format";
 
+/** Absolute clamp for category z meters (aria-valuenow + valuemin/max). */
+export const CATEGORY_Z_METER_BOUND = 4;
+
+/** aria-valuemin for category z meters. */
+export const CATEGORY_Z_METER_MIN = -CATEGORY_Z_METER_BOUND;
+
+/** aria-valuemax for category z meters. */
+export const CATEGORY_Z_METER_MAX = CATEGORY_Z_METER_BOUND;
+
 /** Map a category z-score to a bar width percent for expand UI. */
 export function categoryZBarWidth(z: number): number {
   return Math.min(100, Math.max(8, 50 + z * 12));
@@ -20,7 +29,10 @@ export function categorySigmaDigits(cat: string): number {
 }
 
 /** Clamp z for aria meter bounds while valuetext keeps the true score. */
-export function categoryZMeterValue(z: number, bound = 4): number {
+export function categoryZMeterValue(
+  z: number,
+  bound = CATEGORY_Z_METER_BOUND,
+): number {
   if (!Number.isFinite(z)) return 0;
   return Math.max(-bound, Math.min(bound, Number(z.toFixed(2))));
 }

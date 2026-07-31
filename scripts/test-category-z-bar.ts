@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/test-category-z-bar.ts
  */
 import {
+  CATEGORY_Z_METER_BOUND,
   categoryProjectionPrefix,
   categorySigmaDigits,
   categoryZBarFillClass,
@@ -38,9 +39,16 @@ assert(
 );
 assert(categorySigmaDigits("goals") === 1, "goals digits");
 assert(categorySigmaDigits("hits") === 0, "hits digits");
+assert(CATEGORY_Z_METER_BOUND === 4, "meter bound");
 assert(categoryZMeterValue(0) === 0, "meter 0");
-assert(categoryZMeterValue(9) === 4, "meter clamp high");
-assert(categoryZMeterValue(-9) === -4, "meter clamp low");
+assert(
+  categoryZMeterValue(9) === CATEGORY_Z_METER_BOUND,
+  "meter clamp high",
+);
+assert(
+  categoryZMeterValue(-9) === -CATEGORY_Z_METER_BOUND,
+  "meter clamp low",
+);
 assert(categoryZMeterValue(Number.NaN) === 0, "meter nan");
 assert(categoryZScoreLabel(1.5) === "+1.50 z", "z label");
 assert(
