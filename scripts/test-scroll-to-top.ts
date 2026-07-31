@@ -5,6 +5,8 @@
 import {
   SCROLL_TOP_HIDE_BELOW,
   SCROLL_TOP_SHOW_AFTER,
+  scrollToTopAriaLabel,
+  scrollToTopTitle,
   scrollToTopVisible,
 } from "../src/lib/scroll-to-top";
 
@@ -31,6 +33,8 @@ assert(
   !scrollToTopVisible(SCROLL_TOP_HIDE_BELOW, true),
   "hides at/under hide line",
 );
+assert(scrollToTopAriaLabel() === "Scroll to top", "aria label");
+assert(scrollToTopTitle().includes("Home"), "title mentions Home");
 
 if (failed) process.exit(1);
 console.log("OK: scroll-to-top");

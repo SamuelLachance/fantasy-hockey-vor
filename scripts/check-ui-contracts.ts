@@ -406,7 +406,8 @@ const files: Record<string, string[]> = {
     "RANGE_BOUND_MAX",
   ],
   "src/components/ScrollToTop.tsx": [
-    "Scroll to top",
+    "scrollToTopAriaLabel",
+    "scrollToTopTitle",
     "requestAnimationFrame",
     "scrollPageTop",
     "scrollToTopVisible",
@@ -423,6 +424,8 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/scroll-to-top.ts": [
     "scrollToTopVisible",
+    "scrollToTopAriaLabel",
+    "scrollToTopTitle",
     "SCROLL_TOP_SHOW_AFTER",
     "SCROLL_TOP_HIDE_BELOW",
   ],

@@ -6,6 +6,8 @@ import { scrollPageTop } from "@/lib/board-dom";
 import {
   SCROLL_TOP_HIDE_BELOW,
   SCROLL_TOP_SHOW_AFTER,
+  scrollToTopAriaLabel,
+  scrollToTopTitle,
   scrollToTopVisible,
 } from "@/lib/scroll-to-top";
 
@@ -33,8 +35,8 @@ export function ScrollToTop() {
   return (
     <button
       type="button"
-      aria-label="Scroll to top"
-      title="Scroll to top (Home)"
+      aria-label={scrollToTopAriaLabel()}
+      title={scrollToTopTitle()}
       aria-keyshortcuts="Home"
       onClick={scrollPageTop}
       className="fixed bottom-6 right-6 z-40 rounded-full border border-white/15 bg-slate-900/90 p-3 text-cyan-300 shadow-lg backdrop-blur transition motion-reduce:backdrop-blur-none motion-reduce:transition-none hover:border-cyan-500/40 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
