@@ -21,6 +21,7 @@ const files: Record<string, string[]> = {
     "BoardShortcutsHelp",
     "ActiveStatFilterChips",
     "RankingsEmptyState",
+    'aria-controls="rankings-stat-filters"',
   ],
   "src/components/ActiveStatFilterChips.tsx": [
     "Active stat filters",

@@ -71,6 +71,13 @@ export function useRankingsKeyboard({
         }
         if (filtersOpenNow) {
           setFiltersOpenRef.current(false);
+          queueMicrotask(() => {
+            document
+              .querySelector<HTMLButtonElement>(
+                '#rankings button[aria-controls="rankings-stat-filters"]',
+              )
+              ?.focus();
+          });
           return;
         }
         if (inField) return;

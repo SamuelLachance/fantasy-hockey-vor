@@ -320,7 +320,16 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             activeFilterCount={activeFilterCount}
             onUpdateRange={updateRange}
             onClear={clearStatFilters}
-            onDone={() => setFiltersOpen(false)}
+            onDone={() => {
+              setFiltersOpen(false);
+              queueMicrotask(() => {
+                document
+                  .querySelector<HTMLButtonElement>(
+                    '#rankings button[aria-controls="rankings-stat-filters"]',
+                  )
+                  ?.focus();
+              });
+            }}
           />
         )}
         {!filtersOpen && activeFilterCount > 0 && (
