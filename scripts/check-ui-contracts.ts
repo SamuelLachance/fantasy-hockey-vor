@@ -200,7 +200,13 @@ const files: Record<string, string[]> = {
     "Load more rows",
     "Previous / next position tab",
   ],
-  "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
+  "src/lib/copy-flash.ts": [
+    "copyTextWithFlash",
+    "CopyFlash",
+    "boardLinkButtonLabel",
+    "playerLinkButtonLabel",
+    "playerLinkAriaLabel",
+  ],
   "src/lib/board-dom.ts": [
     "focusStatsFilterButton",
     "rankings-stat-filters",
@@ -255,8 +261,8 @@ const files: Record<string, string[]> = {
     "categoryZMeterValue",
   ],
   "src/components/ExpandedPlayerMeta.tsx": [
-    "Copy player link",
-    "Copy link for",
+    "playerLinkButtonLabel",
+    "playerLinkAriaLabel",
     "Consensus #",
     'aria-live="polite"',
     "projectionMethodLabel",
@@ -267,7 +273,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsToolbar.tsx": [
     "RankingsExportButtons",
-    "Link",
+    "boardLinkButtonLabel",
     "Starters",
     'aria-controls="rankings-stat-filters"',
     "onCopyBoardLink",

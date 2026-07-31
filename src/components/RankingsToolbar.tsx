@@ -8,6 +8,7 @@ import {
   searchQueryLengthLabel,
   searchQueryNearCap,
 } from "@/lib/highlight-match";
+import { boardLinkButtonLabel } from "@/lib/copy-flash";
 import { GOALIE_DEPTH_MAX_GP } from "@/lib/goalie-depth";
 import { PositionFilterTabs } from "./PositionFilterTabs";
 import { RankingsExportButtons } from "./RankingsExportButtons";
@@ -122,7 +123,7 @@ export function RankingsToolbar({
           aria-live="polite"
         >
           <Link2 className="h-4 w-4" aria-hidden />
-          {linkCopied ? "Copied" : linkCopyFailed ? "Failed" : "Link"}
+          {boardLinkButtonLabel(linkCopied, linkCopyFailed)}
         </button>
         {showDepthToggle && (
           <button

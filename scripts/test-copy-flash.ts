@@ -2,7 +2,12 @@
  * Unit check: copy flash status helper.
  * Run: npx tsx scripts/test-copy-flash.ts
  */
-import { copyTextWithFlash } from "../src/lib/copy-flash";
+import {
+  boardLinkButtonLabel,
+  copyTextWithFlash,
+  playerLinkAriaLabel,
+  playerLinkButtonLabel,
+} from "../src/lib/copy-flash";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -29,6 +34,17 @@ function withFlashTimeout(run: () => void): Promise<void> {
 }
 
 async function main() {
+  assert(boardLinkButtonLabel(false) === "Link", "board idle");
+  assert(boardLinkButtonLabel(true) === "Copied", "board ok");
+  assert(boardLinkButtonLabel(false, true) === "Failed", "board err");
+  assert(playerLinkButtonLabel(false) === "Copy player link", "player idle");
+  assert(playerLinkButtonLabel(true) === "Link copied", "player ok");
+  assert(playerLinkButtonLabel(false, true) === "Copy failed", "player err");
+  assert(
+    playerLinkAriaLabel("McDavid", true) === "Link copied for McDavid",
+    "player aria ok",
+  );
+
   Object.defineProperty(globalThis, "document", {
     value: undefined,
     configurable: true,
