@@ -23,7 +23,7 @@ export function RankingsStatusBar({
       breakdown. Click column headers to sort. Press / to focus search, r to
       reset, l to copy link, Home/End to navigate, ? for shortcuts. Esc closes
       help/filters then the open row; j/k or ↑/↓ move (opens first/last if
-      none).
+      none). Shift+G toggles Starters / All goalies.
     </p>
   );
 }
