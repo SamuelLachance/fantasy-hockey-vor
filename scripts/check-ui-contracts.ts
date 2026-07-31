@@ -152,6 +152,7 @@ const files: Record<string, string[]> = {
     "motion-reduce:backdrop-blur-none",
     "motion-reduce:bg-slate-950",
     "data-board-sticky-chrome",
+    "top-[var(--board-safe-area-inset-top,0px)]",
     "BoardActiveFilters",
     "RankingsToolbar",
     "helpOpen",
@@ -182,7 +183,7 @@ const files: Record<string, string[]> = {
     "aria-controls",
     "aria-rowindex",
     "aria-selected",
-    "scroll-mt-[var(--board-sticky-chrome-height,0px)]",
+    "scroll-mt-[calc(var(--board-safe-area-inset-top,0px)+var(--board-sticky-chrome-height,0px))]",
     "isExpanded ? `player-panel-${player.id}` : undefined",
     "isTabStop",
     'role="region"',
@@ -430,6 +431,8 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="f"',
     "STICKY_NAME_SHADOW",
     "STICKY_NAME_BASE",
+    "boardSafeAreaInsetTop",
+    "--board-safe-area-inset-top",
     "withPinnedWindowScroll",
     "scrollPageTop",
     "scrollToRankings",
@@ -1100,6 +1103,10 @@ const files: Record<string, string[]> = {
   "src/lib/site-footer.ts": [
     "footerDraftableCopy",
     "FOOTER_SOURCE_HREF",
+  ],
+  "src/app/globals.css": [
+    "--board-safe-area-inset-top",
+    "safe-area-inset-top",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",

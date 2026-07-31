@@ -25,9 +25,22 @@ export const STICKY_NAME_SHADOW =
 export const STICKY_NAME_BASE =
   "transition-shadow duration-150 motion-reduce:transition-none" as const;
 
-/** Tailwind top offset matching `--board-sticky-chrome-height` on `#rankings`. */
+/** Tailwind top offset: safe-area + `--board-sticky-chrome-height` on `#rankings`. */
 export const BOARD_STICKY_TOP_CLASS =
-  "top-[var(--board-sticky-chrome-height,0px)]" as const;
+  "top-[calc(var(--board-safe-area-inset-top,0px)+var(--board-sticky-chrome-height,0px))]" as const;
+
+/** Resolved safe-area top (px) for sticky scroll math. */
+export function boardSafeAreaInsetTop(
+  doc: { documentElement?: Element | null } | null =
+    typeof document !== "undefined" ? document : null,
+): number {
+  const root = doc?.documentElement;
+  if (!root || typeof getComputedStyle !== "function") return 0;
+  const n = Number.parseFloat(
+    getComputedStyle(root).getPropertyValue("--board-safe-area-inset-top"),
+  );
+  return Number.isFinite(n) ? n : 0;
+}
 
 /** Whether the user prefers reduced motion (SSR-safe → true). */
 export function prefersReducedMotion(): boolean {
@@ -219,6 +232,7 @@ export function boardStickyTopInset(
 ): number {
   if (!doc) return 0;
   return (
+    boardSafeAreaInsetTop() +
     boardStickyChromeHeight(doc) +
     elementHeight(doc.querySelector(BOARD_STICKY_THEAD_SELECTOR))
   );

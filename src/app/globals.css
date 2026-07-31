@@ -5,6 +5,7 @@
   --foreground: #e2e8f0;
   --ice: #38bdf8;
   --ice-dim: #0c4a6e;
+  --board-safe-area-inset-top: env(safe-area-inset-top, 0px);
 }
 
 @theme inline {

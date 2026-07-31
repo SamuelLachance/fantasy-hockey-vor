@@ -10,6 +10,7 @@ import {
   BOARD_STICKY_THEAD_SELECTOR,
   BOARD_STICKY_TOP_CLASS,
   STICKY_NAME_SHADOW,
+  boardSafeAreaInsetTop,
   boardStickyChromeHeight,
   boardStickyTopInset,
   focusBoardSearch,
@@ -120,6 +121,12 @@ assert(
   BOARD_STICKY_TOP_CLASS.includes("--board-sticky-chrome-height"),
   "sticky top class uses css var",
 );
+assert(
+  BOARD_STICKY_TOP_CLASS.includes("--board-safe-area-inset-top"),
+  "sticky top class includes safe-area",
+);
+assert(typeof boardSafeAreaInsetTop === "function", "safe-area helper");
+assert(boardSafeAreaInsetTop(null) === 0, "safe-area null → 0");
 assert(
   stickyAwareScrollDelta(50, 90, 120, 700) === 50 - 128,
   "scroll up out from under sticky chrome",

@@ -71,7 +71,7 @@ export function RankingsBoardChrome({
   return (
     <div
       data-board-sticky-chrome
-      className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md max-md:bg-slate-950 max-md:backdrop-blur-none motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none"
+      className="sticky top-[var(--board-safe-area-inset-top,0px)] z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md max-md:bg-slate-950 max-md:backdrop-blur-none motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none"
       role="region"
       aria-label={boardFiltersRegionLabel()}
     >
