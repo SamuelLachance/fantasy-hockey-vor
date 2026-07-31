@@ -885,6 +885,8 @@ const files: Record<string, string[]> = {
     "scrollToTopVisible",
     "visualViewport",
     "pageTop",
+    "min-h-11",
+    "min-w-11",
     "motion-reduce:transition-none",
     "motion-reduce:backdrop-blur-none",
   ],
@@ -1028,6 +1030,7 @@ const files: Record<string, string[]> = {
     "HeaderRosterNote",
     'aria-hidden="true"',
     "safe-area-inset-top",
+    "min-h-11",
   ],
   "src/hooks/useLiveProjectionAge.ts": [
     "useLiveProjectionAge",

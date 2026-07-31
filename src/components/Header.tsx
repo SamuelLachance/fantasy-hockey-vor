@@ -103,7 +103,7 @@ export function Header({
                 e.preventDefault();
                 scrollToRankings({ focusSearch: true });
               }}
-              className="inline-flex items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 transition motion-reduce:transition-none hover:border-cyan-400/60 hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+              className="inline-flex min-h-11 items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 transition motion-reduce:transition-none hover:border-cyan-400/60 hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
               {headerJumpCtaCopy()}
             </a>
