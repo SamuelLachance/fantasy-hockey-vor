@@ -470,7 +470,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                       onClick={() =>
                         setExpandedId(isExpanded ? null : player.id)
                       }
-                      className="cursor-pointer transition hover:bg-cyan-500/5"
+                      className={`cursor-pointer transition hover:bg-cyan-500/5 ${
+                        isExpanded ? "bg-cyan-500/10" : ""
+                      }`}
                     >
                       <td className="px-4 py-3 font-mono text-slate-400">
                         {position === "ALL"
