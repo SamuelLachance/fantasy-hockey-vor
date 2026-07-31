@@ -626,6 +626,7 @@ const files: Record<string, string[]> = {
     'aria-live="polite"',
     "projectionMethodLabel",
     "shouldShowConfidenceChip",
+    "min-h-11",
   ],
   "src/lib/expanded-meta-copy.ts": [
     "confidenceChipCopy",

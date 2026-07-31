@@ -31,7 +31,11 @@ export function vorForFilter(
 
 /** Normalize typed range bounds (%, European commas). */
 export function normalizeRangeInput(raw: string): string {
-  const s = raw.trim().replace(/%/g, "").replace(",", ".");
+  const s = raw
+    .trim()
+    .replace(/%/g, "")
+    .replace(/\s+/g, "")
+    .replace(/,/g, ".");
   if (!s || s === "." || s === "-" || s === "+" || s === "-.") return "";
   return s;
 }

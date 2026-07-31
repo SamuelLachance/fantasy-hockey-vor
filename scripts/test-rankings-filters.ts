@@ -18,6 +18,8 @@ assert.equal(parseRangeValue("savePct", "91,2"), 0.912);
 assert.equal(normalizeRangeInput(" 91.2% "), "91.2");
 assert.equal(normalizeRangeInput("%"), "");
 assert.equal(normalizeRangeInput(","), "");
+assert.equal(normalizeRangeInput("1,23"), "1.23");
+assert.equal(normalizeRangeInput(" 2 , 5 "), "2.5");
 assert.equal(parseRangeValue("goals", "40"), 40);
 assert.equal(parseRangeValue("goals", ""), undefined);
 assert.equal(isInvertedRangeBound("vor", "10", "5"), true);
