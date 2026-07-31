@@ -206,6 +206,7 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="l"',
     'aria-live="polite"',
     "HIGHLIGHT_QUERY_MAX",
+    "autoComplete",
     "PositionFilterTabs",
     'aria-keyshortcuts="Shift+G"',
   ],
@@ -334,7 +335,12 @@ const files: Record<string, string[]> = {
     "projectionAgeDays",
     "isProjectionVeryStale",
   ],
-  "src/app/error.tsx": ["Try again", "Back to rankings", "homeRankingsHref"],
+  "src/app/error.tsx": [
+    "Try again",
+    "Back to rankings",
+    "homeRankingsHref",
+    "error.digest",
+  ],
   "src/app/global-error.tsx": [
     "Try again",
     "Back to rankings",
