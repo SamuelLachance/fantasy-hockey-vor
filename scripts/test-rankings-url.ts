@@ -4,6 +4,7 @@
  */
 import {
   decodeStatRanges,
+  parsePlayerIdParam,
   splitStatRangeBounds,
   encodeStatRanges,
   edgeBoardHref,
@@ -342,6 +343,20 @@ assert(
   parseRankingsUrl(new URLSearchParams("sort=DraftValue")).sortKey ===
     "draftValue",
   "sort case-insensitive",
+);
+assert(parsePlayerIdParam("8478402") === 8478402, "player id ok");
+assert(parsePlayerIdParam("0x20") === null, "reject hex");
+assert(parsePlayerIdParam("1e6") === null, "reject scientific");
+assert(parsePlayerIdParam("8478402.9") === null, "reject decimal");
+assert(parsePlayerIdParam("+8478402") === null, "reject plus");
+assert(parsePlayerIdParam(" 8478402") === null, "reject spaces");
+assert(
+  parseRankingsUrl(new URLSearchParams("player=0x20")).playerId === null,
+  "parse rejects hex player",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("player=8478402")).playerId === 8478402,
+  "parse keeps decimal player",
 );
 
 if (failed) process.exit(1);

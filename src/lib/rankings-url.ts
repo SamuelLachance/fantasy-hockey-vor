@@ -103,6 +103,14 @@ export function splitStatRangeBounds(
   return { min: both[1]!, max: both[2]! };
 }
 
+/** Strict NHL-style player id from `?player=` (decimal digits only). */
+export function parsePlayerIdParam(raw: string | null | undefined): number | null {
+  if (raw == null || raw === "") return null;
+  if (!/^[1-9]\d{0,15}$/.test(raw)) return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
 export function decodeStatRanges(raw: string | null | undefined): StatRanges {
   if (!raw?.trim()) return {};
   const out: StatRanges = {};
@@ -138,12 +146,7 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
     dirRaw === "asc" || dirRaw === "desc"
       ? dirRaw
       : defaultSortDir(sortKey);
-  const playerRaw = params.get("player");
-  const playerParsed = playerRaw != null ? Number(playerRaw) : NaN;
-  const playerId =
-    Number.isFinite(playerParsed) && playerParsed > 0
-      ? Math.trunc(playerParsed)
-      : null;
+  const playerId = parsePlayerIdParam(params.get("player"));
   const hideDepthGoalies = (params.get("g") ?? "").toLowerCase() !== "all";
   const statRanges = pruneStatRangesForPosition(
     decodeStatRanges(params.get("rf")),
