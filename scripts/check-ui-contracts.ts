@@ -104,7 +104,6 @@ const files: Record<string, string[]> = {
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",
-    'role="button"',
     'role="region"',
     "aria-busy",
     "vorForFilter",

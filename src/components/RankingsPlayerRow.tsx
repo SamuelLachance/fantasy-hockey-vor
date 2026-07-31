@@ -83,7 +83,6 @@ export function RankingsPlayerRow({
       <tr
         id={`player-row-${player.id}`}
         tabIndex={0}
-        role="button"
         aria-expanded={isExpanded}
         aria-controls={`player-panel-${player.id}`}
         aria-label={boardRowAriaLabel(player, position, idx)}
