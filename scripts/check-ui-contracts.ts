@@ -484,6 +484,8 @@ const files: Record<string, string[]> = {
     "playerLinkAriaLabel",
     "(copied)",
     "(failed)",
+    "visibilitychange",
+    "armIdle",
     "playerLinkTitle",
   ],
   "src/lib/board-dom.ts": [

@@ -61,15 +61,68 @@ export function copyTextWithFlash(
 ): () => void {
   let cancelled = false;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let remaining = 0;
+  let startedAt = 0;
+  let flashing = false;
+
+  const clearTimer = () => {
+    if (timer != null) {
+      globalThis.clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  const armIdle = (ms: number) => {
+    remaining = ms;
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+    startedAt = Date.now();
+    timer = globalThis.setTimeout(() => {
+      timer = null;
+      remaining = 0;
+      flashing = false;
+      if (!cancelled) onStatus("idle");
+    }, ms);
+  };
+
+  const onVis = () => {
+    if (cancelled || !flashing) return;
+    if (typeof document === "undefined") return;
+    if (document.visibilityState === "hidden") {
+      if (timer != null) {
+        clearTimer();
+        remaining = Math.max(0, remaining - (Date.now() - startedAt));
+      }
+      return;
+    }
+    if (remaining <= 0) {
+      flashing = false;
+      onStatus("idle");
+      return;
+    }
+    armIdle(remaining);
+  };
+
+  if (typeof document !== "undefined") {
+    document.addEventListener("visibilitychange", onVis);
+  }
+
   void copyText(text).then((ok) => {
     if (cancelled) return;
+    flashing = true;
     onStatus(ok ? "ok" : "err");
-    timer = globalThis.setTimeout(() => {
-      if (!cancelled) onStatus("idle");
-    }, holdMs);
+    armIdle(holdMs);
   });
   return () => {
     cancelled = true;
-    if (timer != null) globalThis.clearTimeout(timer);
+    flashing = false;
+    clearTimer();
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVis);
+    }
   };
 }
