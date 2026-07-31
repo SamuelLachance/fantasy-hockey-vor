@@ -85,6 +85,7 @@ export function RankingsPlayerRow({
       <tr
         id={`player-row-${player.id}`}
         tabIndex={isTabStop ? 0 : -1}
+        aria-rowindex={idx + 1}
         aria-expanded={isExpanded}
         aria-controls={
           isExpanded ? `player-panel-${player.id}` : undefined

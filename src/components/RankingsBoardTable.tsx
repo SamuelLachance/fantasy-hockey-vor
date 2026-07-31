@@ -94,6 +94,7 @@ export function RankingsBoardTable({
           id="rankings-board-table"
           aria-label="Fantasy hockey VOR rankings"
           aria-busy={searchPending || undefined}
+          aria-rowcount={filteredCount > 0 ? filteredCount : undefined}
           className="min-w-full text-left text-sm"
         >
           <RankingsTableHead

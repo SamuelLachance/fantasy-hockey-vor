@@ -51,6 +51,7 @@ const files: Record<string, string[]> = {
     "anchorId",
     "searchPending",
     "aria-busy",
+    "aria-rowcount",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
@@ -125,6 +126,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",
+    "aria-rowindex",
     "isExpanded ? `player-panel-${player.id}` : undefined",
     "isTabStop",
     'role="region"',
