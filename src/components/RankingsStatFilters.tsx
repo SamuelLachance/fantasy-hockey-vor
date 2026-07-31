@@ -34,7 +34,7 @@ export function RankingsStatFilters({
           <h3 className="text-sm font-semibold text-white">Filter by stats</h3>
           <p className="text-xs text-slate-500">
             Set min/max for any column. Σσ ≈50 median — lower max = safer
-            picks. Save % accepts 91.5 or 0.915.
+            picks. Save % accepts 91.5, 91.5%, 91,5, or 0.915.
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
