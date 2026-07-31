@@ -94,6 +94,11 @@ Auto-deploys to GitHub Pages on push to `master` (lint → typecheck → data va
 
 Not affiliated with the NHL.
 
+## Known limitations
+
+- `teamPkGaPer60` / PK style feature is a shorthanded-goals-scored proxy (not on-ice PK GA/60). Training and inference match today; correcting it requires a paired dataset rebuild + `ml:train-v2`.
+- Inactive/retired names are excluded via `src/data/inactive-player-ids.json` (extend as needed).
+
 ## License
 
 MIT

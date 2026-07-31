@@ -184,6 +184,7 @@ export function enrichPlayerSeasonRow(
     teamPimPerGame: style?.pimPerGame ?? 8,
     teamBlocksPerGame: style?.blocksPerGame ?? 14,
     teamPpGoalShare: style?.ppGoalShare ?? 0.2,
+    // Misnamed historically — see team-style.ts KNOWN DEFECT (SH goals proxy).
     teamPkGaPer60: style?.pkGoalsAgainstPer60 ?? 2.5,
   };
 }
