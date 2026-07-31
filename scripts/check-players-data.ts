@@ -123,6 +123,16 @@ const badGp = players.filter(
 ).length;
 if (badGp > 0) errors.push(`${badGp} players with GP outside 0-82`);
 
+const noPos = players.filter((p) => !Array.isArray(p.positions) || p.positions.length === 0)
+  .length;
+if (noPos > 0) errors.push(`${noPos} players missing positions[]`);
+
+const noTeam = players.filter((p) => !p.team?.trim()).length;
+if (noTeam > 0) errors.push(`${noTeam} players missing team`);
+
+const noName = players.filter((p) => !p.name?.trim()).length;
+if (noName > 0) errors.push(`${noName} players missing name`);
+
 const goalies = players.filter((p) => p.isGoalie).length;
 const skaters = players.length - goalies;
 if (goalies < 80) errors.push(`only ${goalies} goalies (expected >= 80)`);
