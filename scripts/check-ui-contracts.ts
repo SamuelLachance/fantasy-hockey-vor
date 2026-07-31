@@ -139,6 +139,8 @@ const files: Record<string, string[]> = {
     "BoardActiveFilters",
     "RankingsToolbar",
     "helpOpen",
+    "focusFirstStatFilterInput",
+    "onOpenStats",
   ],
   "src/components/RankingsBoardFooter.tsx": [
     "loadMoreLabel",
@@ -511,6 +513,8 @@ const files: Record<string, string[]> = {
     "aria-expanded",
     "activeFilterCount",
     "statsFilterButtonLabel",
+    "focusFirstStatFilterInput",
+    "queueMicrotask",
   ],
   "src/components/RankingsBoardLinkButton.tsx": [
     "boardLinkButtonLabel",

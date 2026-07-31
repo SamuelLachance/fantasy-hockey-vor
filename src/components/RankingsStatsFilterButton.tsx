@@ -1,6 +1,7 @@
 "use client";
 
 import { Filter } from "lucide-react";
+import { focusFirstStatFilterInput } from "@/lib/board-dom";
 import { statsFilterButtonLabel } from "@/lib/stat-filters-copy";
 
 interface RankingsStatsFilterButtonProps {
@@ -18,7 +19,13 @@ export function RankingsStatsFilterButton({
   return (
     <button
       type="button"
-      onClick={() => setFiltersOpen((o) => !o)}
+      onClick={() =>
+        setFiltersOpen((o) => {
+          const next = !o;
+          if (next) queueMicrotask(focusFirstStatFilterInput);
+          return next;
+        })
+      }
       aria-keyshortcuts="f"
       aria-expanded={filtersOpen}
       aria-controls={filtersOpen ? "rankings-stat-filters" : undefined}
