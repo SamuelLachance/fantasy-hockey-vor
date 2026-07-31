@@ -82,10 +82,6 @@ const files: Record<string, string[]> = {
     "Drop deep-linked expand ids",
     "canToggleDepthGoalies",
   ],
-  "src/lib/goalie-depth-toggle.ts": [
-    "canToggleDepthGoalies",
-    "canOfferAllGoalies",
-  ],
   "src/components/RankingsBoardChrome.tsx": [
     'aria-label="Board filters"',
     "motion-reduce:backdrop-blur-none",
@@ -298,11 +294,15 @@ const files: Record<string, string[]> = {
     "PositionFilterTabs",
   ],
   "src/components/RankingsGoalieDepthToggle.tsx": [
-    "Starters",
-    "All G",
+    "goalieDepthToggleLabel",
     'aria-keyshortcuts="Shift+G"',
     "GOALIE_DEPTH_MAX_GP",
     "aria-pressed",
+  ],
+  "src/lib/goalie-depth-toggle.ts": [
+    "canToggleDepthGoalies",
+    "canOfferAllGoalies",
+    "goalieDepthToggleLabel",
   ],
   "src/components/RankingsSearchField.tsx": [
     "searchQueryNearCap",
