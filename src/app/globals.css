@@ -34,6 +34,11 @@ mark {
   background: rgba(56, 189, 248, 0.25);
 }
 
+#rankings tbody > tr {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 3rem;
+}
+
 :focus {
   outline: none;
 }
