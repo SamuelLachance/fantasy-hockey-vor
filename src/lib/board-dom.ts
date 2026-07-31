@@ -170,24 +170,53 @@ export function stickyAwareScrollDelta(
   return 0;
 }
 
-/** Keep an expanded player row in view without hiding it under sticky chrome. */
-export function scrollExpandedRowIntoView(playerId: number): void {
-  if (typeof document === "undefined" || typeof window === "undefined") return;
+/** Vertical union of two boxes (e.g. player row + details panel). */
+export function unionVerticalBounds(
+  a: { top: number; bottom: number },
+  b: { top: number; bottom: number } | null | undefined,
+): { top: number; bottom: number } {
+  if (!b) return a;
+  return {
+    top: Math.min(a.top, b.top),
+    bottom: Math.max(a.bottom, b.bottom),
+  };
+}
+
+function scrollExpandedTargetIntoView(
+  playerId: number,
+  behavior: ScrollBehavior,
+): void {
   const row = document.getElementById(`player-row-${playerId}`);
   if (!row) return;
-  const rect = row.getBoundingClientRect();
+  const panel = document.getElementById(`player-panel-${playerId}`);
+  const bounds = unionVerticalBounds(
+    row.getBoundingClientRect(),
+    panel?.getBoundingClientRect(),
+  );
   const delta = stickyAwareScrollDelta(
-    rect.top,
-    rect.bottom,
+    bounds.top,
+    bounds.bottom,
     boardStickyTopInset(),
     window.innerHeight,
   );
   if (delta !== 0) {
-    window.scrollBy({
-      top: delta,
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-    });
+    window.scrollBy({ top: delta, behavior });
   }
+}
+
+/** Keep an expanded player row + details panel clear of sticky chrome. */
+export function scrollExpandedRowIntoView(playerId: number): void {
+  if (typeof document === "undefined" || typeof window === "undefined") return;
+  const row = document.getElementById(`player-row-${playerId}`);
+  if (!row) return;
+  const motion = prefersReducedMotion() ? "auto" : "smooth";
+  scrollExpandedTargetIntoView(playerId, motion);
+  // Panel mounts/lays out after expand — remeasure next frames (instant correction).
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollExpandedTargetIntoView(playerId, "auto");
+    });
+  });
   if (row instanceof HTMLElement) {
     row.focus({ preventScroll: true });
   }

@@ -39,6 +39,7 @@ const files: Record<string, string[]> = {
     "useExpandedRowScroll",
     "scrollExpandedRowIntoView",
     "Intentionally ignores load-more",
+    "details panel",
   ],
   "src/components/RankingsBoardTable.tsx": [
     'id="rankings-board-table"',
@@ -304,6 +305,7 @@ const files: Record<string, string[]> = {
     "scrollToRankings",
     "scrollExpandedRowIntoView",
     "stickyAwareScrollDelta",
+    "unionVerticalBounds",
     "boardStickyTopInset",
     "boardStickyChromeHeight",
     "syncBoardStickyChromeHeight",

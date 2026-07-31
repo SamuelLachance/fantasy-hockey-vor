@@ -21,6 +21,7 @@ import {
   scrollToRankings,
   stickyAwareScrollDelta,
   syncBoardStickyChromeHeight,
+  unionVerticalBounds,
 } from "../src/lib/board-dom";
 
 let failed = 0;
@@ -123,6 +124,15 @@ assert(
 assert(
   stickyAwareScrollDelta(200, 900, 120, 700) === 200 - 128,
   "tall row pins top under sticky",
+);
+assert(
+  unionVerticalBounds({ top: 100, bottom: 140 }, { top: 140, bottom: 400 })
+    .bottom === 400,
+  "union includes panel bottom",
+);
+assert(
+  unionVerticalBounds({ top: 100, bottom: 140 }, null).top === 100,
+  "union without panel",
 );
 
 if (failed) process.exit(1);
