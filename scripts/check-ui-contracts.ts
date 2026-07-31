@@ -109,6 +109,8 @@ const files: Record<string, string[]> = {
     "useTimedFlash",
     "clearTimeout",
     "holdMs",
+    "visibilitychange",
+    "remainingRef",
   ],
   "src/hooks/useCoercedExpandFocusRestore.ts": [
     "useCoercedExpandFocusRestore",
