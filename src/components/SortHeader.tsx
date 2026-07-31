@@ -1,6 +1,7 @@
 "use client";
 
 import type { SortKey } from "@/lib/rankings-filters";
+import { sortHeaderAriaLabel, sortHeaderAriaSort } from "@/lib/sort-header";
 import { SortIcon } from "./SortIcon";
 
 interface SortHeaderProps {
@@ -26,14 +27,11 @@ export function SortHeader({
   title,
   center,
 }: SortHeaderProps) {
-  const active = sortKey === column;
   return (
     <th
       className={className}
       title={title}
-      aria-sort={
-        active ? (sortDir === "asc" ? "ascending" : "descending") : "none"
-      }
+      aria-sort={sortHeaderAriaSort(column, sortKey, sortDir)}
       scope="col"
     >
       <button
@@ -41,11 +39,7 @@ export function SortHeader({
         onClick={() => onToggle(column)}
         onDoubleClick={onReset}
         title={title ?? "Double-click to reset sort to VOR"}
-        aria-label={
-          active
-            ? `${label}, sorted ${sortDir === "asc" ? "ascending" : "descending"}`
-            : `Sort by ${label}`
-        }
+        aria-label={sortHeaderAriaLabel(label, column, sortKey, sortDir)}
         className={
           center
             ? "inline-flex w-full items-center justify-center gap-1 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
