@@ -17,7 +17,7 @@ const files: Record<string, string[]> = {
     "useRankingsUrlSync",
     "useRankingsKeyboard",
     "RankingsPlayerRow",
-    'column="sigma"',
+    "RankingsTableHead",
     "BoardShortcutsHelp",
     "BoardActiveFilters",
     "RankingsEmptyState",
@@ -39,6 +39,13 @@ const files: Record<string, string[]> = {
     "Clear filters",
     "formatRangeChip",
     "hasStatFilters",
+    "All goalies",
+    "showingAllGoalies",
+  ],
+  "src/components/RankingsTableHead.tsx": [
+    'column="sigma"',
+    "STICKY_NAME_SHADOW",
+    "onResetSort",
   ],
   "src/components/RankingsEmptyState.tsx": [
     "No players match your filters",

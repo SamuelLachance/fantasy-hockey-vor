@@ -12,7 +12,6 @@ import {
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection, Position } from "@/lib/types";
-import { CATEGORY_LABELS } from "@/lib/format";
 import {
   defaultSortDir,
   type RangeKey,
@@ -29,8 +28,6 @@ import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import {
   focusStatsFilterButton,
-  STICKY_NAME_BASE,
-  STICKY_NAME_SHADOW,
   scrollExpandedRowIntoView,
   scrollToRankings,
 } from "@/lib/board-dom";
@@ -44,8 +41,8 @@ import { RankingsEmptyState } from "./RankingsEmptyState";
 import { RankingsPlayerRow } from "./RankingsPlayerRow";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsStatusBar } from "./RankingsStatusBar";
+import { RankingsTableHead } from "./RankingsTableHead";
 import { RankingsToolbar } from "./RankingsToolbar";
-import { SortHeader } from "./SortHeader";
 
 const BoardShortcutsHelp = dynamic(
   () =>
@@ -321,13 +318,15 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         )}
         {(activeFilterCount > 0 ||
           position !== "ALL" ||
-          query.trim() !== "") && (
+          query.trim() !== "" ||
+          !hideDepthGoalies) && (
           <BoardActiveFilters
             position={position}
             query={query}
             statRanges={statRanges}
             showStatChips={!filtersOpen && activeFilterCount > 0}
             hasStatFilters={activeFilterCount > 0}
+            showingAllGoalies={!hideDepthGoalies}
             onClearPosition={() =>
               startTransition(() => setPosition("ALL"))
             }
@@ -335,6 +334,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             onOpenStats={() => setFiltersOpen(true)}
             onClearStats={clearStatFilters}
             onRemoveStat={removeStatFilter}
+            onShowStarterGoalies={() =>
+              startTransition(() => setHideDepthGoalies(true))
+            }
           />
         )}
       </div>
@@ -342,91 +344,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div ref={tableScrollRef} className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
-            <thead className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm">
-              <tr>
-                <SortHeader
-                  column="rank"
-                  label="#"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className="sticky left-0 z-[5] bg-slate-950/95 px-4 py-3"
-                />
-                <SortHeader
-                  column="name"
-                  label="Player"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${
-                    showStickyShadow ? STICKY_NAME_SHADOW : ""
-                  }`}
-                />
-                <th className="px-4 py-3">Pos</th>
-                <SortHeader
-                  column="team"
-                  label="Team"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className="px-4 py-3"
-                />
-                <SortHeader
-                  column="vor"
-                  label="VOR"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className="px-4 py-3"
-                />
-                <SortHeader
-                  column="draftValue"
-                  label="Edge"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className="px-4 py-3"
-                  title="Consensus rank − model rank. Positive = undervalued vs synthetic market (Marcel/EWMA/lag1)."
-                />
-                <SortHeader
-                  column="sigma"
-                  label="Σσ"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className="px-3 py-3"
-                  title="Calibrated aggregate uncertainty (1σ). Lower is more confident. Default sort ascending."
-                />
-                <SortHeader
-                  column="gamesPlayed"
-                  label="GP"
-                  sortKey={sortKey}
-                  sortDir={sortDir}
-                  onToggle={toggleSort}
-                  onReset={resetSortToVor}
-                  className="px-4 py-3"
-                />
-                {tableCategories.map((cat) => (
-                  <SortHeader
-                    key={cat}
-                    column={cat}
-                    label={CATEGORY_LABELS[cat]}
-                    sortKey={sortKey}
-                    sortDir={sortDir}
-                    onToggle={toggleSort}
-                    onReset={resetSortToVor}
-                    className="px-3 py-3 text-center"
-                    center
-                  />
-                ))}
-              </tr>
-            </thead>
+            <RankingsTableHead
+              sortKey={sortKey}
+              sortDir={sortDir}
+              tableCategories={tableCategories}
+              showStickyShadow={showStickyShadow}
+              onToggleSort={toggleSort}
+              onResetSort={resetSortToVor}
+            />
             <tbody className="divide-y divide-white/5">
               {filtered.slice(0, renderCount).map((player, idx) => (
                 <RankingsPlayerRow
