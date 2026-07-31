@@ -22,10 +22,10 @@ export function scrollToTopShouldRestoreFocus(
 
 /** Accessible name for the floating scroll control. */
 export function scrollToTopAriaLabel(): string {
-  return "Scroll to top";
+  return "Scroll to top and focus search";
 }
 
 /** Tooltip for the floating scroll control. */
 export function scrollToTopTitle(): string {
-  return "Scroll to top";
+  return "Scroll to top and focus search";
 }

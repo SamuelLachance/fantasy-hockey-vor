@@ -34,8 +34,14 @@ assert(
   !scrollToTopVisible(SCROLL_TOP_HIDE_BELOW, true),
   "hides at/under hide line",
 );
-assert(scrollToTopAriaLabel() === "Scroll to top", "aria label");
-assert(scrollToTopTitle() === "Scroll to top", "title");
+assert(
+  scrollToTopAriaLabel() === "Scroll to top and focus search",
+  "aria label",
+);
+assert(
+  scrollToTopTitle() === "Scroll to top and focus search",
+  "title",
+);
 assert(
   scrollToTopShouldRestoreFocus(false, true),
   "restore when hidden and focused",
