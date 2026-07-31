@@ -5,6 +5,7 @@
 import {
   downloadRankingsCsv,
   downloadRankingsJson,
+  exportButtonLabel,
   rankingsJsonExport,
   rankingsToJsonRows,
 } from "../src/lib/rankings-export";
@@ -55,6 +56,10 @@ assert(
 
 assert(typeof downloadRankingsCsv === "function", "csv download helper");
 assert(typeof downloadRankingsJson === "function", "json download helper");
+assert(exportButtonLabel("csv", "idle") === "CSV", "csv idle");
+assert(exportButtonLabel("csv", "csv") === "Saved", "csv flash");
+assert(exportButtonLabel("json", "csv") === "JSON", "json ignores csv flash");
+assert(exportButtonLabel("json", "json") === "Saved", "json flash");
 
 if (failed) process.exit(1);
 console.log("OK: rankings-export");

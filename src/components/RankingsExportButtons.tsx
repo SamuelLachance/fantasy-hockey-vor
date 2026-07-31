@@ -5,6 +5,7 @@ import type { Category, PlayerProjection, Position } from "@/lib/types";
 import {
   downloadRankingsCsv,
   downloadRankingsJson,
+  exportButtonLabel,
 } from "@/lib/rankings-export";
 import { useTimedFlash } from "@/hooks/useTimedFlash";
 
@@ -43,7 +44,7 @@ export function RankingsExportButtons({
         aria-live="polite"
       >
         <Download className="h-4 w-4" aria-hidden="true" />
-        {exportFlash === "csv" ? "Saved" : "CSV"}
+        {exportButtonLabel("csv", exportFlash)}
       </button>
       <button
         type="button"
@@ -56,7 +57,7 @@ export function RankingsExportButtons({
         title="Download filtered rankings as JSON"
         aria-live="polite"
       >
-        {exportFlash === "json" ? "Saved" : "JSON"}
+        {exportButtonLabel("json", exportFlash)}
       </button>
     </div>
   );

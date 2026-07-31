@@ -224,6 +224,7 @@ const files: Record<string, string[]> = {
     "rankingsCsvString",
     "downloadRankingsCsv",
     "downloadRankingsJson",
+    "exportButtonLabel",
     "vorForFilter",
     "vorScope",
   ],
@@ -288,9 +289,7 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="Shift+G"',
   ],
   "src/components/RankingsExportButtons.tsx": [
-    "CSV",
-    "JSON",
-    "Saved",
+    "exportButtonLabel",
     "useTimedFlash",
     "downloadRankingsCsv",
     "downloadRankingsJson",

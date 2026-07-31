@@ -95,3 +95,14 @@ export function downloadRankingsJson(
     "application/json;charset=utf-8",
   );
 }
+
+export type ExportFlashKind = "idle" | "csv" | "json";
+
+/** Visible label for CSV/JSON export buttons during Saved flash. */
+export function exportButtonLabel(
+  kind: "csv" | "json",
+  flash: ExportFlashKind,
+): string {
+  if (flash === kind) return "Saved";
+  return kind === "csv" ? "CSV" : "JSON";
+}
