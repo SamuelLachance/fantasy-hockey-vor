@@ -38,10 +38,19 @@ export function ExpandedPlayerCategories({
                 {z.toFixed(2)} z
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="h-2 overflow-hidden rounded-full bg-slate-800"
+              role="meter"
+              aria-label={`${CATEGORY_LABELS[cat]} category z-score`}
+              aria-valuemin={-4}
+              aria-valuemax={4}
+              aria-valuenow={Number(z.toFixed(2))}
+              aria-valuetext={`${z >= 0 ? "+" : ""}${z.toFixed(2)} z`}
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-[width] duration-300 motion-reduce:transition-none"
                 style={{ width: `${width}%` }}
+                aria-hidden="true"
               />
             </div>
             <div className="mt-1 text-sm font-medium text-white">

@@ -46,7 +46,9 @@ export function RankingsTableHead({
             showStickyShadow ? STICKY_NAME_SHADOW : ""
           }`}
         />
-        <th className="px-4 py-3">Pos</th>
+        <th scope="col" className="px-4 py-3">
+          Pos
+        </th>
         <SortHeader
           column="team"
           label="Team"
