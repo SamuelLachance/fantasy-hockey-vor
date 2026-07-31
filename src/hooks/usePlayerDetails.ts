@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchPlayerDetails } from "@/lib/player-details-client";
-import { scheduleIdle } from "@/lib/schedule-idle";
+import { prefersSaveData, scheduleIdle } from "@/lib/schedule-idle";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 
 interface PlayerDetailsState {
@@ -21,6 +21,8 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
   const [detailsError, setDetailsError] = useState(false);
 
   useEffect(() => {
+    // Skip background prefetch on Save-Data; expand still fetches on demand.
+    if (prefersSaveData()) return;
     let cancelled = false;
     const cancelIdle = scheduleIdle(() => {
       void fetchPlayerDetails()

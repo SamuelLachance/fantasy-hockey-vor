@@ -6,7 +6,6 @@ import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
 import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
 import { rankingsJsonLd } from "@/lib/seo-jsonld";
-import { playerDetailsHref } from "@/lib/site";
 
 export default function HomePage() {
   const data = getProjections();
@@ -14,7 +13,6 @@ export default function HomePage() {
     data.generatedAt,
     process.env.NEXT_PUBLIC_BUILD_TIME,
   );
-  const detailsHref = playerDetailsHref();
 
   const jsonLd = rankingsJsonLd(data);
 
@@ -23,12 +21,6 @@ export default function HomePage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-      />
-      <link
-        rel="preload"
-        href={detailsHref}
-        as="fetch"
-        crossOrigin="anonymous"
       />
       <Header
         season={data.season}

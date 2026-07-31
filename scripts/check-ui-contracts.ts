@@ -580,12 +580,14 @@ const files: Record<string, string[]> = {
   ],
   "src/hooks/usePlayerDetails.ts": [
     "scheduleIdle",
+    "prefersSaveData",
     "fetchPlayerDetails",
     "expandedId == null || details != null",
     "Stay silent on idle failure",
   ],
   "src/lib/schedule-idle.ts": [
     "scheduleIdle",
+    "prefersSaveData",
     "requestIdleCallback",
     "cancelIdleCallback",
   ],

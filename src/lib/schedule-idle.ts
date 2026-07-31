@@ -1,3 +1,12 @@
+/** True when the user has asked the browser to reduce data use. */
+export function prefersSaveData(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const conn = (
+    navigator as Navigator & { connection?: { saveData?: boolean } }
+  ).connection;
+  return Boolean(conn?.saveData);
+}
+
 /** Run work when the browser is idle (setTimeout fallback). */
 export function scheduleIdle(cb: () => void, timeoutMs = 200): () => void {
   const ric =
