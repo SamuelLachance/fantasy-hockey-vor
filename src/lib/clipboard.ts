@@ -9,18 +9,20 @@ export async function copyText(text: string): Promise<boolean> {
     // fall through
   }
   if (typeof document === "undefined") return false;
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
   try {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
+    ta.focus();
     ta.select();
-    const ok = document.execCommand("copy");
-    document.body.removeChild(ta);
-    return ok;
+    ta.setSelectionRange(0, text.length);
+    return document.execCommand("copy");
   } catch {
     return false;
+  } finally {
+    ta.remove();
   }
 }
