@@ -103,6 +103,7 @@ const files: Record<string, string[]> = {
     "Board shortcuts",
     "BOARD_SHORTCUT_ROWS",
     "board-shortcuts-dialog",
+    "previouslyFocused",
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",

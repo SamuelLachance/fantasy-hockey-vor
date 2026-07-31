@@ -10,9 +10,14 @@ interface BoardShortcutsHelpProps {
 
 export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
+  const previouslyFocused = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    previouslyFocused.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
@@ -41,6 +46,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onTab);
+      previouslyFocused.current?.focus?.();
     };
   }, [open]);
 
