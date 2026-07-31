@@ -11,7 +11,7 @@ import {
   shouldIgnoreBoardShortcut,
 } from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
-import { focusFirstStatFilterInput, focusStatsFilterButton, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
+import { focusFirstStatFilterInput, focusStatsFilterButton, focusBoardSearch, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
@@ -155,9 +155,7 @@ export function useRankingsKeyboard({
         e.key === "/"
       ) {
         e.preventDefault();
-        document
-          .querySelector<HTMLInputElement>('#rankings input[type="search"]')
-          ?.focus();
+        focusBoardSearch();
         return;
       }
       if (

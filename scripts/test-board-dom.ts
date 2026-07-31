@@ -4,6 +4,7 @@
  */
 import {
   STICKY_NAME_SHADOW,
+  focusBoardSearch,
   focusPlayerRow,
   focusPlayerRowIfPanelFocused,
   focusFirstStatFilterInput,
@@ -39,6 +40,7 @@ assert(
 try {
   focusStatsFilterButton();
   focusFirstStatFilterInput();
+  focusBoardSearch();
   focusPlayerRow(1);
   focusPlayerRowIfPanelFocused(1);
   scrollPageTop();
@@ -57,6 +59,7 @@ assert(
   typeof focusFirstStatFilterInput === "function",
   "focusFirstStatFilterInput exported",
 );
+assert(typeof focusBoardSearch === "function", "focusBoardSearch exported");
 
 if (failed) process.exit(1);
 console.log("OK: board-dom");

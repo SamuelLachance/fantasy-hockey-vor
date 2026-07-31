@@ -31,6 +31,14 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+/** Focus the board search field. */
+export function focusBoardSearch(): void {
+  if (typeof document === "undefined") return;
+  document
+    .querySelector<HTMLInputElement>('#rankings input[type="search"]')
+    ?.focus();
+}
+
 /** Smooth (or instant) scroll helpers for board shortcuts. */
 export function scrollPageTop(): void {
   if (typeof window === "undefined") return;
@@ -47,11 +55,7 @@ export function scrollToRankings(options?: { focusSearch?: boolean }): void {
     block: "start",
   });
   if (options?.focusSearch) {
-    queueMicrotask(() => {
-      document
-        .querySelector<HTMLInputElement>('#rankings input[type="search"]')
-        ?.focus();
-    });
+    queueMicrotask(focusBoardSearch);
   }
 }
 

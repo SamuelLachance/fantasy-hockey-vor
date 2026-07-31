@@ -274,6 +274,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-dom.ts": [
     "focusStatsFilterButton",
     "focusFirstStatFilterInput",
+    "focusBoardSearch",
     "rankings-stat-filters",
     "STICKY_NAME_SHADOW",
     "STICKY_NAME_BASE",
@@ -462,13 +463,12 @@ const files: Record<string, string[]> = {
     "applyHorizontalScrollShadow",
   ],
   "src/hooks/useRankingsUrlSync.ts": [
-    "router.replace",
+    "history.replaceState",
+    "rankingsUrlSyncHref",
     "rankingsUrlSearch",
     "nextRankingsUrlSyncAction",
     "onHydrate",
     "query,",
-    "Query-only replace",
-    "scroll: false",
   ],
   "src/hooks/usePlayerDetails.ts": [
     "scheduleIdle",
@@ -514,6 +514,7 @@ const files: Record<string, string[]> = {
     "RANGE_BOUND_MAX",
     "nextRankingsUrlSyncAction",
     "rankingsHashShouldFocusSearch",
+    "rankingsUrlSyncHref",
     "pruneStatRangesForPosition",
   ],
   "src/components/ScrollToTop.tsx": [

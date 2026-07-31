@@ -2,6 +2,7 @@
 
 import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
+import { focusBoardSearch } from "@/lib/board-dom";
 import { visibleBoardPlayers } from "@/lib/board-visible";
 import { startTransition, useRef, useState } from "react";
 import dynamic from "next/dynamic";
@@ -96,7 +97,10 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     onLoadMore: () => {
       if (canLoadMore) loadMore();
     },
-    onClearSearch: () => board.setQuery(""),
+    onClearSearch: () => {
+      board.setQuery("");
+      queueMicrotask(focusBoardSearch);
+    },
     onCyclePosition: (direction) => {
       const pos = cycleBoardPosition(board.position, direction);
       // Keep focus on the board (not the tab) so chrome hotkey gating does not
@@ -165,7 +169,10 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         canLoadMore={canLoadMore}
         loadMoreRef={loadMoreRef}
         onLoadMore={loadMore}
-        onClearSearch={() => board.setQuery("")}
+        onClearSearch={() => {
+          board.setQuery("");
+          queueMicrotask(focusBoardSearch);
+        }}
         onClearStatFilters={board.clearStatFilters}
         onShowAllPositions={() =>
           startTransition(() => board.setPosition("ALL"))

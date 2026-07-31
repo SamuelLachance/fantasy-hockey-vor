@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { focusBoardSearch } from "@/lib/board-dom";
 import {
   HIGHLIGHT_QUERY_MAX,
   clearSearchAriaLabel,
@@ -22,6 +23,11 @@ export function RankingsSearchField({
 }: RankingsSearchFieldProps) {
   const nearQueryCap = searchQueryNearCap(query.length);
 
+  function clearSearch() {
+    setQuery("");
+    queueMicrotask(focusBoardSearch);
+  }
+
   return (
     <div className="relative w-full">
       <input
@@ -41,7 +47,7 @@ export function RankingsSearchField({
         <button
           type="button"
           aria-label={clearSearchAriaLabel()}
-          onClick={() => setQuery("")}
+          onClick={clearSearch}
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:bg-white/10 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >
           <X className="h-4 w-4" />

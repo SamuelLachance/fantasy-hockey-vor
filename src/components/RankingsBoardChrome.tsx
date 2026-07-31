@@ -3,7 +3,7 @@
 import { startTransition } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
-import { focusStatsFilterButton } from "@/lib/board-dom";
+import { focusBoardSearch, focusStatsFilterButton } from "@/lib/board-dom";
 import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
 import { boardFiltersRegionLabel } from "@/lib/stat-filters-copy";
 import { BoardActiveFilters } from "./BoardActiveFilters";
@@ -106,7 +106,10 @@ export function RankingsBoardChrome({
           hasStatFilters={activeFilterCount > 0}
           showingAllGoalies={showingAllGoalies}
           onClearPosition={() => startTransition(() => setPosition("ALL"))}
-          onClearQuery={() => setQuery("")}
+          onClearQuery={() => {
+            setQuery("");
+            queueMicrotask(focusBoardSearch);
+          }}
           onOpenStats={() => setFiltersOpen(true)}
           onClearStats={onClearStatFilters}
           onRemoveStat={onRemoveStat}
