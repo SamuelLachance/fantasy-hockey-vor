@@ -233,6 +233,7 @@ const files: Record<string, string[]> = {
     "shouldIgnoreBoardShortcut",
     "isBoardTypingTarget",
     "focusPlayerRowIfPanelFocused",
+    "focusPlayerRow",
     "onToggleDepthGoalies",
     "onLoadMore",
     "onClearSearch",

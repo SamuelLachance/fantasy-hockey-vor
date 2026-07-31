@@ -99,7 +99,7 @@ export function isBoardImeComposing(e: {
 
 /**
  * Escape while typing: clear non-empty search, otherwise dismiss the expanded
- * row (blur empty search so focus leaves the field).
+ * row (blur empty search so focus can move to the player row).
  */
 export function nextBoardEscapeTypingAction(
   target: EventTarget | null,

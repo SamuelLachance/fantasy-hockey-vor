@@ -11,7 +11,7 @@ import {
   shouldIgnoreBoardShortcut,
 } from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
-import { focusFirstStatFilterInput, focusStatsFilterButton, focusBoardSearch, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
+import { focusBoardSearch, focusFirstStatFilterInput, focusStatsFilterButton, focusPlayerRow, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
@@ -125,7 +125,13 @@ export function useRankingsKeyboard({
             action.blurSearch &&
             e.target instanceof HTMLElement
           ) {
-            e.target.blur();
+            e.preventDefault();
+            // Prefer the expanded row over body — blur() alone dumps focus off-board.
+            if (expandedIdNow != null) {
+              focusPlayerRow(expandedIdNow);
+            } else {
+              e.target.blur();
+            }
           }
         }
         focusPlayerRowIfPanelFocused(expandedIdNow);
