@@ -1,5 +1,6 @@
 import type { Position } from "@/lib/types";
 import {
+  isInvertedRangeBound,
   parseRangeValue,
   type RangeKey,
   type SortKey,
@@ -12,6 +13,7 @@ export function encodeActiveStatRangesToken(statRanges: StatRanges): string {
   for (const key of Object.keys(statRanges).sort() as RangeKey[]) {
     const b = statRanges[key];
     if (!b) continue;
+    if (isInvertedRangeBound(key, b.min, b.max)) continue;
     const minRaw = b.min?.trim() ?? "";
     const maxRaw = b.max?.trim() ?? "";
     const min = minRaw ? parseRangeValue(key, minRaw) : undefined;

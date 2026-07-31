@@ -287,6 +287,10 @@ assert(
   encodeStatRanges({ goals: { min: "2", max: "abc" } }) === "goals:2-",
   "encode keeps parseable side only",
 );
+assert(
+  encodeStatRanges({ vor: { min: "10", max: "5" } }) === "",
+  "encode skips inverted range",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

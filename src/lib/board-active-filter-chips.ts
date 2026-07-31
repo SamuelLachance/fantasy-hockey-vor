@@ -1,5 +1,6 @@
 import {
   formatRangeChip,
+  isInvertedRangeBound,
   parseRangeValue,
   rangeLabel,
   type RangeKey,
@@ -37,6 +38,7 @@ export function boardActiveStatChips(
     [RangeKey, { min: string; max: string } | undefined]
   >) {
     if (!bounds) continue;
+    if (isInvertedRangeBound(key, bounds.min, bounds.max)) continue;
     const chip = formatActiveRangeChip(key, bounds.min ?? "", bounds.max ?? "");
     if (!chip) continue;
     out.push({ key, label: rangeLabel(key), bounds: chip });

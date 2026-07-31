@@ -150,7 +150,10 @@ const files: Record<string, string[]> = {
     "restoreFocusRef",
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId", "coerceExpandedPlayerId"],
-  "src/lib/board-active-filters.ts": ["countActiveStatFilters"],
+  "src/lib/board-active-filters.ts": [
+    "countActiveStatFilters",
+    "isInvertedRangeBound",
+  ],
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",
@@ -192,6 +195,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-reset-token.ts": [
     "boardFilterResetToken",
     "encodeActiveStatRangesToken",
+    "isInvertedRangeBound",
     "g1",
   ],
   "src/lib/board-keyboard.ts": [
@@ -225,6 +229,7 @@ const files: Record<string, string[]> = {
     "boardActiveFiltersVisible",
     "formatActiveRangeChip",
     "formatRangeChip",
+    "isInvertedRangeBound",
   ],
   "src/components/RankingsTableHead.tsx": [
     'column="sigma"',
@@ -639,6 +644,7 @@ const files: Record<string, string[]> = {
     "hideDepthGoalies",
     "playerId",
     "encodeStatRanges",
+    "isInvertedRangeBound",
     "rf",
     "steadiestBoardHref",
     "playerBoardHref",

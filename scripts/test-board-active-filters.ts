@@ -40,6 +40,10 @@ assert(
   countActiveStatFilters({ vor: { min: "%", max: "," } }, keys) === 0,
   "punctuation-only ignored after normalize",
 );
+assert(
+  countActiveStatFilters({ vor: { min: "10", max: "5" } }, keys) === 0,
+  "inverted range not active",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-active-filters");

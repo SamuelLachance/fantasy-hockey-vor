@@ -1,4 +1,5 @@
 import {
+  isInvertedRangeBound,
   parseRangeValue,
   type RangeKey,
   type StatRanges,
@@ -12,6 +13,7 @@ export function countActiveStatFilters(
   let n = 0;
   for (const key of filterRangeKeys) {
     const b = statRanges[key];
+    if (isInvertedRangeBound(key, b?.min, b?.max)) continue;
     if (
       parseRangeValue(key, b?.min ?? "") != null ||
       parseRangeValue(key, b?.max ?? "") != null

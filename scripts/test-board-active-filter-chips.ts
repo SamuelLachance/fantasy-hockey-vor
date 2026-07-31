@@ -43,6 +43,10 @@ assert(
   ).length === 1,
   "junk sibling does not add chip",
 );
+assert(
+  boardActiveStatChips({ vor: { min: "10", max: "5" } }, true).length === 0,
+  "inverted range has no chip",
+);
 
 assert(
   !boardActiveFiltersVisible({

@@ -4,6 +4,7 @@ import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 import { coerceSortKeyForPosition, pruneStatRangesForPosition } from "@/lib/rankings-board";
 import {
   defaultSortDir,
+  isInvertedRangeBound,
   parseRangeValue,
   type RangeKey,
   type SortKey,
@@ -76,6 +77,7 @@ export function encodeStatRanges(ranges: StatRanges): string {
     { min: string; max: string } | undefined,
   ][]) {
     if (!b || !RANGE_KEYS.has(key)) continue;
+    if (isInvertedRangeBound(key, b.min, b.max)) continue;
     const minRaw = (b.min?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
     const maxRaw = (b.max?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
     const min =

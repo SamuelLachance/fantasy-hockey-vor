@@ -59,6 +59,10 @@ assert(
   "invalid-only bounds ignored",
 );
 assert(
+  encodeActiveStatRangesToken({ vor: { min: "10", max: "5" } }) === "",
+  "inverted range ignored",
+);
+assert(
   encodeActiveStatRangesToken({
     vor: { min: "1", max: "" },
     goals: { min: "", max: "" },
