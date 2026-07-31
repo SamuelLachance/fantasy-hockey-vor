@@ -21,6 +21,7 @@ const files: Record<string, string[]> = {
     "RankingsBoardFooter",
     "useHorizontalScrollShadow",
     "boardDocumentTitle",
+    "hashchange",
   ],
   "src/lib/board-document-title.ts": [
     "boardDocumentTitle",

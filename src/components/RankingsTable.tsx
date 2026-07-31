@@ -59,9 +59,13 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.location.hash !== "#rankings") return;
-    scrollToRankings({ focusSearch: true });
+    function jumpIfRankingsHash() {
+      if (window.location.hash !== "#rankings") return;
+      scrollToRankings({ focusSearch: true });
+    }
+    jumpIfRankingsHash();
+    window.addEventListener("hashchange", jumpIfRankingsHash);
+    return () => window.removeEventListener("hashchange", jumpIfRankingsHash);
   }, []);
 
   const expandedPlayer = board.expandedId
