@@ -11,6 +11,15 @@ import {
 
 export const BOARD_PAGE_SIZE = 100;
 
+/** Grow the visible window without overshooting the filtered list. */
+export function nextVisibleCount(
+  current: number,
+  pageSize: number,
+  total: number,
+): number {
+  return Math.min(current + pageSize, total);
+}
+
 interface BoardInfiniteScrollResult {
   loadMoreRef: RefObject<HTMLDivElement | null>;
   renderCount: number;
@@ -49,7 +58,7 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
 
   function loadMore() {
     startTransition(() => {
-      setVisibleCount((c) => Math.min(c + pageSize, filteredLength));
+      setVisibleCount((c) => nextVisibleCount(c, pageSize, filteredLength));
     });
   }
 
@@ -60,7 +69,9 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
           startTransition(() => {
-            setVisibleCount((c) => Math.min(c + pageSize, filteredLength));
+            setVisibleCount((c) =>
+              nextVisibleCount(c, pageSize, filteredLength),
+            );
           });
         }
       },

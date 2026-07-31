@@ -152,6 +152,7 @@ const files: Record<string, string[]> = {
     "BOARD_PAGE_SIZE",
     "IntersectionObserver",
     "loadMore",
+    "nextVisibleCount",
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
     "useHorizontalScrollShadow",
