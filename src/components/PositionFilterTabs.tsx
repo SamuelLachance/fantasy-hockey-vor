@@ -7,6 +7,7 @@ import {
   boardPositionTabId,
   nextBoardPositionIndex,
   positionFilterAnnounce,
+  positionFilterTablistLabel,
 } from "@/lib/board-positions";
 
 interface PositionFilterTabsProps {
@@ -45,7 +46,7 @@ export function PositionFilterTabs({
     <div
       className="flex flex-wrap gap-2"
       role="tablist"
-      aria-label="Filter by position"
+      aria-label={positionFilterTablistLabel()}
       aria-keyshortcuts="[ ]"
     >
       <span className="sr-only" aria-live="polite" aria-atomic="true">

@@ -22,6 +22,11 @@ export function positionFilterAnnounce(position: Position | "ALL"): string {
   return `Position filter ${position}`;
 }
 
+/** Tablist accessible name for position filters. */
+export function positionFilterTablistLabel(): string {
+  return "Filter by position";
+}
+
 /** Next tab index for arrow / Home / End keyboard navigation. */
 export function nextBoardPositionIndex(
   currentIndex: number,

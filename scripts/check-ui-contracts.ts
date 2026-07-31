@@ -426,7 +426,7 @@ const files: Record<string, string[]> = {
   "src/components/PositionFilterTabs.tsx": [
     'role="tablist"',
     "ArrowRight",
-    "Filter by position",
+    "positionFilterTablistLabel",
     "BOARD_POSITIONS",
     "nextBoardPositionIndex",
     "aria-controls",
@@ -442,6 +442,7 @@ const files: Record<string, string[]> = {
     "cycleBoardPosition",
     "boardPositionTabId",
     "positionFilterAnnounce",
+    "positionFilterTablistLabel",
   ],
   "src/lib/rankings-url.ts": [
     "hideDepthGoalies",

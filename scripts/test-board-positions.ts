@@ -8,6 +8,7 @@ import {
   cycleBoardPosition,
   nextBoardPositionIndex,
   positionFilterAnnounce,
+  positionFilterTablistLabel,
 } from "../src/lib/board-positions";
 
 let failed = 0;
@@ -35,6 +36,10 @@ assert(boardPositionTabId("ALL") === "board-pos-tab-ALL", "tab id ALL");
 assert(
   positionFilterAnnounce("G") === "Position filter G",
   "announce G",
+);
+assert(
+  positionFilterTablistLabel() === "Filter by position",
+  "tablist label",
 );
 
 if (failed) process.exit(1);
