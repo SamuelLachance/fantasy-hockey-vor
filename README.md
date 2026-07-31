@@ -65,6 +65,8 @@ Full local gate (mirrors Pages CI): `npm run ci:local`.
 
 Yahoo eligibility gaps (mostly farm/retired): `npm run yahoo:gaps`.
 
+Curated inactive denylist (`src/data/inactive-player-ids.json`): applied at generate; purge committed board with `npm run players:drop-inactive`.
+
 Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmark-*.ts` for segment holdouts.
 
 ## League Settings

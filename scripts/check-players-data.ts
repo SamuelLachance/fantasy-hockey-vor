@@ -9,6 +9,7 @@ import {
   findUnderloadedGoalieTeams,
   topGoalieGpTooLow,
 } from "../src/lib/goalie-tandem-guards";
+import { loadInactivePlayerIds } from "../src/lib/inactive-players";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -89,6 +90,17 @@ const overallOne = players.find((p) => p.rank === 1);
 if (overallOne?.isGoalie) {
   errors.push(
     `rank #1 is goalie ${overallOne.name} — skater scarcity should lead overall VOR`,
+  );
+}
+
+const inactiveIds = loadInactivePlayerIds();
+const inactiveOnBoard = players.filter((p) => inactiveIds.has(p.id));
+if (inactiveOnBoard.length > 0) {
+  errors.push(
+    `${inactiveOnBoard.length} curated inactive player(s) still on board (e.g. ${inactiveOnBoard
+      .slice(0, 3)
+      .map((p) => p.name)
+      .join(", ")}) — run drop-inactive-players or regenerate`,
   );
 }
 

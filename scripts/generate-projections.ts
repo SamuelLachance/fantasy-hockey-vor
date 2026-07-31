@@ -25,6 +25,7 @@ import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile"
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
 import { attachDraftEdge } from "../src/lib/draft-edge";
+import { filterActivePlayers } from "../src/lib/inactive-players";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import {
   findProjectionIssues,
@@ -324,15 +325,22 @@ async function main() {
     };
   });
 
+  const activePool = filterActivePlayers(tandemAdjusted);
+  if (activePool.length < tandemAdjusted.length) {
+    console.log(
+      `Dropped ${tandemAdjusted.length - activePool.length} curated inactive player(s)`,
+    );
+  }
+
   const {
     players: ranked,
     categoryWeights,
     replacementLevels,
     draftableIds,
-  } = applyVor(tandemAdjusted, DEFAULT_LEAGUE);
+  } = applyVor(activePool, DEFAULT_LEAGUE);
 
   // Synthetic-market Edge: shared helper keeps generate and vor:reapply aligned.
-  attachDraftEdge(ranked, tandemAdjusted, DEFAULT_LEAGUE, {
+  attachDraftEdge(ranked, activePool, DEFAULT_LEAGUE, {
     categoryWeights,
     replacementLevels,
     draftableIds,
