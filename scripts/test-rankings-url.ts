@@ -56,6 +56,17 @@ assert(
   decodeStatRanges("sigma:-50,vor:1-").sigma?.max === "50",
   "decode ranges",
 );
+assert(
+  decodeStatRanges("vor:1.5-,sigma:-80").vor?.min === "1.5",
+  "decode decimal min",
+);
+assert(
+  encodeStatRanges({
+    vor: { min: "1.5", max: "" },
+    sigma: { min: "", max: "80" },
+  }) === "vor:1.5-,sigma:-80",
+  "encode steadiest deep-link",
+);
 
 assert(
   parseRankingsUrl(new URLSearchParams("pos=ZZ&sort=nope")).position === "ALL",
