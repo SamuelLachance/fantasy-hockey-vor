@@ -12,6 +12,8 @@ const files: Record<string, string[]> = {
     "hideDepthGoalies",
     "fetchPlayerDetails",
     "resetSortToVor",
+    "sticky left-10",
+    "truncate",
   ],
   "src/components/RankingsToolbar.tsx": ["CSV", "Link", "Starters"],
   "src/lib/rankings-url.ts": ["hideDepthGoalies", "playerId"],
