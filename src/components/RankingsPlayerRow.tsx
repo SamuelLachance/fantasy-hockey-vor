@@ -14,6 +14,7 @@ import {
 import { vorForFilter } from "@/lib/rankings-filters";
 import { highlightMatch } from "@/lib/highlight-match";
 import { STICKY_NAME_BASE, STICKY_NAME_SHADOW } from "@/lib/board-dom";
+import { isBoardRowToggleKey } from "@/lib/board-keyboard";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
 
@@ -67,7 +68,7 @@ export function RankingsPlayerRow({
   const stickyBg = isExpanded ? "bg-slate-900" : "bg-slate-950/95";
 
   function onRowKeyDown(e: KeyboardEvent<HTMLTableRowElement>) {
-    if (e.key !== "Enter" && e.key !== " ") return;
+    if (!isBoardRowToggleKey(e.key)) return;
     e.preventDefault();
     onToggle();
   }

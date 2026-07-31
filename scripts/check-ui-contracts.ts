@@ -106,11 +106,14 @@ const files: Record<string, string[]> = {
     "aria-busy",
     "vorForFilter",
     "ExpandedPlayerPanel",
-    "Enter",
+    "isBoardRowToggleKey",
     "tabular-nums",
   ],
   "src/lib/board-reset-token.ts": ["boardFilterResetToken", "g1"],
-  "src/lib/board-keyboard.ts": ["nextExpandedPlayerId"],
+  "src/lib/board-keyboard.ts": [
+    "nextExpandedPlayerId",
+    "isBoardRowToggleKey",
+  ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
     "Clear filters",

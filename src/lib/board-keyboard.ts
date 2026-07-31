@@ -16,3 +16,8 @@ export function nextExpandedPlayerId(
   if (next < 0 || next >= playerIds.length) return expandedId;
   return playerIds[next]!;
 }
+
+/** Enter / Space toggles an expanded rankings row. */
+export function isBoardRowToggleKey(key: string): boolean {
+  return key === "Enter" || key === " ";
+}
