@@ -29,14 +29,26 @@ loadEnvLocal();
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
 const OUT_PATH = join(process.cwd(), "src", "data", "yahoo-positions.json");
 
-function loadNhlPlayers(): Array<{ id: number; name: string; team: string }> {
+function loadNhlPlayers(): NhlMatchPlayer[] {
   if (!existsSync(PROFILES_PATH)) {
     throw new Error("Run npm run collect first to build player-profiles.json");
   }
   const data = JSON.parse(readFileSync(PROFILES_PATH, "utf8")) as {
-    profiles: Array<{ id: number; name: string; team: string }>;
+    profiles: Array<{
+      id: number;
+      name: string;
+      team: string;
+      position?: Position;
+      positions?: Position[];
+    }>;
   };
-  return data.profiles.map((p) => ({ id: p.id, name: p.name, team: p.team }));
+  return data.profiles.map((p) => ({
+    id: p.id,
+    name: p.name,
+    team: p.team,
+    position: p.position,
+    positions: p.positions,
+  }));
 }
 
 async function promptCode(): Promise<string> {

@@ -16,7 +16,7 @@
     "check:teams": "tsx scripts/check-team-abbreviations.ts",
     "check:bundle": "tsx scripts/check-v2-bundle.ts",
     "check": "npm run check:data && npm run check:teams && npm run check:bundle",
-    "test:unit": "tsx scripts/check-team-abbreviations.ts && tsx scripts/test-vor-baselines.ts && tsx scripts/test-vor-softcap.ts && tsx scripts/test-draft-edge.ts && tsx scripts/test-goalie-tandem.ts && tsx scripts/test-rankings-filters.ts && tsx scripts/test-rankings-url.ts && tsx scripts/test-rankings-csv.ts && tsx scripts/test-publish-players.ts",
+    "test:unit": "tsx scripts/check-team-abbreviations.ts && tsx scripts/test-vor-baselines.ts && tsx scripts/test-vor-softcap.ts && tsx scripts/test-draft-edge.ts && tsx scripts/test-goalie-tandem.ts && tsx scripts/test-yahoo-match.ts && tsx scripts/test-rankings-filters.ts && tsx scripts/test-rankings-url.ts && tsx scripts/test-rankings-csv.ts && tsx scripts/test-publish-players.ts",
     "vor:reapply": "tsx scripts/reapply-vor.ts",
     "goalie:renorm": "tsx scripts/renorm-goalie-gp.ts",
     "collect": "tsx scripts/collect-profiles.ts",

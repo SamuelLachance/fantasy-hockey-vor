@@ -346,14 +346,56 @@ import { normalizeTeamAbbrev } from "./team-abbreviations";
 
 export const normalizeTeam = normalizeTeamAbbrev;
 
+export type NhlMatchPlayer = {
+  id: number;
+  name: string;
+  team: string;
+  position?: Position;
+  positions?: Position[];
+};
+
+function nhlPositionSet(p: NhlMatchPlayer): Set<Position> {
+  const set = new Set<Position>();
+  if (p.position) set.add(p.position);
+  for (const pos of p.positions ?? []) set.add(pos);
+  return set;
+}
+
+function yahooPositionSet(yp: YahooPlayerRecord): Set<Position> {
+  const set = new Set<Position>(yp.positions);
+  if (yp.primaryPosition) set.add(yp.primaryPosition);
+  return set;
+}
+
+/** When multiple NHL ids share a name, keep those whose roster slot overlaps Yahoo. */
+export function disambiguateByPosition(
+  candidateIds: number[],
+  nhlById: Map<number, NhlMatchPlayer>,
+  yp: YahooPlayerRecord,
+): number[] {
+  if (candidateIds.length <= 1) return candidateIds;
+  const yPos = yahooPositionSet(yp);
+  if (yPos.size === 0) return candidateIds;
+  const filtered = candidateIds.filter((id) => {
+    const nhl = nhlById.get(id);
+    if (!nhl) return false;
+    const nPos = nhlPositionSet(nhl);
+    for (const pos of nPos) if (yPos.has(pos)) return true;
+    return false;
+  });
+  return filtered.length > 0 ? filtered : candidateIds;
+}
+
 export function matchYahooToNhlIds(
   yahooPlayers: YahooPlayerRecord[],
-  nhlPlayers: Array<{ id: number; name: string; team: string }>,
+  nhlPlayers: NhlMatchPlayer[],
 ): YahooPositionsDataset {
   const byNameTeam = new Map<string, number[]>();
   const byName = new Map<string, number[]>();
+  const nhlById = new Map<number, NhlMatchPlayer>();
 
   for (const p of nhlPlayers) {
+    nhlById.set(p.id, p);
     const key = `${normalizePlayerName(p.name)}|${normalizeTeam(p.team)}`;
     const list = byNameTeam.get(key) ?? [];
     list.push(p.id);
@@ -370,13 +412,15 @@ export function matchYahooToNhlIds(
 
   for (const yp of yahooPlayers) {
     const key = `${normalizePlayerName(yp.name)}|${normalizeTeam(yp.team)}`;
-    let ids = byNameTeam.get(key);
-    if (!ids || ids.length !== 1) {
-      const nameIds = byName.get(normalizePlayerName(yp.name));
-      ids = nameIds?.length === 1 ? nameIds : ids;
+    let ids = byNameTeam.get(key) ?? [];
+    ids = disambiguateByPosition(ids, nhlById, yp);
+    if (ids.length !== 1) {
+      let nameIds = byName.get(normalizePlayerName(yp.name)) ?? [];
+      nameIds = disambiguateByPosition(nameIds, nhlById, yp);
+      if (nameIds.length === 1) ids = nameIds;
     }
-    if (ids?.length === 1) {
-      byNhlId[ids[0]] = yp;
+    if (ids.length === 1) {
+      byNhlId[ids[0]!] = yp;
     } else {
       unmatchedPlayers.push({
         name: yp.name,

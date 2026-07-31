@@ -1,8 +1,8 @@
 {
   "fetchedAt": "2026-07-03T14:23:07.108Z",
   "gameKey": "465",
-  "matched": 1244,
-  "unmatched": 344,
+  "matched": 1246,
+  "unmatched": 342,
   "byNhlId": {
     "8470600": {
       "yahooPlayerId": 3345,
@@ -6099,6 +6099,16 @@
         "C"
       ]
     },
+    "8480012": {
+      "yahooPlayerId": 7520,
+      "name": "Elias Pettersson",
+      "team": "VAN",
+      "displayPosition": "C",
+      "primaryPosition": "C",
+      "positions": [
+        "C"
+      ]
+    },
     "8480014": {
       "yahooPlayerId": 7526,
       "name": "Gabriel Vilardi",
@@ -11312,6 +11322,16 @@
         "C"
       ]
     },
+    "8483678": {
+      "yahooPlayerId": 32762,
+      "name": "Elias Pettersson",
+      "team": "VAN",
+      "displayPosition": "D",
+      "primaryPosition": "D",
+      "positions": [
+        "D"
+      ]
+    },
     "8483686": {
       "yahooPlayerId": 30869,
       "name": "Adam Engstrom",
@@ -12671,11 +12691,6 @@
   },
   "unmatchedPlayers": [
     {
-      "name": "Elias Pettersson",
-      "team": "VAN",
-      "yahooPlayerId": 7520
-    },
-    {
       "name": "Max Shabanov",
       "team": "MIN",
       "yahooPlayerId": 33674
@@ -12969,11 +12984,6 @@
       "name": "Zach Aston-Reese",
       "team": "CBJ",
       "yahooPlayerId": 7473
-    },
-    {
-      "name": "Elias Pettersson",
-      "team": "VAN",
-      "yahooPlayerId": 32762
     },
     {
       "name": "Josh Mahura",
