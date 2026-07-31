@@ -1890,10 +1890,17 @@ export function renormalizeGoalieGamesByTeam<
     if (idxs.length < 2) continue;
     let sum = 0;
     for (const i of idxs) sum += out[i].gamesPlayed;
-    if (!(sum > 35 && sum < 150)) continue;
+    if (!(sum > 0)) continue;
+    // Previously skipped sum≥150, which left overloaded org charts (PHI 194+)
+    // untouched — the exact case that most needs scaling. Always fit to budget
+    // when the tandem is meaningfully off (more than ~5 GP).
+    if (Math.abs(sum - teamBudget) <= 5) continue;
     const scale = teamBudget / sum;
     for (const i of idxs) {
-      out[i].gamesPlayed = Math.max(4, Math.min(72, Math.round(out[i].gamesPlayed * scale)));
+      out[i].gamesPlayed = Math.max(
+        4,
+        Math.min(72, Math.round(out[i].gamesPlayed * scale)),
+      );
     }
   }
   return out;

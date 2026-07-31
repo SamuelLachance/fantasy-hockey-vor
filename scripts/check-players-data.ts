@@ -84,6 +84,23 @@ if (dWithFow > 0) {
   errors.push(`${dWithFow} defensemen have FOW > 0`);
 }
 
+const goalieGpByTeam = new Map<string, number>();
+for (const p of players) {
+  if (!p.isGoalie) continue;
+  goalieGpByTeam.set(p.team, (goalieGpByTeam.get(p.team) ?? 0) + p.gamesPlayed);
+}
+const overloadedTeams = [...goalieGpByTeam.entries()].filter(
+  ([, gp]) => gp > 110,
+);
+if (overloadedTeams.length > 0) {
+  errors.push(
+    `goalie GP sum >110 on ${overloadedTeams.length} team(s): ${overloadedTeams
+      .slice(0, 5)
+      .map(([t, gp]) => `${t}=${gp}`)
+      .join(", ")}`,
+  );
+}
+
 const goalieSavePcts = players
   .filter((p) => p.isGoalie)
   .map((p) => (p.projection as { savePct?: number }).savePct ?? 0);
