@@ -34,6 +34,23 @@ assert(
 );
 delete process.env.NEXT_PUBLIC_BASE_PATH;
 assert(playerDetailsHref() === "/player-details.json", "details no basePath");
+
+const prevBuild = process.env.NEXT_PUBLIC_BUILD_TIME;
+process.env.NEXT_PUBLIC_BUILD_TIME = "2026-07-30T12:00:00.000Z";
+assert(
+  playerDetailsHref() ===
+    "/player-details.json?v=2026-07-30T12%3A00%3A00.000Z",
+  "details cache buster",
+);
+process.env.NEXT_PUBLIC_BASE_PATH = "/fantasy-hockey-vor";
+assert(
+  playerDetailsHref().startsWith("/fantasy-hockey-vor/player-details.json?v="),
+  "details basePath + buster",
+);
+delete process.env.NEXT_PUBLIC_BASE_PATH;
+if (prevBuild === undefined) delete process.env.NEXT_PUBLIC_BUILD_TIME;
+else process.env.NEXT_PUBLIC_BUILD_TIME = prevBuild;
+
 if (prev === undefined) delete process.env.NEXT_PUBLIC_BASE_PATH;
 else process.env.NEXT_PUBLIC_BASE_PATH = prev;
 

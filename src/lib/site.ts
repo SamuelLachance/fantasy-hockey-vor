@@ -16,7 +16,10 @@ export function homeRankingsHref(): string {
   return withBasePath("/#rankings");
 }
 
-/** Lazy-loaded expand payload path. */
+/** Lazy-loaded expand payload path (build-time cache buster when available). */
 export function playerDetailsHref(): string {
-  return withBasePath("/player-details.json");
+  const path = withBasePath("/player-details.json");
+  const v = process.env.NEXT_PUBLIC_BUILD_TIME?.trim();
+  if (!v) return path;
+  return `${path}?v=${encodeURIComponent(v)}`;
 }
