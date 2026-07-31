@@ -5,7 +5,7 @@ export function scheduleIdle(cb: () => void, timeoutMs = 200): () => void {
       ? window.requestIdleCallback.bind(window)
       : null;
   if (ric) {
-    const id = ric(() => cb());
+    const id = ric(() => cb(), { timeout: timeoutMs });
     return () => {
       window.cancelIdleCallback?.(id);
     };

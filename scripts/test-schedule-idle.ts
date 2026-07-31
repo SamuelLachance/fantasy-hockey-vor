@@ -1,5 +1,5 @@
 /**
- * Unit checks for idle scheduler cancelation.
+ * Unit checks for idle scheduler cancelation + ric timeout.
  * Run: npx tsx scripts/test-schedule-idle.ts
  */
 import { scheduleIdle } from "../src/lib/schedule-idle";
@@ -29,6 +29,26 @@ async function main() {
     }, 10);
   });
   assert(ran2, "uncancelled idle runs");
+
+  let seenTimeout: number | undefined;
+  const g = globalThis as { window?: unknown };
+  const prevWindow = g.window;
+  g.window = {
+    requestIdleCallback(
+      cb: () => void,
+      opts?: { timeout?: number },
+    ) {
+      seenTimeout = opts?.timeout;
+      queueMicrotask(() => cb());
+      return 1;
+    },
+    cancelIdleCallback() {},
+  };
+  await new Promise<void>((resolve) => {
+    scheduleIdle(() => resolve(), 123);
+  });
+  assert(seenTimeout === 123, "ric receives timeout option");
+  g.window = prevWindow;
 
   if (failed) process.exit(1);
   console.log("OK: schedule-idle");
