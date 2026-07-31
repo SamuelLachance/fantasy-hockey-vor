@@ -63,6 +63,8 @@ Checks: `npm run check:data`, `npm run check:teams` (franchise abbrev continuity
 
 Full local gate (mirrors Pages CI): `npm run ci:local`.
 
+Yahoo eligibility gaps (mostly farm/retired): `npm run yahoo:gaps`.
+
 Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmark-*.ts` for segment holdouts.
 
 ## League Settings

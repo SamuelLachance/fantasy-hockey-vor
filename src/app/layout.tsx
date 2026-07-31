@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -18,7 +19,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://samuellachance.github.io/fantasy-hockey-vor/"),
+  metadataBase: new URL(SITE_URL),
   title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
   description:
     "2026-27 NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble (GBDT + ridge + Marcel), with draft Edge vs synthetic consensus and calibrated uncertainty.",
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
     description:
       "Stacked-ensemble VOR rankings for H2H categories — Edge, uncertainty, Yahoo positions.",
-    url: "https://samuellachance.github.io/fantasy-hockey-vor/",
+    url: SITE_URL,
     siteName: "Fantasy Hockey VOR",
     type: "website",
     locale: "en_US",

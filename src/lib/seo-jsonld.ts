@@ -1,6 +1,5 @@
 import type { ProjectionsDataset } from "@/lib/types";
-
-const SITE_URL = "https://samuellachance.github.io/fantasy-hockey-vor/";
+import { SITE_URL } from "@/lib/site";
 
 /** JSON-LD for the rankings homepage (Dataset + WebApplication). */
 export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown> {

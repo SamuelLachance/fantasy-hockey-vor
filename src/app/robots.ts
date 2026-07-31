@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
-
-const site = "https://samuellachance.github.io/fantasy-hockey-vor";
+import { SITE_ORIGIN } from "@/lib/site";
 
 export const dynamic = "force-static";
 
@@ -10,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
     },
-    sitemap: `${site}/sitemap.xml`,
-    host: site,
+    sitemap: `${SITE_ORIGIN}/sitemap.xml`,
+    host: SITE_ORIGIN,
   };
 }
