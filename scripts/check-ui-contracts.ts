@@ -37,6 +37,7 @@ const files: Record<string, string[]> = {
     "draftValue",
     "sigma",
     "onResetBoard",
+    "filteredRef",
   ],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": [

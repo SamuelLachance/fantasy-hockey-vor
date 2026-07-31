@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
@@ -30,22 +30,49 @@ export function useRankingsKeyboard({
   setSortDir,
   onResetBoard,
 }: RankingsKeyboardInput): void {
+  // Keep latest handlers/state without rebinding the window listener every render.
+  const filteredRef = useRef(filtered);
+  const expandedIdRef = useRef(expandedId);
+  const filtersOpenRef = useRef(filtersOpen);
+  const helpOpenRef = useRef(helpOpen);
+  const setExpandedIdRef = useRef(setExpandedId);
+  const setFiltersOpenRef = useRef(setFiltersOpen);
+  const setHelpOpenRef = useRef(setHelpOpen);
+  const setSortKeyRef = useRef(setSortKey);
+  const setSortDirRef = useRef(setSortDir);
+  const onResetBoardRef = useRef(onResetBoard);
+
+  filteredRef.current = filtered;
+  expandedIdRef.current = expandedId;
+  filtersOpenRef.current = filtersOpen;
+  helpOpenRef.current = helpOpen;
+  setExpandedIdRef.current = setExpandedId;
+  setFiltersOpenRef.current = setFiltersOpen;
+  setHelpOpenRef.current = setHelpOpen;
+  setSortKeyRef.current = setSortKey;
+  setSortDirRef.current = setSortDir;
+  onResetBoardRef.current = onResetBoard;
+
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
       const tag = (e.target as HTMLElement | null)?.tagName;
       const inField =
         tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      const helpOpenNow = helpOpenRef.current;
+      const filtersOpenNow = filtersOpenRef.current;
+      const expandedIdNow = expandedIdRef.current;
+
       if (e.key === "Escape") {
-        if (helpOpen) {
-          setHelpOpen(false);
+        if (helpOpenNow) {
+          setHelpOpenRef.current(false);
           return;
         }
-        if (filtersOpen) {
-          setFiltersOpen(false);
+        if (filtersOpenNow) {
+          setFiltersOpenRef.current(false);
           return;
         }
         if (inField) return;
-        setExpandedId(null);
+        setExpandedIdRef.current(null);
         return;
       }
       if (
@@ -56,7 +83,7 @@ export function useRankingsKeyboard({
         (e.key === "?" || (e.key === "/" && e.shiftKey))
       ) {
         e.preventDefault();
-        setHelpOpen((o) => !o);
+        setHelpOpenRef.current((o) => !o);
         return;
       }
       if (
@@ -80,7 +107,7 @@ export function useRankingsKeyboard({
         (e.key === "f" || e.key === "F")
       ) {
         e.preventDefault();
-        setFiltersOpen((open) => {
+        setFiltersOpenRef.current((open) => {
           const next = !open;
           if (next) {
             queueMicrotask(() => {
@@ -100,15 +127,15 @@ export function useRankingsKeyboard({
         !e.metaKey &&
         !e.ctrlKey &&
         !e.altKey &&
-        !helpOpen &&
+        !helpOpenNow &&
         (e.key === "r" || e.key === "R") &&
-        onResetBoard
+        onResetBoardRef.current
       ) {
         e.preventDefault();
-        onResetBoard();
+        onResetBoardRef.current();
         return;
       }
-      if (!inField && !e.metaKey && !e.ctrlKey && !e.altKey && !helpOpen) {
+      if (!inField && !e.metaKey && !e.ctrlKey && !e.altKey && !helpOpenNow) {
         const sortHotkeys: Record<string, SortKey> = {
           v: "vor",
           e: "draftValue",
@@ -118,12 +145,12 @@ export function useRankingsKeyboard({
         const sortKey = sortHotkeys[e.key.toLowerCase()];
         if (sortKey) {
           e.preventDefault();
-          setSortKey(sortKey);
-          setSortDir(defaultSortDir(sortKey));
+          setSortKeyRef.current(sortKey);
+          setSortDirRef.current(defaultSortDir(sortKey));
           return;
         }
       }
-      if (inField || helpOpen || expandedId == null) return;
+      if (inField || helpOpenNow || expandedIdNow == null) return;
       if (
         e.key !== "j" &&
         e.key !== "k" &&
@@ -133,25 +160,15 @@ export function useRankingsKeyboard({
         return;
       }
       e.preventDefault();
-      const idx = filtered.findIndex((p) => p.id === expandedId);
+      const list = filteredRef.current;
+      const idx = list.findIndex((p) => p.id === expandedIdNow);
       if (idx < 0) return;
       const next =
         e.key === "j" || e.key === "ArrowDown" ? idx + 1 : idx - 1;
-      if (next < 0 || next >= filtered.length) return;
-      setExpandedId(filtered[next]!.id);
+      if (next < 0 || next >= list.length) return;
+      setExpandedIdRef.current(list[next]!.id);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [
-    expandedId,
-    filtered,
-    filtersOpen,
-    helpOpen,
-    onResetBoard,
-    setExpandedId,
-    setFiltersOpen,
-    setHelpOpen,
-    setSortKey,
-    setSortDir,
-  ]);
+  }, []);
 }
