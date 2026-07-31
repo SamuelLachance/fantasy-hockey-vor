@@ -136,6 +136,12 @@ assert(
   decodeStatRanges(`vor:${"9".repeat(40)}-`).vor?.min?.length === 24,
   "rf bound clamped",
 );
+assert(
+  encodeStatRanges({
+    vor: { min: "9".repeat(40), max: "" },
+  }) === `vor:${"9".repeat(24)}-`,
+  "encode clamps bound length",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

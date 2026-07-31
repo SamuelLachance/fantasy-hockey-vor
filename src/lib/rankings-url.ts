@@ -74,8 +74,8 @@ export function encodeStatRanges(ranges: StatRanges): string {
     { min: string; max: string } | undefined,
   ][]) {
     if (!b || !RANGE_KEYS.has(key)) continue;
-    const min = b.min?.trim() ?? "";
-    const max = b.max?.trim() ?? "";
+    const min = (b.min?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
+    const max = (b.max?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
     if (!min && !max) continue;
     parts.push(`${key}:${min}-${max}`);
   }
