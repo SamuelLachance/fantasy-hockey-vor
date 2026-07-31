@@ -2,7 +2,10 @@
  * Unit checks for header roster note copy.
  * Run: npx tsx scripts/test-header-roster-copy.ts
  */
-import { headerRosterCopy } from "../src/lib/header-roster-copy";
+import {
+  headerRosterCopy,
+  headerRosterNoteLabel,
+} from "../src/lib/header-roster-copy";
 import type { LeagueSettings } from "../src/lib/types";
 
 let failed = 0;
@@ -25,6 +28,10 @@ const custom = headerRosterCopy({
   goalieVorFactor: 0.2,
 } as LeagueSettings);
 assert(custom.includes("1C · 1LW · 1RW · 3D · 1G"), "custom roster");
+assert(
+  headerRosterNoteLabel() === "League roster and category settings",
+  "note label",
+);
 
 if (failed) process.exit(1);
 console.log("OK: header-roster-copy");

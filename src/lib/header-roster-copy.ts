@@ -11,3 +11,8 @@ export function headerRosterCopy(
   const { C, LW, RW, D, G } = league.roster;
   return `Roster: ${C}C · ${LW}LW · ${RW}RW · ${D}D · ${G}G daily. Skater cats: ${SKATER_CATS}. Goalie cats: ${GOALIE_CATS}.`;
 }
+
+/** Accessible name for the roster note landmark. */
+export function headerRosterNoteLabel(): string {
+  return "League roster and category settings";
+}

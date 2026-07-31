@@ -571,11 +571,12 @@ const files: Record<string, string[]> = {
   ],
   "src/components/HeaderRosterNote.tsx": [
     "headerRosterCopy",
+    "headerRosterNoteLabel",
     'role="note"',
-    "League roster and category settings",
   ],
   "src/lib/header-roster-copy.ts": [
     "headerRosterCopy",
+    "headerRosterNoteLabel",
     "DEFAULT_LEAGUE",
     "Skater cats",
     "Goalie cats",
