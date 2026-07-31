@@ -211,6 +211,13 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           onShowAllPositions={() =>
             startTransition(() => board.setPosition("ALL"))
           }
+          canShowAllGoalies={
+            board.hideDepthGoalies &&
+            (board.position === "G" || board.position === "ALL")
+          }
+          onShowAllGoalies={() =>
+            startTransition(() => board.setHideDepthGoalies(false))
+          }
           onResetBoard={board.resetBoardView}
         />
       </div>

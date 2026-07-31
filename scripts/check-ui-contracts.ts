@@ -75,6 +75,9 @@ const files: Record<string, string[]> = {
     "Reset board view",
     'role="status"',
     "Press r to reset",
+    "Include depth goalies",
+    'aria-keyshortcuts="r"',
+    "EmptyAction",
   ],
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",

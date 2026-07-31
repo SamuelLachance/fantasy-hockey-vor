@@ -17,6 +17,8 @@ interface RankingsBoardFooterProps {
   onClearSearch: () => void;
   onClearStatFilters: () => void;
   onShowAllPositions: () => void;
+  canShowAllGoalies: boolean;
+  onShowAllGoalies: () => void;
   onResetBoard: () => void;
 }
 
@@ -33,6 +35,8 @@ export function RankingsBoardFooter({
   onClearSearch,
   onClearStatFilters,
   onShowAllPositions,
+  canShowAllGoalies,
+  onShowAllGoalies,
   onResetBoard,
 }: RankingsBoardFooterProps) {
   const remaining = Math.max(0, filteredCount - renderCount);
@@ -44,9 +48,11 @@ export function RankingsBoardFooter({
           query={query}
           activeFilterCount={activeFilterCount}
           position={position}
+          canShowAllGoalies={canShowAllGoalies}
           onClearSearch={onClearSearch}
           onClearStatFilters={onClearStatFilters}
           onShowAllPositions={onShowAllPositions}
+          onShowAllGoalies={onShowAllGoalies}
           onResetBoard={onResetBoard}
         />
       )}
