@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { homeRankingsHref } from "@/lib/site";
 
 export default function NotFound() {
   return (
@@ -10,12 +10,12 @@ export default function NotFound() {
       <p className="max-w-md text-slate-400">
         That route is not part of the rankings app. Head back to the full board.
       </p>
-      <Link
-        href="/#rankings"
+      <a
+        href={homeRankingsHref()}
         className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition motion-reduce:transition-none hover:bg-cyan-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         Back to rankings
-      </Link>
+      </a>
     </main>
   );
 }

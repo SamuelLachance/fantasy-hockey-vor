@@ -197,7 +197,11 @@ const files: Record<string, string[]> = {
     "hover:bg-white/[0.07]",
     "motion-reduce:transition-none",
   ],
-  "src/app/not-found.tsx": ["Page not found", "Back to rankings"],
+  "src/app/not-found.tsx": [
+    "Page not found",
+    "Back to rankings",
+    "homeRankingsHref",
+  ],
   "src/lib/seo-jsonld.ts": [
     "WebApplication",
     "Dataset",
