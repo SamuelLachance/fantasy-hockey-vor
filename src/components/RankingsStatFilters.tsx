@@ -52,6 +52,7 @@ export function RankingsStatFilters({
             <button
               type="button"
               onClick={onDone}
+              aria-keyshortcuts="Enter"
               className="rounded-lg bg-cyan-500/15 px-2.5 py-1 text-xs font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               Done

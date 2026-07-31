@@ -215,7 +215,11 @@ const files: Record<string, string[]> = {
     "Home/End",
     "Enter",
   ],
-  "src/components/RankingsStatFilters.tsx": ["onDone", "Done"],
+  "src/components/RankingsStatFilters.tsx": [
+    "onDone",
+    "Done",
+    'aria-keyshortcuts="Enter"',
+  ],
 };
 
 let failed = 0;

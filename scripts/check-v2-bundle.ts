@@ -51,18 +51,15 @@ if (!bundle.trainedAt || !Number.isFinite(Date.parse(bundle.trainedAt))) {
   }
 }
 
-if (
-  bundle.datasetBuiltAt &&
-  !Number.isFinite(Date.parse(bundle.datasetBuiltAt))
-) {
+if (!bundle.datasetBuiltAt) {
+  errors.push("datasetBuiltAt missing");
+} else if (!Number.isFinite(Date.parse(bundle.datasetBuiltAt))) {
   errors.push("datasetBuiltAt is invalid");
-} else if (!bundle.datasetBuiltAt) {
-  warnings.push("datasetBuiltAt missing");
 }
 
 if (!bundle.projectionSeasonId) errors.push("projectionSeasonId missing");
 if (bundle.marketTraining == null) {
-  warnings.push("marketTraining section missing");
+  errors.push("marketTraining section missing");
 }
 
 if (!bundle.skater?.gbdt || !bundle.skater?.ridge) {
