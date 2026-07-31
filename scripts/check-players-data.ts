@@ -73,6 +73,12 @@ if (!data.projectionEngine) {
   );
 }
 
+if (data.positionSource !== "yahoo-fantasy") {
+  errors.push(
+    `positionSource is "${data.positionSource ?? "missing"}" (expected yahoo-fantasy)`,
+  );
+}
+
 const players = data.players ?? [];
 const badVor = players.filter((p) => !Number.isFinite(p.vor)).length;
 if (badVor > 0) errors.push(`${badVor} players with non-finite VOR`);
