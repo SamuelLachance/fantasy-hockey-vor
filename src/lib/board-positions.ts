@@ -17,6 +17,11 @@ export function boardPositionTabId(position: Position | "ALL"): string {
   return `board-pos-tab-${position}`;
 }
 
+/** Tabpanel id for the rankings board (shared across position tabs). */
+export function boardPositionPanelId(): string {
+  return "rankings-board-panel";
+}
+
 /** Screen-reader announcement when the position filter changes. */
 export function positionFilterAnnounce(position: Position | "ALL"): string {
   return `Position filter ${position}`;

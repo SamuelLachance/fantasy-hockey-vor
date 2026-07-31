@@ -4,6 +4,7 @@
  */
 import {
   BOARD_POSITIONS,
+  boardPositionPanelId,
   boardPositionTabId,
   cycleBoardPosition,
   nextBoardPositionIndex,
@@ -33,6 +34,10 @@ assert(cycleBoardPosition("C", -1) === "ALL", "cycle back to ALL");
 assert(cycleBoardPosition("LW", -1) === "C", "cycle LW → C");
 assert(boardPositionTabId("C") === "board-pos-tab-C", "tab id C");
 assert(boardPositionTabId("ALL") === "board-pos-tab-ALL", "tab id ALL");
+assert(
+  boardPositionPanelId() === "rankings-board-panel",
+  "tabpanel id",
+);
 assert(
   positionFilterAnnounce("G") === "Position filter G",
   "announce G",

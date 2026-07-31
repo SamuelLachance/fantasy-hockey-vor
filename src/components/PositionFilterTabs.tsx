@@ -4,6 +4,7 @@ import { startTransition, type KeyboardEvent } from "react";
 import type { Position } from "@/lib/types";
 import {
   BOARD_POSITIONS,
+  boardPositionPanelId,
   boardPositionTabId,
   nextBoardPositionIndex,
   positionFilterAnnounce,
@@ -58,7 +59,7 @@ export function PositionFilterTabs({
           type="button"
           role="tab"
           aria-selected={position === pos}
-          aria-controls="rankings-board-table"
+          aria-controls={boardPositionPanelId()}
           id={boardPositionTabId(pos)}
           tabIndex={position === pos ? 0 : -1}
           onClick={() => startTransition(() => setPosition(pos))}

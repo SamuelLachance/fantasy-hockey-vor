@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  boardPositionPanelId,
+  boardPositionTabId,
+} from "@/lib/board-positions";
 import { boardRowTabStopId } from "@/lib/board-visible";
 import { boardTableAriaRowCount } from "@/lib/board-row-a11y";
 import { useState, type RefObject } from "react";
@@ -92,7 +96,12 @@ export function RankingsBoardTable({
   const searchPending = query !== deferredQuery;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
+    <div
+      id={boardPositionPanelId()}
+      role="tabpanel"
+      aria-labelledby={boardPositionTabId(position)}
+      className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20"
+    >
       <div
         ref={tableScrollRef}
         className="group/hscroll overflow-x-auto overscroll-x-contain"
