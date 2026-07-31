@@ -46,8 +46,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: defaultTitle,
-    description:
-      "Stacked-ensemble VOR rankings for H2H categories — Edge, uncertainty, Yahoo positions.",
+    description: defaultDescription,
     url: SITE_URL,
     siteName: SITE_BRAND,
     type: "website",
@@ -56,8 +55,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: defaultTitle,
-    description:
-      "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
+    description: defaultDescription,
   },
   applicationName: SITE_BRAND,
   appleWebApp: {

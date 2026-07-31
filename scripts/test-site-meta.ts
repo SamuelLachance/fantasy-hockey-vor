@@ -2,6 +2,8 @@
  * Unit checks for shared site metadata copy.
  * Run: npx tsx scripts/test-site-meta.ts
  */
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   siteDefaultDescription,
   siteDefaultTitle,
@@ -19,10 +21,25 @@ function assert(cond: boolean, msg: string) {
 assert(siteDefaultTitle().includes("2026-27"), "title season");
 assert(siteDefaultTitle("2027-28").includes("2027-28"), "title override");
 assert(siteDefaultDescription().includes("Value Over Replacement"), "desc");
+assert(siteDefaultDescription().includes("2026-27"), "desc season");
+assert(siteDefaultDescription("2027-28").includes("2027-28"), "desc override");
 assert(siteManifestDescription().includes("VOR rankings"), "manifest");
 assert(
   siteDefaultTitle() === "Fantasy Hockey VOR | 2026-27 ML Rankings",
   "exact default title",
+);
+
+const layout = readFileSync(
+  join(process.cwd(), "src/app/layout.tsx"),
+  "utf8",
+);
+assert(
+  (layout.match(/description: defaultDescription/g) ?? []).length >= 3,
+  "OG/Twitter/page share defaultDescription",
+);
+assert(
+  !layout.includes("Stacked-ensemble VOR rankings"),
+  "no stale hardcoded social descriptions",
 );
 
 if (failed) process.exit(1);

@@ -738,6 +738,7 @@ const files: Record<string, string[]> = {
     "category",
     "siteDefaultTitle",
     "siteDefaultDescription",
+    "description: defaultDescription",
     "PROJECTION_SEASON",
     "summary_large_image",
     "appleWebApp",
