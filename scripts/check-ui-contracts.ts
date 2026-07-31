@@ -679,6 +679,8 @@ const files: Record<string, string[]> = {
     "hideDepthGoalies",
     "playerId",
     "encodeStatRanges",
+    "decodeStatRanges",
+    "splitStatRangeBounds",
     "isInvertedRangeBound",
     "rf",
     "steadiestBoardHref",

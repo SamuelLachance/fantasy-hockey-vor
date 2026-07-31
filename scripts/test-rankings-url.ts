@@ -4,6 +4,7 @@
  */
 import {
   decodeStatRanges,
+  splitStatRangeBounds,
   encodeStatRanges,
   edgeBoardHref,
   nextRankingsUrlSyncAction,
@@ -290,6 +291,35 @@ assert(
 assert(
   encodeStatRanges({ vor: { min: "10", max: "5" } }) === "",
   "encode skips inverted range",
+);
+assert(
+  encodeStatRanges({ vor: { min: "-2", max: "5" } }) === "vor:-2-5",
+  "encode negative min",
+);
+assert(
+  decodeStatRanges("vor:-2-5").vor?.min === "-2" &&
+    decodeStatRanges("vor:-2-5").vor?.max === "5",
+  "decode negative min + max",
+);
+assert(
+  decodeStatRanges("sigma:-1-").sigma?.min === "-1" &&
+    decodeStatRanges("sigma:-1-").sigma?.max === "",
+  "decode negative min only",
+);
+assert(
+  decodeStatRanges("sigma:-50").sigma?.min === "" &&
+    decodeStatRanges("sigma:-50").sigma?.max === "50",
+  "decode empty-min max-only still works",
+);
+assert(
+  decodeStatRanges("vor:-2--5").vor?.min === "-2" &&
+    decodeStatRanges("vor:-2--5").vor?.max === "-5",
+  "decode negative min and max",
+);
+assert(
+  splitStatRangeBounds("-2-5")?.min === "-2" &&
+    splitStatRangeBounds("-2-5")?.max === "5",
+  "splitStatRangeBounds negative min",
 );
 
 if (failed) process.exit(1);

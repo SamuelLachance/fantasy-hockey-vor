@@ -90,17 +90,32 @@ export function encodeStatRanges(ranges: StatRanges): string {
   return parts.join(",");
 }
 
+/** Split `min-max` after `key:` — supports negative mins (`-2-5`) and empty-min (`-50`). */
+export function splitStatRangeBounds(
+  rest: string,
+): { min: string; max: string } | null {
+  // Empty min + max only: encode emits `key:-50` → rest `-50`.
+  const emptyMin = /^-([^-]+)$/.exec(rest);
+  if (emptyMin) return { min: "", max: emptyMin[1]! };
+  // Otherwise first non-leading `-` is the separator (`-2-5`, `-2-`, `1.5-`, `-2--5`).
+  const both = /^(-?[^-]*)-(.*)$/.exec(rest);
+  if (!both) return null;
+  return { min: both[1]!, max: both[2]! };
+}
+
 export function decodeStatRanges(raw: string | null | undefined): StatRanges {
   if (!raw?.trim()) return {};
   const out: StatRanges = {};
   for (const part of raw.split(",").slice(0, RANGE_KEYS.size)) {
-    const m = /^([A-Za-z]+):([^-]*)-(.*)$/.exec(part.trim());
+    const m = /^([A-Za-z]+):(.*)$/.exec(part.trim());
     if (!m) continue;
     const key = m[1]!;
     if (!RANGE_KEYS.has(key)) continue;
+    const bounds = splitStatRangeBounds(m[2] ?? "");
+    if (!bounds) continue;
     out[key as RangeKey] = {
-      min: (m[2] ?? "").slice(0, RANGE_BOUND_MAX),
-      max: (m[3] ?? "").slice(0, RANGE_BOUND_MAX),
+      min: bounds.min.slice(0, RANGE_BOUND_MAX),
+      max: bounds.max.slice(0, RANGE_BOUND_MAX),
     };
   }
   return out;
