@@ -98,7 +98,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (window.location.hash !== "#rankings") return;
-    scrollToRankings();
+    scrollToRankings({ focusSearch: true });
   }, []);
 
   const filterRangeKeys = useMemo(

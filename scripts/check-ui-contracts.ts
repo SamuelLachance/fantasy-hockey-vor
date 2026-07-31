@@ -168,6 +168,7 @@ const files: Record<string, string[]> = {
     "keywords",
   ],
   "src/lib/site.ts": ["SITE_ORIGIN", "SITE_URL"],
+  "src/app/layout.tsx": ["keywords", "robots", "category"],
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/components/Header.tsx": [

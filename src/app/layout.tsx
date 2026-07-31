@@ -23,6 +23,19 @@ export const metadata: Metadata = {
   title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
   description:
     "2026-27 NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble (GBDT + ridge + Marcel), with draft Edge vs synthetic consensus and calibrated uncertainty.",
+  keywords: [
+    "fantasy hockey",
+    "VOR",
+    "NHL rankings",
+    "2026-27",
+    "draft edge",
+    "Yahoo fantasy",
+    "stacked ensemble",
+  ],
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
     title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
     description:
@@ -42,6 +55,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  category: "sports",
 };
 
 export default function RootLayout({
