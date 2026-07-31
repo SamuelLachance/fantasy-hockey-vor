@@ -115,6 +115,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",
+    "isExpanded ? `player-panel-${player.id}` : undefined",
     "isTabStop",
     'role="region"',
     "aria-busy",

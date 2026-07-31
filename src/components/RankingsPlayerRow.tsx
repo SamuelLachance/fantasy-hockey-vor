@@ -86,7 +86,9 @@ export function RankingsPlayerRow({
         id={`player-row-${player.id}`}
         tabIndex={isTabStop ? 0 : -1}
         aria-expanded={isExpanded}
-        aria-controls={`player-panel-${player.id}`}
+        aria-controls={
+          isExpanded ? `player-panel-${player.id}` : undefined
+        }
         aria-label={boardRowAriaLabel(player, position, idx)}
         onClick={onToggle}
         onKeyDown={onRowKeyDown}
