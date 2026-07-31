@@ -1,4 +1,7 @@
-import { boardShowingSummary } from "@/lib/board-status";
+import {
+  boardInteractionTipCopy,
+  boardShowingSummary,
+} from "@/lib/board-status";
 import { boardShortcutsStatusCopy } from "@/lib/board-shortcuts";
 
 interface RankingsStatusBarProps {
@@ -27,8 +30,7 @@ export function RankingsStatusBar({
           searchPending,
         })}
       </span>{" "}
-      Click or Enter/Space a row for category breakdown. Click column headers to
-      sort. {boardShortcutsStatusCopy()}
+      {boardInteractionTipCopy()} {boardShortcutsStatusCopy()}
     </p>
   );
 }

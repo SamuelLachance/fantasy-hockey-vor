@@ -2,7 +2,10 @@
  * Unit checks for board status summary copy.
  * Run: npx tsx scripts/test-board-status.ts
  */
-import { boardShowingSummary } from "../src/lib/board-status";
+import {
+  boardInteractionTipCopy,
+  boardShowingSummary,
+} from "../src/lib/board-status";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -38,6 +41,14 @@ assert(
     "Updating",
   ),
   "settled has no pending suffix",
+);
+assert(
+  boardInteractionTipCopy().includes("Enter/Space"),
+  "tip mentions Enter/Space",
+);
+assert(
+  boardInteractionTipCopy().includes("column headers"),
+  "tip mentions sort headers",
 );
 
 if (failed) process.exit(1);

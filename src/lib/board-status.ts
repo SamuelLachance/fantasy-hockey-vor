@@ -1,5 +1,12 @@
 import { formatCount } from "@/lib/format";
 
+/** Static tip after the live showing summary (expand + sort affordances). */
+export function boardInteractionTipCopy(): string {
+  return (
+    "Click or Enter/Space a row for category breakdown. Click column headers to sort."
+  );
+}
+
 /** Visible-row summary for the board status bar (aria-live). */
 export function boardShowingSummary(
   renderCount: number,
