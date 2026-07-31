@@ -35,3 +35,13 @@ export function headerJumpCtaCopy(): string {
 export function headerJumpCtaTitle(): string {
   return "Jump to board + focus search";
 }
+
+/** Hero stat chip label under the draftable player count. */
+export function headerPlayersStatLabel(): string {
+  return "Players";
+}
+
+/** Hero stat chip label under the league size. */
+export function headerTeamsStatLabel(): string {
+  return "Team League";
+}

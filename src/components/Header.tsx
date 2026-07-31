@@ -15,6 +15,8 @@ import {
   headerJumpCtaCopy,
   headerJumpCtaTitle,
   headerLeadCopy,
+  headerPlayersStatLabel,
+  headerTeamsStatLabel,
   skipToRankingsCopy,
 } from "@/lib/header-copy";
 import { HeaderRosterNote } from "./HeaderRosterNote";
@@ -111,13 +113,13 @@ export function Header({
                   {formatCount(playerCount)}
                 </div>
                 <div className="text-xs uppercase tracking-wider text-slate-400">
-                  Players
+                  {headerPlayersStatLabel()}
                 </div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center">
                 <div className="text-2xl font-bold text-white">{leagueTeams}</div>
                 <div className="text-xs uppercase tracking-wider text-slate-400">
-                  Team League
+                  {headerTeamsStatLabel()}
                 </div>
               </div>
             </div>

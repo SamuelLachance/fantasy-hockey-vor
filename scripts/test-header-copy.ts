@@ -8,6 +8,8 @@ import {
   headerJumpCtaCopy,
   headerJumpCtaTitle,
   headerLeadCopy,
+  headerPlayersStatLabel,
+  headerTeamsStatLabel,
   skipToRankingsCopy,
 } from "../src/lib/header-copy";
 
@@ -33,6 +35,8 @@ assert(
   "skip link",
 );
 assert(skipToRankingsCopy().includes("focus search"), "skip mentions search");
+assert(headerPlayersStatLabel() === "Players", "players stat");
+assert(headerTeamsStatLabel() === "Team League", "teams stat");
 
 if (failed) process.exit(1);
 console.log("OK: header-copy");
