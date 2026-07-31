@@ -1033,6 +1033,7 @@ const files: Record<string, string[]> = {
     'aria-hidden="true"',
     "safe-area-inset-top",
     "min-h-11",
+    "focus:min-h-11",
   ],
   "src/hooks/useLiveProjectionAge.ts": [
     "useLiveProjectionAge",
