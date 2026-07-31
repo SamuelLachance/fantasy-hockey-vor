@@ -299,10 +299,7 @@ const files: Record<string, string[]> = {
     "RankingsTable",
     "TopPlayers",
     "draftable",
-    "r · l",
-    "Home/End",
-    "Enter",
-    "Shift+G",
+    "boardShortcutsFooterChip",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",
