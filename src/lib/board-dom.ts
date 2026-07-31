@@ -3,7 +3,7 @@ export function focusStatsFilterButton(): void {
   if (typeof document === "undefined") return;
   document
     .querySelector<HTMLButtonElement>(
-      '#rankings button[aria-controls="rankings-stat-filters"]',
+      '#rankings button[aria-keyshortcuts="f"]',
     )
     ?.focus();
 }
