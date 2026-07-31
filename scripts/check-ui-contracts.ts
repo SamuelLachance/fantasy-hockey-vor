@@ -448,6 +448,7 @@ const files: Record<string, string[]> = {
     "dialogFocusableElements",
     "trapDialogTabKey",
     "pull it back",
+    "[inert], [hidden], [aria-hidden='true']",
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",

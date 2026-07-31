@@ -10,6 +10,8 @@ export function dialogFocusableElements(root: ParentNode): HTMLElement[] {
     }
     const ti = el.getAttribute("tabindex");
     if (ti != null && Number(ti) < 0) return false;
+    // Skip controls that AT / Tab should not reach (hidden or inert subtree).
+    if (el.closest("[inert], [hidden], [aria-hidden='true']")) return false;
     return true;
   });
 }

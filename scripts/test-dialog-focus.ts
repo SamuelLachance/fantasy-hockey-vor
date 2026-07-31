@@ -2,6 +2,8 @@
  * Unit checks for dialog focus-trap helpers.
  * Run: npx tsx scripts/test-dialog-focus.ts
  */
+import { readFileSync } from "fs";
+import { join } from "path";
 import { trapDialogTabKey } from "../src/lib/dialog-focus";
 
 let failed = 0;
@@ -69,6 +71,15 @@ assert(focused.at(-1) === "last", "outside shift-tab → last");
 
 e.key = "a";
 assert(trapDialogTabKey(e, [first, last], first) === false, "non-tab ignored");
+
+const src = readFileSync(
+  join(process.cwd(), "src/lib/dialog-focus.ts"),
+  "utf8",
+);
+assert(
+  src.includes("[inert], [hidden], [aria-hidden='true']"),
+  "skips inert/hidden focusables",
+);
 
 if (failed) process.exit(1);
 console.log("OK: dialog-focus");
