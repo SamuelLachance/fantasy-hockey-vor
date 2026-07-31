@@ -1,7 +1,7 @@
 import type { Position } from "@/lib/types";
-import { PROJECTION_SEASON } from "@/lib/nhl-api";
+import { siteDefaultTitle } from "@/lib/site-meta";
 
-const BASE_TITLE = `Fantasy Hockey VOR | ${PROJECTION_SEASON} ML Rankings`;
+const BASE_TITLE = siteDefaultTitle();
 const BRAND = "Fantasy Hockey VOR";
 
 /** Tab title reflecting board position / search / expanded player. */

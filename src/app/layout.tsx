@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { PROJECTION_SEASON } from "@/lib/nhl-api";
 import { SITE_URL } from "@/lib/site";
+import {
+  siteDefaultDescription,
+  siteDefaultTitle,
+} from "@/lib/site-meta";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,6 +18,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const defaultTitle = siteDefaultTitle();
+const defaultDescription = siteDefaultDescription();
+
 export const viewport: Viewport = {
   themeColor: "#020617",
   colorScheme: "dark",
@@ -20,14 +28,13 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
-  description:
-    "2026-27 NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble (GBDT + ridge + Marcel), with draft Edge vs synthetic consensus and calibrated uncertainty.",
+  title: defaultTitle,
+  description: defaultDescription,
   keywords: [
     "fantasy hockey",
     "VOR",
     "NHL rankings",
-    "2026-27",
+    PROJECTION_SEASON,
     "draft edge",
     "Yahoo fantasy",
     "stacked ensemble",
@@ -37,7 +44,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
+    title: defaultTitle,
     description:
       "Stacked-ensemble VOR rankings for H2H categories — Edge, uncertainty, Yahoo positions.",
     url: SITE_URL,
@@ -47,7 +54,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary",
-    title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
+    title: defaultTitle,
     description:
       "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
   },

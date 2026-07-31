@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { siteManifestDescription } from "@/lib/site-meta";
 
 export const dynamic = "force-static";
 
@@ -6,8 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Fantasy Hockey VOR",
     short_name: "VOR Hockey",
-    description:
-      "2026-27 NHL fantasy hockey VOR rankings from a stacked ML ensemble.",
+    description: siteManifestDescription(),
     start_url: "./",
     display: "standalone",
     background_color: "#020617",
