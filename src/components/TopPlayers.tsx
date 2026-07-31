@@ -20,6 +20,7 @@ import {
   steadiestBoardHref,
 } from "@/lib/rankings-url";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
+import { TopLeadersCard } from "./TopLeadersCard";
 import { TopPlayerLink } from "./TopPlayerLink";
 
 interface TopPlayersProps {
@@ -41,11 +42,11 @@ export function TopPlayers({
 
   return (
     <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6">
-        <div className="mb-4 flex items-center gap-2 text-amber-400">
-          <Trophy className="h-5 w-5" />
-          <h2 className="text-lg font-semibold text-white">Overall VOR Leaders</h2>
-        </div>
+      <TopLeadersCard
+        icon={<Trophy className="h-5 w-5" />}
+        title="Overall VOR Leaders"
+        accentClass="text-amber-400"
+      >
         <ul className="space-y-3">
           {topOverall.map((player) => (
             <li key={player.id}>
@@ -84,16 +85,14 @@ export function TopPlayers({
             </li>
           ))}
         </ul>
-      </div>
+      </TopLeadersCard>
 
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6">
-        <div className="mb-4 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-emerald-400">
-            <Zap className="h-5 w-5" />
-            <h2 className="text-lg font-semibold text-white">
-              Top Edge (undervalued)
-            </h2>
-          </div>
+      <TopLeadersCard
+        icon={<Zap className="h-5 w-5" />}
+        title="Top Edge (undervalued)"
+        accentClass="text-emerald-400"
+        description="Consensus rank − model rank. Positive = model likes them more than the synthetic market."
+        headerExtra={
           <div className="flex items-center gap-3 text-xs">
             <a
               href={edgeBoardHref()}
@@ -108,11 +107,8 @@ export function TopPlayers({
               Sort by Σσ
             </a>
           </div>
-        </div>
-        <p className="mb-3 text-xs text-slate-500">
-          Consensus rank − model rank. Positive = model likes them more than
-          the synthetic market.
-        </p>
+        }
+      >
         <ul className="space-y-3">
           {topEdge.map((player) => (
             <li key={player.id}>
@@ -143,27 +139,24 @@ export function TopPlayers({
             </li>
           ))}
         </ul>
-      </div>
+      </TopLeadersCard>
 
       {steadiest.length > 0 && (
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-1">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-cyan-400">
-              <Gauge className="h-5 w-5" />
-              <h2 className="text-lg font-semibold text-white">
-                Steadiest (low Σσ)
-              </h2>
-            </div>
+        <TopLeadersCard
+          icon={<Gauge className="h-5 w-5" />}
+          title="Steadiest (low Σσ)"
+          accentClass="text-cyan-400"
+          className="lg:col-span-2 xl:col-span-1"
+          description="Among skaters with VOR ≥ 2, the five with the tightest Σσ bands."
+          headerExtra={
             <a
               href={steadiestBoardHref()}
               className="text-xs text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               Board view
             </a>
-          </div>
-          <p className="mb-3 text-xs text-slate-500">
-            Among skaters with VOR ≥ 2, the five with the tightest Σσ bands.
-          </p>
+          }
+        >
           <ul className="space-y-3">
             {steadiest.map((player) => (
               <li key={player.id}>
@@ -191,14 +184,15 @@ export function TopPlayers({
               </li>
             ))}
           </ul>
-        </div>
+        </TopLeadersCard>
       )}
 
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3">
-        <div className="mb-4 flex items-center gap-2 text-cyan-400">
-          <Target className="h-5 w-5" />
-          <h2 className="text-lg font-semibold text-white">By Position</h2>
-        </div>
+      <TopLeadersCard
+        icon={<Target className="h-5 w-5" />}
+        title="By Position"
+        accentClass="text-cyan-400"
+        className="lg:col-span-2 xl:col-span-3"
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           {topByPosition.map(({ position, players: posPlayers }) => (
             <div key={position} className="rounded-xl border border-white/5 p-3">
@@ -239,7 +233,7 @@ export function TopPlayers({
             </div>
           ))}
         </div>
-      </div>
+      </TopLeadersCard>
 
       <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3">
         <div className="mb-4 flex items-center gap-2 text-emerald-400">
