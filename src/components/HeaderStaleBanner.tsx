@@ -18,7 +18,8 @@ export function HeaderStaleBanner({
           : "border border-amber-500/30 bg-amber-500/10 text-amber-100/90"
       }`}
     >
-      Rankings data is {Math.floor(ageDays)} days old
+      Rankings data is{" "}
+      <span className="tabular-nums">{Math.floor(ageDays)}</span> days old
       {veryStale ? " (refresh urgently)" : ""} — re-run{" "}
       <code className={veryStale ? "text-rose-200" : "text-amber-200"}>
         npm run generate
