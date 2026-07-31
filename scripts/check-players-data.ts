@@ -93,6 +93,21 @@ if (overallOne?.isGoalie) {
   );
 }
 
+const topFiveNames = players
+  .filter((p) => p.rank <= 5)
+  .map((p) => p.name)
+  .join(" | ");
+if (
+  players.length > 500 &&
+  !/Celebrini|MacKinnon|McDavid|Draisaitl|Matthews|Hughes|Rantanen|Kucherov|Seider/i.test(
+    topFiveNames,
+  )
+) {
+  warnings.push(
+    `top-5 looks unusual (${topFiveNames}) — verify soft-cap / regenerate`,
+  );
+}
+
 const inactiveIds = loadInactivePlayerIds();
 const inactiveOnBoard = players.filter((p) => inactiveIds.has(p.id));
 if (inactiveOnBoard.length > 0) {
