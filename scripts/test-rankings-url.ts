@@ -13,6 +13,7 @@ import {
   rankingsHashShouldFocusSearch,
   rankingsShareUrl,
   rankingsUrlSearch,
+  rankingsBoardRouterHref,
   rankingsUrlSyncHref,
   sigmaBoardHref,
   steadiestBoardHref,
@@ -221,6 +222,18 @@ assert(
   rankingsUrlSyncHref("/", "pos=D", "#rankings", "/fantasy-hockey-vor") ===
     "/fantasy-hockey-vor/?pos=D#rankings",
   "sync href basePath + query + hash",
+);
+assert(
+  rankingsBoardRouterHref("/", "pos=C") === "/?pos=C",
+  "router href query only (no basePath)",
+);
+assert(
+  rankingsBoardRouterHref("/", "") === "/",
+  "router href omits empty query",
+);
+assert(
+  rankingsBoardRouterHref("/board", "sort=name") === "/board?sort=name",
+  "router href keeps pathname",
 );
 
 assert(

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Position } from "@/lib/types";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
+import { withPinnedWindowScroll } from "@/lib/board-dom";
 import {
   nextRankingsUrlSyncAction,
   parseLiveRankingsUrl,
+  rankingsBoardRouterHref,
   rankingsUrlSearch,
-  rankingsUrlSyncHref,
   type RankingsUrlState,
 } from "@/lib/rankings-url";
 
@@ -35,6 +36,7 @@ export function useRankingsUrlSync({
   onHydrate,
 }: RankingsUrlSyncInput): void {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const pathname = usePathname();
   const lastPushedRef = useRef<string | null>(null);
   const onHydrateRef = useRef(onHydrate);
@@ -42,6 +44,22 @@ export function useRankingsUrlSync({
   useEffect(() => {
     onHydrateRef.current = onHydrate;
   }, [onHydrate]);
+
+  // Back/Forward: hydrate from the live address bar even if searchParams lag.
+  useEffect(() => {
+    function onPopState() {
+      const urlState = parseLiveRankingsUrl(
+        { toString: () => "" },
+        window.location.search,
+      );
+      const urlSearch = rankingsUrlSearch(urlState);
+      if (urlSearch === lastPushedRef.current) return;
+      lastPushedRef.current = urlSearch;
+      onHydrateRef.current(urlState);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   useEffect(() => {
     const stateSearch = rankingsUrlSearch({
@@ -73,17 +91,15 @@ export function useRankingsUrlSync({
     }
 
     lastPushedRef.current = action.search;
-    // App Router `router.replace(..., { scroll: false })` still scrolls to top
-    // on query-only soft navigations (Next 16 + static export). Use the patched
-    // `history.replaceState` so searchParams update without scroll handling.
-    // Passing `null` lets Next copy internals and dispatch ACTION_RESTORE.
-    const hash =
-      typeof window !== "undefined" ? window.location.hash : "";
-    window.history.replaceState(
-      null,
-      "",
-      rankingsUrlSyncHref(pathname, action.search, hash),
-    );
+    // Query-only sync must not re-attach #rankings (hash scrolling) and must
+    // keep App Router searchParams/history coherent. `history.replaceState`
+    // left Next's renderedSearch stale and broke subsequent navigations;
+    // `router.replace(..., { scroll: false })` still jumps scroll on static
+    // export — pin scrollY across the replace.
+    const href = rankingsBoardRouterHref(pathname, action.search);
+    withPinnedWindowScroll(() => {
+      router.replace(href, { scroll: false });
+    });
   }, [
     position,
     query,
@@ -93,6 +109,7 @@ export function useRankingsUrlSync({
     hideDepthGoalies,
     statRanges,
     pathname,
+    router,
     searchParams,
   ]);
 }

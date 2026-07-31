@@ -19,6 +19,7 @@ import {
   scrollExpandedRowIntoView,
   scrollPageTop,
   scrollToRankings,
+  withPinnedWindowScroll,
   stickyAwareScrollDelta,
   syncBoardStickyChromeHeight,
   unionVerticalBounds,
@@ -134,6 +135,12 @@ assert(
   unionVerticalBounds({ top: 100, bottom: 140 }, null).top === 100,
   "union without panel",
 );
+
+let pinnedWrote = false;
+withPinnedWindowScroll(() => {
+  pinnedWrote = true;
+});
+assert(pinnedWrote, "withPinnedWindowScroll invokes write");
 
 if (failed) process.exit(1);
 console.log("OK: board-dom");

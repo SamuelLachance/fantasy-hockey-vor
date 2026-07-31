@@ -73,6 +73,41 @@ export function focusAfterActiveFilterClear(): void {
   });
 }
 
+/**
+ * Run a write (e.g. router.replace) while pinning window scroll briefly.
+ * Next App Router can still jump to top on query-only soft navigations even
+ * with `{ scroll: false }` — restore scrollY across rAF + a short scroll lock.
+ */
+export function withPinnedWindowScroll(write: () => void): void {
+  if (typeof window === "undefined") {
+    write();
+    return;
+  }
+  const x = window.scrollX;
+  const y = window.scrollY;
+  let pinning = true;
+  const restore = () => {
+    if (!pinning) return;
+    if (window.scrollX !== x || window.scrollY !== y) {
+      window.scrollTo(x, y);
+    }
+  };
+  const onScroll = () => restore();
+  window.addEventListener("scroll", onScroll, { passive: true });
+  write();
+  restore();
+  requestAnimationFrame(() => {
+    restore();
+    requestAnimationFrame(() => {
+      restore();
+      window.setTimeout(() => {
+        pinning = false;
+        window.removeEventListener("scroll", onScroll);
+      }, 120);
+    });
+  });
+}
+
 /** Smooth (or instant) scroll helpers for board shortcuts. */
 export function scrollPageTop(): void {
   if (typeof window === "undefined") return;

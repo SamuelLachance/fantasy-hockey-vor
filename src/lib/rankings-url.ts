@@ -289,9 +289,9 @@ export function rankingsHashShouldFocusSearch(
 }
 
 /**
- * Href for board URL sync via `history.replaceState`.
- * Includes `basePath` (GitHub Pages) and preserves any hash without going
- * through App Router navigation (which scrolls despite `scroll: false`).
+ * Absolute path + query + hash for the address bar / share links.
+ * Includes GitHub Pages `basePath`. Prefer {@link rankingsBoardRouterHref}
+ * for App Router `router.replace` (Next adds basePath itself).
  */
 export function rankingsUrlSyncHref(
   pathname: string,
@@ -305,4 +305,16 @@ export function rankingsUrlSyncHref(
   const fragment =
     !hash || hash.startsWith("#") ? hash : `#${hash}`;
   return `${path}${qs}${fragment}`;
+}
+
+/**
+ * App-relative href for board URL sync via `router.replace`.
+ * Omits `#rankings` so query-only sync does not re-trigger hash scrolling.
+ */
+export function rankingsBoardRouterHref(
+  pathname: string,
+  search: string,
+): string {
+  const path = pathname || "/";
+  return search ? `${path}?${search}` : path;
 }
