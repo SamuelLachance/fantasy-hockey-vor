@@ -341,6 +341,7 @@ const files: Record<string, string[]> = {
     "Back to rankings",
     "homeRankingsHref",
     "error.digest",
+    "Fantasy Hockey VOR",
   ],
   "src/app/global-error.tsx": [
     "Try again",

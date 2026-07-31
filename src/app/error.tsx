@@ -16,6 +16,9 @@ export default function Error({
 
   return (
     <main className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+      <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">
+        Fantasy Hockey VOR
+      </p>
       <h1 className="text-2xl font-semibold text-white">Something went wrong</h1>
       <p className="max-w-md text-sm text-slate-400">
         The rankings UI hit an unexpected error. Your data files are usually
