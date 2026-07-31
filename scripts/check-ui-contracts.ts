@@ -178,6 +178,12 @@ const files: Record<string, string[]> = {
     "BOARD_SHORTCUT_ROWS",
     "board-shortcuts-dialog",
     "previouslyFocused",
+    "trapDialogTabKey",
+    "dialogFocusableElements",
+  ],
+  "src/lib/dialog-focus.ts": [
+    "dialogFocusableElements",
+    "trapDialogTabKey",
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",

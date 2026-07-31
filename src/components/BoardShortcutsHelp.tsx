@@ -2,6 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { BOARD_SHORTCUT_ROWS } from "@/lib/board-shortcuts";
+import {
+  dialogFocusableElements,
+  trapDialogTabKey,
+} from "@/lib/dialog-focus";
 
 interface BoardShortcutsHelpProps {
   open: boolean;
@@ -23,24 +27,13 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
     closeRef.current?.focus();
 
     function onTab(e: KeyboardEvent) {
-      if (e.key !== "Tab") return;
       const root = document.getElementById("board-shortcuts-dialog");
       if (!root) return;
-      const focusable = [
-        ...root.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ].filter((el) => !el.hasAttribute("disabled"));
-      if (focusable.length === 0) return;
-      const first = focusable[0]!;
-      const last = focusable[focusable.length - 1]!;
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      trapDialogTabKey(
+        e,
+        dialogFocusableElements(root),
+        document.activeElement,
+      );
     }
     window.addEventListener("keydown", onTab);
     return () => {
