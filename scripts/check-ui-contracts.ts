@@ -277,6 +277,7 @@ const files: Record<string, string[]> = {
     "nextBoardPositionIndex",
     "aria-controls",
     "rankings-board-table",
+    'aria-keyshortcuts="[ ]"',
   ],
   "src/lib/board-positions.ts": ["BOARD_POSITIONS", "nextBoardPositionIndex"],
   "src/lib/rankings-url.ts": [
