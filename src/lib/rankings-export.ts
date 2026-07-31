@@ -171,10 +171,13 @@ export function exportGroupAriaLabel(): string {
 /** Tooltip for an export format button. */
 export function exportButtonTitle(
   kind: "csv" | "json",
-  opts?: { searchPending?: boolean },
+  opts?: { searchPending?: boolean; empty?: boolean },
 ): string {
   if (opts?.searchPending) {
     return "Wait for search to finish updating before exporting";
+  }
+  if (opts?.empty) {
+    return "No players to export — clear filters or search";
   }
   return kind === "csv"
     ? "Download filtered rankings as CSV"

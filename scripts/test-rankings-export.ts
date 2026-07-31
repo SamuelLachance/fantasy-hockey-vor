@@ -116,6 +116,16 @@ assert(
   exportButtonTitle("csv", { searchPending: true }).includes("search"),
   "pending title",
 );
+assert(
+  exportButtonTitle("csv", { empty: true }).includes("No players"),
+  "empty title",
+);
+assert(
+  exportButtonTitle("csv", { searchPending: true, empty: true }).includes(
+    "search",
+  ),
+  "pending beats empty",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-export");
