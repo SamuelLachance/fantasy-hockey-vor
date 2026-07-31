@@ -18,8 +18,11 @@ export function useBoardDocumentTitle(opts: {
       query,
       playerName,
     });
+  }, [position, query, playerName]);
+
+  useEffect(() => {
     return () => {
       document.title = siteDefaultTitle();
     };
-  }, [position, query, playerName]);
+  }, []);
 }

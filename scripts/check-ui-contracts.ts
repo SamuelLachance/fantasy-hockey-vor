@@ -75,6 +75,8 @@ const files: Record<string, string[]> = {
     "useBoardDocumentTitle",
     "boardDocumentTitle",
     "document.title",
+    "siteDefaultTitle",
+    "return () =>",
   ],
   "src/lib/board-document-title.ts": [
     "boardDocumentTitle",
