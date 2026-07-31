@@ -26,8 +26,31 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
+
+    function onTab(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const root = document.getElementById("board-shortcuts-dialog");
+      if (!root) return;
+      const focusable = [
+        ...root.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((el) => !el.hasAttribute("disabled"));
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    window.addEventListener("keydown", onTab);
     return () => {
       document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onTab);
     };
   }, [open]);
 
@@ -41,6 +64,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
       onClick={onClose}
     >
       <div
+        id="board-shortcuts-dialog"
         className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
