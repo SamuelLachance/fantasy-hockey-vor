@@ -1,7 +1,7 @@
 "use client";
 
 import { cycleBoardPosition } from "@/lib/board-positions";
-import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
+import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { startTransition, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -171,9 +171,10 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         onShowAllPositions={() =>
           startTransition(() => board.setPosition("ALL"))
         }
-        canShowAllGoalies={
-          board.hideDepthGoalies && canToggleDepthGoalies(board.position)
-        }
+        canShowAllGoalies={canOfferAllGoalies(
+          board.hideDepthGoalies,
+          board.position,
+        )}
         onShowAllGoalies={() =>
           startTransition(() => board.setHideDepthGoalies(false))
         }

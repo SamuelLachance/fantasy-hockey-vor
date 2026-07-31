@@ -75,6 +75,7 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/goalie-depth-toggle.ts": [
     "canToggleDepthGoalies",
+    "canOfferAllGoalies",
   ],
   "src/components/RankingsBoardChrome.tsx": [
     'aria-label="Board filters"',
