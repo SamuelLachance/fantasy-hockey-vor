@@ -15,7 +15,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "Shift+G", action: "Toggle Starters / All goalies" },
   { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
   { keys: "?", action: "Toggle this help" },
-  { keys: "Esc", action: "Close help / filters / row" },
+  { keys: "Esc", action: "Clear search / close help / filters / row" },
   { keys: "j / ↓", action: "Next player (opens first if none)" },
   { keys: "k / ↑", action: "Previous player (opens last if none)" },
   { keys: "Enter / Space", action: "Expand / collapse focused row" },

@@ -21,6 +21,7 @@ interface RankingsKeyboardInput {
   onCopyBoardLink?: () => void;
   onToggleDepthGoalies?: () => void;
   onLoadMore?: () => void;
+  onClearSearch?: () => void;
 }
 
 /** Global board shortcuts: Esc, /, ?, j/k, r, l, m. */
@@ -38,6 +39,7 @@ export function useRankingsKeyboard({
   onCopyBoardLink,
   onToggleDepthGoalies,
   onLoadMore,
+  onClearSearch,
 }: RankingsKeyboardInput): void {
   // Keep latest handlers/state without rebinding the window listener every render.
   const filteredRef = useRef(filtered);
@@ -53,6 +55,7 @@ export function useRankingsKeyboard({
   const onCopyBoardLinkRef = useRef(onCopyBoardLink);
   const onToggleDepthGoaliesRef = useRef(onToggleDepthGoalies);
   const onLoadMoreRef = useRef(onLoadMore);
+  const onClearSearchRef = useRef(onClearSearch);
 
   useEffect(() => {
     filteredRef.current = filtered;
@@ -68,6 +71,7 @@ export function useRankingsKeyboard({
     onCopyBoardLinkRef.current = onCopyBoardLink;
     onToggleDepthGoaliesRef.current = onToggleDepthGoalies;
     onLoadMoreRef.current = onLoadMore;
+    onClearSearchRef.current = onClearSearch;
   });
 
   useEffect(() => {
@@ -89,7 +93,19 @@ export function useRankingsKeyboard({
           queueMicrotask(focusStatsFilterButton);
           return;
         }
-        if (inField) return;
+        if (inField) {
+          const el = e.target as HTMLInputElement | HTMLTextAreaElement;
+          if (
+            el instanceof HTMLInputElement &&
+            el.type === "search" &&
+            el.value !== "" &&
+            onClearSearchRef.current
+          ) {
+            e.preventDefault();
+            onClearSearchRef.current();
+          }
+          return;
+        }
         setExpandedIdRef.current(null);
         return;
       }

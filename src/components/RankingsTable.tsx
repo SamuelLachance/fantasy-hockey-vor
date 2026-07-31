@@ -94,6 +94,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     onLoadMore: () => {
       if (canLoadMore) loadMore();
     },
+    onClearSearch: () => board.setQuery(""),
   });
 
   return (

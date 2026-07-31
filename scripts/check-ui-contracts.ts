@@ -138,6 +138,7 @@ const files: Record<string, string[]> = {
     "nextExpandedPlayerId",
     "onToggleDepthGoalies",
     "onLoadMore",
+    "onClearSearch",
     'e.key === "G"',
     'e.key === "m"',
   ],
