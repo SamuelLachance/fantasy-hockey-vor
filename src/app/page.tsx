@@ -71,7 +71,7 @@ export default function HomePage() {
           {boardShortcutsFooterChip()}
         </span>
         <span className="mx-2 text-slate-700">·</span>
-        <span className="text-slate-600">
+        <span className="tabular-nums text-slate-600">
           {data.players.length.toLocaleString()} draftable
         </span>
       </footer>
