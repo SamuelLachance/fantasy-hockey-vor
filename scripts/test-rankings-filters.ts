@@ -11,6 +11,8 @@ import type { PlayerProjection } from "../src/lib/types";
 
 assert.equal(parseRangeValue("savePct", "91.2"), 0.912);
 assert.equal(parseRangeValue("savePct", "0.912"), 0.912);
+assert.equal(parseRangeValue("savePct", "91.2%"), 0.912);
+assert.equal(parseRangeValue("savePct", "91,2"), 0.912);
 assert.equal(parseRangeValue("goals", "40"), 40);
 assert.equal(parseRangeValue("goals", ""), undefined);
 

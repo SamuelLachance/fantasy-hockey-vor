@@ -29,11 +29,16 @@ export function vorForFilter(
   return player.vor;
 }
 
+/** Normalize typed range bounds (%, European commas). */
+export function normalizeRangeInput(raw: string): string {
+  return raw.trim().replace(/%/g, "").replace(",", ".");
+}
+
 export function parseRangeValue(
   key: RangeKey,
   raw: string,
 ): number | undefined {
-  const trimmed = raw.trim();
+  const trimmed = normalizeRangeInput(raw);
   if (!trimmed) return undefined;
   const v = Number(trimmed);
   if (!Number.isFinite(v)) return undefined;

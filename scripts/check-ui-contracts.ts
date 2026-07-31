@@ -322,6 +322,7 @@ const files: Record<string, string[]> = {
   "src/components/HeaderRosterNote.tsx": [
     "2C · 2LW · 2RW · 4D · 2G",
     "SV%",
+    'role="note"',
   ],
   "src/components/HeaderStaleBanner.tsx": [
     "npm run generate",
