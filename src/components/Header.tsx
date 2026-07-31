@@ -1,12 +1,13 @@
 "use client";
 
-import { Search, Snowflake } from "lucide-react";
+import { Snowflake } from "lucide-react";
 import { formatCount } from "@/lib/format";
 import { scrollToRankings } from "@/lib/board-dom";
 import {
   isProjectionStale,
   isProjectionVeryStale,
 } from "@/lib/projection-age";
+import { HeaderRosterNote } from "./HeaderRosterNote";
 import { HeaderStaleBanner } from "./HeaderStaleBanner";
 
 interface HeaderProps {
@@ -116,13 +117,7 @@ export function Header({
         {stale && (
           <HeaderStaleBanner ageDays={ageDays} veryStale={veryStale} />
         )}
-        <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
-          <Search className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
-          <p>
-            Roster: 2C · 2LW · 2RW · 4D · 2G daily. Skater cats: G, A, SOG,
-            BLK, HIT, PPP, PIM, FOW. Goalie cats: W, SO, SV, SV%.
-          </p>
-        </div>
+        <HeaderRosterNote />
       </div>
     </header>
   );

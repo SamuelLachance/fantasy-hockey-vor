@@ -189,6 +189,11 @@ const files: Record<string, string[]> = {
     "focusSearch: true",
     "isProjectionStale",
     "HeaderStaleBanner",
+    "HeaderRosterNote",
+  ],
+  "src/components/HeaderRosterNote.tsx": [
+    "2C · 2LW · 2RW · 4D · 2G",
+    "SV%",
   ],
   "src/components/HeaderStaleBanner.tsx": [
     "npm run generate",
