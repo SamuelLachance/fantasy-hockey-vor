@@ -1,6 +1,7 @@
 "use client";
 
 import type { Category, PlayerProjection, Position } from "@/lib/types";
+import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import { PositionFilterTabs } from "./PositionFilterTabs";
 import { RankingsBoardLinkButton } from "./RankingsBoardLinkButton";
 import { RankingsExportButtons } from "./RankingsExportButtons";
@@ -19,6 +20,9 @@ interface RankingsToolbarProps {
   activeFilterCount: number;
   filtered: PlayerProjection[];
   tableCategories: readonly Category[];
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  statRanges: StatRanges;
   linkCopied: boolean;
   linkCopyFailed?: boolean;
   onCopyBoardLink: () => void;
@@ -38,6 +42,9 @@ export function RankingsToolbar({
   activeFilterCount,
   filtered,
   tableCategories,
+  sortKey,
+  sortDir,
+  statRanges,
   linkCopied,
   linkCopyFailed = false,
   onCopyBoardLink,
@@ -60,6 +67,11 @@ export function RankingsToolbar({
           filtered={filtered}
           position={position}
           tableCategories={tableCategories}
+          query={query}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          hideDepthGoalies={hideDepthGoalies}
+          statRanges={statRanges}
         />
         <RankingsBoardLinkButton
           linkCopied={linkCopied}

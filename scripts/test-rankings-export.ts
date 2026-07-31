@@ -40,6 +40,13 @@ const sample = {
 } as unknown as PlayerProjection;
 
 const cats = ["goals", "assists"] as const;
+const filters = {
+  query: "mcd",
+  sortKey: "vor" as const,
+  sortDir: "desc" as const,
+  hideDepthGoalies: true,
+  statRanges: { vor: { min: "2", max: "" } },
+};
 
 const rows = rankingsToJsonRows([sample], "C", cats);
 assert(rows[0]!.rank === 2, "position rank");
@@ -55,19 +62,25 @@ assert(
 
 const bundle = rankingsJsonExport(
   [sample],
-  "C",
-  cats,
+  { position: "C", categories: cats, filters },
   "2026-07-30T00:00:00.000Z",
 );
 assert(bundle.filterPosition === "C", "bundle filter");
 assert(bundle.vorScope === "position", "bundle vorScope");
 assert(bundle.playerCount === 1, "bundle count");
 assert(bundle.categories.join(",") === "goals,assists", "bundle categories");
+assert(bundle.filters.query === "mcd", "bundle query provenance");
+assert(bundle.filters.sortKey === "vor", "bundle sort provenance");
+assert(bundle.filters.statRanges.vor?.min === "2", "bundle range provenance");
 assert(bundle.players[0]!.vor === 1.235, "bundle rows");
 assert(bundle.players[0]!.stats.goals === 40, "bundle stats");
 assert(bundle.exportedAt.startsWith("2026"), "bundle timestamp");
 assert(
-  rankingsJsonExport([sample], "ALL", cats).vorScope === "overall",
+  rankingsJsonExport([sample], {
+    position: "ALL",
+    categories: cats,
+    filters,
+  }).vorScope === "overall",
   "ALL overall scope",
 );
 

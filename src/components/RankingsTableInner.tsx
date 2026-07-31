@@ -127,6 +127,8 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         activeFilterCount={board.activeFilterCount}
         filtered={board.filtered}
         tableCategories={board.tableCategories}
+        sortKey={board.sortKey}
+        sortDir={board.sortDir}
         boardLinkStatus={boardLinkStatus}
         onCopyBoardLink={copyBoardLink}
         hideDepthGoalies={board.hideDepthGoalies}

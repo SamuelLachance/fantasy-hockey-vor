@@ -2,6 +2,7 @@
 
 import { Download } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
+import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import {
   downloadRankingsCsv,
   downloadRankingsJson,
@@ -15,6 +16,11 @@ interface RankingsExportButtonsProps {
   filtered: PlayerProjection[];
   position: Position | "ALL";
   tableCategories: readonly Category[];
+  query: string;
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
+  hideDepthGoalies: boolean;
+  statRanges: StatRanges;
 }
 
 /** CSV/JSON download group with brief Saved flash. */
@@ -22,6 +28,11 @@ export function RankingsExportButtons({
   filtered,
   position,
   tableCategories,
+  query,
+  sortKey,
+  sortDir,
+  hideDepthGoalies,
+  statRanges,
 }: RankingsExportButtonsProps) {
   const [exportFlash, flashExport] = useTimedFlash<"idle" | "csv" | "json">(
     "idle",
@@ -52,7 +63,17 @@ export function RankingsExportButtons({
         type="button"
         disabled={empty}
         onClick={() => {
-          downloadRankingsJson(filtered, position, tableCategories);
+          downloadRankingsJson(filtered, {
+            position,
+            categories: tableCategories,
+            filters: {
+              query,
+              sortKey,
+              sortDir,
+              hideDepthGoalies,
+              statRanges,
+            },
+          });
           flashExport("json");
         }}
         className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"

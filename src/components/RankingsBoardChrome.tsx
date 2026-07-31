@@ -2,7 +2,7 @@
 
 import { startTransition } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
+import type { RangeKey, SortKey, StatRanges } from "@/lib/rankings-filters";
 import { focusBoardSearch, focusStatsFilterButton } from "@/lib/board-dom";
 import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
 import { boardFiltersRegionLabel } from "@/lib/stat-filters-copy";
@@ -20,6 +20,8 @@ interface RankingsBoardChromeProps {
   activeFilterCount: number;
   filtered: PlayerProjection[];
   tableCategories: readonly Category[];
+  sortKey: SortKey;
+  sortDir: "asc" | "desc";
   boardLinkStatus: "idle" | "ok" | "err";
   onCopyBoardLink: () => void;
   hideDepthGoalies: boolean;
@@ -44,6 +46,8 @@ export function RankingsBoardChrome({
   activeFilterCount,
   filtered,
   tableCategories,
+  sortKey,
+  sortDir,
   boardLinkStatus,
   onCopyBoardLink,
   hideDepthGoalies,
@@ -73,6 +77,9 @@ export function RankingsBoardChrome({
         activeFilterCount={activeFilterCount}
         filtered={filtered}
         tableCategories={tableCategories}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        statRanges={statRanges}
         linkCopied={boardLinkStatus === "ok"}
         linkCopyFailed={boardLinkStatus === "err"}
         onCopyBoardLink={onCopyBoardLink}
