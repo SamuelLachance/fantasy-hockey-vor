@@ -21,20 +21,31 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
   const [detailsError, setDetailsError] = useState(false);
 
   useEffect(() => {
-    return scheduleIdle(() => {
+    let cancelled = false;
+    const cancelIdle = scheduleIdle(() => {
       void fetchPlayerDetails()
         .then((d) => {
+          if (cancelled) return;
           setDetailsError(false);
           setDetails(d);
         })
-        .catch(() => setDetailsError(true));
+        .catch(() => {
+          // Stay silent on idle failure — expand/retry surfaces the error.
+        });
     });
+    return () => {
+      cancelled = true;
+      cancelIdle();
+    };
   }, []);
 
   useEffect(() => {
     // Retry on expand even after a prior failure (detailsError must not block).
     if (expandedId == null || details != null) return;
     let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setDetailsError(false);
+    });
     fetchPlayerDetails()
       .then((d) => {
         if (!cancelled) {
