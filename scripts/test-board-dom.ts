@@ -13,6 +13,7 @@ import {
   boardSafeAreaInsetTop,
   boardStickyChromeHeight,
   boardStickyTopInset,
+  boardVisualViewportFrame,
   focusBoardSearch,
   focusBoardSearchWhenReady,
   focusPlayerRow,
@@ -127,6 +128,28 @@ assert(
 );
 assert(typeof boardSafeAreaInsetTop === "function", "safe-area helper");
 assert(boardSafeAreaInsetTop(null) === 0, "safe-area null → 0");
+assert(
+  boardVisualViewportFrame(null).height === 0,
+  "visualViewport null → empty frame",
+);
+assert(
+  boardVisualViewportFrame({ innerHeight: 800 }).height === 800,
+  "falls back to innerHeight",
+);
+assert(
+  boardVisualViewportFrame({
+    innerHeight: 800,
+    visualViewport: { offsetTop: 40, height: 500 },
+  }).offsetTop === 40,
+  "uses visualViewport offsetTop",
+);
+assert(
+  boardVisualViewportFrame({
+    innerHeight: 800,
+    visualViewport: { offsetTop: 40, height: 500 },
+  }).height === 500,
+  "uses visualViewport height",
+);
 assert(
   stickyAwareScrollDelta(50, 90, 120, 700) === 50 - 128,
   "scroll up out from under sticky chrome",

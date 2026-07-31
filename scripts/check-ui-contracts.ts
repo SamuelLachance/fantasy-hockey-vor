@@ -486,6 +486,8 @@ const files: Record<string, string[]> = {
     "scrollExpandedRowIntoView",
     "isBoardSortHeaderFocus",
     "stickyAwareScrollDelta",
+    "boardVisualViewportFrame",
+    "visualViewport",
     "unionVerticalBounds",
     "boardStickyTopInset",
     "boardStickyChromeHeight",

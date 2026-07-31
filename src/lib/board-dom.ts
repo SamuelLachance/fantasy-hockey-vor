@@ -252,8 +252,32 @@ export function syncBoardStickyChromeHeight(
 }
 
 /**
+ * Visible frame for sticky-aware scroll (mobile URL bar / keyboard).
+ * Coordinates match getBoundingClientRect (layout viewport); callers should
+ * subtract offsetTop before stickyAwareScrollDelta.
+ */
+export function boardVisualViewportFrame(
+  win: {
+    innerHeight: number;
+    visualViewport?: { offsetTop: number; height: number } | null;
+  } | null =
+    typeof window !== "undefined" ? window : null,
+): { offsetTop: number; height: number } {
+  if (!win) return { offsetTop: 0, height: 0 };
+  const vv = win.visualViewport;
+  if (vv && typeof vv.height === "number" && vv.height > 0) {
+    return {
+      offsetTop: Number.isFinite(vv.offsetTop) ? vv.offsetTop : 0,
+      height: vv.height,
+    };
+  }
+  return { offsetTop: 0, height: win.innerHeight };
+}
+
+/**
  * Vertical scrollBy delta so a row clears sticky top chrome and stays in the
  * viewport. Pure — used by expand / j-k scroll.
+ * Row/sticky coords must be relative to the visual viewport top (offsetTop = 0).
  */
 export function stickyAwareScrollDelta(
   rowTop: number,
@@ -303,11 +327,12 @@ function scrollExpandedTargetIntoView(
     row.getBoundingClientRect(),
     panel?.getBoundingClientRect(),
   );
+  const frame = boardVisualViewportFrame();
   const delta = stickyAwareScrollDelta(
-    bounds.top,
-    bounds.bottom,
+    bounds.top - frame.offsetTop,
+    bounds.bottom - frame.offsetTop,
     boardStickyTopInset(),
-    window.innerHeight,
+    frame.height,
   );
   if (delta !== 0) {
     window.scrollBy({ top: delta, behavior });
