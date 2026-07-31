@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { BOARD_SHORTCUT_ROWS } from "@/lib/board-shortcuts";
 import { useDialogFocusTrap } from "@/hooks/useDialogFocusTrap";
 
@@ -8,17 +9,21 @@ interface BoardShortcutsHelpProps {
   onClose: () => void;
 }
 
-export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
-  useDialogFocusTrap(open, "board-shortcuts-dialog", onClose);
+const DIALOG_ROOT_ID = "board-shortcuts-dialog";
 
-  if (!open) return null;
-  return (
+export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
+  useDialogFocusTrap(open, DIALOG_ROOT_ID, onClose);
+
+  if (!open || typeof document === "undefined") return null;
+
+  return createPortal(
     <div
+      data-dialog-portal={DIALOG_ROOT_ID}
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm motion-reduce:backdrop-blur-none"
       onClick={onClose}
     >
       <div
-        id="board-shortcuts-dialog"
+        id={DIALOG_ROOT_ID}
         role="dialog"
         aria-modal="true"
         aria-labelledby="board-shortcuts-title"
@@ -54,6 +59,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
           ))}
         </ul>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

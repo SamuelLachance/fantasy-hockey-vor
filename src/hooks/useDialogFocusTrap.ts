@@ -39,6 +39,17 @@ export function useDialogFocusTrap(
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
+    // Mark other body children inert so browse-mode AT cannot reach behind
+    // the modal (Tab trap alone is not enough).
+    const inerted: HTMLElement[] = [];
+    for (const child of Array.from(document.body.children)) {
+      if (!(child instanceof HTMLElement)) continue;
+      if (child.dataset.dialogPortal === rootId) continue;
+      if (child.hasAttribute("inert")) continue;
+      child.setAttribute("inert", "");
+      inerted.push(child);
+    }
+
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape" && onCloseRef.current) {
         e.preventDefault();
@@ -56,6 +67,7 @@ export function useDialogFocusTrap(
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
+      for (const el of inerted) el.removeAttribute("inert");
       window.removeEventListener("keydown", onKey);
       const restore = previouslyFocused.current;
       if (restore?.isConnected) restore.focus();

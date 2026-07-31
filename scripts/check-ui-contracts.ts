@@ -298,6 +298,8 @@ const files: Record<string, string[]> = {
     "Board shortcuts",
     "BOARD_SHORTCUT_ROWS",
     "board-shortcuts-dialog",
+    "createPortal",
+    "data-dialog-portal",
     "useDialogFocusTrap",
   ],
   "src/hooks/useDialogFocusTrap.ts": [
@@ -307,6 +309,8 @@ const files: Record<string, string[]> = {
     "useLayoutEffect",
     "previouslyFocused",
     "isConnected",
+    "dataset.dialogPortal",
+    'setAttribute("inert"',
     "Escape",
   ],
   "src/lib/dialog-focus.ts": [
