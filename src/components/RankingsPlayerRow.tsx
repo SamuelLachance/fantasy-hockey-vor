@@ -93,7 +93,7 @@ export function RankingsPlayerRow({
         aria-label={boardRowAriaLabel(player, position, idx)}
         onClick={onToggle}
         onKeyDown={onRowKeyDown}
-        className={`cursor-pointer transition hover:bg-cyan-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/80 ${
+        className={`cursor-pointer scroll-mt-[var(--board-sticky-chrome-height,0px)] transition hover:bg-cyan-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/80 ${
           isExpanded ? "bg-cyan-500/10" : ""
         }`}
       >
