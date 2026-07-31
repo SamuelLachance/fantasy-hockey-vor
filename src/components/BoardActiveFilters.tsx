@@ -7,6 +7,10 @@ import {
   boardActiveStatChips,
 } from "@/lib/board-active-filter-chips";
 import { clearBoardFiltersCopy } from "@/lib/board-empty-recovery";
+import {
+  focusAfterActiveFilterClear,
+  focusBoardSearch,
+} from "@/lib/board-dom";
 import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
 
 interface BoardActiveFiltersProps {
@@ -64,7 +68,10 @@ export function BoardActiveFilters({
           <button
             type="button"
             aria-label="Clear position filter"
-            onClick={onClearPosition}
+            onClick={() => {
+              onClearPosition();
+              focusAfterActiveFilterClear();
+            }}
             className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
@@ -92,7 +99,10 @@ export function BoardActiveFilters({
           <button
             type="button"
             aria-label="Show starter goalies only"
-            onClick={onShowStarterGoalies}
+            onClick={() => {
+              onShowStarterGoalies();
+              focusAfterActiveFilterClear();
+            }}
             className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
@@ -115,7 +125,10 @@ export function BoardActiveFilters({
           <button
             type="button"
             aria-label={`Remove ${chip.label} filter`}
-            onClick={() => onRemoveStat(chip.key)}
+            onClick={() => {
+              onRemoveStat(chip.key);
+              focusAfterActiveFilterClear();
+            }}
             className="rounded-full p-1 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
@@ -129,10 +142,13 @@ export function BoardActiveFilters({
         <button
           type="button"
           onClick={() => {
+            const preferSearch = q !== "";
             if (position !== "ALL") onClearPosition();
-            if (q !== "") onClearQuery();
+            if (preferSearch) onClearQuery();
             if (hasStatFilters) onClearStats();
             if (showingAllGoalies) onShowStarterGoalies();
+            if (preferSearch) queueMicrotask(focusBoardSearch);
+            else focusAfterActiveFilterClear();
           }}
           className="rounded-full px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >

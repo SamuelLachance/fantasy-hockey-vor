@@ -43,6 +43,36 @@ export function focusBoardSearch(): void {
     ?.focus();
 }
 
+/** Focus a position filter tab (defaults to ALL). */
+export function focusBoardPositionTab(position: "ALL" | string = "ALL"): void {
+  if (typeof document === "undefined") return;
+  document.getElementById(`board-pos-tab-${position}`)?.focus();
+}
+
+/**
+ * After an active-filter chip unmounts, park focus on another chip control or
+ * the ALL position tab so keyboard users are not dumped onto <body>.
+ */
+export function focusAfterActiveFilterClear(): void {
+  if (typeof document === "undefined") return;
+  queueMicrotask(() => {
+    const strip = document.querySelector<HTMLElement>(
+      '[aria-label="Active board filters"]',
+    );
+    if (strip) {
+      const next =
+        strip.querySelector<HTMLButtonElement>(
+          'button[aria-label^="Clear"], button[aria-label^="Remove"], button[aria-label="Show starter goalies only"]',
+        ) ?? strip.querySelector<HTMLButtonElement>("button");
+      if (next) {
+        next.focus();
+        return;
+      }
+    }
+    focusBoardPositionTab("ALL");
+  });
+}
+
 /** Smooth (or instant) scroll helpers for board shortcuts. */
 export function scrollPageTop(): void {
   if (typeof window === "undefined") return;

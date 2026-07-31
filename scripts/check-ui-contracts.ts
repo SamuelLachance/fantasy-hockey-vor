@@ -331,6 +331,8 @@ const files: Record<string, string[]> = {
     "focusStatsFilterButton",
     "focusFirstStatFilterInput",
     "focusBoardSearch",
+    "focusBoardPositionTab",
+    "focusAfterActiveFilterClear",
     'aria-keyshortcuts="f"',
     "STICKY_NAME_SHADOW",
     "STICKY_NAME_BASE",
