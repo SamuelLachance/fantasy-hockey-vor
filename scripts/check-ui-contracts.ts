@@ -16,6 +16,8 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsTableInner.tsx": [
     'id="rankings"',
+    "rankings-heading",
+    "VOR rankings",
     "usePlayerDetails",
     "useRankingsBoardState",
     "useRankingsUrlSync",
