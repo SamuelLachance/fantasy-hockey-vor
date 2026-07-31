@@ -50,7 +50,7 @@ interface RankingsTableProps {
 }
 
 /** Initial paint budget — infinite scroll grows by this step. */
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 60;
 
 function RankingsTableInner({ players }: RankingsTableProps) {
   const searchParams = useSearchParams();
@@ -229,14 +229,16 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }
 
   function updateRange(key: RangeKey, field: "min" | "max", value: string) {
-    setStatRanges((prev) => ({
-      ...prev,
-      [key]: { min: "", max: "", ...prev[key], [field]: value },
-    }));
+    startTransition(() => {
+      setStatRanges((prev) => ({
+        ...prev,
+        [key]: { min: "", max: "", ...prev[key], [field]: value },
+      }));
+    });
   }
 
   function clearStatFilters() {
-    setStatRanges({});
+    startTransition(() => setStatRanges({}));
   }
 
   const tableCategories = boardCategories(position);
