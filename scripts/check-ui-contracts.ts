@@ -20,8 +20,13 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "RankingsBoardFooter",
     "useHorizontalScrollShadow",
-    "boardDocumentTitle",
+    "useBoardDocumentTitle",
     "hashchange",
+  ],
+  "src/hooks/useBoardDocumentTitle.ts": [
+    "useBoardDocumentTitle",
+    "boardDocumentTitle",
+    "document.title",
   ],
   "src/lib/board-document-title.ts": [
     "boardDocumentTitle",
@@ -131,10 +136,12 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/rankings-export.ts": [
     "rankingsToJsonRows",
+    "rankingsJsonExport",
     "rankingsCsvString",
     "downloadRankingsCsv",
     "downloadRankingsJson",
     "vorForFilter",
+    "vorScope",
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "ExpandedPlayerMeta",
