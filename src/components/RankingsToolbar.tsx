@@ -1,16 +1,12 @@
 "use client";
 
 import { startTransition } from "react";
-import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
+import { CircleHelp, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import {
-  downloadRankingsCsv,
-  downloadRankingsJson,
-} from "@/lib/rankings-export";
 import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 import { GOALIE_DEPTH_MAX_GP } from "@/lib/goalie-depth";
-import { useTimedFlash } from "@/hooks/useTimedFlash";
 import { PositionFilterTabs } from "./PositionFilterTabs";
+import { RankingsExportButtons } from "./RankingsExportButtons";
 
 interface RankingsToolbarProps {
   position: Position | "ALL";
@@ -49,9 +45,7 @@ export function RankingsToolbar({
   showDepthToggle,
   onOpenHelp,
 }: RankingsToolbarProps) {
-  const [exportFlash, flashExport] = useTimedFlash<"idle" | "csv" | "json">(
-    "idle",
-  );
+  const nearQueryCap = query.length >= HIGHLIGHT_QUERY_MAX - 8;
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -62,6 +56,7 @@ export function RankingsToolbar({
             type="search"
             aria-label="Search players or teams"
             aria-keyshortcuts="Slash"
+            aria-describedby={nearQueryCap ? "rankings-search-limit" : undefined}
             autoComplete="off"
             spellCheck={false}
             maxLength={HIGHLIGHT_QUERY_MAX}
@@ -79,6 +74,14 @@ export function RankingsToolbar({
             >
               <X className="h-4 w-4" />
             </button>
+          )}
+          {nearQueryCap && (
+            <span
+              id="rankings-search-limit"
+              className="pointer-events-none absolute -bottom-5 right-1 text-[10px] tabular-nums text-slate-500"
+            >
+              {query.length}/{HIGHLIGHT_QUERY_MAX}
+            </span>
           )}
         </div>
         <button
@@ -101,39 +104,11 @@ export function RankingsToolbar({
             </span>
           )}
         </button>
-        <div
-          className="inline-flex shrink-0 overflow-hidden rounded-xl border border-white/10"
-          role="group"
-          aria-label="Export filtered rankings"
-        >
-          <button
-            type="button"
-            disabled={filtered.length === 0}
-            onClick={() => {
-              downloadRankingsCsv(filtered, position, tableCategories);
-              flashExport("csv");
-            }}
-            className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Download filtered rankings as CSV"
-            aria-live="polite"
-          >
-            <Download className="h-4 w-4" aria-hidden="true" />
-            {exportFlash === "csv" ? "Saved" : "CSV"}
-          </button>
-          <button
-            type="button"
-            disabled={filtered.length === 0}
-            onClick={() => {
-              downloadRankingsJson(filtered, position);
-              flashExport("json");
-            }}
-            className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
-            title="Download filtered rankings as JSON"
-            aria-live="polite"
-          >
-            {exportFlash === "json" ? "Saved" : "JSON"}
-          </button>
-        </div>
+        <RankingsExportButtons
+          filtered={filtered}
+          position={position}
+          tableCategories={tableCategories}
+        />
         <button
           type="button"
           onClick={onCopyBoardLink}
