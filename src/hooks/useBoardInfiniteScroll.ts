@@ -14,6 +14,8 @@ export const BOARD_PAGE_SIZE = 80;
 interface BoardInfiniteScrollResult {
   loadMoreRef: RefObject<HTMLDivElement | null>;
   renderCount: number;
+  loadMore: () => void;
+  canLoadMore: boolean;
 }
 
 /** Progressive row window + intersection observer for the rankings table. */
@@ -42,14 +44,23 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
     );
   }, [expandedId, filtered, visibleCount, pageSize]);
 
+  const filteredLength = filtered.length;
+  const canLoadMore = filteredLength > renderCount;
+
+  function loadMore() {
+    startTransition(() => {
+      setVisibleCount((c) => Math.min(c + pageSize, filteredLength));
+    });
+  }
+
   useEffect(() => {
     const el = loadMoreRef.current;
-    if (!el || filtered.length <= renderCount) return;
+    if (!el || !canLoadMore) return;
     const obs = new IntersectionObserver(
       (entries) => {
         if (entries.some((e) => e.isIntersecting)) {
           startTransition(() => {
-            setVisibleCount((c) => Math.min(c + pageSize, filtered.length));
+            setVisibleCount((c) => Math.min(c + pageSize, filteredLength));
           });
         }
       },
@@ -57,10 +68,12 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
     );
     obs.observe(el);
     return () => obs.disconnect();
-  }, [filtered.length, renderCount, pageSize]);
+  }, [filteredLength, renderCount, pageSize, canLoadMore]);
 
   return {
     loadMoreRef,
     renderCount,
+    loadMore,
+    canLoadMore,
   };
 }

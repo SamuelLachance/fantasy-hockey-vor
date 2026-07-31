@@ -23,6 +23,7 @@ const files: Record<string, string[]> = {
     "RankingsEmptyState",
     "RankingsStatusBar",
     "useHorizontalScrollShadow",
+    "Load more players",
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
@@ -88,6 +89,7 @@ const files: Record<string, string[]> = {
     "useBoardInfiniteScroll",
     "BOARD_PAGE_SIZE",
     "IntersectionObserver",
+    "loadMore",
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
     "useHorizontalScrollShadow",

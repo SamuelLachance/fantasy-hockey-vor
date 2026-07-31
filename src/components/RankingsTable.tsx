@@ -171,11 +171,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     ],
   );
 
-  const { loadMoreRef, renderCount } = useBoardInfiniteScroll(
-    filtered,
-    expandedId,
-    filterKey,
-  );
+  const { loadMoreRef, renderCount, loadMore, canLoadMore } =
+    useBoardInfiniteScroll(filtered, expandedId, filterKey);
 
   useEffect(() => {
     if (expandedId == null) return;
@@ -572,13 +569,18 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             onResetBoard={resetBoardView}
           />
         )}
-        {filtered.length > renderCount && (
+        {canLoadMore && (
           <div
             ref={loadMoreRef}
-            className="border-t border-white/5 px-6 py-4 text-center text-xs text-slate-500"
-            aria-hidden
+            className="border-t border-white/5 px-6 py-4 text-center"
           >
-            Loading more…
+            <button
+              type="button"
+              onClick={loadMore}
+              className="rounded-lg px-3 py-1.5 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            >
+              Load more players
+            </button>
           </div>
         )}
       </div>
