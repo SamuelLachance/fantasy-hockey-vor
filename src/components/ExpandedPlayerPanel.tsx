@@ -156,7 +156,7 @@ export function ExpandedPlayerPanel({
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-slate-800">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 motion-reduce:transition-none"
+                  className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-[width] duration-300 motion-reduce:transition-none"
                   style={{ width: `${width}%` }}
                 />
               </div>
