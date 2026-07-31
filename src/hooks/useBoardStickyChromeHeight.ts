@@ -23,6 +23,19 @@ export function useBoardStickyChromeHeight(): void {
     window.addEventListener("resize", update);
     cleanups.push(() => window.removeEventListener("resize", update));
 
+    // iOS often reports intermediate sizes mid-rotate — resync after settle.
+    let orientTimer = 0;
+    const onOrientation = () => {
+      update();
+      window.clearTimeout(orientTimer);
+      orientTimer = window.setTimeout(update, 250);
+    };
+    window.addEventListener("orientationchange", onOrientation);
+    cleanups.push(() => {
+      window.removeEventListener("orientationchange", onOrientation);
+      window.clearTimeout(orientTimer);
+    });
+
     const vv = window.visualViewport;
     if (vv) {
       vv.addEventListener("resize", update);

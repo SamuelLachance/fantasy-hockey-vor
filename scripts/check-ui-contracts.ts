@@ -122,6 +122,8 @@ const files: Record<string, string[]> = {
     "ResizeObserver",
     "visualViewport",
     'addEventListener("resize"',
+    'addEventListener("orientationchange"',
+    "setTimeout(update, 250)",
   ],
   "src/hooks/useBoardDocumentTitle.ts": [
     "useBoardDocumentTitle",
