@@ -20,3 +20,8 @@ export function sortHeaderAriaLabel(
   if (sortKey !== column) return `Sort by ${label}`;
   return `${label}, sorted ${sortDir === "asc" ? "ascending" : "descending"}`;
 }
+
+/** Default tooltip for sortable headers (double-click resets to VOR). */
+export function sortHeaderResetTitle(): string {
+  return "Double-click to reset sort to VOR";
+}

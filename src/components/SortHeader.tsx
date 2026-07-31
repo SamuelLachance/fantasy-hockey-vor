@@ -1,7 +1,7 @@
 "use client";
 
 import type { SortKey } from "@/lib/rankings-filters";
-import { sortHeaderAriaLabel, sortHeaderAriaSort } from "@/lib/sort-header";
+import { sortHeaderAriaLabel, sortHeaderAriaSort, sortHeaderResetTitle } from "@/lib/sort-header";
 import { SortIcon } from "./SortIcon";
 
 interface SortHeaderProps {
@@ -38,7 +38,7 @@ export function SortHeader({
         type="button"
         onClick={() => onToggle(column)}
         onDoubleClick={onReset}
-        title={title ?? "Double-click to reset sort to VOR"}
+        title={title ?? sortHeaderResetTitle()}
         aria-label={sortHeaderAriaLabel(label, column, sortKey, sortDir)}
         className={
           center

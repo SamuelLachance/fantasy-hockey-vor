@@ -5,6 +5,7 @@
 import {
   sortHeaderAriaLabel,
   sortHeaderAriaSort,
+  sortHeaderResetTitle,
 } from "../src/lib/sort-header";
 
 let failed = 0;
@@ -29,6 +30,10 @@ assert(
   sortHeaderAriaLabel("VOR", "vor", "vor", "desc") ===
     "VOR, sorted descending",
   "active label",
+);
+assert(
+  sortHeaderResetTitle() === "Double-click to reset sort to VOR",
+  "reset title",
 );
 
 if (failed) process.exit(1);

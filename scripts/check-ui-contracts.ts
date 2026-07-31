@@ -596,12 +596,13 @@ const files: Record<string, string[]> = {
   "src/components/SortHeader.tsx": [
     "sortHeaderAriaSort",
     "sortHeaderAriaLabel",
-    "Double-click to reset sort to VOR",
+    "sortHeaderResetTitle",
     "aria-sort",
   ],
   "src/lib/sort-header.ts": [
     "sortHeaderAriaSort",
     "sortHeaderAriaLabel",
+    "sortHeaderResetTitle",
   ],
   "src/lib/position-badge.ts": [
     "positionBadgeTitle",
