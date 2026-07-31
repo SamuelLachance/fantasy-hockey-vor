@@ -23,6 +23,7 @@ const files: Record<string, string[]> = {
     "useHorizontalScrollShadow",
     "useBoardDocumentTitle",
     "hashchange",
+    "overscroll-x-contain",
   ],
   "src/hooks/useTimedFlash.ts": [
     "useTimedFlash",
