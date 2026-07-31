@@ -5,6 +5,7 @@ import { Download, Filter, Link2 } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import type { SortKey } from "@/lib/rankings-filters";
+import { copyText } from "@/lib/clipboard";
 import { rankingsUrlSearch } from "@/lib/rankings-url";
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
@@ -151,7 +152,9 @@ export function RankingsToolbar({
               playerId: expandedId,
             });
             const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
-            void navigator.clipboard.writeText(url).then(onLinkCopied);
+            void copyText(url).then((ok) => {
+              if (ok) onLinkCopied();
+            });
           }}
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10"
           title="Copy link to this board view"
