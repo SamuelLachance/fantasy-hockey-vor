@@ -21,6 +21,7 @@ const files: Record<string, string[]> = {
     "BoardShortcutsHelp",
     "BoardActiveFilters",
     "RankingsEmptyState",
+    "RankingsStatusBar",
     'aria-controls="rankings-stat-filters"',
   ],
   "src/components/BoardActiveFilters.tsx": [
@@ -31,6 +32,10 @@ const files: Record<string, string[]> = {
   "src/components/RankingsEmptyState.tsx": [
     "No players match your filters",
     "Reset board view",
+  ],
+  "src/components/RankingsStatusBar.tsx": [
+    "aria-live",
+    "matching players",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',

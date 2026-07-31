@@ -16,7 +16,6 @@ import type { PlayerProjection, Position } from "@/lib/types";
 import {
   CATEGORY_LABELS,
   edgeColor,
-  formatCount,
   formatStat,
   playerCategories,
   sigmaColor,
@@ -44,6 +43,7 @@ import { BoardActiveFilters } from "./BoardActiveFilters";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsEmptyState } from "./RankingsEmptyState";
 import { RankingsStatFilters } from "./RankingsStatFilters";
+import { RankingsStatusBar } from "./RankingsStatusBar";
 import { RankingsToolbar } from "./RankingsToolbar";
 import { SortHeader } from "./SortHeader";
 
@@ -63,7 +63,7 @@ interface RankingsTableProps {
 }
 
 /** Initial paint budget — infinite scroll grows by this step. */
-const PAGE_SIZE = 60;
+const PAGE_SIZE = 80;
 
 function RankingsTableInner({ players }: RankingsTableProps) {
   const searchParams = useSearchParams();
@@ -600,18 +600,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           </div>
         )}
       </div>
-      <p
-        className="text-center text-xs text-slate-500"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
-        {formatCount(filtered.length)} matching players (
-        {formatCount(players.length)} total). Click a row for category
-        breakdown. Click column headers to sort. Press / to focus search, r to
-        reset, ? for shortcuts. Esc closes help/filters then the open row; with
-        a row open use j/k or ↑/↓.
-      </p>
+      <RankingsStatusBar
+        renderCount={renderCount}
+        filteredCount={filtered.length}
+        totalCount={players.length}
+      />
     </div>
   );
 }
