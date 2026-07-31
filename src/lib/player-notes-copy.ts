@@ -13,6 +13,24 @@ export function playerNotesUnavailableCopy(): string {
   return "Player notes unavailable.";
 }
 
+/** Settled expand with no reasoning / profile summary to show. */
+export function playerNotesEmptyCopy(): string {
+  return "No projection notes for this player.";
+}
+
+/** True when either notes field has non-whitespace content. */
+export function playerNotesHasContent(
+  details:
+    | { reasoning?: string | null; profileSummary?: string | null }
+    | null
+    | undefined,
+): boolean {
+  if (!details) return false;
+  return (
+    !!(details.reasoning?.trim() || details.profileSummary?.trim())
+  );
+}
+
 /** Retry control label while a fetch is in flight. */
 export function playerNotesRetryLabel(retrying: boolean): string {
   return retrying ? "Retrying…" : "Retry";

@@ -5,6 +5,8 @@ import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { focusPlayerRow } from "@/lib/board-dom";
 import { fetchPlayerDetails } from "@/lib/player-details-client";
 import {
+  playerNotesEmptyCopy,
+  playerNotesHasContent,
   playerNotesLoadingLabel,
   playerNotesRetryLabel,
   playerNotesUnavailableCopy,
@@ -61,17 +63,21 @@ export function ExpandedPlayerNotes({
   }
 
   const showRetry = detailsError || retrying;
+  const reasoning = playerDetails?.reasoning?.trim() ?? "";
+  const profileSummary = playerDetails?.profileSummary?.trim() ?? "";
+  const hasNotes = playerNotesHasContent(playerDetails);
+  const showEmpty = !detailsLoading && !showRetry && !hasNotes;
 
   return (
     <>
-      {playerDetails?.reasoning && (
+      {reasoning && (
         <p className="mb-3 text-sm leading-relaxed text-slate-300">
-          {playerDetails.reasoning}
+          {reasoning}
         </p>
       )}
-      {playerDetails?.profileSummary && (
+      {profileSummary && (
         <p className="mb-4 rounded-xl border border-white/5 bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
-          {playerDetails.profileSummary}
+          {profileSummary}
         </p>
       )}
       {detailsLoading && !retrying && (
@@ -86,6 +92,11 @@ export function ExpandedPlayerNotes({
           <div className="h-3 w-2/3 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
           <span className="sr-only">{playerNotesLoadingLabel()}…</span>
         </div>
+      )}
+      {showEmpty && (
+        <p className="mb-3 text-xs text-slate-500" role="status">
+          {playerNotesEmptyCopy()}
+        </p>
       )}
       {showRetry && (
         <p className="mb-3 text-xs text-amber-400/90" role="alert">
