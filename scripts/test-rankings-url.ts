@@ -217,5 +217,16 @@ assert(boardShare.includes("pos=C"), "board share keeps filters");
 assert(!boardShare.includes("player="), "board share omits player");
 assert(playerShare.includes("player=8478402"), "player share keeps player");
 
+assert(
+  parseRankingsUrl(new URLSearchParams("pos=C&rf=wins:20-,vor:1-")).statRanges
+    .wins === undefined,
+  "URL prune drops wins on C",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("pos=C&rf=wins:20-,vor:1-")).statRanges
+    .vor?.min === "1",
+  "URL prune keeps vor on C",
+);
+
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

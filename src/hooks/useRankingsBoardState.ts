@@ -18,6 +18,7 @@ import {
   boardFilterKeys,
   coerceSortKeyForPosition,
   filterAndSortBoard,
+  pruneStatRangesForPosition,
 } from "@/lib/rankings-board";
 import { countActiveStatFilters } from "@/lib/board-active-filters";
 import { coerceExpandedPlayerId } from "@/lib/board-players";
@@ -82,6 +83,10 @@ export function useRankingsBoardState(
     if (nextKey !== sortKey) {
       setSortKey(nextKey);
       setSortDir("desc");
+    }
+    const nextRanges = pruneStatRangesForPosition(statRanges, position);
+    if (nextRanges !== statRanges) {
+      setStatRanges(nextRanges);
     }
   }
 

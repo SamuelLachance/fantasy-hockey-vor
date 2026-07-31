@@ -90,6 +90,7 @@ const files: Record<string, string[]> = {
     "toggleDepthGoalies",
     "hydrateFromUrl",
     "Drop expand when the player leaves",
+    "pruneStatRangesForPosition",
     "canToggleDepthGoalies",
   ],
   "src/components/RankingsBoardChrome.tsx": [
@@ -484,6 +485,7 @@ const files: Record<string, string[]> = {
     "RANGE_BOUND_MAX",
     "nextRankingsUrlSyncAction",
     "rankingsHashShouldFocusSearch",
+    "pruneStatRangesForPosition",
   ],
   "src/components/ScrollToTop.tsx": [
     "scrollToTopAriaLabel",
@@ -569,6 +571,7 @@ const files: Record<string, string[]> = {
     "filterAndSortBoard",
     "hideDepthGoalies",
     "coerceSortKeyForPosition",
+    "pruneStatRangesForPosition",
     "isStarterEligibleGoalie",
   ],
   "src/lib/goalie-depth.ts": [

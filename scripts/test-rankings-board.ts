@@ -5,6 +5,7 @@
 import {
   coerceSortKeyForPosition,
   filterAndSortBoard,
+  pruneStatRangesForPosition,
 } from "../src/lib/rankings-board";
 import type { PlayerProjection } from "../src/lib/types";
 
@@ -96,6 +97,18 @@ assert(
 );
 assert(coerceSortKeyForPosition("wins", "G") === "wins", "wins valid on G");
 assert(coerceSortKeyForPosition("wins", "ALL") === "vor", "wins invalid on ALL");
+
+const gRanges = {
+  wins: { min: "20", max: "" },
+  vor: { min: "1", max: "" },
+};
+const prunedC = pruneStatRangesForPosition(gRanges, "C");
+assert(prunedC.wins === undefined, "prune drops wins on C");
+assert(prunedC.vor?.min === "1", "prune keeps vor on C");
+assert(
+  pruneStatRangesForPosition(gRanges, "G") === gRanges,
+  "prune same ref when unchanged",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-board");

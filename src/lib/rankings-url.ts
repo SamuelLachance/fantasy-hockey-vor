@@ -1,7 +1,7 @@
 import type { Position } from "@/lib/types";
 import { BOARD_POSITIONS } from "@/lib/board-positions";
 import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
-import { coerceSortKeyForPosition } from "@/lib/rankings-board";
+import { coerceSortKeyForPosition, pruneStatRangesForPosition } from "@/lib/rankings-board";
 import {
   defaultSortDir,
   type RangeKey,
@@ -120,7 +120,10 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
       ? Math.trunc(playerParsed)
       : null;
   const hideDepthGoalies = params.get("g") !== "all";
-  const statRanges = decodeStatRanges(params.get("rf"));
+  const statRanges = pruneStatRangesForPosition(
+    decodeStatRanges(params.get("rf")),
+    position,
+  );
   return {
     position,
     query,

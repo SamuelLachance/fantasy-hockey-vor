@@ -45,6 +45,28 @@ export function coerceSortKeyForPosition(
   return "vor";
 }
 
+/** Drop category range filters that do not apply to the current position. */
+export function pruneStatRangesForPosition(
+  ranges: StatRanges,
+  position: Position | "ALL",
+): StatRanges {
+  const allowed = new Set<string>(boardFilterKeys(position));
+  let changed = false;
+  const out: StatRanges = {};
+  for (const [key, bound] of Object.entries(ranges) as [
+    RangeKey,
+    { min: string; max: string } | undefined,
+  ][]) {
+    if (!bound) continue;
+    if (!allowed.has(key)) {
+      changed = true;
+      continue;
+    }
+    out[key] = bound;
+  }
+  return changed ? out : ranges;
+}
+
 export interface BoardQuery {
   position: Position | "ALL";
   query: string;
