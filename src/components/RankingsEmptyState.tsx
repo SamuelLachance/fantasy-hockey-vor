@@ -1,7 +1,11 @@
 "use client";
 
 import type { Position } from "@/lib/types";
-import { emptyBoardRecoveryFlags } from "@/lib/board-empty-recovery";
+import {
+  emptyBoardHintCopy,
+  emptyBoardRecoveryFlags,
+  emptyBoardStatusCopy,
+} from "@/lib/board-empty-recovery";
 
 interface RankingsEmptyStateProps {
   query: string;
@@ -63,13 +67,15 @@ export function RankingsEmptyState({
 
   return (
     <div className="px-6 py-16 text-center text-slate-400" role="status">
-      <p>No players match your filters.</p>
-      <p className="mt-1 text-xs text-slate-500">
-        Press r to reset the board, or Esc after clearing search.
-      </p>
+      <p>{emptyBoardStatusCopy()}</p>
+      <p className="mt-1 text-xs text-slate-500">{emptyBoardHintCopy()}</p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         {actions.clearSearch && (
-          <EmptyAction label="Clear search" onClick={onClearSearch} />
+          <EmptyAction
+            label="Clear search"
+            onClick={onClearSearch}
+            keyshortcuts="Escape"
+          />
         )}
         {actions.clearStatFilters && (
           <EmptyAction

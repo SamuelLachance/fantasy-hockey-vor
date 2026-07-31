@@ -19,3 +19,13 @@ export function emptyBoardRecoveryFlags(input: {
     showAllGoalies: input.canShowAllGoalies,
   };
 }
+
+/** Primary empty-board status line. */
+export function emptyBoardStatusCopy(): string {
+  return "No players match your filters.";
+}
+
+/** Hint under the empty-board status (keyboard recovery). */
+export function emptyBoardHintCopy(): string {
+  return "Press r to reset the board, or Esc after clearing search.";
+}

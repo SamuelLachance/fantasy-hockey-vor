@@ -134,17 +134,19 @@ const files: Record<string, string[]> = {
     "motion-reduce:bg-slate-950",
   ],
   "src/components/RankingsEmptyState.tsx": [
-    "No players match your filters",
+    "emptyBoardStatusCopy",
+    "emptyBoardHintCopy",
     "Reset board view",
     'role="status"',
-    "Press r to reset",
     "Include depth goalies",
-    "keyshortcuts",
+    'keyshortcuts="Escape"',
     "EmptyAction",
     "emptyBoardRecoveryFlags",
   ],
   "src/lib/board-empty-recovery.ts": [
     "emptyBoardRecoveryFlags",
+    "emptyBoardStatusCopy",
+    "emptyBoardHintCopy",
     "canShowAllGoalies",
   ],
   "src/components/RankingsStatusBar.tsx": [
