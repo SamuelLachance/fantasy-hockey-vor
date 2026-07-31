@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { Position } from "@/lib/types";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import {
   nextRankingsUrlSyncAction,
   parseRankingsUrl,
   rankingsUrlSearch,
+  rankingsUrlSyncHref,
   type RankingsUrlState,
 } from "@/lib/rankings-url";
 
@@ -34,7 +35,6 @@ export function useRankingsUrlSync({
   onHydrate,
 }: RankingsUrlSyncInput): void {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const lastPushedRef = useRef<string | null>(null);
   const onHydrateRef = useRef(onHydrate);
@@ -73,12 +73,17 @@ export function useRankingsUrlSync({
     }
 
     lastPushedRef.current = action.search;
-    // Query-only replace: do not re-attach #rankings (share/deep links keep it
-    // via rankingsShareUrl / boardHref). Replacing with the fragment scrolls
-    // the page back to the board on every filter/sort/expand sync.
-    router.replace(`${pathname}${action.search ? `?${action.search}` : ""}`, {
-      scroll: false,
-    });
+    // App Router `router.replace(..., { scroll: false })` still scrolls to top
+    // on query-only soft navigations (Next 16 + static export). Use the patched
+    // `history.replaceState` so searchParams update without scroll handling.
+    // Passing `null` lets Next copy internals and dispatch ACTION_RESTORE.
+    const hash =
+      typeof window !== "undefined" ? window.location.hash : "";
+    window.history.replaceState(
+      null,
+      "",
+      rankingsUrlSyncHref(pathname, action.search, hash),
+    );
   }, [
     position,
     query,
@@ -88,7 +93,6 @@ export function useRankingsUrlSync({
     hideDepthGoalies,
     statRanges,
     pathname,
-    router,
     searchParams,
   ]);
 }

@@ -264,3 +264,22 @@ export function rankingsHashShouldFocusSearch(
 ): boolean {
   return parseRankingsUrl(params).playerId == null;
 }
+
+/**
+ * Href for board URL sync via `history.replaceState`.
+ * Includes `basePath` (GitHub Pages) and preserves any hash without going
+ * through App Router navigation (which scrolls despite `scroll: false`).
+ */
+export function rankingsUrlSyncHref(
+  pathname: string,
+  search: string,
+  hash = "",
+  basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "",
+): string {
+  const path =
+    `${basePath}${pathname || "/"}`.replace(/\/{2,}/g, "/") || "/";
+  const qs = search ? `?${search}` : "";
+  const fragment =
+    !hash || hash.startsWith("#") ? hash : `#${hash}`;
+  return `${path}${qs}${fragment}`;
+}

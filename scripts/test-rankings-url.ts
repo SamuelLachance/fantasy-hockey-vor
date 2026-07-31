@@ -12,6 +12,7 @@ import {
   rankingsHashShouldFocusSearch,
   rankingsShareUrl,
   rankingsUrlSearch,
+  rankingsUrlSyncHref,
   sigmaBoardHref,
   steadiestBoardHref,
 } from "../src/lib/rankings-url";
@@ -191,6 +192,25 @@ assert(
 assert(
   parseRankingsUrl(new URLSearchParams("pos=G&sort=wins")).sortKey === "wins",
   "G keeps wins sort",
+);
+
+assert(
+  rankingsUrlSyncHref("/", "pos=C", "", "") === "/?pos=C",
+  "sync href query only",
+);
+assert(
+  rankingsUrlSyncHref("/", "pos=C", "#rankings", "") === "/?pos=C#rankings",
+  "sync href keeps hash",
+);
+assert(
+  rankingsUrlSyncHref("/", "", "#rankings", "/fantasy-hockey-vor") ===
+    "/fantasy-hockey-vor/#rankings",
+  "sync href basePath + hash",
+);
+assert(
+  rankingsUrlSyncHref("/", "pos=D", "#rankings", "/fantasy-hockey-vor") ===
+    "/fantasy-hockey-vor/?pos=D#rankings",
+  "sync href basePath + query + hash",
 );
 
 assert(
