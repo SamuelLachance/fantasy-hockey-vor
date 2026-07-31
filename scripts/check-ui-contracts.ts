@@ -609,9 +609,15 @@ const files: Record<string, string[]> = {
     "Done",
     'aria-keyshortcuts="Enter"',
     "normalizeRangeInput",
+    "statFiltersHintCopy",
     'type="text"',
     "inputMode",
     "tabular-nums",
+  ],
+  "src/lib/stat-filters-copy.ts": [
+    "statFiltersHintCopy",
+    "91.5%",
+    "0.915",
   ],
 };
 

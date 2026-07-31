@@ -7,6 +7,7 @@ import {
   type RangeKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
+import { statFiltersHintCopy } from "@/lib/stat-filters-copy";
 
 interface RankingsStatFiltersProps {
   filterRangeKeys: RangeKey[];
@@ -33,10 +34,7 @@ export function RankingsStatFilters({
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-white">Filter by stats</h3>
-          <p className="text-xs text-slate-500">
-            Set min/max for any column. Σσ ≈50 median — lower max = safer
-            picks. Save % accepts 91.5, 91.5%, 91,5, or 0.915.
-          </p>
+          <p className="text-xs text-slate-500">{statFiltersHintCopy()}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {activeFilterCount > 0 && (
