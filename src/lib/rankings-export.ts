@@ -8,10 +8,19 @@ export interface BoardExportRow {
   name: string;
   team: string;
   positions: Position[];
+  /** VOR scoped to the export filter position (overall when ALL). */
   vor: number;
   edge: number;
   sigma: number | null;
   gamesPlayed: number;
+}
+
+export interface RankingsJsonExport {
+  exportedAt: string;
+  filterPosition: Position | "ALL";
+  vorScope: "overall" | "position";
+  playerCount: number;
+  players: BoardExportRow[];
 }
 
 export function rankingsToJsonRows(
@@ -31,11 +40,25 @@ export function rankingsToJsonRows(
   }));
 }
 
+export function rankingsJsonExport(
+  players: PlayerProjection[],
+  position: Position | "ALL",
+  exportedAt = new Date().toISOString(),
+): RankingsJsonExport {
+  return {
+    exportedAt,
+    filterPosition: position,
+    vorScope: position === "ALL" ? "overall" : "position",
+    playerCount: players.length,
+    players: rankingsToJsonRows(players, position),
+  };
+}
+
 export function rankingsJsonString(
   players: PlayerProjection[],
   position: Position | "ALL",
 ): string {
-  return `${JSON.stringify(rankingsToJsonRows(players, position), null, 2)}\n`;
+  return `${JSON.stringify(rankingsJsonExport(players, position), null, 2)}\n`;
 }
 
 export function rankingsCsvString(

@@ -5,6 +5,7 @@
 import {
   downloadRankingsCsv,
   downloadRankingsJson,
+  rankingsJsonExport,
   rankingsToJsonRows,
 } from "../src/lib/rankings-export";
 import type { PlayerProjection } from "../src/lib/types";
@@ -40,6 +41,18 @@ assert(
   rankingsToJsonRows([sample], "ALL")[0]!.vor === 3.142,
   "ALL uses overall VOR",
 );
+
+const bundle = rankingsJsonExport([sample], "C", "2026-07-30T00:00:00.000Z");
+assert(bundle.filterPosition === "C", "bundle filter");
+assert(bundle.vorScope === "position", "bundle vorScope");
+assert(bundle.playerCount === 1, "bundle count");
+assert(bundle.players[0]!.vor === 1.235, "bundle rows");
+assert(bundle.exportedAt.startsWith("2026"), "bundle timestamp");
+assert(
+  rankingsJsonExport([sample], "ALL").vorScope === "overall",
+  "ALL overall scope",
+);
+
 assert(typeof downloadRankingsCsv === "function", "csv download helper");
 assert(typeof downloadRankingsJson === "function", "json download helper");
 

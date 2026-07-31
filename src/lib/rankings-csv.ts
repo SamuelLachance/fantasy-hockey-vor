@@ -14,6 +14,8 @@ export function rankingsToCsv(
   position: Position | "ALL",
   categories: readonly Category[],
 ): string {
+  const vorScope = position === "ALL" ? "overall" : "position";
+  const meta = `# fantasy-hockey-vor;filter=${position};vorScope=${vorScope};count=${players.length}`;
   const headers = [
     "rank",
     "name",
@@ -25,7 +27,7 @@ export function rankingsToCsv(
     "gp",
     ...categories.map((c) => CATEGORY_LABELS[c]),
   ];
-  const lines = [headers.join(",")];
+  const lines = [meta, headers.join(",")];
   for (const p of players) {
     const rank = position === "ALL" ? p.rank : (p.positionRank ?? p.rank);
     const cells: Array<string | number> = [

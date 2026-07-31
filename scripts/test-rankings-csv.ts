@@ -40,19 +40,30 @@ const sample = {
 } as unknown as PlayerProjection;
 
 const csv = rankingsToCsv([sample], "C", ["goals", "assists"]);
+const lines = csv.split("\n");
 assert(
-  csv.startsWith("rank,name,team,positions,vor,edge,sigma,gp,G,A"),
+  lines[0]!.startsWith("# fantasy-hockey-vor;filter=C;vorScope=position"),
+  "meta comment",
+);
+assert(
+  lines[1] === "rank,name,team,positions,vor,edge,sigma,gp,G,A",
   "header",
 );
-const dataLine = csv.split("\n")[1] ?? "";
+const dataLine = lines[2] ?? "";
 assert(dataLine.includes('"A, ""Test"""'), "escaped name");
 assert(dataLine.startsWith("1,"), "positionRank when pos=C");
 assert(dataLine.includes(",2.250,"), "CSV uses position VOR");
 assert(
-  rankingsToCsv([sample], "ALL", ["goals"]).split("\n")[1]!.includes(",5.500,"),
+  rankingsToCsv([sample], "ALL", ["goals"])
+    .split("\n")[0]!
+    .includes("vorScope=overall"),
+  "ALL meta overall scope",
+);
+assert(
+  rankingsToCsv([sample], "ALL", ["goals"]).split("\n")[2]!.includes(",5.500,"),
   "ALL CSV uses overall VOR",
 );
-assert(csv.split("\n").length === 2, "one data row");
+assert(lines.length === 3, "meta + header + one data row");
 
 if (failed) process.exit(1);
 console.log("OK: rankings-csv");
