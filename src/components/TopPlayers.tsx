@@ -9,6 +9,7 @@ import {
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
 import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap, Gauge } from "lucide-react";
+import { steadiestSkaters, topEdgeSkaters } from "@/lib/top-lists";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
 
 function playerHref(id: number): string {
@@ -35,23 +36,8 @@ export function TopPlayers({
 }: TopPlayersProps) {
   const topOverall = players.slice(0, 5);
   const teams = league.teams;
-  const topEdge = [...players]
-    .filter((p) => !p.isGoalie && (p.draftValue ?? 0) > 0)
-    .sort((a, b) => (b.draftValue ?? 0) - (a.draftValue ?? 0))
-    .slice(0, 5);
-  const steadiest = [...players]
-    .filter(
-      (p) =>
-        !p.isGoalie &&
-        p.vor >= 2 &&
-        p.uncertainty?.total?.sigma != null,
-    )
-    .sort(
-      (a, b) =>
-        (a.uncertainty!.total.sigma - b.uncertainty!.total.sigma) ||
-        b.vor - a.vor,
-    )
-    .slice(0, 5);
+  const topEdge = topEdgeSkaters(players);
+  const steadiest = steadiestSkaters(players);
   const topByPosition = (["C", "LW", "RW", "D", "G"] as const).map((pos) => ({
     position: pos,
     players: players
