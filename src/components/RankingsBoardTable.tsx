@@ -80,6 +80,12 @@ export function RankingsBoardTable({
   const [anchorId, setAnchorId] = useState<number | null>(expandedId);
   if (expandedId != null && expandedId !== anchorId) {
     setAnchorId(expandedId);
+  } else if (
+    expandedId == null &&
+    anchorId != null &&
+    !visiblePlayers.some((p) => p.id === anchorId)
+  ) {
+    setAnchorId(visiblePlayers[0]?.id ?? null);
   }
   const tabStopId = boardRowTabStopId(visiblePlayers, expandedId, anchorId);
   const searchPending = query !== deferredQuery;

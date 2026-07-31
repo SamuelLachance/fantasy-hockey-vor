@@ -14,6 +14,7 @@ import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardDocumentTitle } from "@/hooks/useBoardDocumentTitle";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useBoardStickyChromeHeight } from "@/hooks/useBoardStickyChromeHeight";
+import { useCoercedExpandFocusRestore } from "@/hooks/useCoercedExpandFocusRestore";
 import { useExpandedRowScroll } from "@/hooks/useExpandedRowScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
@@ -80,6 +81,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     );
 
   useExpandedRowScroll(board.expandedId);
+  useCoercedExpandFocusRestore(board.expandedId);
 
   useRankingsKeyboard({
     filtered: board.filtered,

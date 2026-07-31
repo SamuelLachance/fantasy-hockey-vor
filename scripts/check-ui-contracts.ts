@@ -27,6 +27,7 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "useHorizontalScrollShadow",
     "useBoardStickyChromeHeight",
+    "useCoercedExpandFocusRestore",
     "useBoardDocumentTitle",
     "useExpandedRowScroll",
     "visibleBoardPlayers",
@@ -75,6 +76,12 @@ const files: Record<string, string[]> = {
     "useTimedFlash",
     "clearTimeout",
     "holdMs",
+  ],
+  "src/hooks/useCoercedExpandFocusRestore.ts": [
+    "useCoercedExpandFocusRestore",
+    "player-row-",
+    "focusBoardSearch",
+    "preventScroll",
   ],
   "src/hooks/useBoardStickyChromeHeight.ts": [
     "useBoardStickyChromeHeight",
