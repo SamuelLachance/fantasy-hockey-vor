@@ -1898,9 +1898,24 @@ export function renormalizeGoalieGamesByTeam<
     let sum = 0;
     for (const i of active) sum += out[i]!.gamesPlayed;
     if (!(sum > 0)) continue;
-    // Previously skipped sum≥150, which left overloaded org charts (PHI 194+)
-    // untouched — the exact case that most needs scaling.
-    if (Math.abs(sum - teamBudget) > 5) {
+
+    const lead = out[active[0]!]!.gamesPlayed;
+    const second = out[active[1]!]?.gamesPlayed ?? 0;
+    // Clear #1 (≈1.35× backup): use starter-heavy shares instead of flat scale,
+    // so Hellebuyck-style workhorses don't get diluted by a new backup's prior GP.
+    const clearStarter = second > 0 && lead / second >= 1.35;
+    if (clearStarter && active.length >= 2) {
+      const shares =
+        active.length >= 3 ? [0.62, 0.28, 0.1] : [0.68, 0.32];
+      for (let k = 0; k < active.length; k++) {
+        const share = shares[k] ?? 0.05;
+        out[active[k]!]!.gamesPlayed = Math.max(
+          4,
+          Math.min(72, Math.round(teamBudget * share)),
+        );
+      }
+    } else if (Math.abs(sum - teamBudget) > 5) {
+      // Previously skipped sum≥150, which left overloaded org charts untouched.
       const scale = teamBudget / sum;
       for (const i of active) {
         out[i]!.gamesPlayed = Math.max(

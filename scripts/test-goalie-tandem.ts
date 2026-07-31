@@ -35,5 +35,16 @@ assert(activeSum >= 75 && activeSum <= 85, `top-3 sum ~80 (got ${activeSum})`);
 assert(after[0]!.gamesPlayed >= 30, `starter keeps real workload (got ${after[0]!.gamesPlayed})`);
 assert(after[4]!.gamesPlayed === 4, "org depth fixed at 4 GP");
 
+const clear = renormalizeGoalieGamesByTeam(
+  [
+    { team: "WPG", gamesPlayed: 60, isGoalie: true },
+    { team: "WPG", gamesPlayed: 40, isGoalie: true },
+    { team: "WPG", gamesPlayed: 10, isGoalie: true },
+  ],
+  80,
+);
+assert(clear[0]!.gamesPlayed >= 48, `clear starter gets ≥48 (got ${clear[0]!.gamesPlayed})`);
+assert(clear[1]!.gamesPlayed <= 28, `backup capped (got ${clear[1]!.gamesPlayed})`);
+
 if (failed) process.exit(1);
 console.log("OK: goalie-tandem");
