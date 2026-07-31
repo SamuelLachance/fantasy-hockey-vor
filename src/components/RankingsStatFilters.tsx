@@ -112,6 +112,7 @@ export function RankingsStatFilters({
                 <input
                   type="text"
                   inputMode="decimal"
+                  enterKeyHint="done"
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="Min"
@@ -133,6 +134,7 @@ export function RankingsStatFilters({
                 <input
                   type="text"
                   inputMode="decimal"
+                  enterKeyHint="done"
                   autoComplete="off"
                   spellCheck={false}
                   placeholder="Max"

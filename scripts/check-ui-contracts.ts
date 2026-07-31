@@ -1282,6 +1282,7 @@ const files: Record<string, string[]> = {
     "rankings-stat-filters-hint",
     'type="text"',
     "inputMode",
+    'enterKeyHint="done"',
     'aria-hidden="true"',
     "tabular-nums",
     "min-h-11",
