@@ -659,6 +659,11 @@ const files: Record<string, string[]> = {
     "1200",
     "630",
   ],
+  "src/app/twitter-image.tsx": [
+    "OpenGraphImage",
+    "force-static",
+    "TwitterImage",
+  ],
   "src/lib/site-meta.ts": [
     "siteDefaultTitle",
     "siteDefaultDescription",

@@ -17,6 +17,7 @@ export function RankingsHelpButton({ onOpenHelp }: RankingsHelpButtonProps) {
       title={boardHelpTitle()}
       aria-label={boardHelpAriaLabel()}
       aria-keyshortcuts="Shift+Slash"
+      aria-haspopup="dialog"
     >
       <CircleHelp className="h-4 w-4" />
     </button>
