@@ -908,6 +908,16 @@ const files: Record<string, string[]> = {
   "src/lib/projection-age.ts": [
     "projectionAgeDays",
     "isProjectionVeryStale",
+    "sitemapLastModified",
+  ],
+  "src/app/sitemap.ts": [
+    "sitemapLastModified",
+    "sitemapChangeFrequency",
+    "projectionAgeDays",
+    "getProjections",
+    "SITE_URL",
+    "force-static",
+    "lastModified",
   ],
   "src/components/BrandEyebrow.tsx": [
     "SITE_BRAND",

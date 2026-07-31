@@ -32,3 +32,19 @@ export function sitemapChangeFrequency(
 ): "daily" | "weekly" {
   return ageDays <= SITEMAP_DAILY_MAX_AGE_DAYS ? "daily" : "weekly";
 }
+
+const SITEMAP_LASTMOD_FALLBACK = "2026-07-22T00:00:00.000Z";
+
+/**
+ * Sitemap lastmod: newer of projection generation and build time so UI-only
+ * deploys still advance <lastmod> for crawlers.
+ */
+export function sitemapLastModified(
+  generatedAt: string,
+  buildTimeIso?: string,
+): Date {
+  const candidates = [generatedAt, buildTimeIso, SITEMAP_LASTMOD_FALLBACK]
+    .map((s) => Date.parse(s ?? ""))
+    .filter(Number.isFinite);
+  return new Date(Math.max(...candidates));
+}

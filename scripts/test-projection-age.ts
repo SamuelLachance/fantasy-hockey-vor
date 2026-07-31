@@ -10,6 +10,7 @@ import {
   PROJECTION_VERY_STALE_DAYS,
   SITEMAP_DAILY_MAX_AGE_DAYS,
   sitemapChangeFrequency,
+  sitemapLastModified,
 } from "../src/lib/projection-age";
 
 let failed = 0;
@@ -46,6 +47,25 @@ assert(!isProjectionVeryStale(PROJECTION_VERY_STALE_DAYS), "45 not very");
 assert(
   isProjectionVeryStale(PROJECTION_VERY_STALE_DAYS + 0.01),
   "just over 45 very",
+);
+assert(
+  sitemapLastModified(
+    "2026-07-22T00:00:00.000Z",
+    "2026-07-31T12:00:00.000Z",
+  ).toISOString() === "2026-07-31T12:00:00.000Z",
+  "build newer wins lastmod",
+);
+assert(
+  sitemapLastModified(
+    "2026-07-31T12:00:00.000Z",
+    "2026-07-22T00:00:00.000Z",
+  ).toISOString() === "2026-07-31T12:00:00.000Z",
+  "generated newer wins lastmod",
+);
+assert(
+  sitemapLastModified("not-a-date", undefined).toISOString() ===
+    "2026-07-22T00:00:00.000Z",
+  "fallback lastmod",
 );
 
 if (failed) process.exit(1);
