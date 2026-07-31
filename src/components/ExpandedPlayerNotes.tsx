@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import {
   fetchPlayerDetails,
@@ -31,6 +31,14 @@ export function ExpandedPlayerNotes({
   onClearDetailsError,
 }: ExpandedPlayerNotesProps) {
   const [retrying, setRetrying] = useState(false);
+  const aliveRef = useRef(true);
+
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
 
   function retryDetails() {
     if (retrying) return;
@@ -39,10 +47,14 @@ export function ExpandedPlayerNotes({
     onClearDetailsError();
     void fetchPlayerDetails()
       .then((d) => {
-        onDetailsLoaded(d);
+        if (aliveRef.current) onDetailsLoaded(d);
       })
-      .catch(onDetailsError)
-      .finally(() => setRetrying(false));
+      .catch(() => {
+        if (aliveRef.current) onDetailsError();
+      })
+      .finally(() => {
+        if (aliveRef.current) setRetrying(false);
+      });
   }
 
   return (
