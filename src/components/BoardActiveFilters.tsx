@@ -72,7 +72,7 @@ export function BoardActiveFilters({
               onClearPosition();
               focusAfterActiveFilterClear();
             }}
-            className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
           </button>
@@ -87,7 +87,7 @@ export function BoardActiveFilters({
             type="button"
             aria-label="Clear search"
             onClick={onClearQuery}
-            className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
           </button>
@@ -103,7 +103,7 @@ export function BoardActiveFilters({
               onShowStarterGoalies();
               focusAfterActiveFilterClear();
             }}
-            className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
           </button>
@@ -129,7 +129,7 @@ export function BoardActiveFilters({
               onRemoveStat(chip.key);
               focusAfterActiveFilterClear();
             }}
-            className="rounded-full p-1 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             <X className="h-3 w-3" />
           </button>
