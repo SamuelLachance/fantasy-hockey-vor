@@ -47,6 +47,7 @@ const files: Record<string, string[]> = {
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
   "src/lib/site.ts": ["SITE_ORIGIN", "SITE_URL"],
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
+  "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
