@@ -7,6 +7,17 @@ import { siteDefaultTitle } from "@/lib/site-meta";
 
 const BASE_TITLE = siteDefaultTitle();
 
+/** Max characters for an expanded-player name in the tab title. */
+export const BOARD_TITLE_PLAYER_NAME_MAX = 28;
+
+/** Truncate long player names for the compact tab title. */
+export function boardPlayerTitleToken(playerName: string): string | null {
+  const name = playerName.trim();
+  if (!name) return null;
+  if (name.length <= BOARD_TITLE_PLAYER_NAME_MAX) return name;
+  return `${name.slice(0, BOARD_TITLE_PLAYER_NAME_MAX - 1)}…`;
+}
+
 /** Compact sort token for the tab title; null when VOR desc (board default). */
 export function boardSortTitleToken(
   sortKey: SortKey,
@@ -44,7 +55,8 @@ export function boardDocumentTitle(opts: {
   showingAllGoalies?: boolean;
 }): string {
   const parts: string[] = [];
-  if (opts.playerName?.trim()) parts.push(opts.playerName.trim());
+  const player = opts.playerName ? boardPlayerTitleToken(opts.playerName) : null;
+  if (player) parts.push(player);
   if (opts.position !== "ALL") parts.push(opts.position);
   const q = opts.query.trim();
   if (q) {

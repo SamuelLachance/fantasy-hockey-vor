@@ -3,8 +3,10 @@
  * Run: npx tsx scripts/test-board-document-title.ts
  */
 import {
+  BOARD_TITLE_PLAYER_NAME_MAX,
   boardDocumentTitle,
   boardFiltersTitleToken,
+  boardPlayerTitleToken,
   boardSortTitleToken,
 } from "../src/lib/board-document-title";
 
@@ -100,6 +102,28 @@ assert(
     showingAllGoalies: true,
   }) === "Fantasy Hockey VOR · C · Edge · 1f · All G",
   "title combines filters and All G",
+);
+assert(boardPlayerTitleToken("  ") === null, "blank player omitted");
+assert(
+  boardPlayerTitleToken("Celebrini") === "Celebrini",
+  "short player kept",
+);
+const longName = "A".repeat(BOARD_TITLE_PLAYER_NAME_MAX + 5);
+assert(
+  boardPlayerTitleToken(longName)?.endsWith("…") === true,
+  "long player truncated",
+);
+assert(
+  boardPlayerTitleToken(longName)?.length === BOARD_TITLE_PLAYER_NAME_MAX,
+  "long player max length",
+);
+assert(
+  boardDocumentTitle({
+    position: "ALL",
+    query: "",
+    playerName: longName,
+  }).includes("…"),
+  "title truncates long player name",
 );
 
 if (failed) process.exit(1);

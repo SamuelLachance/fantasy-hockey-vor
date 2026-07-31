@@ -135,6 +135,8 @@ const files: Record<string, string[]> = {
     "boardDocumentTitle",
     "boardSortTitleToken",
     "boardFiltersTitleToken",
+    "boardPlayerTitleToken",
+    "BOARD_TITLE_PLAYER_NAME_MAX",
     "activeFilterCount",
     "showingAllGoalies",
     "All G",
