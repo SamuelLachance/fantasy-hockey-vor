@@ -1,5 +1,6 @@
 import { Header } from "@/components/Header";
 import { RankingsTable } from "@/components/RankingsTable";
+import { ScrollToTop } from "@/components/ScrollToTop";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
 
@@ -52,6 +53,7 @@ export default function HomePage() {
           source
         </a>
       </footer>
+      <ScrollToTop />
     </main>
   );
 }
