@@ -17,6 +17,16 @@ export function boardLinkTitle(): string {
   return "Copy link to this board view (l)";
 }
 
+/** Accessible name for the board share-link control (includes flash state). */
+export function boardLinkAriaLabel(
+  copied: boolean,
+  failed = false,
+): string {
+  if (copied) return "Board link copied";
+  if (failed) return "Failed to copy board link";
+  return "Copy link to this board view";
+}
+
 /** Expanded-row player link button label. */
 export function playerLinkButtonLabel(
   copied: boolean,

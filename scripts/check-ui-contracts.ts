@@ -330,6 +330,7 @@ const files: Record<string, string[]> = {
     "CopyFlash",
     "boardLinkButtonLabel",
     "boardLinkTitle",
+    "boardLinkAriaLabel",
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
     "playerLinkTitle",
@@ -467,6 +468,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsBoardLinkButton.tsx": [
     "boardLinkButtonLabel",
     "boardLinkTitle",
+    "boardLinkAriaLabel",
     'aria-keyshortcuts="l"',
     'aria-live="polite"',
     "onCopyBoardLink",

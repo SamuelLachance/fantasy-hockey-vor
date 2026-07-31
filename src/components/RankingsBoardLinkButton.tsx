@@ -1,7 +1,11 @@
 "use client";
 
 import { Link2 } from "lucide-react";
-import { boardLinkButtonLabel, boardLinkTitle } from "@/lib/copy-flash";
+import {
+  boardLinkAriaLabel,
+  boardLinkButtonLabel,
+  boardLinkTitle,
+} from "@/lib/copy-flash";
 
 interface RankingsBoardLinkButtonProps {
   linkCopied: boolean;
@@ -21,6 +25,7 @@ export function RankingsBoardLinkButton({
       onClick={onCopyBoardLink}
       className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       title={boardLinkTitle()}
+      aria-label={boardLinkAriaLabel(linkCopied, linkCopyFailed)}
       aria-keyshortcuts="l"
       aria-live="polite"
     >

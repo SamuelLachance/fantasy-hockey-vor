@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/test-copy-flash.ts
  */
 import {
+  boardLinkAriaLabel,
   boardLinkButtonLabel,
   boardLinkTitle,
   copyTextWithFlash,
@@ -40,6 +41,15 @@ async function main() {
   assert(boardLinkButtonLabel(true) === "Copied", "board ok");
   assert(boardLinkButtonLabel(false, true) === "Failed", "board err");
   assert(boardLinkTitle() === "Copy link to this board view (l)", "board title");
+  assert(
+    boardLinkAriaLabel(false) === "Copy link to this board view",
+    "board aria idle",
+  );
+  assert(boardLinkAriaLabel(true) === "Board link copied", "board aria ok");
+  assert(
+    boardLinkAriaLabel(false, true) === "Failed to copy board link",
+    "board aria err",
+  );
   assert(playerLinkButtonLabel(false) === "Copy player link", "player idle");
   assert(playerLinkButtonLabel(true) === "Link copied", "player ok");
   assert(playerLinkButtonLabel(false, true) === "Copy failed", "player err");
