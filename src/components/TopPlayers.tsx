@@ -148,11 +148,18 @@ export function TopPlayers({
                   <li key={p.id}>
                     <a
                       href={playerHref(p.id)}
-                      className="flex justify-between text-sm text-slate-300 transition hover:text-white"
+                      className="flex justify-between gap-2 text-sm text-slate-300 transition hover:text-white"
                     >
-                      <span className="truncate pr-2">{p.name}</span>
+                      <span className="truncate">
+                        {p.name}
+                        {position === "G" ? (
+                          <span className="ml-1 text-xs text-slate-500">
+                            {p.gamesPlayed}gp
+                          </span>
+                        ) : null}
+                      </span>
                       <span
-                        className={`font-mono ${vorColor(vorAtPosition(p, position))}`}
+                        className={`shrink-0 font-mono ${vorColor(vorAtPosition(p, position))}`}
                       >
                         {vorAtPosition(p, position).toFixed(1)}
                       </span>
