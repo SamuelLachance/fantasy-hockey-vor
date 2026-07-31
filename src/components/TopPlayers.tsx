@@ -12,14 +12,11 @@ import { Trophy, Target, Shield, Zap, Gauge } from "lucide-react";
 import { steadiestSkaters, topEdgeSkaters } from "@/lib/top-lists";
 import {
   edgeBoardHref,
+  playerBoardHref,
   sigmaBoardHref,
   steadiestBoardHref,
 } from "@/lib/rankings-url";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
-
-function playerHref(id: number): string {
-  return `?player=${id}#rankings`;
-}
 
 interface TopPlayersProps {
   players: ProjectionsDataset["players"];
@@ -63,7 +60,7 @@ export function TopPlayers({
           {topOverall.map((player) => (
             <li key={player.id}>
               <a
-                href={playerHref(player.id)}
+                href={playerBoardHref(player.id)}
                 className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
               >
                 <div className="flex items-center gap-3">
@@ -129,7 +126,7 @@ export function TopPlayers({
           {topEdge.map((player) => (
             <li key={player.id}>
               <a
-                href={playerHref(player.id)}
+                href={playerBoardHref(player.id)}
                 className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-emerald-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
               >
                 <div className="flex items-center gap-3">
@@ -180,7 +177,7 @@ export function TopPlayers({
             {steadiest.map((player) => (
               <li key={player.id}>
                 <a
-                  href={playerHref(player.id)}
+                  href={playerBoardHref(player.id)}
                   className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
                 >
                   <div className="flex items-center gap-3">
@@ -222,7 +219,7 @@ export function TopPlayers({
                 {posPlayers.map((p) => (
                   <li key={p.id}>
                     <a
-                      href={playerHref(p.id)}
+                      href={playerBoardHref(p.id)}
                       className="flex justify-between gap-2 rounded-md text-sm text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
                     >
                       <span className="truncate">

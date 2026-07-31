@@ -37,16 +37,27 @@ export function RankingsStatFilters({
             picks. Save % accepts 91.5 or 0.915.
           </p>
         </div>
-        {activeFilterCount > 0 && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-          >
-            <X className="h-3.5 w-3.5" />
-            Clear all
-          </button>
-        )}
+        <div className="flex shrink-0 items-center gap-1">
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear all
+            </button>
+          )}
+          {onDone && (
+            <button
+              type="button"
+              onClick={onDone}
+              className="rounded-lg bg-cyan-500/15 px-2.5 py-1 text-xs font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            >
+              Done
+            </button>
+          )}
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filterRangeKeys.map((key) => (

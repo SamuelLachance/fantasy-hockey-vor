@@ -7,6 +7,7 @@ import {
   encodeStatRanges,
   edgeBoardHref,
   parseRankingsUrl,
+  playerBoardHref,
   rankingsUrlSearch,
   sigmaBoardHref,
   steadiestBoardHref,
@@ -116,6 +117,7 @@ assert(
   ).statRanges.vor?.min === "2",
   "steadiest href parses VOR min 2",
 );
+assert(playerBoardHref(8478402) === "?player=8478402#rankings", "player board href");
 
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

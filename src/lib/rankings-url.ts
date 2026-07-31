@@ -184,3 +184,11 @@ export function steadiestBoardHref(): string {
     statRanges: { vor: { min: "2", max: "" } },
   });
 }
+
+/** Expand a single player on the board. */
+export function playerBoardHref(id: number): string {
+  return boardHref({
+    ...defaultRankingsUrlState(),
+    playerId: id,
+  });
+}

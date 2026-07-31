@@ -43,6 +43,9 @@ const files: Record<string, string[]> = {
     "playerId",
     "encodeStatRanges",
     "rf",
+    "steadiestBoardHref",
+    "playerBoardHref",
+    "rf=${rf}",
   ],
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
   "src/lib/site.ts": ["SITE_ORIGIN", "SITE_URL"],
@@ -56,10 +59,13 @@ const files: Record<string, string[]> = {
   "src/lib/format.ts": ["sigmaColor", "edgeColor"],
   "src/components/TopPlayers.tsx": [
     "gamesPlayed > 8",
-    "playerHref",
+    "playerBoardHref",
     "gamesPlayed}gp",
     "Steadiest",
+    "steadiestBoardHref",
+    "edgeBoardHref",
   ],
+  "src/components/RankingsStatFilters.tsx": ["onDone", "Done"],
 };
 
 let failed = 0;
