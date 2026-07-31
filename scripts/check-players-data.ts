@@ -116,6 +116,13 @@ if (goalieSavePcts.length >= 20 && uniqueSv.size < 5) {
   );
 }
 
+const yahooPos = players.filter((p) => p.positionSource === "yahoo").length;
+if (players.length > 500 && yahooPos < players.length * 0.9) {
+  warnings.push(
+    `only ${yahooPos}/${players.length} players have Yahoo positions (${((100 * yahooPos) / players.length).toFixed(0)}%)`,
+  );
+}
+
 const mlWithUnc = players.filter((p) => p.projectionMethod === "ml" && p.uncertainty)
   .length;
 const mlSkaters = players.filter((p) => p.projectionMethod === "ml" && !p.isGoalie)
