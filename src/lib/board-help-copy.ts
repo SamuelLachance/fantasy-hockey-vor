@@ -18,6 +18,11 @@ export function boardShortcutsCloseAriaLabel(): string {
   return "Close shortcuts";
 }
 
+/** Visible Esc glyph on the shortcuts dialog close control. */
+export function boardShortcutsEscLabel(): string {
+  return "Esc";
+}
+
 /** Shortcuts dialog heading (aria-labelledby target). */
 export function boardShortcutsDialogTitle(): string {
   return "Board shortcuts";

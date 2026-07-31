@@ -402,6 +402,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/BoardShortcutsHelp.tsx": [
     "boardShortcutsDialogTitle",
+    "boardShortcutsEscLabel",
     "BOARD_SHORTCUT_ROWS",
     "BOARD_SHORTCUTS_DIALOG_ID",
     "createPortal",
@@ -650,6 +651,8 @@ const files: Record<string, string[]> = {
     "boardHelpAriaLabel",
     "boardHelpButtonGlyph",
     "boardShortcutsCloseAriaLabel",
+    "boardShortcutsEscLabel",
+    "Esc",
     "boardShortcutsDialogTitle",
     "Board shortcuts",
   ],

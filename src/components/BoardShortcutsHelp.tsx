@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import {
   boardShortcutsCloseAriaLabel,
   boardShortcutsDialogTitle,
+  boardShortcutsEscLabel,
 } from "@/lib/board-help-copy";
 import {
   BOARD_SHORTCUT_ROWS,
@@ -51,7 +52,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
             aria-keyshortcuts="Escape"
             className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
-            Esc
+            {boardShortcutsEscLabel()}
           </button>
         </div>
         <ul id="board-shortcuts-list" className="space-y-2 text-sm">
