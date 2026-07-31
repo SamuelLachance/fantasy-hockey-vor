@@ -11,7 +11,6 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -44,6 +43,7 @@ import {
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
+import { SortIcon } from "./SortIcon";
 
 interface RankingsTableProps {
   players: PlayerProjection[];
@@ -51,25 +51,6 @@ interface RankingsTableProps {
 
 /** Initial paint budget — infinite scroll grows by this step. */
 const PAGE_SIZE = 50;
-
-function SortIcon({
-  column,
-  sortKey,
-  sortDir,
-}: {
-  column: SortKey;
-  sortKey: SortKey;
-  sortDir: "asc" | "desc";
-}) {
-  if (sortKey !== column) {
-    return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
-  }
-  return sortDir === "asc" ? (
-    <ArrowUp className="h-3.5 w-3.5 text-cyan-400" />
-  ) : (
-    <ArrowDown className="h-3.5 w-3.5 text-cyan-400" />
-  );
-}
 
 let detailsPromise: Promise<Record<string, PlayerDetailRecord>> | null = null;
 
