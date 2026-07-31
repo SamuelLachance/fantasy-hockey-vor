@@ -143,7 +143,11 @@ const files: Record<string, string[]> = {
     "Copy player link",
     "Consensus #",
     'aria-live="polite"',
-    "ML stacked ensemble",
+    "projectionMethodLabel",
+  ],
+  "src/lib/projection-method.ts": [
+    "projectionMethodLabel",
+    "projectionMethodTone",
   ],
   "src/components/RankingsToolbar.tsx": [
     "CSV",

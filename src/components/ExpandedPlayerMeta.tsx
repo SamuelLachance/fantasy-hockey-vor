@@ -1,4 +1,8 @@
 import type { PlayerProjection } from "@/lib/types";
+import {
+  projectionMethodLabel,
+  projectionMethodTone,
+} from "@/lib/projection-method";
 
 interface ExpandedPlayerMetaProps {
   player: PlayerProjection;
@@ -17,19 +21,9 @@ export function ExpandedPlayerMeta({
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2">
       <span
-        className={`rounded-full px-3 py-1 text-xs font-semibold ${
-          player.projectionMethod === "ai"
-            ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30"
-            : player.projectionMethod === "ml"
-              ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30"
-              : "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
-        }`}
+        className={`rounded-full px-3 py-1 text-xs font-semibold ${projectionMethodTone(player.projectionMethod)}`}
       >
-        {player.projectionMethod === "ai"
-          ? "AI projection"
-          : player.projectionMethod === "ml"
-            ? "ML stacked ensemble"
-            : "Contextual model"}
+        {projectionMethodLabel(player.projectionMethod)}
       </span>
       {player.confidence != null && (
         <span className="text-xs text-slate-400">
