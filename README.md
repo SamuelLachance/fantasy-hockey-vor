@@ -80,7 +80,7 @@ Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmar
 - URL sync: `pos`, `q`, `sort`, `dir`, `player`, `g=all` (depth goalies), `rf` (stat ranges e.g. `sigma:-50`)
 - Columns: VOR, Edge (consensus−model), Σσ (calibrated uncertainty), GP, cats
 - Shortcuts: `/` search · `f` filters · `r` reset board · `v`/`e`/`u`/`g` sort · `?` help · `j`/`k` · `Esc`
-- Active stat filters show as removable chips when the filter panel is closed
+- Active board filters (position, search, stats) show as removable chips when the filter panel is closed
 - Export filtered CSV/JSON or copy a shareable board / player link
 
 ## Deploy

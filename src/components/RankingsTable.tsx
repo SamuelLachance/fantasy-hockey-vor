@@ -40,7 +40,7 @@ import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
-import { ActiveStatFilterChips } from "./ActiveStatFilterChips";
+import { BoardActiveFilters } from "./BoardActiveFilters";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsEmptyState } from "./RankingsEmptyState";
 import { RankingsStatFilters } from "./RankingsStatFilters";
@@ -332,14 +332,24 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             }}
           />
         )}
-        {!filtersOpen && activeFilterCount > 0 && (
-          <ActiveStatFilterChips
-            statRanges={statRanges}
-            onOpen={() => setFiltersOpen(true)}
-            onClear={clearStatFilters}
-            onRemove={removeStatFilter}
-          />
-        )}
+        {!filtersOpen &&
+          (activeFilterCount > 0 ||
+            position !== "ALL" ||
+            query.trim() !== "") && (
+            <BoardActiveFilters
+              position={position}
+              query={query}
+              statRanges={statRanges}
+              showStatChips={activeFilterCount > 0}
+              onClearPosition={() =>
+                startTransition(() => setPosition("ALL"))
+              }
+              onClearQuery={() => setQuery("")}
+              onOpenStats={() => setFiltersOpen(true)}
+              onClearStats={clearStatFilters}
+              onRemoveStat={removeStatFilter}
+            />
+          )}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">

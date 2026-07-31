@@ -19,12 +19,12 @@ const files: Record<string, string[]> = {
     "ExpandedPlayerPanel",
     'column="sigma"',
     "BoardShortcutsHelp",
-    "ActiveStatFilterChips",
+    "BoardActiveFilters",
     "RankingsEmptyState",
     'aria-controls="rankings-stat-filters"',
   ],
-  "src/components/ActiveStatFilterChips.tsx": [
-    "Active stat filters",
+  "src/components/BoardActiveFilters.tsx": [
+    "Active board filters",
     "Clear filters",
     "formatRangeChip",
   ],
