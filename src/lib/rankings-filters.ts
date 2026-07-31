@@ -13,7 +13,7 @@ export type CoreSortKey =
   | "draftValue";
 export type SortKey = CoreSortKey | Category;
 
-export type CoreRangeKey = "gamesPlayed" | "vor" | "draftValue";
+export type CoreRangeKey = "gamesPlayed" | "vor" | "draftValue" | "sigma";
 export type RangeKey = CoreRangeKey | Category;
 
 export type StatRanges = Partial<Record<RangeKey, { min: string; max: string }>>;
@@ -44,9 +44,10 @@ function coreValue(
   player: PlayerProjection,
   key: CoreRangeKey,
   position: Position | "ALL",
-): number {
+): number | null {
   if (key === "vor") return vorForFilter(player, position);
   if (key === "draftValue") return player.draftValue ?? 0;
+  if (key === "sigma") return player.uncertainty?.total?.sigma ?? null;
   return player.gamesPlayed;
 }
 
@@ -68,7 +69,12 @@ export function passesRanges(
     if (min == null && max == null) continue;
 
     let value: number | null;
-    if (key === "gamesPlayed" || key === "vor" || key === "draftValue") {
+    if (
+      key === "gamesPlayed" ||
+      key === "vor" ||
+      key === "draftValue" ||
+      key === "sigma"
+    ) {
       value = coreValue(player, key, position);
     } else {
       value = projectionStatValue(player, key);
@@ -84,6 +90,7 @@ export function rangeLabel(key: RangeKey): string {
   if (key === "gamesPlayed") return "Games Played";
   if (key === "vor") return "VOR";
   if (key === "draftValue") return "Edge vs consensus";
+  if (key === "sigma") return "Uncertainty Σσ";
   return CATEGORY_FULL_LABELS[key];
 }
 

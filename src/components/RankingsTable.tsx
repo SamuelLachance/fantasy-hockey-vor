@@ -99,7 +99,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const filterRangeKeys = useMemo((): RangeKey[] => {
     const cats =
       position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
-    return ["gamesPlayed", "vor", "draftValue", ...cats];
+    return ["gamesPlayed", "vor", "draftValue", "sigma", ...cats];
   }, [position]);
 
   const activeFilterCount = useMemo(() => {

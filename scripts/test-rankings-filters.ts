@@ -16,6 +16,7 @@ assert.equal(parseRangeValue("goals", ""), undefined);
 assert.equal(defaultSortDir("rank"), "asc");
 assert.equal(defaultSortDir("vor"), "desc");
 assert.equal(rangeLabel("draftValue"), "Edge vs consensus");
+assert.equal(rangeLabel("sigma"), "Uncertainty Σσ");
 
 const player = {
   vor: 5,
@@ -25,6 +26,7 @@ const player = {
   position: "C",
   isGoalie: false,
   projection: { goals: 30, savePct: 0.9 },
+  uncertainty: { total: { sigma: 2.5 } },
 } as unknown as PlayerProjection;
 
 assert.equal(vorForFilter(player, "ALL"), 5);
@@ -45,6 +47,24 @@ assert.equal(
     { goals: { min: "50", max: "" } },
     "ALL",
     ["goals"],
+  ),
+  false,
+);
+assert.equal(
+  passesRanges(
+    player,
+    { sigma: { min: "", max: "3" } },
+    "ALL",
+    ["sigma"],
+  ),
+  true,
+);
+assert.equal(
+  passesRanges(
+    player,
+    { sigma: { min: "", max: "2" } },
+    "ALL",
+    ["sigma"],
   ),
   false,
 );

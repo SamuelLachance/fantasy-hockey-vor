@@ -28,7 +28,8 @@ export function RankingsStatFilters({
         <div>
           <h3 className="text-sm font-semibold text-white">Filter by stats</h3>
           <p className="text-xs text-slate-500">
-            Set min/max for any column. Save % accepts 91.5 or 0.915.
+            Set min/max for any column. Σσ filters calibrated uncertainty.
+            Save % accepts 91.5 or 0.915.
           </p>
         </div>
         {activeFilterCount > 0 && (
