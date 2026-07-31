@@ -121,10 +121,16 @@ const files: Record<string, string[]> = {
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
     "Clear filters",
-    "formatRangeChip",
+    "boardActiveStatChips",
+    "boardActiveFiltersVisible",
     "hasStatFilters",
     "All goalies",
     "showingAllGoalies",
+  ],
+  "src/lib/board-active-filter-chips.ts": [
+    "boardActiveStatChips",
+    "boardActiveFiltersVisible",
+    "formatRangeChip",
   ],
   "src/components/RankingsTableHead.tsx": [
     'column="sigma"',

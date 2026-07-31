@@ -3,11 +3,10 @@
 import { X } from "lucide-react";
 import type { Position } from "@/lib/types";
 import {
-  formatRangeChip,
-  rangeLabel,
-  type RangeKey,
-  type StatRanges,
-} from "@/lib/rankings-filters";
+  boardActiveFiltersVisible,
+  boardActiveStatChips,
+} from "@/lib/board-active-filter-chips";
+import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
 
 interface BoardActiveFiltersProps {
   position: Position | "ALL";
@@ -40,23 +39,18 @@ export function BoardActiveFilters({
   onShowStarterGoalies,
 }: BoardActiveFiltersProps) {
   const q = query.trim();
-  const chips = showStatChips
-    ? (
-        Object.entries(statRanges) as Array<
-          [RangeKey, { min: string; max: string } | undefined]
-        >
-      ).filter(
-        ([, b]) => b && formatRangeChip(b.min ?? "", b.max ?? "") !== "",
-      )
-    : [];
-
-  const hasAnything =
-    position !== "ALL" ||
-    q !== "" ||
-    hasStatFilters ||
-    chips.length > 0 ||
-    showingAllGoalies;
-  if (!hasAnything) return null;
+  const chips = boardActiveStatChips(statRanges, showStatChips);
+  if (
+    !boardActiveFiltersVisible({
+      position,
+      query,
+      hasStatFilters,
+      chipCount: chips.length,
+      showingAllGoalies,
+    })
+  ) {
+    return null;
+  }
 
   return (
     <div
@@ -104,32 +98,29 @@ export function BoardActiveFilters({
           </button>
         </span>
       )}
-      {chips.map(([key, bound]) => {
-        const text = formatRangeChip(bound!.min, bound!.max);
-        return (
-          <span
-            key={key}
-            className="inline-flex items-center gap-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 pl-2.5 text-xs text-cyan-100"
+      {chips.map((chip) => (
+        <span
+          key={chip.key}
+          className="inline-flex items-center gap-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 pl-2.5 text-xs text-cyan-100"
+        >
+          <button
+            type="button"
+            onClick={onOpenStats}
+            className="py-1 pr-0.5 font-medium tabular-nums transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            title="Edit filters"
           >
-            <button
-              type="button"
-              onClick={onOpenStats}
-              className="py-1 pr-0.5 font-medium tabular-nums transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-              title="Edit filters"
-            >
-              {rangeLabel(key)} {text}
-            </button>
-            <button
-              type="button"
-              aria-label={`Remove ${rangeLabel(key)} filter`}
-              onClick={() => onRemoveStat(key)}
-              className="rounded-full p-1 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        );
-      })}
+            {chip.label} {chip.bounds}
+          </button>
+          <button
+            type="button"
+            aria-label={`Remove ${chip.label} filter`}
+            onClick={() => onRemoveStat(chip.key)}
+            className="rounded-full p-1 text-cyan-300/80 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </span>
+      ))}
       {(hasStatFilters ||
         position !== "ALL" ||
         q !== "" ||
