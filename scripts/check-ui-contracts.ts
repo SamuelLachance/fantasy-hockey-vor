@@ -949,6 +949,7 @@ const files: Record<string, string[]> = {
   "src/app/loading.tsx": [
     "loadingRankingsCopy",
     'role="status"',
+    'aria-busy="true"',
     "BrandEyebrow",
   ],
   "src/lib/app-shell-copy.ts": [
