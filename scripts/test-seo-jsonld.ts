@@ -30,11 +30,15 @@ const crumbs = graph[3]?.itemListElement as Array<Record<string, unknown>>;
 assert(Array.isArray(crumbs) && crumbs.length === 2, "breadcrumb items");
 assert(crumbs[1]?.name === "2026-27 Rankings", "season crumb");
 const faq = graph[2]?.mainEntity as Array<Record<string, unknown>>;
-assert(Array.isArray(faq) && faq.length >= 4, "FAQ entries");
+assert(Array.isArray(faq) && faq.length >= 5, "FAQ entries");
 assert(faq[0]?.["@type"] === "Question", "FAQ question type");
 assert(
   JSON.stringify(faq).includes("Starters"),
   "FAQ covers goalie starters filter",
+);
+assert(
+  JSON.stringify(faq).includes("keyboard"),
+  "FAQ covers keyboard shortcuts",
 );
 assert(graph[1]?.dateModified === data.generatedAt, "dateModified wired");
 assert(graph[1]?.license === "https://opensource.org/licenses/MIT", "license");

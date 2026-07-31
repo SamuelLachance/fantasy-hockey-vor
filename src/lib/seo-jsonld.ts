@@ -18,6 +18,10 @@ const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
     q: "What does Starters mean for goalies?",
     a: "Starters hides depth goalies projected under 8 games played. Use All goalies (or Shift+G) when you need tandem backups and streaming options.",
   },
+  {
+    q: "What keyboard shortcuts does the board support?",
+    a: "Press ? for the full list. Highlights: / search, f filters, r reset, l copy link, m load more, [ and ] cycle positions, j/k move rows, v/e/u/g sort, Shift+G toggle starter goalies.",
+  },
 ];
 
 /** JSON-LD for the rankings homepage (Dataset + WebApplication + FAQ). */
