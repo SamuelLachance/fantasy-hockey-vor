@@ -288,8 +288,14 @@ const files: Record<string, string[]> = {
     "RankingsGoalieDepthToggle",
     "RankingsBoardLinkButton",
     "RankingsHelpButton",
-    'aria-controls="rankings-stat-filters"',
+    "RankingsStatsFilterButton",
     "PositionFilterTabs",
+  ],
+  "src/components/RankingsStatsFilterButton.tsx": [
+    'aria-controls="rankings-stat-filters"',
+    'aria-keyshortcuts="f"',
+    "activeFilterCount",
+    "Stats",
   ],
   "src/components/RankingsBoardLinkButton.tsx": [
     "boardLinkButtonLabel",
