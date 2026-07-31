@@ -6,6 +6,11 @@ import {
   fetchPlayerDetails,
   resetPlayerDetailsCache,
 } from "@/lib/player-details-client";
+import {
+  playerNotesLoadingLabel,
+  playerNotesRetryLabel,
+  playerNotesUnavailableCopy,
+} from "@/lib/player-notes-copy";
 
 interface ExpandedPlayerNotesProps {
   playerDetails: PlayerDetailRecord | undefined;
@@ -57,17 +62,17 @@ export function ExpandedPlayerNotes({
           className="mb-3 space-y-2"
           role="status"
           aria-busy="true"
-          aria-label="Loading player notes"
+          aria-label={playerNotesLoadingLabel()}
         >
           <div className="h-3 w-full animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
           <div className="h-3 w-5/6 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
           <div className="h-3 w-2/3 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
-          <span className="sr-only">Loading player notes…</span>
+          <span className="sr-only">{playerNotesLoadingLabel()}…</span>
         </div>
       )}
       {detailsError && (
         <p className="mb-3 text-xs text-amber-400/90" role="alert">
-          Player notes unavailable.
+          {playerNotesUnavailableCopy()}
           <button
             type="button"
             disabled={retrying}
@@ -75,7 +80,7 @@ export function ExpandedPlayerNotes({
             className="ml-2 underline decoration-amber-400/50 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-wait disabled:opacity-70"
             onClick={retryDetails}
           >
-            {retrying ? "Retrying…" : "Retry"}
+            {playerNotesRetryLabel(retrying)}
           </button>
         </p>
       )}

@@ -248,13 +248,18 @@ const files: Record<string, string[]> = {
     "ExpandedPlayerNotes",
   ],
   "src/components/ExpandedPlayerNotes.tsx": [
-    "Loading player notes",
+    "playerNotesLoadingLabel",
+    "playerNotesUnavailableCopy",
+    "playerNotesRetryLabel",
     "sr-only",
-    "Retry",
-    "Retrying",
     "resetPlayerDetailsCache",
     'role="alert"',
     'aria-busy="true"',
+  ],
+  "src/lib/player-notes-copy.ts": [
+    "playerNotesLoadingLabel",
+    "playerNotesUnavailableCopy",
+    "playerNotesRetryLabel",
   ],
   "src/components/ExpandedPlayerCategories.tsx": [
     "categoryZBarWidth",
