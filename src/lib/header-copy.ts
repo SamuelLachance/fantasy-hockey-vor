@@ -30,3 +30,8 @@ export function headerLeadCopy(season: string): string {
 export function headerJumpCtaCopy(): string {
   return "Jump to board";
 }
+
+/** Tooltip / accessible hint for the hero jump CTA (also focuses search). */
+export function headerJumpCtaTitle(): string {
+  return "Jump to board + focus search";
+}

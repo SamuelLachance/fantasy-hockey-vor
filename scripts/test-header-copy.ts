@@ -6,6 +6,7 @@ import {
   headerEyebrowCopy,
   headerHeroTitle,
   headerJumpCtaCopy,
+  headerJumpCtaTitle,
   headerLeadCopy,
   skipToRankingsCopy,
 } from "../src/lib/header-copy";
@@ -21,6 +22,10 @@ function assert(cond: boolean, msg: string) {
 assert(headerEyebrowCopy() === "Value Over Replacement", "eyebrow");
 assert(headerHeroTitle() === "Fantasy Hockey VOR", "hero brand");
 assert(headerJumpCtaCopy() === "Jump to board", "cta");
+assert(
+  headerJumpCtaTitle() === "Jump to board + focus search",
+  "cta title",
+);
 assert(headerLeadCopy("2026-27").startsWith("2026-27 projections"), "lead");
 assert(headerLeadCopy("2026-27").includes("±1σ"), "lead uncertainty");
 assert(skipToRankingsCopy() === "Skip to rankings", "skip link");
