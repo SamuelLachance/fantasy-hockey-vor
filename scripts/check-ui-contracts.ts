@@ -164,6 +164,12 @@ const files: Record<string, string[]> = {
     "Scroll to top",
     "requestAnimationFrame",
     "scrollPageTop",
+    "motion-reduce:transition-none",
+  ],
+  "src/components/TopPlayerLink.tsx": [
+    "TopPlayerLink",
+    "hover:bg-white/[0.07]",
+    "motion-reduce:transition-none",
   ],
   "src/app/not-found.tsx": ["Page not found", "Back to rankings"],
   "src/lib/seo-jsonld.ts": [
@@ -210,7 +216,6 @@ const files: Record<string, string[]> = {
     "vorForFilter",
     "TopPlayerLink",
   ],
-  "src/components/TopPlayerLink.tsx": ["TopPlayerLink", "hover:bg-white/[0.07]"],
   "src/app/page.tsx": [
     "RankingsTable",
     "TopPlayers",

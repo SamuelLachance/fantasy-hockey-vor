@@ -38,7 +38,7 @@ export function TopPlayerLink({
   return (
     <a
       href={href}
-      className={`flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition ${a.hover} hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 ${a.ring}`}
+      className={`flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition motion-reduce:transition-none ${a.hover} hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 ${a.ring}`}
     >
       <div className="flex items-center gap-3">{children}</div>
       {trailing}
