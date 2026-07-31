@@ -383,6 +383,7 @@ const files: Record<string, string[]> = {
     "vorForFilter",
     "TopPlayerLink",
     "dense",
+    "tabular-nums",
   ],
   "src/app/page.tsx": [
     "RankingsTable",
