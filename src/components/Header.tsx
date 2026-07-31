@@ -8,6 +8,7 @@ import {
   isProjectionStale,
   isProjectionVeryStale,
 } from "@/lib/projection-age";
+import { SITE_BRAND } from "@/lib/site";
 import { HeaderRosterNote } from "./HeaderRosterNote";
 import { HeaderStaleBanner } from "./HeaderStaleBanner";
 
@@ -61,7 +62,7 @@ export function Header({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Fantasy Hockey Rankings
+              {SITE_BRAND}
             </h1>
             <p className="mt-3 max-w-2xl text-lg text-slate-400">
               {season} projections from a stacked ML ensemble — gradient
