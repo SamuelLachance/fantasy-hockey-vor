@@ -36,7 +36,7 @@ import {
 } from "@/lib/rankings-board";
 import { copyText } from "@/lib/clipboard";
 import { highlightMatch } from "@/lib/highlight-match";
-import { parseRankingsUrl, rankingsShareUrl, rankingsUrlSearch } from "@/lib/rankings-url";
+import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";

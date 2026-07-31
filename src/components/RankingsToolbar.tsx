@@ -10,7 +10,7 @@ import {
 } from "@/lib/rankings-export";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import { copyText } from "@/lib/clipboard";
-import { rankingsUrlSearch } from "@/lib/rankings-url";
+import { rankingsShareUrl } from "@/lib/rankings-url";
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
 
@@ -195,7 +195,7 @@ export function RankingsToolbar({
         <button
           type="button"
           onClick={() => {
-            const qs = rankingsUrlSearch({
+            const url = rankingsShareUrl(window.location.origin, pathname, {
               position,
               query: deferredQuery,
               sortKey,
@@ -204,7 +204,6 @@ export function RankingsToolbar({
               hideDepthGoalies,
               statRanges,
             });
-            const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
             void copyText(url).then((ok) => {
               if (ok) onLinkCopied();
             });
