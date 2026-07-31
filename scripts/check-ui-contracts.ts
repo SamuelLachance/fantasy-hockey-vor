@@ -25,8 +25,10 @@ const files: Record<string, string[]> = {
     "Load more players",
     "Drop deep-linked expand ids",
     "boardHasPlayerId",
+    "countActiveStatFilters",
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId"],
+  "src/lib/board-active-filters.ts": ["countActiveStatFilters"],
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",

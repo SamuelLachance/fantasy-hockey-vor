@@ -24,6 +24,7 @@ import {
   coerceSortKeyForPosition,
   filterAndSortBoard,
 } from "@/lib/rankings-board";
+import { countActiveStatFilters } from "@/lib/board-active-filters";
 import { boardHasPlayerId } from "@/lib/board-players";
 import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { copyTextWithFlash } from "@/lib/copy-flash";
@@ -113,14 +114,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     [position],
   );
 
-  const activeFilterCount = useMemo(() => {
-    let n = 0;
-    for (const key of filterRangeKeys) {
-      const b = statRanges[key];
-      if (b?.min?.trim() || b?.max?.trim()) n++;
-    }
-    return n;
-  }, [statRanges, filterRangeKeys]);
+  const activeFilterCount = useMemo(
+    () => countActiveStatFilters(statRanges, filterRangeKeys),
+    [statRanges, filterRangeKeys],
+  );
 
   const filterKey = boardFilterResetToken(
     position,
