@@ -1886,21 +1886,32 @@ export function renormalizeGoalieGamesByTeam<
     groups.set(team, list);
   }
   const out = players.map((p) => ({ ...p }));
+  const MAX_TANDEM = 3; // starter + backup + injury spare; rest are org depth
   for (const idxs of groups.values()) {
     if (idxs.length < 2) continue;
+    // Rank by projected workload; only the top tandem shares the season budget.
+    const ordered = [...idxs].sort(
+      (a, b) => out[b]!.gamesPlayed - out[a]!.gamesPlayed,
+    );
+    const active = ordered.slice(0, MAX_TANDEM);
+    const depth = ordered.slice(MAX_TANDEM);
     let sum = 0;
-    for (const i of idxs) sum += out[i].gamesPlayed;
+    for (const i of active) sum += out[i]!.gamesPlayed;
     if (!(sum > 0)) continue;
     // Previously skipped sum≥150, which left overloaded org charts (PHI 194+)
-    // untouched — the exact case that most needs scaling. Always fit to budget
-    // when the tandem is meaningfully off (more than ~5 GP).
-    if (Math.abs(sum - teamBudget) <= 5) continue;
-    const scale = teamBudget / sum;
-    for (const i of idxs) {
-      out[i].gamesPlayed = Math.max(
-        4,
-        Math.min(72, Math.round(out[i].gamesPlayed * scale)),
-      );
+    // untouched — the exact case that most needs scaling.
+    if (Math.abs(sum - teamBudget) > 5) {
+      const scale = teamBudget / sum;
+      for (const i of active) {
+        out[i]!.gamesPlayed = Math.max(
+          4,
+          Math.min(72, Math.round(out[i]!.gamesPlayed * scale)),
+        );
+      }
+    }
+    // Org depth stays on the board as streamers, not budget participants.
+    for (const i of depth) {
+      out[i]!.gamesPlayed = 4;
     }
   }
   return out;

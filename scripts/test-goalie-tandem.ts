@@ -26,14 +26,14 @@ const sumBefore = before
 assert(sumBefore > 150, "fixture overloaded");
 
 const after = renormalizeGoalieGamesByTeam(before, 80);
-const sumAfter = after
+const activeSum = after
   .filter((p) => p.isGoalie)
+  .sort((a, b) => b.gamesPlayed - a.gamesPlayed)
+  .slice(0, 3)
   .reduce((s, p) => s + p.gamesPlayed, 0);
-assert(sumAfter >= 75 && sumAfter <= 85, `sum ~80 (got ${sumAfter})`);
-assert(
-  after[0]!.gamesPlayed >= after[4]!.gamesPlayed,
-  "relative order preserved",
-);
+assert(activeSum >= 75 && activeSum <= 85, `top-3 sum ~80 (got ${activeSum})`);
+assert(after[0]!.gamesPlayed >= 30, `starter keeps real workload (got ${after[0]!.gamesPlayed})`);
+assert(after[4]!.gamesPlayed === 4, "org depth fixed at 4 GP");
 
 if (failed) process.exit(1);
 console.log("OK: goalie-tandem");

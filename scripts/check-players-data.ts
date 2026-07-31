@@ -84,19 +84,24 @@ if (dWithFow > 0) {
   errors.push(`${dWithFow} defensemen have FOW > 0`);
 }
 
-const goalieGpByTeam = new Map<string, number>();
+// Top-3 goalies per team should fit a season; depth chart fillers may add ~4 GP each.
+const goaliesByTeam = new Map<string, number[]>();
 for (const p of players) {
   if (!p.isGoalie) continue;
-  goalieGpByTeam.set(p.team, (goalieGpByTeam.get(p.team) ?? 0) + p.gamesPlayed);
+  const list = goaliesByTeam.get(p.team) ?? [];
+  list.push(p.gamesPlayed);
+  goaliesByTeam.set(p.team, list);
 }
-const overloadedTeams = [...goalieGpByTeam.entries()].filter(
-  ([, gp]) => gp > 110,
-);
+const overloadedTeams: string[] = [];
+for (const [team, gps] of goaliesByTeam) {
+  const top3 = [...gps].sort((a, b) => b - a).slice(0, 3);
+  const sum = top3.reduce((s, g) => s + g, 0);
+  if (sum > 100) overloadedTeams.push(`${team}=${sum}`);
+}
 if (overloadedTeams.length > 0) {
   errors.push(
-    `goalie GP sum >110 on ${overloadedTeams.length} team(s): ${overloadedTeams
+    `top-3 goalie GP sum >100 on ${overloadedTeams.length} team(s): ${overloadedTeams
       .slice(0, 5)
-      .map(([t, gp]) => `${t}=${gp}`)
       .join(", ")}`,
   );
 }
