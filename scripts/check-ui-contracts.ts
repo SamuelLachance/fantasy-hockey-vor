@@ -399,7 +399,9 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/board-dom.ts": [
     "preventScroll: true",
-    "focusBoardSearch({ preventScroll",
+    "focusBoardSearchWhenReady",
+    "requestAnimationFrame(tick)",
+    "focusBoardSearchWhenReady({ preventScroll: true })",
     "focusStatsFilterButton",
     "focusFirstStatFilterInput",
     "focusBoardSearch",

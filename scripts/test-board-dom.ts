@@ -13,6 +13,7 @@ import {
   boardStickyChromeHeight,
   boardStickyTopInset,
   focusBoardSearch,
+  focusBoardSearchWhenReady,
   focusPlayerRow,
   focusPlayerRowIfPanelFocused,
   focusFirstStatFilterInput,
@@ -54,6 +55,7 @@ try {
   focusFirstStatFilterInput();
   focusBoardSearch();
   focusBoardSearch({ preventScroll: true });
+  focusBoardSearchWhenReady({ preventScroll: true }, 0);
   focusPlayerRow(1);
   focusPlayerRowIfPanelFocused(1);
   scrollPageTop();
@@ -74,6 +76,10 @@ assert(
   "focusFirstStatFilterInput exported",
 );
 assert(typeof focusBoardSearch === "function", "focusBoardSearch exported");
+assert(
+  typeof focusBoardSearchWhenReady === "function",
+  "focusBoardSearchWhenReady exported",
+);
 assert(
   BOARD_STICKY_CHROME_SELECTOR.includes("data-board-sticky-chrome"),
   "sticky chrome selector",
@@ -151,8 +157,12 @@ const boardDomSrc = readFileSync(
   "utf8",
 );
 assert(
-  boardDomSrc.includes("focusBoardSearch({ preventScroll: true })"),
-  "scrollToRankings focusSearch uses preventScroll",
+  boardDomSrc.includes("focusBoardSearchWhenReady({ preventScroll: true })"),
+  "scrollToRankings focusSearch retries with preventScroll",
+);
+assert(
+  boardDomSrc.includes("requestAnimationFrame(tick)"),
+  "focusBoardSearchWhenReady retries via rAF",
 );
 
 if (failed) process.exit(1);

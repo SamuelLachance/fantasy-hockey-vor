@@ -43,6 +43,33 @@ export function focusBoardSearch(options?: { preventScroll?: boolean }): void {
     ?.focus({ preventScroll: options?.preventScroll === true });
 }
 
+/**
+ * Focus search once it exists — Suspense may delay `#rankings` search input
+ * after Jump / skip-link / End scrolls to the shell.
+ */
+export function focusBoardSearchWhenReady(
+  options?: { preventScroll?: boolean },
+  attempts = 30,
+): void {
+  if (typeof document === "undefined") return;
+  const preferPreventScroll = options?.preventScroll === true;
+  const tryFocus = (): boolean => {
+    const el = document.querySelector<HTMLInputElement>(
+      '#rankings input[type="search"]',
+    );
+    if (!el) return false;
+    el.focus({ preventScroll: preferPreventScroll });
+    return true;
+  };
+  if (tryFocus()) return;
+  let left = attempts;
+  const tick = () => {
+    if (tryFocus() || --left <= 0) return;
+    requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+}
+
 /** Focus a position filter tab (defaults to ALL). */
 export function focusBoardPositionTab(position: "ALL" | string = "ALL"): void {
   if (typeof document === "undefined") return;
@@ -125,7 +152,10 @@ export function scrollToRankings(options?: { focusSearch?: boolean }): void {
   });
   if (options?.focusSearch) {
     // Do not let focus scroll fight the in-flight smooth scroll to #rankings.
-    queueMicrotask(() => focusBoardSearch({ preventScroll: true }));
+    // Retry across rAF — search may still be behind Suspense.
+    queueMicrotask(() =>
+      focusBoardSearchWhenReady({ preventScroll: true }),
+    );
   }
 }
 
