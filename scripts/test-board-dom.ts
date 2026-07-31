@@ -6,6 +6,7 @@ import {
   STICKY_NAME_SHADOW,
   focusPlayerRow,
   focusStatsFilterButton,
+  prefersReducedMotion,
   scrollExpandedRowIntoView,
   scrollPageTop,
   scrollToRankings,
@@ -26,6 +27,10 @@ assert(
 assert(
   typeof STICKY_NAME_SHADOW === "string" && STICKY_NAME_SHADOW.length > 10,
   "sticky shadow non-empty",
+);
+assert(
+  prefersReducedMotion() === true,
+  "SSR/Node defaults to reduced motion",
 );
 
 // Node has no document/window — helpers must no-op without throwing.

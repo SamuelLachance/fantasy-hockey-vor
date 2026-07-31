@@ -15,7 +15,8 @@ export const STICKY_NAME_SHADOW =
 export const STICKY_NAME_BASE =
   "transition-shadow duration-150 motion-reduce:transition-none" as const;
 
-function prefersReducedMotion(): boolean {
+/** Whether the user prefers reduced motion (SSR-safe → true). */
+export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return true;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }

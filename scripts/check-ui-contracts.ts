@@ -166,6 +166,7 @@ const files: Record<string, string[]> = {
     "scrollToRankings",
     "scrollExpandedRowIntoView",
     "focusPlayerRow",
+    "prefersReducedMotion",
   ],
   "src/lib/rankings-export.ts": [
     "rankingsToJsonRows",
