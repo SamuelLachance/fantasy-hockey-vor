@@ -327,24 +327,23 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             }}
           />
         )}
-        {!filtersOpen &&
-          (activeFilterCount > 0 ||
-            position !== "ALL" ||
-            query.trim() !== "") && (
-            <BoardActiveFilters
-              position={position}
-              query={query}
-              statRanges={statRanges}
-              showStatChips={activeFilterCount > 0}
-              onClearPosition={() =>
-                startTransition(() => setPosition("ALL"))
-              }
-              onClearQuery={() => setQuery("")}
-              onOpenStats={() => setFiltersOpen(true)}
-              onClearStats={clearStatFilters}
-              onRemoveStat={removeStatFilter}
-            />
-          )}
+        {(activeFilterCount > 0 ||
+          position !== "ALL" ||
+          query.trim() !== "") && (
+          <BoardActiveFilters
+            position={position}
+            query={query}
+            statRanges={statRanges}
+            showStatChips={!filtersOpen && activeFilterCount > 0}
+            onClearPosition={() =>
+              startTransition(() => setPosition("ALL"))
+            }
+            onClearQuery={() => setQuery("")}
+            onOpenStats={() => setFiltersOpen(true)}
+            onClearStats={clearStatFilters}
+            onRemoveStat={removeStatFilter}
+          />
+        )}
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
