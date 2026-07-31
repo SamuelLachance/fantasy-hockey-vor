@@ -8,6 +8,7 @@ export function HeaderStaleBanner({
   ageDays,
   veryStale,
 }: HeaderStaleBannerProps) {
+  const days = Math.floor(ageDays);
   return (
     <div
       role={veryStale ? "alert" : "status"}
@@ -19,7 +20,8 @@ export function HeaderStaleBanner({
       }`}
     >
       Rankings data is{" "}
-      <span className="tabular-nums">{Math.floor(ageDays)}</span> days old
+      <span className="tabular-nums">{days}</span>{" "}
+      {days === 1 ? "day" : "days"} old
       {veryStale ? " (refresh urgently)" : ""} — re-run{" "}
       <code className={veryStale ? "text-rose-200" : "text-amber-200"}>
         npm run generate
