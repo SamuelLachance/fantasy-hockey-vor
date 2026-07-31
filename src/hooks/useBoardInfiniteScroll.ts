@@ -19,6 +19,18 @@ export function nextVisibleCount(
   return Math.min(current + pageSize, total);
 }
 
+/** Apply load-more growth only if the reset generation still matches. */
+export function applyLoadMoreVisibleCount(
+  current: number,
+  pageSize: number,
+  total: number,
+  scheduledGen: number,
+  currentGen: number,
+): number {
+  if (scheduledGen !== currentGen) return current;
+  return nextVisibleCount(current, pageSize, total);
+}
+
 /**
  * Minimum rows to keep mounted so an expanded player (and a page of context)
  * stay in the DOM. Persisted into visibleCount so collapse does not shrink.
@@ -66,6 +78,7 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
   const [prevToken, setPrevToken] = useState(resetToken);
   const skipIoRef = useRef(false);
   const tokenMountedRef = useRef(false);
+  const resetGenRef = useRef(0);
   const reset = resetToken !== prevToken;
   if (reset) {
     setPrevToken(resetToken);
@@ -78,6 +91,7 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
     }
     // Arm after token change so a bottom-clamped sentinel cannot undo the reset.
     skipIoRef.current = true;
+    resetGenRef.current += 1;
   }, [resetToken]);
 
   const expandFloor = expandVisibleFloor(filtered, expandedId, pageSize);
@@ -96,8 +110,17 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
   const canLoadMore = filteredLength > renderCount;
 
   function loadMore() {
+    const gen = resetGenRef.current;
     startTransition(() => {
-      setVisibleCount((c) => nextVisibleCount(c, pageSize, filteredLength));
+      setVisibleCount((c) =>
+        applyLoadMoreVisibleCount(
+          c,
+          pageSize,
+          filteredLength,
+          gen,
+          resetGenRef.current,
+        ),
+      );
     });
   }
 
@@ -117,9 +140,16 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
           });
           return;
         }
+        const gen = resetGenRef.current;
         startTransition(() => {
           setVisibleCount((c) =>
-            nextVisibleCount(c, pageSize, filteredLength),
+            applyLoadMoreVisibleCount(
+              c,
+              pageSize,
+              filteredLength,
+              gen,
+              resetGenRef.current,
+            ),
           );
         });
       },

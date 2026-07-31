@@ -4,6 +4,7 @@
  */
 import {
   BOARD_PAGE_SIZE,
+  applyLoadMoreVisibleCount,
   expandVisibleFloor,
   nextVisibleCount,
   resolveVisibleCount,
@@ -55,6 +56,15 @@ assert(
     expandFloor: 0,
   }) === 200,
   "no reset keeps window",
+);
+
+assert(
+  applyLoadMoreVisibleCount(100, 100, 250, 1, 1) === 200,
+  "load-more applies when gen matches",
+);
+assert(
+  applyLoadMoreVisibleCount(100, 100, 250, 1, 2) === 100,
+  "stale load-more ignored after reset gen",
 );
 
 if (failed) process.exit(1);
