@@ -45,6 +45,7 @@ const files: Record<string, string[]> = {
   "src/app/global-error.tsx": ["Try again"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
+  "src/lib/format.ts": ["sigmaColor", "edgeColor"],
   "src/components/TopPlayers.tsx": [
     "gamesPlayed > 8",
     "playerHref",
