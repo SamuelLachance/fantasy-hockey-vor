@@ -2,7 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
-import { nextExpandedPlayerId } from "@/lib/board-keyboard";
+import {
+  isBoardTypingTarget,
+  nextExpandedPlayerId,
+  shouldIgnoreBoardShortcut,
+} from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
 import { focusStatsFilterButton, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
@@ -84,12 +88,11 @@ export function useRankingsKeyboard({
 
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
-      const tag = (e.target as HTMLElement | null)?.tagName;
-      const inField =
-        tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      const typing = isBoardTypingTarget(e.target);
       const helpOpenNow = helpOpenRef.current;
       const filtersOpenNow = filtersOpenRef.current;
       const expandedIdNow = expandedIdRef.current;
+      const ignoreBoard = shouldIgnoreBoardShortcut(helpOpenNow, e.target);
 
       if (e.key === "Escape") {
         if (helpOpenNow) {
@@ -101,7 +104,7 @@ export function useRankingsKeyboard({
           queueMicrotask(focusStatsFilterButton);
           return;
         }
-        if (inField) {
+        if (typing) {
           const el = e.target as HTMLInputElement | HTMLTextAreaElement;
           if (
             el instanceof HTMLInputElement &&
@@ -117,8 +120,9 @@ export function useRankingsKeyboard({
         setExpandedIdRef.current(null);
         return;
       }
+
       if (
-        !inField &&
+        !typing &&
         !e.metaKey &&
         !e.ctrlKey &&
         !e.altKey &&
@@ -128,26 +132,17 @@ export function useRankingsKeyboard({
         setHelpOpenRef.current((o) => !o);
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        e.key === "/"
-      ) {
+
+      if (ignoreBoard || e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === "/") {
         e.preventDefault();
         document
           .querySelector<HTMLInputElement>('#rankings input[type="search"]')
           ?.focus();
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        (e.key === "f" || e.key === "F")
-      ) {
+      if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         setFiltersOpenRef.current((open) => {
           const next = !open;
@@ -164,62 +159,27 @@ export function useRankingsKeyboard({
         });
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
-        e.key === "Home"
-      ) {
+      if (e.key === "Home") {
         e.preventDefault();
         scrollPageTop();
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
-        e.key === "End"
-      ) {
+      if (e.key === "End") {
         e.preventDefault();
         scrollToRankings({ focusSearch: true });
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
-        (e.key === "r" || e.key === "R") &&
-        onResetBoardRef.current
-      ) {
+      if ((e.key === "r" || e.key === "R") && onResetBoardRef.current) {
         e.preventDefault();
         onResetBoardRef.current();
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
-        (e.key === "l" || e.key === "L") &&
-        onCopyBoardLinkRef.current
-      ) {
+      if ((e.key === "l" || e.key === "L") && onCopyBoardLinkRef.current) {
         e.preventDefault();
         onCopyBoardLinkRef.current();
         return;
       }
       if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
         (e.key === "p" || e.key === "P") &&
         expandedIdNow != null &&
         onCopyPlayerLinkRef.current
@@ -228,38 +188,17 @@ export function useRankingsKeyboard({
         onCopyPlayerLinkRef.current(expandedIdNow);
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
-        (e.key === "m" || e.key === "M") &&
-        onLoadMoreRef.current
-      ) {
+      if ((e.key === "m" || e.key === "M") && onLoadMoreRef.current) {
         e.preventDefault();
         onLoadMoreRef.current();
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
-        (e.key === "[" || e.key === "]") &&
-        onCyclePositionRef.current
-      ) {
+      if ((e.key === "[" || e.key === "]") && onCyclePositionRef.current) {
         e.preventDefault();
         onCyclePositionRef.current(e.key === "]" ? 1 : -1);
         return;
       }
       if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !helpOpenNow &&
         e.shiftKey &&
         (e.key === "G" || e.key === "g") &&
         onToggleDepthGoaliesRef.current
@@ -268,14 +207,7 @@ export function useRankingsKeyboard({
         onToggleDepthGoaliesRef.current();
         return;
       }
-      if (
-        !inField &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        !e.shiftKey &&
-        !helpOpenNow
-      ) {
+      if (!e.shiftKey) {
         const sortKey = BOARD_SORT_HOTKEYS[e.key.toLowerCase()];
         if (sortKey) {
           e.preventDefault();
@@ -284,7 +216,6 @@ export function useRankingsKeyboard({
           return;
         }
       }
-      if (inField || helpOpenNow) return;
       if (
         e.key !== "j" &&
         e.key !== "k" &&

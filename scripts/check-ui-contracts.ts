@@ -128,6 +128,9 @@ const files: Record<string, string[]> = {
   "src/lib/board-keyboard.ts": [
     "nextExpandedPlayerId",
     "isBoardRowToggleKey",
+    "isBoardTypingTarget",
+    "isBoardChromeTarget",
+    "shouldIgnoreBoardShortcut",
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
@@ -193,6 +196,8 @@ const files: Record<string, string[]> = {
     'e.key === "Home"',
     'e.key === "End"',
     "nextExpandedPlayerId",
+    "shouldIgnoreBoardShortcut",
+    "isBoardTypingTarget",
     "onToggleDepthGoalies",
     "onLoadMore",
     "onClearSearch",
