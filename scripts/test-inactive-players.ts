@@ -22,6 +22,8 @@ assert(ids.has(8474053), "Couture id listed");
 assert(ids.has(8476346), "Gaudreau id listed");
 assert(ids.has(8470794), "Pavelski id listed");
 assert(ids.has(8473604), "Toews id listed");
+assert(ids.has(8470966), "Giordano id listed");
+assert(ids.has(8470600), "Suter id listed");
 const kept = filterActivePlayers([
   { id: 8474053 },
   { id: 8480014 },
