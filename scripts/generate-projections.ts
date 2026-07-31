@@ -327,8 +327,13 @@ async function main() {
 
   const activePool = filterActivePlayers(tandemAdjusted);
   if (activePool.length < tandemAdjusted.length) {
+    const dropped = tandemAdjusted.filter(
+      (p) => !activePool.some((a) => a.id === p.id),
+    );
     console.log(
-      `Dropped ${tandemAdjusted.length - activePool.length} curated inactive player(s)`,
+      `Dropped ${dropped.length} curated inactive player(s): ${dropped
+        .map((p) => p.name)
+        .join(", ")}`,
     );
   }
 
