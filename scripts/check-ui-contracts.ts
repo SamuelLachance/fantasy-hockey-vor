@@ -188,7 +188,11 @@ const files: Record<string, string[]> = {
     "playerDetailsHref",
   ],
   "src/app/layout.tsx": ["keywords", "robots", "category"],
-  "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
+  "src/lib/rankings-board.ts": [
+    "filterAndSortBoard",
+    "hideDepthGoalies",
+    "coerceSortKeyForPosition",
+  ],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/components/Header.tsx": [
     "Jump to board",

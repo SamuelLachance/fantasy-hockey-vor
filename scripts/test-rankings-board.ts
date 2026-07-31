@@ -2,7 +2,10 @@
  * Unit checks for pure board filter/sort.
  * Run: npx tsx scripts/test-rankings-board.ts
  */
-import { filterAndSortBoard } from "../src/lib/rankings-board";
+import {
+  coerceSortKeyForPosition,
+  filterAndSortBoard,
+} from "../src/lib/rankings-board";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -81,6 +84,18 @@ const edgeMin = filterAndSortBoard(players, {
   statRanges: { draftValue: { min: "5", max: "" } },
 });
 assert(edgeMin.length === 1 && edgeMin[0]!.name === "Gamma", "edge filter");
+
+assert(coerceSortKeyForPosition("vor", "D") === "vor", "core sort kept");
+assert(
+  coerceSortKeyForPosition("faceoffWins", "D") === "vor",
+  "FOW invalid on D → vor",
+);
+assert(
+  coerceSortKeyForPosition("faceoffWins", "C") === "faceoffWins",
+  "FOW valid on C",
+);
+assert(coerceSortKeyForPosition("wins", "G") === "wins", "wins valid on G");
+assert(coerceSortKeyForPosition("wins", "ALL") === "vor", "wins invalid on ALL");
 
 if (failed) process.exit(1);
 console.log("OK: rankings-board");

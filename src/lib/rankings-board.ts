@@ -23,6 +23,27 @@ export function boardFilterKeys(position: Position | "ALL"): RangeKey[] {
   return ["gamesPlayed", "vor", "draftValue", "sigma", ...boardCategories(position)];
 }
 
+const CORE_SORT_KEYS = new Set<SortKey>([
+  "rank",
+  "vor",
+  "name",
+  "team",
+  "gamesPlayed",
+  "draftValue",
+  "sigma",
+]);
+
+/** Reset category sorts that vanish when the position filter changes. */
+export function coerceSortKeyForPosition(
+  sortKey: SortKey,
+  position: Position | "ALL",
+): SortKey {
+  if (CORE_SORT_KEYS.has(sortKey)) return sortKey;
+  const cats = boardCategories(position);
+  if ((cats as readonly string[]).includes(sortKey)) return sortKey;
+  return "vor";
+}
+
 export interface BoardQuery {
   position: Position | "ALL";
   query: string;

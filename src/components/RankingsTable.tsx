@@ -21,6 +21,7 @@ import {
 import {
   boardCategories,
   boardFilterKeys,
+  coerceSortKeyForPosition,
   filterAndSortBoard,
 } from "@/lib/rankings-board";
 import { boardHasPlayerId } from "@/lib/board-players";
@@ -131,18 +132,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   if (position !== prevPosition) {
     setPrevPosition(position);
     // Drop sorts on categories that disappear under the new filter (e.g. FOW on D).
-    const cats = boardCategories(position);
-    if (
-      sortKey !== "rank" &&
-      sortKey !== "vor" &&
-      sortKey !== "name" &&
-      sortKey !== "team" &&
-      sortKey !== "gamesPlayed" &&
-      sortKey !== "draftValue" &&
-      sortKey !== "sigma" &&
-      !(cats as readonly string[]).includes(sortKey)
-    ) {
-      setSortKey("vor");
+    const nextKey = coerceSortKeyForPosition(sortKey, position);
+    if (nextKey !== sortKey) {
+      setSortKey(nextKey);
       setSortDir("desc");
     }
   }
