@@ -185,7 +185,7 @@ export function RankingsToolbar({
           <button
             type="button"
             aria-pressed={hideDepthGoalies}
-            onClick={() => setHideDepthGoalies((v) => !v)}
+            onClick={() => startTransition(() => setHideDepthGoalies((v) => !v))}
             className={`inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
               hideDepthGoalies
                 ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
