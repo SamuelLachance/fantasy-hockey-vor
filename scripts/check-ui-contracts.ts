@@ -310,7 +310,6 @@ const files: Record<string, string[]> = {
     "aria-busy",
     "searchPending",
     "boardShowingSummary",
-    "opacity-70",
     "Enter/Space",
     "boardShortcutsStatusCopy",
     "tabular-nums",

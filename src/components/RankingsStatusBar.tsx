@@ -18,7 +18,7 @@ export function RankingsStatusBar({
   return (
     <p className="text-center text-xs text-slate-400">
       <span
-        className={`tabular-nums${searchPending ? " opacity-70" : ""}`}
+        className="tabular-nums"
         aria-live="polite"
         aria-atomic="true"
         aria-busy={searchPending || undefined}
