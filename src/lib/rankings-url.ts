@@ -132,9 +132,12 @@ export function rankingsUrlSearch(state: RankingsUrlState): string {
   if (state.sortDir !== defaultSortDir(state.sortKey)) p.set("dir", state.sortDir);
   if (state.playerId != null) p.set("player", String(state.playerId));
   if (!state.hideDepthGoalies) p.set("g", "all");
+  const base = p.toString();
   const rf = encodeStatRanges(state.statRanges ?? {});
-  if (rf) p.set("rf", rf);
-  return p.toString();
+  // Append rf manually so `:` / `,` stay readable (URLSearchParams would %3A-encode).
+  if (!rf) return base;
+  const rfPart = `rf=${rf}`;
+  return base ? `${base}&${rfPart}` : rfPart;
 }
 
 export function defaultRankingsUrlState(): RankingsUrlState {
