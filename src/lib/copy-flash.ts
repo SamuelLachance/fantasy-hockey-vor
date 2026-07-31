@@ -48,9 +48,18 @@ export function copyTextWithFlash(
   text: string,
   onStatus: (status: CopyFlash) => void,
   holdMs = 1600,
-): void {
+): () => void {
+  let cancelled = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
   void copyText(text).then((ok) => {
+    if (cancelled) return;
     onStatus(ok ? "ok" : "err");
-    globalThis.setTimeout(() => onStatus("idle"), holdMs);
+    timer = globalThis.setTimeout(() => {
+      if (!cancelled) onStatus("idle");
+    }, holdMs);
   });
+  return () => {
+    cancelled = true;
+    if (timer != null) globalThis.clearTimeout(timer);
+  };
 }

@@ -55,6 +55,8 @@ const files: Record<string, string[]> = {
     "copyBoardLink",
     "copyPlayerLink",
     "boardShareState(null)",
+    "cancelBoardFlashRef",
+    "cancelPlayerFlashRef",
   ],
   "src/hooks/useRankingsHashJump.ts": [
     "useRankingsHashJump",

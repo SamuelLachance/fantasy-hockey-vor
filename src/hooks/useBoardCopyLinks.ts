@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { CopyFlash } from "@/lib/copy-flash";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import type { RankingsUrlState } from "@/lib/rankings-url";
@@ -18,10 +18,12 @@ export function useBoardCopyLinks(
     id: number | null;
     status: CopyFlash;
   }>({ id: null, status: "idle" });
+  const cancelBoardFlashRef = useRef<(() => void) | null>(null);
+  const cancelPlayerFlashRef = useRef<(() => void) | null>(null);
 
   function copyBoardLink() {
-    // Board view share never includes an expanded player (that is `p` / copyPlayerLink).
-    copyTextWithFlash(
+    cancelBoardFlashRef.current?.();
+    cancelBoardFlashRef.current = copyTextWithFlash(
       rankingsShareUrl(
         window.location.origin,
         pathname,
@@ -32,8 +34,9 @@ export function useBoardCopyLinks(
   }
 
   function copyPlayerLink(playerId: number) {
+    cancelPlayerFlashRef.current?.();
     setPlayerLinkStatus({ id: playerId, status: "idle" });
-    copyTextWithFlash(
+    cancelPlayerFlashRef.current = copyTextWithFlash(
       rankingsShareUrl(
         window.location.origin,
         pathname,

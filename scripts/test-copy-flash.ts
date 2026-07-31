@@ -86,6 +86,34 @@ async function main() {
   assert(okStatuses[0] === "ok", `expected ok first, got ${okStatuses[0]}`);
   assert(okStatuses[1] === "idle", `expected idle after ok, got ${okStatuses[1]}`);
 
+  const cancelled: string[] = [];
+  let pendingIdle: (() => void) | undefined;
+  const realTimeout = globalThis.setTimeout;
+  const realClear = globalThis.clearTimeout;
+  (globalThis as { setTimeout: typeof setTimeout }).setTimeout = ((
+    fn: () => void,
+  ) => {
+    pendingIdle = fn;
+    return 1 as unknown as ReturnType<typeof setTimeout>;
+  }) as typeof setTimeout;
+  (globalThis as { clearTimeout: typeof clearTimeout }).clearTimeout = ((
+    id: ReturnType<typeof setTimeout>,
+  ) => {
+    if (id === (1 as unknown as ReturnType<typeof setTimeout>)) {
+      pendingIdle = undefined;
+    }
+  }) as typeof clearTimeout;
+
+  const cancel = copyTextWithFlash("cancel-me", (s) => cancelled.push(s), 50);
+  await new Promise((r) => realTimeout(r, 0));
+  assert(cancelled[0] === "ok", "cancel case starts ok");
+  cancel();
+  pendingIdle?.();
+  assert(cancelled.length === 1, "cancelled flash never returns idle");
+  (globalThis as { setTimeout: typeof setTimeout }).setTimeout = realTimeout;
+  (globalThis as { clearTimeout: typeof clearTimeout }).clearTimeout =
+    realClear;
+
   if (failed) process.exit(1);
   console.log("OK: copy-flash");
 }
