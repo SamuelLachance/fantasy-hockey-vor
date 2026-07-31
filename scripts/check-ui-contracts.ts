@@ -49,7 +49,11 @@ const files: Record<string, string[]> = {
     "onCopyBoardLink",
   ],
   "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
-  "src/lib/board-dom.ts": ["focusStatsFilterButton", "rankings-stat-filters"],
+  "src/lib/board-dom.ts": [
+    "focusStatsFilterButton",
+    "rankings-stat-filters",
+    "STICKY_NAME_SHADOW",
+  ],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",
@@ -93,6 +97,12 @@ const files: Record<string, string[]> = {
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/components/Header.tsx": ["Jump to board", "dateTime"],
+  "src/app/page.tsx": [
+    "RankingsTable",
+    "TopPlayers",
+    "draftable",
+    "r · l",
+  ],
   "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],
   "src/app/loading.tsx": ["Loading rankings", "role=\"status\""],

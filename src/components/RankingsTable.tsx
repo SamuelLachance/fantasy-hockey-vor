@@ -36,7 +36,7 @@ import {
 import { highlightMatch } from "@/lib/highlight-match";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
-import { focusStatsFilterButton } from "@/lib/board-dom";
+import { focusStatsFilterButton, STICKY_NAME_SHADOW } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
@@ -407,9 +407,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                   onToggle={toggleSort}
                   onReset={resetSortToVor}
                   className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${
-                    showStickyShadow
-                      ? "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]"
-                      : ""
+                    showStickyShadow ? STICKY_NAME_SHADOW : ""
                   }`}
                 />
                 <th className="px-4 py-3">Pos</th>
@@ -502,9 +500,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                       </td>
                       <td
                         className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${
-                          showStickyShadow
-                            ? "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]"
-                            : ""
+                          showStickyShadow ? STICKY_NAME_SHADOW : ""
                         } ${
                           isExpanded ? "bg-slate-900" : "bg-slate-950/95"
                         }`}
