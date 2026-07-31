@@ -126,17 +126,17 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           {
             "@type": "HowToStep",
             name: "Open the board",
-            text: "Jump to #rankings or press End to focus search.",
+            text: "Jump to #rankings or press End (when not on a row) to focus search.",
           },
           {
             "@type": "HowToStep",
             name: "Filter by position and stats",
-            text: "Use position tabs or [ / ], open Stats with f, and set min/max ranges.",
+            text: "Use position tabs or [ / ], open Stats with f (Esc closes), and set min/max ranges.",
           },
           {
             "@type": "HowToStep",
             name: "Sort and compare risk",
-            text: "Press v/e/u/g for VOR / Edge / Σσ / GP. Expand a row for category z and notes.",
+            text: "Press v/e/u/g for VOR / Edge / Σσ / GP. Expand a row for category z and notes; j/k or PageUp/PageDown move; Home/End jump to first/last while on a row.",
           },
           {
             "@type": "HowToStep",
