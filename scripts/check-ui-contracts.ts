@@ -372,6 +372,7 @@ const files: Record<string, string[]> = {
     "ExpandedPlayerNotes",
   ],
   "src/components/ExpandedPlayerNotes.tsx": [
+    "aliveRef",
     "playerNotesLoadingLabel",
     "playerNotesUnavailableCopy",
     "playerNotesRetryLabel",
@@ -648,6 +649,15 @@ const files: Record<string, string[]> = {
     "siteDefaultTitle",
     "siteDefaultDescription",
     "PROJECTION_SEASON",
+    "summary_large_image",
+  ],
+  "src/app/opengraph-image.tsx": [
+    "ImageResponse",
+    "force-static",
+    "SITE_BRAND",
+    "PROJECTION_SEASON",
+    "1200",
+    "630",
   ],
   "src/lib/site-meta.ts": [
     "siteDefaultTitle",

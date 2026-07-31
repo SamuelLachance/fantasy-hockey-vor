@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     locale: "en_US",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: defaultTitle,
     description:
       "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
