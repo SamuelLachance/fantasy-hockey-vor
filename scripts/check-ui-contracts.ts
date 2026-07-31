@@ -183,6 +183,11 @@ const files: Record<string, string[]> = {
     "sigmaCellTitle",
     "sigmaCellDisplay",
   ],
+  "src/lib/rankings-filters.ts": [
+    "passesRanges",
+    "isInvertedRangeBound",
+    "Skip inverted min/max",
+  ],
   "src/lib/board-reset-token.ts": [
     "boardFilterResetToken",
     "encodeActiveStatRangesToken",

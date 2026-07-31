@@ -82,6 +82,8 @@ export function passesRanges(
   ][]) {
     if (!validKeys.includes(key)) continue;
     if (!bounds?.min && !bounds?.max) continue;
+    // Skip inverted min/max until the user corrects them (UI marks invalid).
+    if (isInvertedRangeBound(key, bounds.min, bounds.max)) continue;
 
     const min = bounds.min ? parseRangeValue(key, bounds.min) : undefined;
     const max = bounds.max ? parseRangeValue(key, bounds.max) : undefined;

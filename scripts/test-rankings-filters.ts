@@ -89,5 +89,15 @@ assert.equal(
   ),
   false,
 );
+assert.equal(
+  passesRanges(
+    player,
+    { vor: { min: "10", max: "5" } },
+    "ALL",
+    ["vor"],
+  ),
+  true,
+  "inverted range is ignored",
+);
 
 console.log("test-rankings-filters: ok");
