@@ -60,6 +60,7 @@ const files: Record<string, string[]> = {
     "detailStatSigma",
     "Loading player notes",
     "Consensus #",
+    "sr-only",
   ],
   "src/components/RankingsToolbar.tsx": [
     "CSV",

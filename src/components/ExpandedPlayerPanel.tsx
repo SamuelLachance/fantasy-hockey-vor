@@ -108,7 +108,16 @@ export function ExpandedPlayerPanel({
         </p>
       )}
       {detailsLoading && (
-        <p className="mb-3 text-xs text-slate-500">Loading player notes...</p>
+        <div
+          className="mb-3 space-y-2"
+          role="status"
+          aria-label="Loading player notes"
+        >
+          <div className="h-3 w-full animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
+          <div className="h-3 w-5/6 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
+          <div className="h-3 w-2/3 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
+          <span className="sr-only">Loading player notes…</span>
+        </div>
       )}
       {detailsError && (
         <p className="mb-3 text-xs text-amber-400/90">

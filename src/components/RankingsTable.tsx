@@ -246,21 +246,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }
 
-  function copyBoardLink() {
-    const url = rankingsShareUrl(window.location.origin, pathname, {
-      position,
-      query: deferredQuery,
-      sortKey,
-      sortDir,
-      playerId: expandedId,
-      hideDepthGoalies,
-      statRanges,
-    });
-    copyTextWithFlash(url, setBoardLinkStatus);
-  }
-
-  function copyPlayerLink(playerId: number) {
-    const url = rankingsShareUrl(window.location.origin, pathname, {
+  function boardShareState(playerId: number | null) {
+    return {
       position,
       query: deferredQuery,
       sortKey,
@@ -268,11 +255,32 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       playerId,
       hideDepthGoalies,
       statRanges,
-    });
+    };
+  }
+
+  function copyBoardLink() {
+    copyTextWithFlash(
+      rankingsShareUrl(
+        window.location.origin,
+        pathname,
+        boardShareState(expandedId),
+      ),
+      setBoardLinkStatus,
+    );
+  }
+
+  function copyPlayerLink(playerId: number) {
     setPlayerLinkStatus({ id: playerId, status: "idle" });
-    copyTextWithFlash(url, (status) => {
-      setPlayerLinkStatus({ id: playerId, status });
-    });
+    copyTextWithFlash(
+      rankingsShareUrl(
+        window.location.origin,
+        pathname,
+        boardShareState(playerId),
+      ),
+      (status) => {
+        setPlayerLinkStatus({ id: playerId, status });
+      },
+    );
   }
 
   useRankingsKeyboard({
