@@ -17,7 +17,7 @@ export function scrollToTopAriaLabel(): string {
   return "Scroll to top";
 }
 
-/** Tooltip including the Home hotkey hint. */
+/** Tooltip for the floating scroll control. */
 export function scrollToTopTitle(): string {
-  return "Scroll to top (Home)";
+  return "Scroll to top";
 }

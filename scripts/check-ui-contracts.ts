@@ -591,7 +591,6 @@ const files: Record<string, string[]> = {
     "scrollToTopVisible",
     "motion-reduce:transition-none",
     "motion-reduce:backdrop-blur-none",
-    'aria-keyshortcuts="Home"',
   ],
   "src/lib/scroll-to-top.ts": [
     "scrollToTopVisible",

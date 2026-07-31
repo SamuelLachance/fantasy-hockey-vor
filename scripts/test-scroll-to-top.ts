@@ -34,7 +34,7 @@ assert(
   "hides at/under hide line",
 );
 assert(scrollToTopAriaLabel() === "Scroll to top", "aria label");
-assert(scrollToTopTitle().includes("Home"), "title mentions Home");
+assert(scrollToTopTitle() === "Scroll to top", "title");
 
 if (failed) process.exit(1);
 console.log("OK: scroll-to-top");
