@@ -49,7 +49,8 @@ const players = [
 ] as unknown as PlayerProjection[];
 
 const edge = topEdgeSkaters(players, 2);
-assert(edge[0]!.name === "A", "edge prefers high draftValue skater");
+assert(edge[0]!.name === "C", "edge prefers highest draftValue skater");
+assert(edge[1]!.name === "A", "edge second is next skater");
 assert(edge.every((p) => !p.isGoalie), "edge skips goalies");
 
 const steady = steadiestSkaters(players, { minVor: 2, limit: 2 });
