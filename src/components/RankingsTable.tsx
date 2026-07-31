@@ -36,7 +36,7 @@ import {
 } from "@/lib/rankings-board";
 import { copyText } from "@/lib/clipboard";
 import { highlightMatch } from "@/lib/highlight-match";
-import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
+import { parseRankingsUrl, rankingsShareUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
@@ -211,6 +211,23 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }, [expandedId, renderCount]);
 
+  function clearStatFilters() {
+    startTransition(() => setStatRanges({}));
+  }
+
+  function resetBoardView() {
+    setQuery("");
+    clearStatFilters();
+    setFiltersOpen(false);
+    setExpandedId(null);
+    startTransition(() => {
+      setPosition("ALL");
+      setHideDepthGoalies(true);
+      setSortKey("vor");
+      setSortDir("desc");
+    });
+  }
+
   useRankingsKeyboard({
     filtered,
     expandedId,
@@ -221,6 +238,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     setHelpOpen,
     setSortKey: (key) => startTransition(() => setSortKey(key)),
     setSortDir: (dir) => startTransition(() => setSortDir(dir)),
+    onResetBoard: resetBoardView,
   });
 
   function toggleSort(key: SortKey) {
@@ -248,10 +266,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         [key]: { min: "", max: "", ...prev[key], [field]: value },
       }));
     });
-  }
-
-  function clearStatFilters() {
-    startTransition(() => setStatRanges({}));
   }
 
   const tableCategories = boardCategories(position);
@@ -486,16 +500,19 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                             detailsError={detailsError && details === null}
                             linkCopied={copiedPlayerId === player.id}
                             onCopyLink={() => {
-                              const qs = rankingsUrlSearch({
-                                position,
-                                query: deferredQuery,
-                                sortKey,
-                                sortDir,
-                                playerId: player.id,
-                                hideDepthGoalies,
-                                statRanges,
-                              });
-                              const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
+                              const url = rankingsShareUrl(
+                                window.location.origin,
+                                pathname,
+                                {
+                                  position,
+                                  query: deferredQuery,
+                                  sortKey,
+                                  sortDir,
+                                  playerId: player.id,
+                                  hideDepthGoalies,
+                                  statRanges,
+                                },
+                              );
                               void copyText(url).then((ok) => {
                                 if (!ok) return;
                                 setCopiedPlayerId(player.id);
@@ -554,17 +571,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
               )}
               <button
                 type="button"
-                onClick={() => {
-                  setQuery("");
-                  clearStatFilters();
-                  setFiltersOpen(false);
-                  startTransition(() => {
-                    setPosition("ALL");
-                    setHideDepthGoalies(true);
-                    setSortKey("vor");
-                    setSortDir("desc");
-                  });
-                }}
+                onClick={resetBoardView}
                 className="rounded-full bg-cyan-500/15 px-4 py-1.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
               >
                 Reset board view
@@ -590,9 +597,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
-        breakdown. Click column headers to sort. Press / to focus search, ? for
-        shortcuts. Esc closes help/filters then the open row; with a row open
-        use j/k or ↑/↓.
+        breakdown. Click column headers to sort. Press / to focus search, r to
+        reset, ? for shortcuts. Esc closes help/filters then the open row; with
+        a row open use j/k or ↑/↓.
       </p>
     </div>
   );

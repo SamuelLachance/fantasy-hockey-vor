@@ -14,9 +14,10 @@ interface RankingsKeyboardInput {
   setHelpOpen: (open: boolean | ((o: boolean) => boolean)) => void;
   setSortKey: (key: SortKey) => void;
   setSortDir: (dir: "asc" | "desc") => void;
+  onResetBoard?: () => void;
 }
 
-/** Global board shortcuts: Esc, /, ?, j/k. */
+/** Global board shortcuts: Esc, /, ?, j/k, r. */
 export function useRankingsKeyboard({
   filtered,
   expandedId,
@@ -27,6 +28,7 @@ export function useRankingsKeyboard({
   setHelpOpen,
   setSortKey,
   setSortDir,
+  onResetBoard,
 }: RankingsKeyboardInput): void {
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
@@ -93,6 +95,19 @@ export function useRankingsKeyboard({
         });
         return;
       }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpen &&
+        (e.key === "r" || e.key === "R") &&
+        onResetBoard
+      ) {
+        e.preventDefault();
+        onResetBoard();
+        return;
+      }
       if (!inField && !e.metaKey && !e.ctrlKey && !e.altKey && !helpOpen) {
         const sortHotkeys: Record<string, SortKey> = {
           v: "vor",
@@ -132,6 +147,7 @@ export function useRankingsKeyboard({
     filtered,
     filtersOpen,
     helpOpen,
+    onResetBoard,
     setExpandedId,
     setFiltersOpen,
     setHelpOpen,

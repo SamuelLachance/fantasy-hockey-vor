@@ -26,9 +26,14 @@ const files: Record<string, string[]> = {
     "ArrowDown",
     "draftValue",
     "sigma",
+    "onResetBoard",
   ],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
-  "src/components/BoardShortcutsHelp.tsx": ["Board shortcuts", "Focus search"],
+  "src/components/BoardShortcutsHelp.tsx": [
+    "Board shortcuts",
+    "Focus search",
+    "Reset board view",
+  ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",
     "detailStatSigma",

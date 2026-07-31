@@ -8,6 +8,7 @@ import {
   edgeBoardHref,
   parseRankingsUrl,
   playerBoardHref,
+  rankingsShareUrl,
   rankingsUrlSearch,
   sigmaBoardHref,
   steadiestBoardHref,
@@ -118,6 +119,13 @@ assert(
   "steadiest href parses VOR min 2",
 );
 assert(playerBoardHref(8478402) === "?player=8478402#rankings", "player board href");
+assert(
+  rankingsShareUrl("https://example.com", "/fantasy-hockey-vor/", {
+    ...defaults,
+    playerId: 8478402,
+  }) === "https://example.com/fantasy-hockey-vor/?player=8478402#rankings",
+  "share url with player",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

@@ -192,3 +192,13 @@ export function playerBoardHref(id: number): string {
     playerId: id,
   });
 }
+
+/** Absolute shareable board URL (origin + path + query + #rankings). */
+export function rankingsShareUrl(
+  origin: string,
+  pathname: string,
+  state: RankingsUrlState,
+): string {
+  const qs = rankingsUrlSearch(state);
+  return `${origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
+}
