@@ -32,6 +32,7 @@ const files: Record<string, string[]> = {
     "aria-controls",
     'role="button"',
     'role="region"',
+    "aria-busy",
     "vorForFilter",
     "ExpandedPlayerPanel",
     "Enter",
@@ -56,6 +57,7 @@ const files: Record<string, string[]> = {
     "No players match your filters",
     "Reset board view",
     'role="status"',
+    "Press r to reset",
   ],
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",

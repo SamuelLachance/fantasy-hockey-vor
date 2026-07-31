@@ -27,6 +27,9 @@ export function RankingsEmptyState({
       role="status"
     >
       <p>No players match your filters.</p>
+      <p className="mt-1 text-xs text-slate-500">
+        Press r to reset the board, or Esc after clearing search.
+      </p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         {query.trim() !== "" && (
           <button

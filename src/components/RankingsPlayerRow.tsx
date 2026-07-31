@@ -161,6 +161,7 @@ export function RankingsPlayerRow({
             id={`player-panel-${player.id}`}
             role="region"
             aria-label={`${player.name} details`}
+            aria-busy={detailsLoading || undefined}
           >
             <ExpandedPlayerPanel
               player={player}
