@@ -165,5 +165,24 @@ assert(
   "sync hydrate when first URL differs",
 );
 
+assert(
+  parseRankingsUrl(new URLSearchParams("pos=D&sort=faceoffWins")).sortKey ===
+    "vor",
+  "D + FOW sort coerces to vor",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("pos=C&sort=faceoffWins")).sortKey ===
+    "faceoffWins",
+  "C keeps FOW sort",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("pos=G&sort=goals")).sortKey === "vor",
+  "G + goals sort coerces to vor",
+);
+assert(
+  parseRankingsUrl(new URLSearchParams("pos=G&sort=wins")).sortKey === "wins",
+  "G keeps wins sort",
+);
+
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

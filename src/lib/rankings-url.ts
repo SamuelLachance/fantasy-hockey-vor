@@ -1,6 +1,7 @@
 import type { Position } from "@/lib/types";
 import { BOARD_POSITIONS } from "@/lib/board-positions";
 import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
+import { coerceSortKeyForPosition } from "@/lib/rankings-board";
 import {
   defaultSortDir,
   type RangeKey,
@@ -105,7 +106,8 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
     : "ALL";
   const query = (params.get("q") ?? "").slice(0, HIGHLIGHT_QUERY_MAX);
   const sortRaw = params.get("sort") ?? "vor";
-  const sortKey = (SORT_KEYS.has(sortRaw) ? sortRaw : "vor") as SortKey;
+  const sortParsed = (SORT_KEYS.has(sortRaw) ? sortRaw : "vor") as SortKey;
+  const sortKey = coerceSortKeyForPosition(sortParsed, position);
   const dirRaw = params.get("dir");
   const sortDir =
     dirRaw === "asc" || dirRaw === "desc"

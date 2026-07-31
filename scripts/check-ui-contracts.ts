@@ -37,6 +37,7 @@ const files: Record<string, string[]> = {
   "src/hooks/useExpandedRowScroll.ts": [
     "useExpandedRowScroll",
     "scrollExpandedRowIntoView",
+    "Intentionally ignores load-more",
   ],
   "src/components/RankingsBoardTable.tsx": [
     'id="rankings-board-table"',
