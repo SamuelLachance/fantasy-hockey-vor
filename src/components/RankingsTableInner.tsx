@@ -2,6 +2,7 @@
 
 import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
+import { visibleBoardPlayers } from "@/lib/board-visible";
 import { startTransition, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -139,7 +140,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         tableCategories={board.tableCategories}
         onToggleSort={board.toggleSort}
         onResetSort={board.resetSortToVor}
-        visiblePlayers={board.filtered.slice(0, renderCount)}
+        visiblePlayers={visibleBoardPlayers(board.filtered, renderCount)}
         position={board.position}
         deferredQuery={board.deferredQuery}
         expandedId={board.expandedId}
