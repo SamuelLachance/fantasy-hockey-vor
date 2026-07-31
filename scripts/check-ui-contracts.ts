@@ -244,6 +244,7 @@ const files: Record<string, string[]> = {
     "resetPlayerDetailsCache",
     "attempt < 2",
     "playerDetailsHref",
+    "normalizePlayerDetailsPayload",
   ],
   "src/app/layout.tsx": ["keywords", "robots", "category"],
   "src/lib/rankings-board.ts": [

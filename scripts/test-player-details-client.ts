@@ -4,6 +4,7 @@
  */
 import {
   fetchPlayerDetails,
+  normalizePlayerDetailsPayload,
   resetPlayerDetailsCache,
 } from "../src/lib/player-details-client";
 
@@ -82,6 +83,23 @@ async function main() {
   const recovered = await fetchPlayerDetails();
   assert(calls === 1, "fresh fetch after failed cache clear");
   assert(recovered["7"]?.reasoning === "recovered", "recovery payload");
+
+  const normalized = normalizePlayerDetailsPayload({
+    "1": { reasoning: "a", profileSummary: "b", junk: true },
+    bad: null,
+    also: "nope",
+    "2": { reasoning: 9, profileSummary: "ok" },
+  });
+  assert(normalized["1"]?.reasoning === "a", "keeps valid record");
+  assert(normalized["1"]?.profileSummary === "b", "keeps summary");
+  assert(normalized.bad === undefined, "drops null");
+  assert(normalized.also === undefined, "drops non-object");
+  assert(normalized["2"]?.reasoning === "", "coerces bad reasoning");
+  assert(normalized["2"]?.profileSummary === "ok", "keeps string summary");
+  assert(
+    Object.keys(normalizePlayerDetailsPayload([])).length === 0,
+    "arrays → empty",
+  );
 
   globalThis.fetch = realFetch;
   globalThis.setTimeout = realTimeout;
