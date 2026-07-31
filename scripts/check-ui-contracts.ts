@@ -20,6 +20,11 @@ const files: Record<string, string[]> = {
     "ExpandedPlayerPanel",
     'column="sigma"',
     "BoardShortcutsHelp",
+    "ActiveStatFilterChips",
+  ],
+  "src/components/ActiveStatFilterChips.tsx": [
+    "Active stat filters",
+    "Clear filters",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',

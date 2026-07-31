@@ -40,6 +40,7 @@ import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
+import { ActiveStatFilterChips } from "./ActiveStatFilterChips";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
@@ -215,6 +216,16 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     startTransition(() => setStatRanges({}));
   }
 
+  function removeStatFilter(key: RangeKey) {
+    startTransition(() => {
+      setStatRanges((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    });
+  }
+
   function resetBoardView() {
     setQuery("");
     clearStatFilters();
@@ -309,6 +320,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             onUpdateRange={updateRange}
             onClear={clearStatFilters}
             onDone={() => setFiltersOpen(false)}
+          />
+        )}
+        {!filtersOpen && activeFilterCount > 0 && (
+          <ActiveStatFilterChips
+            statRanges={statRanges}
+            onOpen={() => setFiltersOpen(true)}
+            onClear={clearStatFilters}
+            onRemove={removeStatFilter}
           />
         )}
       </div>
