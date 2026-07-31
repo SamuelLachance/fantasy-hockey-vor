@@ -31,6 +31,15 @@ export const BOARD_SORT_HOTKEYS: Readonly<Record<string, SortKey>> = {
   g: "gamesPlayed",
 };
 
+/** Compact FAQ answer for keyboard shortcuts (JSON-LD + docs). */
+export function boardShortcutsFaqAnswer(): string {
+  return (
+    "Press ? for the full list. Highlights: / search, f filters, r reset, l copy link, " +
+    "m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
+    "j/k move rows, Enter/Space expand, v/e/u/g sort, Shift+G toggle starter goalies."
+  );
+}
+
 /** Compact footer/status line listing primary shortcuts. */
 export function boardShortcutsStatusCopy(): string {
   return (

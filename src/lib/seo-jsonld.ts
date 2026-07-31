@@ -1,4 +1,5 @@
 import type { ProjectionsDataset } from "@/lib/types";
+import { boardShortcutsFaqAnswer } from "@/lib/board-shortcuts";
 import { DEFAULT_PROJECTION_ENGINE } from "@/lib/projection-engine-label";
 import { SITE_URL } from "@/lib/site";
 
@@ -21,7 +22,7 @@ const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
   },
   {
     q: "What keyboard shortcuts does the board support?",
-    a: "Press ? for the full list. Highlights: / search, f filters, r reset, l copy link, m load more, [ and ] cycle positions, j/k move rows, v/e/u/g sort, Shift+G toggle starter goalies.",
+    a: boardShortcutsFaqAnswer(),
   },
 ];
 

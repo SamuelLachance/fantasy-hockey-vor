@@ -5,6 +5,7 @@
 import {
   BOARD_SHORTCUT_ROWS,
   BOARD_SORT_HOTKEYS,
+  boardShortcutsFaqAnswer,
   boardShortcutsFooterChip,
   boardShortcutsStatusCopy,
 } from "../src/lib/board-shortcuts";
@@ -38,6 +39,14 @@ assert(boardShortcutsStatusCopy().includes("j/k"), "status mentions j/k");
 assert(
   boardShortcutsFooterChip().includes("Shift+G"),
   "footer chip mentions Shift+G",
+);
+assert(
+  boardShortcutsFaqAnswer().includes("Esc clears search"),
+  "FAQ mentions Esc",
+);
+assert(
+  boardShortcutsFaqAnswer().includes("Enter/Space expand"),
+  "FAQ mentions expand",
 );
 
 const keys = BOARD_SHORTCUT_ROWS.map((r) => r.keys);

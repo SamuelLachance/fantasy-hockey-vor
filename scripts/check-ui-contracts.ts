@@ -195,6 +195,7 @@ const files: Record<string, string[]> = {
     "BOARD_SORT_HOTKEYS",
     "boardShortcutsStatusCopy",
     "boardShortcutsFooterChip",
+    "boardShortcutsFaqAnswer",
     "Shift+G",
     "Load more rows",
     "Previous / next position tab",
@@ -381,6 +382,7 @@ const files: Record<string, string[]> = {
     "keywords",
     "National Hockey League",
     "sameAs",
+    "boardShortcutsFaqAnswer",
   ],
   "src/lib/site.ts": [
     "SITE_ORIGIN",
