@@ -110,5 +110,45 @@ assert(
   "prune same ref when unchanged",
 );
 
+const twins = [
+  {
+    id: 20,
+    name: "Zed",
+    team: "EDM",
+    positions: ["C"],
+    isGoalie: false,
+    gamesPlayed: 80,
+    vor: 1,
+    rank: 20,
+    draftValue: 0,
+  },
+  {
+    id: 10,
+    name: "Amy",
+    team: "EDM",
+    positions: ["C"],
+    isGoalie: false,
+    gamesPlayed: 80,
+    vor: 1,
+    rank: 10,
+    draftValue: 0,
+  },
+] as unknown as PlayerProjection[];
+const byTeam = filterAndSortBoard(twins, {
+  ...base,
+  sortKey: "team",
+  sortDir: "asc",
+});
+assert(byTeam.map((p) => p.id).join() === "10,20", "tie-break by rank");
+const byTeamRev = filterAndSortBoard([...twins].reverse(), {
+  ...base,
+  sortKey: "team",
+  sortDir: "asc",
+});
+assert(
+  byTeamRev.map((p) => p.id).join() === "10,20",
+  "tie-break stable vs input order",
+);
+
 if (failed) process.exit(1);
 console.log("OK: rankings-board");

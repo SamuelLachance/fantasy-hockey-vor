@@ -129,11 +129,19 @@ export function filterAndSortBoard(
       bv = projectionStatValue(b, q.sortKey) ?? -Infinity;
     }
 
+    let cmp: number;
     if (typeof av === "string" && typeof bv === "string") {
-      return q.sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+      cmp =
+        q.sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+    } else {
+      cmp =
+        q.sortDir === "asc"
+          ? Number(av) - Number(bv)
+          : Number(bv) - Number(av);
     }
-    return q.sortDir === "asc"
-      ? Number(av) - Number(bv)
-      : Number(bv) - Number(av);
+    if (cmp !== 0) return cmp;
+    // Deterministic tie-break so team/GP/stat ties are not input-order dependent.
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return a.id - b.id;
   });
 }

@@ -288,9 +288,12 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/rankings-csv.ts": [
     "rankingsToCsv",
+    "downloadTextFile",
     "fantasy-hockey-vor",
     "vorScope",
     "csvEscape",
+    "revokeObjectURL",
+    "\\uFEFF",
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "ExpandedPlayerMeta",
