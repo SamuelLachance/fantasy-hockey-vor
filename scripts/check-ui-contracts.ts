@@ -466,6 +466,8 @@ const files: Record<string, string[]> = {
     "nextRankingsUrlSyncAction",
     "onHydrate",
     "query,",
+    "Query-only replace",
+    "scroll: false",
   ],
   "src/hooks/usePlayerDetails.ts": [
     "scheduleIdle",

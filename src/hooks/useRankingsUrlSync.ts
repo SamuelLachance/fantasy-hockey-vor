@@ -73,11 +73,10 @@ export function useRankingsUrlSync({
     }
 
     lastPushedRef.current = action.search;
-    const hash =
-      typeof window !== "undefined" && window.location.hash
-        ? window.location.hash
-        : "";
-    router.replace(`${pathname}${action.search ? `?${action.search}` : ""}${hash}`, {
+    // Query-only replace: do not re-attach #rankings (share/deep links keep it
+    // via rankingsShareUrl / boardHref). Replacing with the fragment scrolls
+    // the page back to the board on every filter/sort/expand sync.
+    router.replace(`${pathname}${action.search ? `?${action.search}` : ""}`, {
       scroll: false,
     });
   }, [
