@@ -19,10 +19,11 @@ export function RankingsStatusBar({
     >
       Showing {formatCount(Math.min(renderCount, filteredCount))} of{" "}
       {formatCount(filteredCount)} matching players (
-      {formatCount(totalCount)} total). Click a row for category breakdown.
-      Click column headers to sort. Press / to focus search, r to reset, l to
-      copy link, Home/End to navigate, ? for shortcuts. Esc closes help/filters
-      then the open row; with a row open use j/k or ↑/↓.
+      {formatCount(totalCount)} total). Click or Enter/Space a row for category
+      breakdown. Click column headers to sort. Press / to focus search, r to
+      reset, l to copy link, Home/End to navigate, ? for shortcuts. Esc closes
+      help/filters then the open row; j/k or ↑/↓ move (opens first/last if
+      none).
     </p>
   );
 }

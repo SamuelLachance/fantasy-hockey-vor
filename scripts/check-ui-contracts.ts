@@ -23,6 +23,7 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "useHorizontalScrollShadow",
     "Load more players",
+    "!players.some((p) => p.id === expandedId)",
   ],
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
@@ -57,6 +58,8 @@ const files: Record<string, string[]> = {
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",
     "matching players",
+    "Enter/Space",
+    "opens first/last",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',

@@ -101,6 +101,13 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     scrollToRankings({ focusSearch: true });
   }, []);
 
+  useEffect(() => {
+    if (expandedId == null) return;
+    if (!players.some((p) => p.id === expandedId)) {
+      setExpandedId(null);
+    }
+  }, [players, expandedId]);
+
   const filterRangeKeys = useMemo(
     () => boardFilterKeys(position),
     [position],
