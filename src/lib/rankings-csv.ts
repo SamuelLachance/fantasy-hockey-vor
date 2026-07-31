@@ -1,6 +1,11 @@
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { CATEGORY_LABELS, projectionStatValue } from "@/lib/format";
-import { vorForFilter } from "@/lib/rankings-filters";
+import {
+  vorForFilter,
+  type SortKey,
+  type StatRanges,
+} from "@/lib/rankings-filters";
+import { encodeStatRanges } from "@/lib/rankings-url";
 
 function csvEscape(value: string | number): string {
   const s = String(value);
@@ -8,27 +13,60 @@ function csvEscape(value: string | number): string {
   return s;
 }
 
+export interface RankingsCsvMeta {
+  query?: string;
+  sortKey?: SortKey;
+  sortDir?: "asc" | "desc";
+  hideDepthGoalies?: boolean;
+  statRanges?: StatRanges;
+}
+
+/** Build the `# fantasy-hockey-vor;…` comment for CSV exports. */
+export function rankingsCsvMetaLine(
+  position: Position | "ALL",
+  playerCount: number,
+  meta?: RankingsCsvMeta,
+): string {
+  const vorScope = position === "ALL" ? "overall" : "position";
+  const parts = [
+    "fantasy-hockey-vor",
+    `filter=${position}`,
+    `vorScope=${vorScope}`,
+    `count=${playerCount}`,
+  ];
+  if (meta?.sortKey) parts.push(`sort=${meta.sortKey}`);
+  if (meta?.sortDir) parts.push(`dir=${meta.sortDir}`);
+  if (meta?.hideDepthGoalies === false) parts.push("g=all");
+  if (meta?.query?.trim()) {
+    parts.push(`q=${encodeURIComponent(meta.query.trim().slice(0, 48))}`);
+  }
+  const rf = meta?.statRanges ? encodeStatRanges(meta.statRanges) : "";
+  if (rf) parts.push(`rf=${rf}`);
+  return `# ${parts.join(";")}`;
+}
+
 /** Build a CSV of the current filtered board (full list, not page slice). */
 export function rankingsToCsv(
   players: PlayerProjection[],
   position: Position | "ALL",
   categories: readonly Category[],
+  meta?: RankingsCsvMeta,
 ): string {
-  const vorScope = position === "ALL" ? "overall" : "position";
-  const meta = `# fantasy-hockey-vor;filter=${position};vorScope=${vorScope};count=${players.length}`;
-  const headers = [
-    "rank",
-    "id",
-    "name",
-    "team",
-    "positions",
-    "vor",
-    "edge",
-    "sigma",
-    "gp",
-    ...categories.map((c) => CATEGORY_LABELS[c]),
+  const lines = [
+    rankingsCsvMetaLine(position, players.length, meta),
+    [
+      "rank",
+      "id",
+      "name",
+      "team",
+      "positions",
+      "vor",
+      "edge",
+      "sigma",
+      "gp",
+      ...categories.map((c) => CATEGORY_LABELS[c]),
+    ].join(","),
   ];
-  const lines = [meta, headers.join(",")];
   for (const p of players) {
     const rank = position === "ALL" ? p.rank : (p.positionRank ?? p.rank);
     const cells: Array<string | number> = [

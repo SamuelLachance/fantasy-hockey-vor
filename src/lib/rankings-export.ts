@@ -116,8 +116,9 @@ export function rankingsCsvString(
   players: PlayerProjection[],
   position: Position | "ALL",
   categories: readonly Category[],
+  filters?: RankingsJsonExportFilters,
 ): string {
-  return rankingsToCsv(players, position, categories);
+  return rankingsToCsv(players, position, categories, filters);
 }
 
 function stamp(): string {
@@ -126,12 +127,16 @@ function stamp(): string {
 
 export function downloadRankingsCsv(
   players: PlayerProjection[],
-  position: Position | "ALL",
-  categories: readonly Category[],
+  ctx: RankingsExportContext,
 ): void {
   downloadTextFile(
-    `vor-rankings-${position.toLowerCase()}-${stamp()}.csv`,
-    rankingsCsvString(players, position, categories),
+    `vor-rankings-${ctx.position.toLowerCase()}-${stamp()}.csv`,
+    rankingsCsvString(
+      players,
+      ctx.position,
+      ctx.categories,
+      ctx.filters,
+    ),
     "text/csv;charset=utf-8",
   );
 }

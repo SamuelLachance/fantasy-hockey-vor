@@ -2,7 +2,7 @@
  * Unit checks for rankings CSV export.
  * Run: npx tsx scripts/test-rankings-csv.ts
  */
-import { downloadTextFile, rankingsToCsv } from "../src/lib/rankings-csv";
+import { downloadTextFile, rankingsCsvMetaLine, rankingsToCsv } from "../src/lib/rankings-csv";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -45,6 +45,27 @@ const lines = csv.replace(/^\uFEFF/, "").split("\n");
 assert(
   lines[0]!.startsWith("# fantasy-hockey-vor;filter=C;vorScope=position"),
   "meta comment",
+);
+assert(
+  rankingsCsvMetaLine("C", 1, {
+    sortKey: "vor",
+    sortDir: "desc",
+    query: "mcd",
+    hideDepthGoalies: false,
+    statRanges: { vor: { min: "2", max: "" } },
+  }) ===
+    "# fantasy-hockey-vor;filter=C;vorScope=position;count=1;sort=vor;dir=desc;g=all;q=mcd;rf=vor:2-",
+  "meta includes filter provenance",
+);
+assert(
+  rankingsToCsv([sample], "C", ["goals"], {
+    sortKey: "goals",
+    sortDir: "asc",
+  })
+    .replace(/^\uFEFF/, "")
+    .split("\n")[0]!
+    .includes("sort=goals;dir=asc"),
+  "CSV meta wires sort",
 );
 assert(
   lines[1] === "rank,id,name,team,positions,vor,edge,sigma,gp,G,A",

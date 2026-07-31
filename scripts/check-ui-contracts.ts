@@ -347,6 +347,7 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/rankings-csv.ts": [
     "rankingsToCsv",
+    "rankingsCsvMetaLine",
     "downloadTextFile",
     "fantasy-hockey-vor",
     "vorScope",

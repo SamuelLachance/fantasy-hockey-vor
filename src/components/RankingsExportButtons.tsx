@@ -49,7 +49,18 @@ export function RankingsExportButtons({
         type="button"
         disabled={empty}
         onClick={() => {
-          downloadRankingsCsv(filtered, position, tableCategories);
+          const ctx = {
+            position,
+            categories: tableCategories,
+            filters: {
+              query,
+              sortKey,
+              sortDir,
+              hideDepthGoalies,
+              statRanges,
+            },
+          };
+          downloadRankingsCsv(filtered, ctx);
           flashExport("csv");
         }}
         className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
@@ -63,7 +74,7 @@ export function RankingsExportButtons({
         type="button"
         disabled={empty}
         onClick={() => {
-          downloadRankingsJson(filtered, {
+          const ctx = {
             position,
             categories: tableCategories,
             filters: {
@@ -73,7 +84,8 @@ export function RankingsExportButtons({
               hideDepthGoalies,
               statRanges,
             },
-          });
+          };
+          downloadRankingsJson(filtered, ctx);
           flashExport("json");
         }}
         className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
