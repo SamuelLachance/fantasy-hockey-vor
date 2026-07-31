@@ -14,6 +14,7 @@ const ROWS: Array<{ keys: string; action: string }> = [
   { keys: "l", action: "Copy board link" },
   { keys: "Home", action: "Scroll to top" },
   { keys: "End", action: "Jump to board + focus search" },
+  { keys: "Shift+G", action: "Toggle Starters / All goalies" },
   { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
   { keys: "?", action: "Toggle this help" },
   { keys: "Esc", action: "Close help / filters / row" },

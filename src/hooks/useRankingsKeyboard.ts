@@ -18,6 +18,7 @@ interface RankingsKeyboardInput {
   setSortDir: (dir: "asc" | "desc") => void;
   onResetBoard?: () => void;
   onCopyBoardLink?: () => void;
+  onToggleDepthGoalies?: () => void;
 }
 
 /** Global board shortcuts: Esc, /, ?, j/k, r, l. */
@@ -33,6 +34,7 @@ export function useRankingsKeyboard({
   setSortDir,
   onResetBoard,
   onCopyBoardLink,
+  onToggleDepthGoalies,
 }: RankingsKeyboardInput): void {
   // Keep latest handlers/state without rebinding the window listener every render.
   const filteredRef = useRef(filtered);
@@ -46,6 +48,7 @@ export function useRankingsKeyboard({
   const setSortDirRef = useRef(setSortDir);
   const onResetBoardRef = useRef(onResetBoard);
   const onCopyBoardLinkRef = useRef(onCopyBoardLink);
+  const onToggleDepthGoaliesRef = useRef(onToggleDepthGoalies);
 
   useEffect(() => {
     filteredRef.current = filtered;
@@ -59,6 +62,7 @@ export function useRankingsKeyboard({
     setSortDirRef.current = setSortDir;
     onResetBoardRef.current = onResetBoard;
     onCopyBoardLinkRef.current = onCopyBoardLink;
+    onToggleDepthGoaliesRef.current = onToggleDepthGoalies;
   });
 
   useEffect(() => {
@@ -181,7 +185,28 @@ export function useRankingsKeyboard({
         onCopyBoardLinkRef.current();
         return;
       }
-      if (!inField && !e.metaKey && !e.ctrlKey && !e.altKey && !helpOpenNow) {
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
+        e.shiftKey &&
+        (e.key === "G" || e.key === "g") &&
+        onToggleDepthGoaliesRef.current
+      ) {
+        e.preventDefault();
+        onToggleDepthGoaliesRef.current();
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !e.shiftKey &&
+        !helpOpenNow
+      ) {
         const sortHotkeys: Record<string, SortKey> = {
           v: "vor",
           e: "draftValue",

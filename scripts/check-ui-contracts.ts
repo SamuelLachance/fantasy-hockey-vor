@@ -88,6 +88,8 @@ const files: Record<string, string[]> = {
     'e.key === "Home"',
     'e.key === "End"',
     "nextExpandedPlayerId",
+    "onToggleDepthGoalies",
+    'e.key === "G"',
   ],
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",
@@ -98,6 +100,7 @@ const files: Record<string, string[]> = {
     "Jump to board + focus search",
     "opens first if none",
     "Enter / Space",
+    "Shift+G",
   ],
   "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
   "src/lib/board-dom.ts": [
