@@ -17,10 +17,8 @@ import { useRankingsHashJump } from "@/hooks/useRankingsHashJump";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { RankingsBoardChrome } from "./RankingsBoardChrome";
-import { RankingsBoardFooter } from "./RankingsBoardFooter";
-import { RankingsPlayerRow } from "./RankingsPlayerRow";
+import { RankingsBoardTable } from "./RankingsBoardTable";
 import { RankingsStatusBar } from "./RankingsStatusBar";
-import { RankingsTableHead } from "./RankingsTableHead";
 
 const BoardShortcutsHelp = dynamic(
   () =>
@@ -135,87 +133,52 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         onOpenHelp={() => board.setHelpOpen(true)}
       />
 
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
-        <div
-          ref={tableScrollRef}
-          className="overflow-x-auto overscroll-x-contain"
-        >
-          <table
-            id="rankings-board-table"
-            aria-label="Fantasy hockey VOR rankings"
-            className="min-w-full text-left text-sm"
-          >
-            <RankingsTableHead
-              sortKey={board.sortKey}
-              sortDir={board.sortDir}
-              tableCategories={board.tableCategories}
-              showStickyShadow={showStickyShadow}
-              onToggleSort={board.toggleSort}
-              onResetSort={board.resetSortToVor}
-            />
-            <tbody className="divide-y divide-white/5">
-              {board.filtered.slice(0, renderCount).map((player, idx) => (
-                <RankingsPlayerRow
-                  key={player.id}
-                  player={player}
-                  idx={idx}
-                  position={board.position}
-                  deferredQuery={board.deferredQuery}
-                  isExpanded={board.expandedId === player.id}
-                  showStickyShadow={showStickyShadow}
-                  tableCategories={board.tableCategories}
-                  playerDetails={details?.[String(player.id)]}
-                  detailsLoading={details === null && !detailsError}
-                  detailsError={detailsError && details === null}
-                  linkCopied={
-                    playerLinkStatus.id === player.id &&
-                    playerLinkStatus.status === "ok"
-                  }
-                  linkCopyFailed={
-                    playerLinkStatus.id === player.id &&
-                    playerLinkStatus.status === "err"
-                  }
-                  onToggle={() =>
-                    board.setExpandedId((cur) =>
-                      cur === player.id ? null : player.id,
-                    )
-                  }
-                  onCopyLink={() => copyPlayerLink(player.id)}
-                  onDetailsLoaded={(d) => {
-                    setDetailsError(false);
-                    setDetails(d);
-                  }}
-                  onDetailsError={() => setDetailsError(true)}
-                  onClearDetailsError={() => setDetailsError(false)}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <RankingsBoardFooter
-          query={board.query}
-          activeFilterCount={board.activeFilterCount}
-          position={board.position}
-          filteredCount={board.filtered.length}
-          renderCount={renderCount}
-          canLoadMore={canLoadMore}
-          loadMoreRef={loadMoreRef}
-          onLoadMore={loadMore}
-          onClearSearch={() => board.setQuery("")}
-          onClearStatFilters={board.clearStatFilters}
-          onShowAllPositions={() =>
-            startTransition(() => board.setPosition("ALL"))
-          }
-          canShowAllGoalies={
-            board.hideDepthGoalies &&
-            (board.position === "G" || board.position === "ALL")
-          }
-          onShowAllGoalies={() =>
-            startTransition(() => board.setHideDepthGoalies(false))
-          }
-          onResetBoard={board.resetBoardView}
-        />
-      </div>
+      <RankingsBoardTable
+        tableScrollRef={tableScrollRef}
+        showStickyShadow={showStickyShadow}
+        sortKey={board.sortKey}
+        sortDir={board.sortDir}
+        tableCategories={board.tableCategories}
+        onToggleSort={board.toggleSort}
+        onResetSort={board.resetSortToVor}
+        visiblePlayers={board.filtered.slice(0, renderCount)}
+        position={board.position}
+        deferredQuery={board.deferredQuery}
+        expandedId={board.expandedId}
+        details={details}
+        detailsError={detailsError}
+        playerLinkStatus={playerLinkStatus}
+        onTogglePlayer={(playerId) =>
+          board.setExpandedId((cur) => (cur === playerId ? null : playerId))
+        }
+        onCopyPlayerLink={copyPlayerLink}
+        onDetailsLoaded={(d) => {
+          setDetailsError(false);
+          setDetails(d);
+        }}
+        onDetailsError={() => setDetailsError(true)}
+        onClearDetailsError={() => setDetailsError(false)}
+        query={board.query}
+        activeFilterCount={board.activeFilterCount}
+        filteredCount={board.filtered.length}
+        renderCount={renderCount}
+        canLoadMore={canLoadMore}
+        loadMoreRef={loadMoreRef}
+        onLoadMore={loadMore}
+        onClearSearch={() => board.setQuery("")}
+        onClearStatFilters={board.clearStatFilters}
+        onShowAllPositions={() =>
+          startTransition(() => board.setPosition("ALL"))
+        }
+        canShowAllGoalies={
+          board.hideDepthGoalies &&
+          (board.position === "G" || board.position === "ALL")
+        }
+        onShowAllGoalies={() =>
+          startTransition(() => board.setHideDepthGoalies(false))
+        }
+        onResetBoard={board.resetBoardView}
+      />
       <RankingsStatusBar
         renderCount={renderCount}
         filteredCount={board.filtered.length}

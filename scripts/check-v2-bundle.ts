@@ -4,6 +4,7 @@
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { PROJECTION_SEASON_ID } from "../src/lib/nhl-api";
 
 const PATH = join(process.cwd(), "src", "data", "ml", "v2-bundle.json");
 
@@ -58,9 +59,9 @@ if (!bundle.datasetBuiltAt) {
 }
 
 if (!bundle.projectionSeasonId) errors.push("projectionSeasonId missing");
-else if (bundle.projectionSeasonId !== 20262027) {
+else if (bundle.projectionSeasonId !== PROJECTION_SEASON_ID) {
   errors.push(
-    `projectionSeasonId ${bundle.projectionSeasonId} != 20262027 (update check when rolling seasons)`,
+    `projectionSeasonId ${bundle.projectionSeasonId} != ${PROJECTION_SEASON_ID}`,
   );
 }
 if (bundle.marketTraining == null) {
