@@ -62,10 +62,12 @@ export function fetchPlayerDetails(): Promise<
   Record<string, PlayerDetailRecord>
 > {
   if (!detailsPromise) {
-    detailsPromise = loadDetailsOnce().catch((err) => {
-      detailsPromise = null;
+    const p = loadDetailsOnce().catch((err) => {
+      // Only clear if we still own the cache slot (a newer retry may have replaced us).
+      if (detailsPromise === p) detailsPromise = null;
       throw err;
     });
+    detailsPromise = p;
   }
   return detailsPromise;
 }

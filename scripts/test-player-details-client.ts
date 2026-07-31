@@ -89,6 +89,44 @@ async function main() {
   assert(calls === 1, "fresh fetch after failed cache clear");
   assert(recovered["7"]?.reasoning === "recovered", "recovery payload");
 
+  // Superseded failure must not wipe a newer session cache.
+  resetPlayerDetailsCache();
+  const rejectors: Array<(err: Error) => void> = [];
+  globalThis.fetch = (() =>
+    new Promise<Response>((_resolve, reject) => {
+      rejectors.push(reject);
+    })) as typeof fetch;
+  const staleP = fetchPlayerDetails();
+  resetPlayerDetailsCache();
+  let freshCalls = 0;
+  globalThis.fetch = (async () => {
+    freshCalls++;
+    return {
+      ok: true,
+      json: async () => ({
+        "9": { reasoning: "fresh", profileSummary: "" },
+      }),
+    } as Response;
+  }) as typeof fetch;
+  const fresh = await fetchPlayerDetails();
+  assert(fresh["9"]?.reasoning === "fresh", "fresh cache set");
+  assert(freshCalls === 1, "one fresh fetch");
+
+  globalThis.fetch = (async () => {
+    throw new Error("stale retry");
+  }) as typeof fetch;
+  for (const reject of rejectors) reject(new Error("stale"));
+  let staleThrew = false;
+  try {
+    await staleP;
+  } catch {
+    staleThrew = true;
+  }
+  assert(staleThrew, "stale promise rejects");
+  const stillFresh = await fetchPlayerDetails();
+  assert(stillFresh["9"]?.reasoning === "fresh", "stale fail kept fresh cache");
+  assert(freshCalls === 1, "no refetch after stale fail");
+
   const normalized = normalizePlayerDetailsPayload({
     "1": { reasoning: "a", profileSummary: "b", junk: true },
     bad: null,
