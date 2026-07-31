@@ -73,6 +73,7 @@ export function RankingsStatFilters({
               <input
                 type="number"
                 inputMode="decimal"
+                step="any"
                 placeholder="Min"
                 aria-label={`${rangeLabel(key)} minimum`}
                 value={statRanges[key]?.min ?? ""}
@@ -86,6 +87,7 @@ export function RankingsStatFilters({
               <input
                 type="number"
                 inputMode="decimal"
+                step="any"
                 placeholder="Max"
                 aria-label={`${rangeLabel(key)} maximum`}
                 value={statRanges[key]?.max ?? ""}
