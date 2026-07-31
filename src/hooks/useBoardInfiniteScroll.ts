@@ -130,6 +130,8 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
     let raf = 0;
     const obs = new IntersectionObserver(
       (entries) => {
+        // Background tabs keep intersecting; skip growth until the user returns.
+        if (document.visibilityState === "hidden") return;
         if (!entries.some((e) => e.isIntersecting)) return;
         if (skipIoRef.current) {
           skipIoRef.current = false;
@@ -155,8 +157,15 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
       },
       { rootMargin: "240px 0px" },
     );
+    const onVis = () => {
+      if (document.visibilityState !== "visible") return;
+      obs.unobserve(el);
+      obs.observe(el);
+    };
+    document.addEventListener("visibilitychange", onVis);
     obs.observe(el);
     return () => {
+      document.removeEventListener("visibilitychange", onVis);
       if (raf) cancelAnimationFrame(raf);
       obs.disconnect();
     };

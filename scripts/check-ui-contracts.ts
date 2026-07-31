@@ -751,6 +751,8 @@ const files: Record<string, string[]> = {
     "resetGenRef",
     "tokenMountedRef",
     "requestAnimationFrame",
+    "visibilityState",
+    "visibilitychange",
     "collapsing a deep row does not yank",
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
