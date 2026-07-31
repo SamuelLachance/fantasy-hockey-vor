@@ -378,7 +378,7 @@ const files: Record<string, string[]> = {
     'e.key === "["',
   ],
   "src/components/BoardShortcutsHelp.tsx": [
-    "Board shortcuts",
+    "boardShortcutsDialogTitle",
     "BOARD_SHORTCUT_ROWS",
     "BOARD_SHORTCUTS_DIALOG_ID",
     "createPortal",
@@ -625,6 +625,8 @@ const files: Record<string, string[]> = {
     "boardHelpTitle",
     "boardHelpAriaLabel",
     "boardShortcutsCloseAriaLabel",
+    "boardShortcutsDialogTitle",
+    "Board shortcuts",
   ],
   "src/lib/goalie-depth-toggle.ts": [
     "canToggleDepthGoalies",

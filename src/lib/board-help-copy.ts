@@ -12,3 +12,8 @@ export function boardHelpAriaLabel(): string {
 export function boardShortcutsCloseAriaLabel(): string {
   return "Close shortcuts";
 }
+
+/** Shortcuts dialog heading (aria-labelledby target). */
+export function boardShortcutsDialogTitle(): string {
+  return "Board shortcuts";
+}

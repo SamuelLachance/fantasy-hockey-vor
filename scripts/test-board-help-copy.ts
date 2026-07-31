@@ -6,6 +6,7 @@ import {
   boardHelpAriaLabel,
   boardHelpTitle,
   boardShortcutsCloseAriaLabel,
+  boardShortcutsDialogTitle,
 } from "../src/lib/board-help-copy";
 
 let failed = 0;
@@ -22,6 +23,7 @@ assert(
   boardShortcutsCloseAriaLabel() === "Close shortcuts",
   "close aria",
 );
+assert(boardShortcutsDialogTitle() === "Board shortcuts", "dialog title");
 
 if (failed) process.exit(1);
 console.log("OK: board-help-copy");

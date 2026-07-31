@@ -1,7 +1,10 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { boardShortcutsCloseAriaLabel } from "@/lib/board-help-copy";
+import {
+  boardShortcutsCloseAriaLabel,
+  boardShortcutsDialogTitle,
+} from "@/lib/board-help-copy";
 import {
   BOARD_SHORTCUT_ROWS,
   BOARD_SHORTCUTS_DIALOG_ID,
@@ -39,7 +42,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
             id="board-shortcuts-title"
             className="text-lg font-semibold text-white"
           >
-            Board shortcuts
+            {boardShortcutsDialogTitle()}
           </h2>
           <button
             type="button"
