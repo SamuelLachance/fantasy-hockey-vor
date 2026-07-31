@@ -416,6 +416,7 @@ const files: Record<string, string[]> = {
     "rankings-search-limit",
     "autoComplete",
     'aria-keyshortcuts="Slash"',
+    "focusBoardSearch",
   ],
   "src/lib/highlight-match.tsx": [
     "HIGHLIGHT_QUERY_MAX",
