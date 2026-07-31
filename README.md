@@ -61,6 +61,8 @@ Legacy ridge/GBM (`npm run ml:train`) is fallback-only; production is **`ml:trai
 
 Checks: `npm run check:data`, `npm run check:teams` (franchise abbrev continuity), `npm run typecheck`, `npm run lint`.
 
+Full local gate (mirrors Pages CI): `npm run ci:local`.
+
 Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmark-*.ts` for segment holdouts.
 
 ## League Settings

@@ -4,6 +4,11 @@
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import {
+  findOverloadedGoalieTeams,
+  findUnderloadedGoalieTeams,
+  topGoalieGpTooLow,
+} from "../src/lib/goalie-tandem-guards";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -92,15 +97,8 @@ for (const p of players) {
   list.push(p.gamesPlayed);
   goaliesByTeam.set(p.team, list);
 }
-const overloadedTeams: string[] = [];
-const underloadedTeams: string[] = [];
-for (const [team, gps] of goaliesByTeam) {
-  const top3 = [...gps].sort((a, b) => b - a).slice(0, 3);
-  const sum = top3.reduce((s, g) => s + g, 0);
-  if (sum > 100) overloadedTeams.push(`${team}=${sum}`);
-  // Teams with a real tandem (≥2 projected G) should still cover most of a season.
-  if (gps.length >= 2 && sum < 60) underloadedTeams.push(`${team}=${sum}`);
-}
+const overloadedTeams = findOverloadedGoalieTeams(goaliesByTeam);
+const underloadedTeams = findUnderloadedGoalieTeams(goaliesByTeam);
 if (overloadedTeams.length > 0) {
   errors.push(
     `top-3 goalie GP sum >100 on ${overloadedTeams.length} team(s): ${overloadedTeams
@@ -129,7 +127,7 @@ if (goalieSavePcts.length >= 20 && uniqueSv.size < 5) {
 const topGoalie = [...players]
   .filter((p) => p.isGoalie)
   .sort((a, b) => b.vor - a.vor)[0];
-if (topGoalie && topGoalie.gamesPlayed < 40) {
+if (topGoalie && topGoalieGpTooLow(topGoalie.gamesPlayed)) {
   errors.push(
     `top goalie ${topGoalie.name} has only ${topGoalie.gamesPlayed} GP (expected ≥40) — check tandem allocation`,
   );

@@ -2,6 +2,12 @@
  * Unit check: overloaded team goalie GP pools are scaled to budget.
  * Run: npx tsx scripts/test-goalie-tandem.ts
  */
+import {
+  findOverloadedGoalieTeams,
+  findUnderloadedGoalieTeams,
+  top3GoalieGpSum,
+  topGoalieGpTooLow,
+} from "../src/lib/goalie-tandem-guards";
 import { renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
 
 let failed = 0;
@@ -45,6 +51,22 @@ const clear = renormalizeGoalieGamesByTeam(
 );
 assert(clear[0]!.gamesPlayed >= 48, `clear starter gets ≥48 (got ${clear[0]!.gamesPlayed})`);
 assert(clear[1]!.gamesPlayed <= 28, `backup capped (got ${clear[1]!.gamesPlayed})`);
+
+assert(top3GoalieGpSum([50, 22, 8, 4]) === 80, "top3 sums three largest");
+assert(topGoalieGpTooLow(39), "39 GP fails top-goalie floor");
+assert(!topGoalieGpTooLow(40), "40 GP passes top-goalie floor");
+const byTeam = new Map<string, number[]>([
+  ["PHI", [45, 40, 35]],
+  ["ANA", [20, 15]],
+]);
+assert(
+  findOverloadedGoalieTeams(byTeam).some((s) => s.startsWith("PHI=")),
+  "PHI flagged overloaded",
+);
+assert(
+  findUnderloadedGoalieTeams(byTeam).some((s) => s.startsWith("ANA=")),
+  "ANA flagged underloaded",
+);
 
 if (failed) process.exit(1);
 console.log("OK: goalie-tandem");

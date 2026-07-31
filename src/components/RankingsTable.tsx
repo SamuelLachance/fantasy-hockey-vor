@@ -36,7 +36,10 @@ import {
   type StatRanges,
 } from "@/lib/rankings-filters";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
-import { fetchPlayerDetails } from "@/lib/player-details-client";
+import {
+  fetchPlayerDetails,
+  resetPlayerDetailsCache,
+} from "@/lib/player-details-client";
 import {
   detailStatSigma,
   type PlayerDetailRecord,
@@ -75,6 +78,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     string,
     PlayerDetailRecord
   > | null>(null);
+  const [detailsError, setDetailsError] = useState(false);
 
   useEffect(() => {
     const next = rankingsUrlSearch({
@@ -161,22 +165,34 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     const cancel =
       window.cancelIdleCallback ?? ((id: number) => window.clearTimeout(id));
     const id = ric(() => {
-      void fetchPlayerDetails().then(setDetails);
+      void fetchPlayerDetails()
+        .then((d) => {
+          setDetailsError(false);
+          setDetails(d);
+        })
+        .catch(() => setDetailsError(true));
     });
     return () => cancel(id as number);
   }, []);
 
   useEffect(() => {
-    if (expandedId != null && details === null) {
+    if (expandedId != null && details === null && !detailsError) {
       let cancelled = false;
-      fetchPlayerDetails().then((d) => {
-        if (!cancelled) setDetails(d);
-      });
+      fetchPlayerDetails()
+        .then((d) => {
+          if (!cancelled) {
+            setDetailsError(false);
+            setDetails(d);
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setDetailsError(true);
+        });
       return () => {
         cancelled = true;
       };
     }
-  }, [expandedId, details]);
+  }, [expandedId, details, detailsError]);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -575,9 +591,30 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                               {playerDetails.profileSummary}
                             </p>
                           )}
-                          {isExpanded && details === null && (
+                          {isExpanded && details === null && !detailsError && (
                             <p className="mb-3 text-xs text-slate-500">
                               Loading player notes...
+                            </p>
+                          )}
+                          {isExpanded && detailsError && details === null && (
+                            <p className="mb-3 text-xs text-amber-400/90">
+                              Player notes unavailable — expand again to retry.
+                              <button
+                                type="button"
+                                className="ml-2 underline decoration-amber-400/50 hover:text-amber-300"
+                                onClick={() => {
+                                  resetPlayerDetailsCache();
+                                  setDetailsError(false);
+                                  void fetchPlayerDetails()
+                                    .then((d) => {
+                                      setDetailsError(false);
+                                      setDetails(d);
+                                    })
+                                    .catch(() => setDetailsError(true));
+                                }}
+                              >
+                                Retry
+                              </button>
                             </p>
                           )}
                           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

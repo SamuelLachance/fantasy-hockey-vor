@@ -16,9 +16,19 @@ function ageDaysAtBuild(generatedAt: string): number {
 export default function HomePage() {
   const data = getProjections();
   const projectionAgeDays = ageDaysAtBuild(data.generatedAt);
+  const detailsHref = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/player-details.json`.replace(
+    /\/{2,}/g,
+    "/",
+  );
 
   return (
     <main className="min-h-screen pb-16">
+      <link
+        rel="preload"
+        href={detailsHref}
+        as="fetch"
+        crossOrigin="anonymous"
+      />
       <Header
         season={data.season}
         playerCount={data.players.length}
