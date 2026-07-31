@@ -1,4 +1,5 @@
 import type { Position } from "@/lib/types";
+import { BOARD_POSITIONS } from "@/lib/board-positions";
 import {
   defaultSortDir,
   type RangeKey,
@@ -6,7 +7,7 @@ import {
   type StatRanges,
 } from "@/lib/rankings-filters";
 
-const POSITIONS = new Set<Position | "ALL">(["ALL", "C", "LW", "RW", "D", "G"]);
+const POSITIONS = new Set<Position | "ALL">(BOARD_POSITIONS);
 const SORT_KEYS = new Set<string>([
   "rank",
   "name",

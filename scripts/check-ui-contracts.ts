@@ -142,7 +142,10 @@ const files: Record<string, string[]> = {
     'role="tablist"',
     "ArrowRight",
     "Filter by position",
+    "BOARD_POSITIONS",
+    "nextBoardPositionIndex",
   ],
+  "src/lib/board-positions.ts": ["BOARD_POSITIONS", "nextBoardPositionIndex"],
   "src/lib/rankings-url.ts": [
     "hideDepthGoalies",
     "playerId",

@@ -2,8 +2,10 @@
 
 import { startTransition, type KeyboardEvent } from "react";
 import type { Position } from "@/lib/types";
-
-const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
+import {
+  BOARD_POSITIONS,
+  nextBoardPositionIndex,
+} from "@/lib/board-positions";
 
 interface PositionFilterTabsProps {
   position: Position | "ALL";
@@ -25,13 +27,11 @@ export function PositionFilterTabs({
       return;
     }
     e.preventDefault();
-    let next = index;
-    if (e.key === "ArrowRight") next = (index + 1) % POSITIONS.length;
-    else if (e.key === "ArrowLeft")
-      next = (index - 1 + POSITIONS.length) % POSITIONS.length;
-    else if (e.key === "Home") next = 0;
-    else next = POSITIONS.length - 1;
-    startTransition(() => setPosition(POSITIONS[next]!));
+    const next = nextBoardPositionIndex(
+      index,
+      e.key as "ArrowRight" | "ArrowLeft" | "Home" | "End",
+    );
+    startTransition(() => setPosition(BOARD_POSITIONS[next]!));
     const tabs = (
       e.currentTarget.parentElement as HTMLElement | null
     )?.querySelectorAll('[role="tab"]');
@@ -45,7 +45,7 @@ export function PositionFilterTabs({
       role="tablist"
       aria-label="Filter by position"
     >
-      {POSITIONS.map((pos, index) => (
+      {BOARD_POSITIONS.map((pos, index) => (
         <button
           key={pos}
           type="button"

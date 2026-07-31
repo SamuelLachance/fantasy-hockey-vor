@@ -1,0 +1,27 @@
+import type { Position } from "@/lib/types";
+
+/** Ordered board position filter tabs (ALL first). */
+export const BOARD_POSITIONS = [
+  "ALL",
+  "C",
+  "LW",
+  "RW",
+  "D",
+  "G",
+] as const satisfies ReadonlyArray<Position | "ALL">;
+
+export type BoardPosition = (typeof BOARD_POSITIONS)[number];
+
+/** Next tab index for arrow / Home / End keyboard navigation. */
+export function nextBoardPositionIndex(
+  currentIndex: number,
+  key: "ArrowRight" | "ArrowLeft" | "Home" | "End",
+  length = BOARD_POSITIONS.length,
+): number {
+  if (length <= 0) return 0;
+  const i = ((currentIndex % length) + length) % length;
+  if (key === "ArrowRight") return (i + 1) % length;
+  if (key === "ArrowLeft") return (i - 1 + length) % length;
+  if (key === "Home") return 0;
+  return length - 1;
+}
