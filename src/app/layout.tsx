@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,12 +12,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#020617",
+  colorScheme: "dark",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL("https://samuellachance.github.io/fantasy-hockey-vor/"),
   title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
   description:
     "2026-27 NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble (GBDT + ridge + Marcel), with draft Edge vs synthetic consensus and calibrated uncertainty.",
-  themeColor: "#020617",
   openGraph: {
     title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
     description:
