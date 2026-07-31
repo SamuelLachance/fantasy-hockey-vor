@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection } from "@/lib/types";
 import { copyTextWithFlash } from "@/lib/copy-flash";
+import { boardDocumentTitle } from "@/lib/board-document-title";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import {
   scrollExpandedRowIntoView,
@@ -62,6 +63,18 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     if (window.location.hash !== "#rankings") return;
     scrollToRankings({ focusSearch: true });
   }, []);
+
+  const expandedPlayer = board.expandedId
+    ? board.filtered.find((p) => p.id === board.expandedId)
+    : undefined;
+
+  useEffect(() => {
+    document.title = boardDocumentTitle({
+      position: board.position,
+      query: board.deferredQuery,
+      playerName: expandedPlayer?.name ?? null,
+    });
+  }, [board.position, board.deferredQuery, expandedPlayer?.name]);
 
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const showStickyShadow = useHorizontalScrollShadow(tableScrollRef);

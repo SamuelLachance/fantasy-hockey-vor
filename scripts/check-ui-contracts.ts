@@ -20,6 +20,11 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "RankingsBoardFooter",
     "useHorizontalScrollShadow",
+    "boardDocumentTitle",
+  ],
+  "src/lib/board-document-title.ts": [
+    "boardDocumentTitle",
+    "Fantasy Hockey VOR",
   ],
   "src/hooks/useRankingsBoardState.ts": [
     "useRankingsBoardState",
