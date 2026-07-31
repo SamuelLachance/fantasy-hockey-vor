@@ -232,9 +232,15 @@ const files: Record<string, string[]> = {
     "Scroll to top",
     "requestAnimationFrame",
     "scrollPageTop",
+    "scrollToTopVisible",
     "motion-reduce:transition-none",
     "motion-reduce:backdrop-blur-none",
     'aria-keyshortcuts="Home"',
+  ],
+  "src/lib/scroll-to-top.ts": [
+    "scrollToTopVisible",
+    "SCROLL_TOP_SHOW_AFTER",
+    "SCROLL_TOP_HIDE_BELOW",
   ],
   "src/components/TopPlayerLink.tsx": [
     "TopPlayerLink",
