@@ -350,16 +350,18 @@ const files: Record<string, string[]> = {
     "boardHelpTitle",
     "boardHelpAriaLabel",
   ],
-  "src/components/RankingsGoalieDepthToggle.tsx": [
-    "goalieDepthToggleLabel",
-    'aria-keyshortcuts="Shift+G"',
-    "GOALIE_DEPTH_MAX_GP",
-    "aria-pressed",
-  ],
   "src/lib/goalie-depth-toggle.ts": [
     "canToggleDepthGoalies",
     "canOfferAllGoalies",
     "goalieDepthToggleLabel",
+    "goalieDepthToggleTitle",
+  ],
+  "src/components/RankingsGoalieDepthToggle.tsx": [
+    "goalieDepthToggleLabel",
+    "goalieDepthToggleTitle",
+    'aria-keyshortcuts="Shift+G"',
+    "GOALIE_DEPTH_MAX_GP",
+    "aria-pressed",
   ],
   "src/components/RankingsSearchField.tsx": [
     "searchQueryNearCap",
