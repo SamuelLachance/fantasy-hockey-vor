@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { BOARD_SHORTCUT_ROWS } from "@/lib/board-shortcuts";
 import { useDialogFocusTrap } from "@/hooks/useDialogFocusTrap";
 
@@ -10,12 +9,7 @@ interface BoardShortcutsHelpProps {
 }
 
 export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
-  const closeRef = useRef<HTMLButtonElement | null>(null);
   useDialogFocusTrap(open, "board-shortcuts-dialog", onClose);
-
-  useEffect(() => {
-    if (open) closeRef.current?.focus();
-  }, [open]);
 
   if (!open) return null;
   return (
@@ -39,7 +33,6 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
             Board shortcuts
           </h2>
           <button
-            ref={closeRef}
             type="button"
             onClick={onClose}
             className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"

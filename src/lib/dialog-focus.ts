@@ -4,11 +4,19 @@ export function dialogFocusableElements(root: ParentNode): HTMLElement[] {
     ...root.querySelectorAll<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     ),
-  ].filter((el) => !el.hasAttribute("disabled"));
+  ].filter((el) => {
+    if (el.hasAttribute("disabled") || el.getAttribute("aria-disabled") === "true") {
+      return false;
+    }
+    const ti = el.getAttribute("tabindex");
+    if (ti != null && Number(ti) < 0) return false;
+    return true;
+  });
 }
 
 /**
  * Trap Tab / Shift+Tab inside a dialog. Returns true when the event was handled.
+ * If focus is outside the dialog focusables, pull it back to first/last.
  */
 export function trapDialogTabKey(
   e: { key: string; shiftKey: boolean; preventDefault: () => void },
@@ -18,6 +26,13 @@ export function trapDialogTabKey(
   if (e.key !== "Tab" || focusable.length === 0) return false;
   const first = focusable[0]!;
   const last = focusable[focusable.length - 1]!;
+  const inside = active != null && focusable.includes(active as HTMLElement);
+
+  if (!inside) {
+    e.preventDefault();
+    (e.shiftKey ? last : first).focus();
+    return true;
+  }
   if (e.shiftKey && active === first) {
     e.preventDefault();
     last.focus();

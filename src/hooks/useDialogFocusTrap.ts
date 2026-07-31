@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import {
   dialogFocusableElements,
   trapDialogTabKey,
@@ -21,6 +21,13 @@ export function useDialogFocusTrap(
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const root = document.getElementById(rootId);
+    if (!root) return;
+    dialogFocusableElements(root)[0]?.focus();
+  }, [open, rootId]);
 
   useEffect(() => {
     if (!open) return;
