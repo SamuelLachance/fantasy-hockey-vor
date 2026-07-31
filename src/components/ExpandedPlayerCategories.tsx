@@ -1,5 +1,5 @@
 import type { Category, PlayerProjection } from "@/lib/types";
-import { CATEGORY_LABELS, formatStat } from "@/lib/format";
+import { CATEGORY_LABELS, formatSigned, formatStat } from "@/lib/format";
 import {
   categorySigmaDigits,
   categoryZBarWidth,
@@ -37,8 +37,7 @@ export function ExpandedPlayerCategories({
               <span
                 className={`tabular-nums ${z >= 0 ? "text-emerald-400" : "text-rose-400"}`}
               >
-                {z >= 0 ? "+" : ""}
-                {z.toFixed(2)} z
+                {formatSigned(z, { digits: 2, plusZero: true })} z
               </span>
             </div>
             <div
@@ -48,7 +47,7 @@ export function ExpandedPlayerCategories({
               aria-valuemin={-4}
               aria-valuemax={4}
               aria-valuenow={categoryZMeterValue(z)}
-              aria-valuetext={`${z >= 0 ? "+" : ""}${z.toFixed(2)} z`}
+              aria-valuetext={`${formatSigned(z, { digits: 2, plusZero: true })} z`}
             >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-[width] duration-300 motion-reduce:transition-none"

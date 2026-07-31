@@ -416,8 +416,9 @@ const files: Record<string, string[]> = {
   "src/app/manifest.ts": ["Fantasy Hockey VOR", "categories", "standalone"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
-  "src/lib/format.ts": ["sigmaColor", "edgeColor"],
+  "src/lib/format.ts": ["sigmaColor", "edgeColor", "formatSigned"],
   "src/components/TopPlayers.tsx": [
+    "TopLeadersCard",
     "topByPositionLeaders",
     "playerBoardHref",
     "gamesPlayed}gp",
@@ -429,11 +430,18 @@ const files: Record<string, string[]> = {
     "dense",
     "tabular-nums",
   ],
+  "src/components/TopLeadersCard.tsx": [
+    "TopLeadersCard",
+    "accentClass",
+    "headerExtra",
+  ],
   "src/app/page.tsx": [
     "RankingsTable",
     "TopPlayers",
     "draftable",
     "boardShortcutsFooterChip",
+    "formatCount",
+    "formatProjectionEngine",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",
