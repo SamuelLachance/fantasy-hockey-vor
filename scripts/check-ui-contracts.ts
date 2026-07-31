@@ -1096,6 +1096,7 @@ const files: Record<string, string[]> = {
     "aria-sort",
     "compact",
     "accessibleLabel",
+    "min-h-11",
   ],
 
   "src/lib/sort-header.ts": [

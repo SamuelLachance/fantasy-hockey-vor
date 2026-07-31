@@ -49,8 +49,8 @@ export function SortHeader({
         aria-label={sortHeaderAriaLabel(spoken, column, sortKey, sortDir)}
         className={
           center
-            ? `inline-flex w-full items-center justify-center ${compact ? "gap-0.5" : "gap-1"} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80`
-            : "inline-flex items-center gap-1 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            ? `inline-flex min-h-11 w-full items-center justify-center ${compact ? "gap-0.5" : "gap-1"} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80`
+            : "inline-flex min-h-11 items-center gap-1 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         }
       >
         {label}
