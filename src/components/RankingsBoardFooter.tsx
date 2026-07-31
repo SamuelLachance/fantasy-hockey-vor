@@ -3,6 +3,7 @@
 import type { RefObject } from "react";
 import type { Position } from "@/lib/types";
 import { formatCount } from "@/lib/format";
+import { remainingBoardRows } from "@/lib/board-remaining";
 import { RankingsEmptyState } from "./RankingsEmptyState";
 
 interface RankingsBoardFooterProps {
@@ -39,7 +40,7 @@ export function RankingsBoardFooter({
   onShowAllGoalies,
   onResetBoard,
 }: RankingsBoardFooterProps) {
-  const remaining = Math.max(0, filteredCount - renderCount);
+  const remaining = remainingBoardRows(filteredCount, renderCount);
 
   return (
     <>

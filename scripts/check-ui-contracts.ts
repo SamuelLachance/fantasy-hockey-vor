@@ -52,6 +52,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsBoardFooter.tsx": [
     "Load more",
     "remaining",
+    "remainingBoardRows",
     "RankingsEmptyState",
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId"],
@@ -316,8 +317,10 @@ const files: Record<string, string[]> = {
   "src/components/HeaderStaleBanner.tsx": [
     "npm run generate",
     "refresh urgently",
-    'role="status"',
+    "aria-live",
+    "veryStale",
   ],
+  "src/lib/board-remaining.ts": ["remainingBoardRows"],
   "src/lib/clipboard.ts": ["copyText", "execCommand"],
   "src/lib/projection-age.ts": [
     "projectionAgeDays",

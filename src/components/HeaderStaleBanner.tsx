@@ -10,7 +10,8 @@ export function HeaderStaleBanner({
 }: HeaderStaleBannerProps) {
   return (
     <div
-      role="status"
+      role={veryStale ? "alert" : "status"}
+      aria-live={veryStale ? "assertive" : "polite"}
       className={`rounded-xl px-4 py-3 text-sm ${
         veryStale
           ? "border border-rose-500/40 bg-rose-500/10 text-rose-100/90"
