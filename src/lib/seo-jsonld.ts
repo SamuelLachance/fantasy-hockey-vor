@@ -1,4 +1,5 @@
 import type { ProjectionsDataset } from "@/lib/types";
+import { DEFAULT_PROJECTION_ENGINE } from "@/lib/projection-engine-label";
 import { SITE_URL } from "@/lib/site";
 
 const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
@@ -70,7 +71,8 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           data.season,
           `${data.players.length} players`,
         ],
-        measurementTechnique: data.projectionEngine ?? "stacked-ensemble",
+        measurementTechnique:
+          data.projectionEngine ?? DEFAULT_PROJECTION_ENGINE,
         distribution: [
           {
             "@type": "DataDownload",
