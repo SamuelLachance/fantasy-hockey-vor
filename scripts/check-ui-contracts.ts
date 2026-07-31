@@ -38,7 +38,8 @@ const files: Record<string, string[]> = {
     "RankingsToolbar",
   ],
   "src/components/RankingsBoardFooter.tsx": [
-    "Load more players",
+    "Load more",
+    "remaining",
     "RankingsEmptyState",
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId"],

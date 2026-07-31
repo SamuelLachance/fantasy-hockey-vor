@@ -2,6 +2,7 @@
 
 import type { RefObject } from "react";
 import type { Position } from "@/lib/types";
+import { formatCount } from "@/lib/format";
 import { RankingsEmptyState } from "./RankingsEmptyState";
 
 interface RankingsBoardFooterProps {
@@ -9,6 +10,7 @@ interface RankingsBoardFooterProps {
   activeFilterCount: number;
   position: Position | "ALL";
   filteredCount: number;
+  renderCount: number;
   canLoadMore: boolean;
   loadMoreRef: RefObject<HTMLDivElement | null>;
   onLoadMore: () => void;
@@ -24,6 +26,7 @@ export function RankingsBoardFooter({
   activeFilterCount,
   position,
   filteredCount,
+  renderCount,
   canLoadMore,
   loadMoreRef,
   onLoadMore,
@@ -32,6 +35,8 @@ export function RankingsBoardFooter({
   onShowAllPositions,
   onResetBoard,
 }: RankingsBoardFooterProps) {
+  const remaining = Math.max(0, filteredCount - renderCount);
+
   return (
     <>
       {filteredCount === 0 && (
@@ -53,9 +58,10 @@ export function RankingsBoardFooter({
           <button
             type="button"
             onClick={onLoadMore}
+            aria-label={`Load more players, ${formatCount(remaining)} remaining`}
             className="rounded-lg px-3 py-1.5 text-xs text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
-            Load more players
+            Load more · {formatCount(remaining)} left
           </button>
         </div>
       )}

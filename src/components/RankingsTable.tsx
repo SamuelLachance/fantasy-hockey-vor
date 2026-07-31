@@ -202,6 +202,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           activeFilterCount={board.activeFilterCount}
           position={board.position}
           filteredCount={board.filtered.length}
+          renderCount={renderCount}
           canLoadMore={canLoadMore}
           loadMoreRef={loadMoreRef}
           onLoadMore={loadMore}
