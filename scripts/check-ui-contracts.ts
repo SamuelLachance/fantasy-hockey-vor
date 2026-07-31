@@ -45,6 +45,7 @@ const files: Record<string, string[]> = {
     "onResetBoard",
     "filteredRef",
   ],
+  "src/lib/board-dom.ts": ["focusStatsFilterButton", "rankings-stat-filters"],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",

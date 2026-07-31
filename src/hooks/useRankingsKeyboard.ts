@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
+import { focusStatsFilterButton } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
@@ -71,13 +72,7 @@ export function useRankingsKeyboard({
         }
         if (filtersOpenNow) {
           setFiltersOpenRef.current(false);
-          queueMicrotask(() => {
-            document
-              .querySelector<HTMLButtonElement>(
-                '#rankings button[aria-controls="rankings-stat-filters"]',
-              )
-              ?.focus();
-          });
+          queueMicrotask(focusStatsFilterButton);
           return;
         }
         if (inField) return;

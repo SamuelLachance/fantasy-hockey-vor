@@ -36,6 +36,7 @@ import {
 import { copyText } from "@/lib/clipboard";
 import { highlightMatch } from "@/lib/highlight-match";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
+import { focusStatsFilterButton } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
@@ -322,13 +323,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             onClear={clearStatFilters}
             onDone={() => {
               setFiltersOpen(false);
-              queueMicrotask(() => {
-                document
-                  .querySelector<HTMLButtonElement>(
-                    '#rankings button[aria-controls="rankings-stat-filters"]',
-                  )
-                  ?.focus();
-              });
+              queueMicrotask(focusStatsFilterButton);
             }}
           />
         )}
