@@ -78,7 +78,9 @@ export function Header({
                 {generatedLabel ? (
                   <>
                     {" · Generated "}
-                    <time dateTime={generatedAt}>{generatedLabel}</time>
+                    <time dateTime={generatedAt} className="tabular-nums">
+                      {generatedLabel}
+                    </time>
                   </>
                 ) : null}
               </p>
