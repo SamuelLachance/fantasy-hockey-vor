@@ -1,6 +1,6 @@
 "use client";
 
-import { CATEGORY_LABELS } from "@/lib/format";
+import { CATEGORY_FULL_LABELS, CATEGORY_LABELS } from "@/lib/format";
 import type { Category } from "@/lib/types";
 import { BOARD_STICKY_TOP_CLASS, STICKY_NAME_BASE, STICKY_NAME_SHADOW } from "@/lib/board-dom";
 import type { SortKey } from "@/lib/rankings-filters";
@@ -27,6 +27,7 @@ export function RankingsTableHead({
         <SortHeader
           column="rank"
           label="#"
+          accessibleLabel="Rank"
           sortKey={sortKey}
           sortDir={sortDir}
           onToggle={onToggleSort}
@@ -45,7 +46,9 @@ export function RankingsTableHead({
           className={`sticky left-10 ${BOARD_STICKY_TOP_CLASS} z-[5] bg-slate-950/95 max-md:bg-slate-950 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW}`}
         />
         <th scope="col" className="px-4 py-3">
-          Pos
+          <abbr title="Position" className="no-underline">
+            Pos
+          </abbr>
         </th>
         <SortHeader
           column="team"
@@ -59,6 +62,7 @@ export function RankingsTableHead({
         <SortHeader
           column="vor"
           label="VOR"
+          accessibleLabel="Value over replacement"
           sortKey={sortKey}
           sortDir={sortDir}
           onToggle={onToggleSort}
@@ -68,6 +72,7 @@ export function RankingsTableHead({
         <SortHeader
           column="draftValue"
           label="Edge"
+          accessibleLabel="Draft edge"
           sortKey={sortKey}
           sortDir={sortDir}
           onToggle={onToggleSort}
@@ -78,6 +83,7 @@ export function RankingsTableHead({
         <SortHeader
           column="sigma"
           label="Σσ"
+          accessibleLabel="Uncertainty"
           sortKey={sortKey}
           sortDir={sortDir}
           onToggle={onToggleSort}
@@ -88,6 +94,7 @@ export function RankingsTableHead({
         <SortHeader
           column="gamesPlayed"
           label="GP"
+          accessibleLabel="Games played"
           sortKey={sortKey}
           sortDir={sortDir}
           onToggle={onToggleSort}
@@ -99,6 +106,7 @@ export function RankingsTableHead({
             key={cat}
             column={cat}
             label={CATEGORY_LABELS[cat]}
+            accessibleLabel={CATEGORY_FULL_LABELS[cat]}
             sortKey={sortKey}
             sortDir={sortDir}
             onToggle={onToggleSort}

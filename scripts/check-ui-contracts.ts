@@ -274,6 +274,12 @@ const files: Record<string, string[]> = {
     "motion-reduce:bg-slate-950",
     "BOARD_STICKY_TOP_CLASS",
     "aria-rowindex={1}",
+    "CATEGORY_FULL_LABELS",
+    "accessibleLabel=",
+    "Games played",
+    "Uncertainty",
+    "Draft edge",
+    'title="Position"',
   ],
   "src/components/RankingsEmptyState.tsx": [
     "emptyBoardStatusCopy",
@@ -950,6 +956,7 @@ const files: Record<string, string[]> = {
     "sortHeaderResetTitle",
     "aria-sort",
     "compact",
+    "accessibleLabel",
   ],
 
   "src/lib/sort-header.ts": [

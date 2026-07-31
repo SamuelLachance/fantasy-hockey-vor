@@ -32,6 +32,15 @@ assert(
   "active label",
 );
 assert(
+  sortHeaderAriaLabel("Goals", "goals", "name", "asc") === "Sort by Goals",
+  "full category accessible name",
+);
+assert(
+  sortHeaderAriaLabel("Games played", "gamesPlayed", "name", "asc") ===
+    "Sort by Games played",
+  "GP accessible stem",
+);
+assert(
   sortHeaderResetTitle() === "Double-click to reset sort to VOR",
   "reset title",
 );

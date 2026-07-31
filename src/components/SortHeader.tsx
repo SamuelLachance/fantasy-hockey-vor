@@ -11,6 +11,8 @@ interface SortHeaderProps {
   onToggle: (key: SortKey) => void;
   onReset: () => void;
   label: string;
+  /** Spoken name when the visible label is abbreviated (defaults to `label`). */
+  accessibleLabel?: string;
   className?: string;
   title?: string;
   center?: boolean;
@@ -25,11 +27,13 @@ export function SortHeader({
   onToggle,
   onReset,
   label,
+  accessibleLabel,
   className = "",
   title,
   center,
   compact,
 }: SortHeaderProps) {
+  const spoken = accessibleLabel ?? label;
   return (
     <th
       className={className}
@@ -42,7 +46,7 @@ export function SortHeader({
         onClick={() => onToggle(column)}
         onDoubleClick={onReset}
         title={title ?? sortHeaderResetTitle()}
-        aria-label={sortHeaderAriaLabel(label, column, sortKey, sortDir)}
+        aria-label={sortHeaderAriaLabel(spoken, column, sortKey, sortDir)}
         className={
           center
             ? `inline-flex w-full items-center justify-center ${compact ? "gap-0.5" : "gap-1"} hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80`
