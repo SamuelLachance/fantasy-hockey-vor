@@ -38,6 +38,7 @@ import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import { focusStatsFilterButton, STICKY_NAME_SHADOW, scrollToRankings } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
+import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
@@ -64,9 +65,6 @@ interface RankingsTableProps {
   players: PlayerProjection[];
 }
 
-/** Initial paint budget — infinite scroll grows by this step. */
-const PAGE_SIZE = 80;
-
 function RankingsTableInner({ players }: RankingsTableProps) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -90,7 +88,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     seed.hideDepthGoalies,
   );
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [playerLinkStatus, setPlayerLinkStatus] = useState<{
     id: number | null;
     status: "idle" | "ok" | "err";
@@ -130,12 +127,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }, [statRanges, filterRangeKeys]);
 
   const filterKey = `${position}|${deferredQuery.trim().toLowerCase()}|${JSON.stringify(statRanges)}`;
-  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
   const [prevPosition, setPrevPosition] = useState(position);
-  if (filterKey !== prevFilterKey) {
-    setPrevFilterKey(filterKey);
-    setVisibleCount(PAGE_SIZE);
-  }
   if (position !== prevPosition) {
     setPrevPosition(position);
     // Drop sorts on categories that disappear under the new filter (e.g. FOW on D).
@@ -155,7 +147,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     }
   }
 
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const showStickyShadow = useHorizontalScrollShadow(tableScrollRef);
 
@@ -180,32 +171,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     ],
   );
 
-  const renderCount = useMemo(() => {
-    if (expandedId == null) return visibleCount;
-    const idx = filtered.findIndex((p) => p.id === expandedId);
-    if (idx < 0) return visibleCount;
-    return Math.max(
-      visibleCount,
-      Math.min(filtered.length, idx + 1 + PAGE_SIZE),
-    );
-  }, [expandedId, filtered, visibleCount]);
-
-  useEffect(() => {
-    const el = loadMoreRef.current;
-    if (!el || filtered.length <= renderCount) return;
-    const obs = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          startTransition(() => {
-            setVisibleCount((c) => Math.min(c + PAGE_SIZE, filtered.length));
-          });
-        }
-      },
-      { rootMargin: "240px 0px" },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [filtered.length, renderCount]);
+  const { loadMoreRef, renderCount } = useBoardInfiniteScroll(
+    filtered,
+    expandedId,
+    filterKey,
+  );
 
   useEffect(() => {
     if (expandedId == null) return;

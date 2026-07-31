@@ -83,6 +83,11 @@ const files: Record<string, string[]> = {
     "onCopyBoardLink",
     'aria-keyshortcuts="l"',
   ],
+  "src/hooks/useBoardInfiniteScroll.ts": [
+    "useBoardInfiniteScroll",
+    "BOARD_PAGE_SIZE",
+    "IntersectionObserver",
+  ],
   "src/hooks/useHorizontalScrollShadow.ts": [
     "useHorizontalScrollShadow",
     "scrollLeft",
