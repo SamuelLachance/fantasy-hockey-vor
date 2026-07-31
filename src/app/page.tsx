@@ -17,7 +17,7 @@ export default function HomePage() {
   const jsonLd = rankingsJsonLd(data);
 
   return (
-    <main className="min-h-screen pb-16">
+    <main className="min-h-screen pb-[max(4rem,calc(env(safe-area-inset-bottom,0px)+3rem))]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}

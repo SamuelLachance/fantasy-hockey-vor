@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PROJECTION_SEASON } from "@/lib/nhl-api";
-import { SITE_BRAND, SITE_URL } from "@/lib/site";
+import { SITE_BRAND, SITE_SHORT_NAME, SITE_URL } from "@/lib/site";
 import {
   siteDefaultDescription,
   siteDefaultTitle,
@@ -60,6 +60,11 @@ export const metadata: Metadata = {
       "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
   },
   applicationName: SITE_BRAND,
+  appleWebApp: {
+    capable: true,
+    title: SITE_SHORT_NAME,
+    statusBarStyle: "black-translucent",
+  },
   alternates: {
     canonical: "/",
   },

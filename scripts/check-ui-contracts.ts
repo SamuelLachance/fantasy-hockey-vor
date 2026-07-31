@@ -740,6 +740,10 @@ const files: Record<string, string[]> = {
     "siteDefaultDescription",
     "PROJECTION_SEASON",
     "summary_large_image",
+    "appleWebApp",
+    "black-translucent",
+    "capable: true",
+    "SITE_SHORT_NAME",
   ],
   "src/app/opengraph-image.tsx": [
     "ImageResponse",
@@ -794,6 +798,7 @@ const files: Record<string, string[]> = {
     "HeaderStaleBanner",
     "HeaderRosterNote",
     "Jump to board + focus search",
+    "safe-area-inset-top",
   ],
   "src/hooks/useLiveProjectionAge.ts": [
     "useLiveProjectionAge",
@@ -966,6 +971,7 @@ const files: Record<string, string[]> = {
     "ScrollToTop",
     "rankingsJsonLd",
     "serializeJsonLd",
+    "safe-area-inset-bottom",
   ],
   "src/components/SiteFooter.tsx": [
     "boardShortcutsFooterChip",
@@ -973,6 +979,7 @@ const files: Record<string, string[]> = {
     "FOOTER_SOURCE_HREF",
     "formatProjectionEngine",
     "Projections generated",
+    "safe-area-inset-bottom",
   ],
   "src/lib/site-footer.ts": [
     "footerDraftableCopy",

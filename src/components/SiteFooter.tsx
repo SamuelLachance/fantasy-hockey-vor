@@ -23,7 +23,7 @@ export function SiteFooter({
   projectionEngine,
 }: SiteFooterProps) {
   return (
-    <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-400">
+    <footer className="border-t border-white/10 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] text-center text-xs text-slate-400">
       Projections generated{" "}
       <time dateTime={generatedAt}>
         {new Date(generatedAt).toISOString().slice(0, 10)}
