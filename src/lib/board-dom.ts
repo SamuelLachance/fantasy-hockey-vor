@@ -204,8 +204,19 @@ function scrollExpandedTargetIntoView(
   }
 }
 
+/** True when focus is on a rankings table sort header control. */
+export function isBoardSortHeaderFocus(): boolean {
+  if (typeof document === "undefined") return false;
+  const el = document.activeElement;
+  if (!(el instanceof HTMLElement)) return false;
+  return !!el.closest("#rankings-board-table thead th button");
+}
+
 /** Keep an expanded player row + details panel clear of sticky chrome. */
-export function scrollExpandedRowIntoView(playerId: number): void {
+export function scrollExpandedRowIntoView(
+  playerId: number,
+  opts?: { focus?: boolean },
+): void {
   if (typeof document === "undefined" || typeof window === "undefined") return;
   const row = document.getElementById(`player-row-${playerId}`);
   if (!row) return;
@@ -217,7 +228,7 @@ export function scrollExpandedRowIntoView(playerId: number): void {
       scrollExpandedTargetIntoView(playerId, "auto");
     });
   });
-  if (row instanceof HTMLElement) {
+  if (opts?.focus !== false && row instanceof HTMLElement) {
     row.focus({ preventScroll: true });
   }
 }

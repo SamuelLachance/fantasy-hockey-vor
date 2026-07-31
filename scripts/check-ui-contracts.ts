@@ -40,6 +40,9 @@ const files: Record<string, string[]> = {
   "src/hooks/useExpandedRowScroll.ts": [
     "useExpandedRowScroll",
     "scrollExpandedRowIntoView",
+    "isBoardSortHeaderFocus",
+    "sortKey",
+    "sortDir",
     "Intentionally ignores load-more",
     "details panel",
   ],
@@ -329,6 +332,7 @@ const files: Record<string, string[]> = {
     "scrollPageTop",
     "scrollToRankings",
     "scrollExpandedRowIntoView",
+    "isBoardSortHeaderFocus",
     "stickyAwareScrollDelta",
     "unionVerticalBounds",
     "boardStickyTopInset",

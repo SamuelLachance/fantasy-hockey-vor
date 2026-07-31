@@ -80,7 +80,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
       board.filterKey,
     );
 
-  useExpandedRowScroll(board.expandedId);
+  useExpandedRowScroll(board.expandedId, board.sortKey, board.sortDir);
   useCoercedExpandFocusRestore(board.expandedId);
 
   useRankingsKeyboard({
