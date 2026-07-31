@@ -9,7 +9,7 @@ import {
   findUnderloadedGoalieTeams,
   topGoalieGpTooLow,
 } from "../src/lib/goalie-tandem-guards";
-import { loadInactivePlayerIds } from "../src/lib/inactive-players";
+import { loadInactivePlayerIds, inactiveFileIssues } from "../src/lib/inactive-players";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -109,6 +109,9 @@ if (
 }
 
 const inactiveIds = loadInactivePlayerIds();
+for (const issue of inactiveFileIssues()) {
+  errors.push(`inactive denylist: ${issue}`);
+}
 const inactiveOnBoard = players.filter((p) => inactiveIds.has(p.id));
 if (inactiveOnBoard.length > 0) {
   errors.push(

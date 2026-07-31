@@ -1,8 +1,13 @@
 /**
- * Unit check: inactive denylist filter.
+ * Unit check: inactive denylist filter + file consistency.
  * Run: npx tsx scripts/test-inactive-players.ts
  */
-import { filterActivePlayers, loadInactivePlayerIds } from "../src/lib/inactive-players";
+import {
+  filterActivePlayers,
+  inactiveFileIssues,
+  loadInactivePlayerIds,
+  loadInactivePlayersFile,
+} from "../src/lib/inactive-players";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -20,6 +25,31 @@ const kept = filterActivePlayers([
   { id: 8480014 },
 ]);
 assert(kept.length === 1 && kept[0]!.id === 8480014, "filters Couture");
+
+const file = loadInactivePlayersFile();
+const issues = inactiveFileIssues(file);
+assert(issues.length === 0, `denylist issues: ${issues.join("; ")}`);
+assert(
+  (file.names?.length ?? 0) === file.ids.length,
+  "names aligned with ids",
+);
+
+assert(
+  inactiveFileIssues({
+    reason: "x",
+    ids: [1, 1],
+    names: ["A", "B"],
+  }).some((m) => m.includes("duplicate ids")),
+  "detects duplicate ids",
+);
+assert(
+  inactiveFileIssues({
+    reason: "x",
+    ids: [1, 2],
+    names: ["OnlyOne"],
+  }).some((m) => m.includes("names length")),
+  "detects names/ids length mismatch",
+);
 
 if (failed) process.exit(1);
 console.log("OK: inactive-players");
