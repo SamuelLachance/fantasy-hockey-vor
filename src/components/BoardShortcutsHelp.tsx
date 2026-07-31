@@ -15,13 +15,13 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm motion-reduce:backdrop-blur-none"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="board-shortcuts-title"
       onClick={onClose}
     >
       <div
         id="board-shortcuts-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="board-shortcuts-title"
         className="w-full max-w-md rounded-2xl border border-white/10 bg-slate-900 p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
