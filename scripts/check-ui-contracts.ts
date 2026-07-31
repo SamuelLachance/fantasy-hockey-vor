@@ -114,6 +114,7 @@ const files: Record<string, string[]> = {
     "TopPlayers",
     "draftable",
     "r · l",
+    "Home/End",
   ],
   "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],
