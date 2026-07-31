@@ -5,6 +5,18 @@ export function confidenceChipCopy(confidence: number): string {
   return `Confidence: ${(confidence * 100).toFixed(0)}%`;
 }
 
+/** Show legacy confidence only when calibrated uncertainty is absent. */
+export function shouldShowConfidenceChip(input: {
+  confidence?: number | null;
+  hasUncertainty: boolean;
+}): boolean {
+  return (
+    input.confidence != null &&
+    Number.isFinite(input.confidence) &&
+    !input.hasUncertainty
+  );
+}
+
 /** Consensus / model / optional Edge chip. */
 export function marketEdgeChipCopy(input: {
   consensusRank: number;

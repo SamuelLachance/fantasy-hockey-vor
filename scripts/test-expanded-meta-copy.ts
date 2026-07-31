@@ -5,6 +5,7 @@
 import {
   confidenceChipCopy,
   marketEdgeChipCopy,
+  shouldShowConfidenceChip,
   uncertaintyChipCopy,
   uncertaintyChipTitle,
 } from "../src/lib/expanded-meta-copy";
@@ -18,6 +19,20 @@ function assert(cond: boolean, msg: string) {
 }
 
 assert(confidenceChipCopy(0.82) === "Confidence: 82%", "confidence");
+assert(
+  shouldShowConfidenceChip({ confidence: 0.8, hasUncertainty: true }) === false,
+  "hide stub when uncertainty present",
+);
+assert(
+  shouldShowConfidenceChip({ confidence: 0.55, hasUncertainty: false }) ===
+    true,
+  "show confidence without uncertainty",
+);
+assert(
+  shouldShowConfidenceChip({ confidence: Number.NaN, hasUncertainty: false }) ===
+    false,
+  "reject NaN confidence",
+);
 assert(
   marketEdgeChipCopy({
     consensusRank: 10,

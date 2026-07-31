@@ -535,9 +535,12 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="p"',
     'aria-live="polite"',
     "projectionMethodLabel",
+    "shouldShowConfidenceChip",
   ],
   "src/lib/expanded-meta-copy.ts": [
     "confidenceChipCopy",
+    "shouldShowConfidenceChip",
+    "hasUncertainty",
     "marketEdgeChipCopy",
     "uncertaintyChipCopy",
     "uncertaintyChipTitle",

@@ -7,6 +7,7 @@ import {
 import {
   confidenceChipCopy,
   marketEdgeChipCopy,
+  shouldShowConfidenceChip,
   uncertaintyChipCopy,
   uncertaintyChipTitle,
 } from "@/lib/expanded-meta-copy";
@@ -36,9 +37,12 @@ export function ExpandedPlayerMeta({
       >
         {projectionMethodLabel(player.projectionMethod)}
       </span>
-      {player.confidence != null && (
+      {shouldShowConfidenceChip({
+        confidence: player.confidence,
+        hasUncertainty: !!player.uncertainty,
+      }) && (
         <span className="text-xs tabular-nums text-slate-400">
-          {confidenceChipCopy(player.confidence)}
+          {confidenceChipCopy(player.confidence!)}
         </span>
       )}
       {player.syntheticMarketRank != null && (
