@@ -15,7 +15,10 @@ export function PositionBadge({
   return (
     <span
       className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_COLORS[position]} ${highlight ? "ring-2 ring-cyan-400/80" : ""} ${className}`}
-      title={highlight ? `VOR calculated at ${position}` : undefined}
+      title={highlight ? `VOR calculated at ${position}` : position}
+      aria-label={
+        highlight ? `${position}, VOR position` : `Position ${position}`
+      }
     >
       {position}
     </span>
