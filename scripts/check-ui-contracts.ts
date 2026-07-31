@@ -109,12 +109,16 @@ const files: Record<string, string[]> = {
     "vorForFilter",
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
-    "Copy player link",
+    "ExpandedPlayerMeta",
     "detailStatSigma",
     "Loading player notes",
-    "Consensus #",
     "sr-only",
+  ],
+  "src/components/ExpandedPlayerMeta.tsx": [
+    "Copy player link",
+    "Consensus #",
     'aria-live="polite"',
+    "ML stacked ensemble",
   ],
   "src/components/RankingsToolbar.tsx": [
     "CSV",

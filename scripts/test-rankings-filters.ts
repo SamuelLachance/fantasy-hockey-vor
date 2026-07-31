@@ -23,6 +23,8 @@ assert.equal(formatRangeChip("2", ""), "≥2");
 assert.equal(formatRangeChip("", "50"), "≤50");
 assert.equal(formatRangeChip("1", "10"), "1–10");
 assert.equal(formatRangeChip("", ""), "");
+assert.equal(formatRangeChip("  2  ", "  "), "≥2");
+assert.equal(formatRangeChip("  ", " 40 "), "≤40");
 
 const player = {
   vor: 5,
