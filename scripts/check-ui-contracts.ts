@@ -73,6 +73,7 @@ const files: Record<string, string[]> = {
     "vorForFilter",
     "ExpandedPlayerPanel",
     "Enter",
+    "tabular-nums",
   ],
   "src/lib/board-reset-token.ts": ["boardFilterResetToken", "g1"],
   "src/lib/board-keyboard.ts": ["nextExpandedPlayerId"],

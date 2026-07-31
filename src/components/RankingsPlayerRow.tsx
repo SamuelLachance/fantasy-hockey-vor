@@ -110,12 +110,12 @@ export function RankingsPlayerRow({
         <td className="px-4 py-3 font-mono text-slate-300">
           {highlightMatch(player.team, deferredQuery)}
         </td>
-        <td className={`px-4 py-3 font-mono font-semibold ${vorColor(vor)}`}>
+        <td className={`px-4 py-3 font-mono tabular-nums font-semibold ${vorColor(vor)}`}>
           {vor >= 0 ? "+" : ""}
           {vor.toFixed(2)}
         </td>
         <td
-          className={`px-4 py-3 font-mono text-sm ${edgeColor(player.draftValue ?? 0)}`}
+          className={`px-4 py-3 font-mono tabular-nums text-sm ${edgeColor(player.draftValue ?? 0)}`}
           title={
             player.syntheticMarketRank != null
               ? `Consensus rank ${player.syntheticMarketRank} − model rank ${player.rank}`
@@ -126,7 +126,7 @@ export function RankingsPlayerRow({
           {player.draftValue ?? 0}
         </td>
         <td
-          className={`px-3 py-3 font-mono text-sm ${
+          className={`px-3 py-3 font-mono tabular-nums text-sm ${
             player.uncertainty?.total?.sigma != null
               ? sigmaColor(player.uncertainty.total.sigma)
               : "text-slate-500"
@@ -141,13 +141,13 @@ export function RankingsPlayerRow({
             ? player.uncertainty.total.sigma.toFixed(0)
             : "—"}
         </td>
-        <td className="px-4 py-3 font-mono text-slate-400">
+        <td className="px-4 py-3 font-mono tabular-nums text-slate-400">
           {player.gamesPlayed}
         </td>
         {tableCategories.map((cat) => (
           <td
             key={cat}
-            className="px-3 py-3 text-center font-mono text-slate-300"
+            className="px-3 py-3 text-center font-mono tabular-nums text-slate-300"
           >
             {formatStat(player, cat)}
           </td>
