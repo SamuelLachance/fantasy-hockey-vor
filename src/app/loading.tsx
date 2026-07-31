@@ -1,4 +1,5 @@
 import { BrandEyebrow } from "@/components/BrandEyebrow";
+import { loadingRankingsCopy } from "@/lib/app-shell-copy";
 
 export default function Loading() {
   return (
@@ -11,7 +12,7 @@ export default function Loading() {
         <div className="h-full w-1/2 animate-pulse rounded-full bg-cyan-400/60 motion-reduce:animate-none" />
       </div>
       <p className="text-sm text-slate-400" role="status">
-        Loading rankings…
+        {loadingRankingsCopy()}
       </p>
     </main>
   );
