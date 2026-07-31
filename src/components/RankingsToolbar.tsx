@@ -103,6 +103,7 @@ export function RankingsToolbar({
             type="search"
             aria-label="Search players or teams"
             aria-keyshortcuts="Slash"
+            maxLength={48}
             placeholder="Search players or teams..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}

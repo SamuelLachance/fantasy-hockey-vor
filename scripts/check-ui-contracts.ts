@@ -90,6 +90,7 @@ const files: Record<string, string[]> = {
     'aria-controls="rankings-stat-filters"',
     "onCopyBoardLink",
     'aria-keyshortcuts="l"',
+    "maxLength={48}",
   ],
   "src/hooks/useBoardInfiniteScroll.ts": [
     "useBoardInfiniteScroll",
