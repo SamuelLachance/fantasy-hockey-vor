@@ -858,6 +858,13 @@ const files: Record<string, string[]> = {
     "SITE_BRAND",
     "SITE_SHORT_NAME",
     "categories",
+    "192x192",
+    "512x512",
+    "image/png",
+    'purpose: "maskable"',
+    "icon-192.png",
+    "icon-512.png",
+    "icon-maskable-512.png",
   ],
   "src/lib/rankings-board.ts": [
     "filterAndSortBoard",
