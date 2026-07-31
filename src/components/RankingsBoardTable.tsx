@@ -149,6 +149,9 @@ export function RankingsBoardTable({
         filteredCount={filteredCount}
         renderCount={renderCount}
         canLoadMore={canLoadMore}
+        lastVisiblePlayerId={
+          visiblePlayers[visiblePlayers.length - 1]?.id ?? null
+        }
         loadMoreRef={loadMoreRef}
         onLoadMore={onLoadMore}
         onClearSearch={onClearSearch}

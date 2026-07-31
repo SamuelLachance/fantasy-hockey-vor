@@ -1,7 +1,8 @@
 "use client";
 
-import type { RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import type { Position } from "@/lib/types";
+import { focusPlayerRow } from "@/lib/board-dom";
 import {
   loadMoreAriaLabel,
   loadMoreLabel,
@@ -16,6 +17,8 @@ interface RankingsBoardFooterProps {
   filteredCount: number;
   renderCount: number;
   canLoadMore: boolean;
+  /** Last mounted player — focus target when Load more unmounts after the final page. */
+  lastVisiblePlayerId: number | null;
   loadMoreRef: RefObject<HTMLDivElement | null>;
   onLoadMore: () => void;
   onClearSearch: () => void;
@@ -34,6 +37,7 @@ export function RankingsBoardFooter({
   filteredCount,
   renderCount,
   canLoadMore,
+  lastVisiblePlayerId,
   loadMoreRef,
   onLoadMore,
   onClearSearch,
@@ -44,6 +48,22 @@ export function RankingsBoardFooter({
   onResetBoard,
 }: RankingsBoardFooterProps) {
   const remaining = remainingBoardRows(filteredCount, renderCount);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const restoreFocusRef = useRef(false);
+  const wasCanLoadMoreRef = useRef(canLoadMore);
+
+  useEffect(() => {
+    if (
+      wasCanLoadMoreRef.current &&
+      !canLoadMore &&
+      restoreFocusRef.current &&
+      lastVisiblePlayerId != null
+    ) {
+      restoreFocusRef.current = false;
+      focusPlayerRow(lastVisiblePlayerId);
+    }
+    wasCanLoadMoreRef.current = canLoadMore;
+  }, [canLoadMore, lastVisiblePlayerId]);
 
   return (
     <>
@@ -66,8 +86,13 @@ export function RankingsBoardFooter({
           className="border-t border-white/5 px-6 py-4 text-center"
         >
           <button
+            ref={buttonRef}
             type="button"
-            onClick={onLoadMore}
+            onClick={() => {
+              restoreFocusRef.current =
+                document.activeElement === buttonRef.current;
+              onLoadMore();
+            }}
             aria-keyshortcuts="m"
             aria-label={loadMoreAriaLabel(remaining)}
             className="rounded-lg px-3 py-1.5 text-xs tabular-nums text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
