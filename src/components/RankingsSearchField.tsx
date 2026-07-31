@@ -41,7 +41,7 @@ export function RankingsSearchField({
         placeholder={searchFieldPlaceholder()}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus-visible:ring-cyan-300/70"
+        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-base text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus-visible:ring-cyan-300/70"
       />
       {query.trim() !== "" && (
         <button

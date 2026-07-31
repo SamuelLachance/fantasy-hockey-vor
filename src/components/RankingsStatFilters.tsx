@@ -88,8 +88,8 @@ export function RankingsStatFilters({
           );
           const errorId = `range-error-${key}`;
           const inputClass = inverted
-            ? "w-full rounded-lg border border-rose-500/50 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-rose-400/60 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
-            : "w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25";
+            ? "w-full rounded-lg border border-rose-500/50 bg-slate-950/60 px-2 py-1.5 text-base tabular-nums text-white placeholder:text-slate-600 focus:border-rose-400/60 focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+            : "w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-base tabular-nums text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25";
           return (
             <div
               key={key}
