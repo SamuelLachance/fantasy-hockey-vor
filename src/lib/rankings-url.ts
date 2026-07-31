@@ -1,11 +1,15 @@
 import type { Position } from "@/lib/types";
 import { BOARD_POSITIONS } from "@/lib/board-positions";
+import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 import {
   defaultSortDir,
   type RangeKey,
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
+
+/** Cap decoded range bound strings from the URL. */
+const RANGE_BOUND_MAX = 24;
 
 const POSITIONS = new Set<Position | "ALL">(BOARD_POSITIONS);
 const SORT_KEYS = new Set<string>([
@@ -81,12 +85,15 @@ export function encodeStatRanges(ranges: StatRanges): string {
 export function decodeStatRanges(raw: string | null | undefined): StatRanges {
   if (!raw?.trim()) return {};
   const out: StatRanges = {};
-  for (const part of raw.split(",")) {
+  for (const part of raw.split(",").slice(0, RANGE_KEYS.size)) {
     const m = /^([A-Za-z]+):([^-]*)-(.*)$/.exec(part.trim());
     if (!m) continue;
     const key = m[1]!;
     if (!RANGE_KEYS.has(key)) continue;
-    out[key as RangeKey] = { min: m[2] ?? "", max: m[3] ?? "" };
+    out[key as RangeKey] = {
+      min: (m[2] ?? "").slice(0, RANGE_BOUND_MAX),
+      max: (m[3] ?? "").slice(0, RANGE_BOUND_MAX),
+    };
   }
   return out;
 }
@@ -96,7 +103,7 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
   const position = POSITIONS.has(posRaw as Position | "ALL")
     ? (posRaw as Position | "ALL")
     : "ALL";
-  const query = params.get("q") ?? "";
+  const query = (params.get("q") ?? "").slice(0, HIGHLIGHT_QUERY_MAX);
   const sortRaw = params.get("sort") ?? "vor";
   const sortKey = (SORT_KEYS.has(sortRaw) ? sortRaw : "vor") as SortKey;
   const dirRaw = params.get("dir");

@@ -157,6 +157,8 @@ const files: Record<string, string[]> = {
     "steadiestBoardHref",
     "playerBoardHref",
     "rf=${rf}",
+    "HIGHLIGHT_QUERY_MAX",
+    "RANGE_BOUND_MAX",
   ],
   "src/components/ScrollToTop.tsx": [
     "Scroll to top",

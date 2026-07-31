@@ -127,5 +127,15 @@ assert(
   "share url with player",
 );
 
+const longQ = "x".repeat(80);
+assert(
+  parseRankingsUrl(new URLSearchParams(`q=${longQ}`)).query.length === 48,
+  "q clamped to highlight max",
+);
+assert(
+  decodeStatRanges(`vor:${"9".repeat(40)}-`).vor?.min?.length === 24,
+  "rf bound clamped",
+);
+
 if (failed) process.exit(1);
 console.log("OK: rankings-url");
