@@ -48,7 +48,7 @@ export function rankingsToCsv(
     }
     lines.push(cells.map(csvEscape).join(","));
   }
-  return lines.join("\n");
+  return `\uFEFF${lines.join("\n")}`;
 }
 
 export function downloadTextFile(filename: string, text: string, mime: string) {
