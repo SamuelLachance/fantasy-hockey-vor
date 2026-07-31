@@ -24,7 +24,9 @@ const files: Record<string, string[]> = {
     "useHorizontalScrollShadow",
     "Load more players",
     "Drop deep-linked expand ids",
+    "boardHasPlayerId",
   ],
+  "src/lib/board-players.ts": ["boardHasPlayerId"],
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",

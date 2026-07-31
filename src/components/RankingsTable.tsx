@@ -23,6 +23,7 @@ import {
   boardFilterKeys,
   filterAndSortBoard,
 } from "@/lib/rankings-board";
+import { boardHasPlayerId } from "@/lib/board-players";
 import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
@@ -102,7 +103,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }, []);
 
   // Drop deep-linked expand ids that are no longer on the board dataset.
-  if (expandedId != null && !players.some((p) => p.id === expandedId)) {
+  if (expandedId != null && !boardHasPlayerId(players, expandedId)) {
     setExpandedId(null);
   }
 
