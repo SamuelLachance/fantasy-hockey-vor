@@ -54,14 +54,14 @@ export function TopPlayers({
                 trailing={
                   <div className="text-right">
                     <div
-                      className={`font-mono font-bold ${vorColor(player.vor)}`}
+                      className={`font-mono tabular-nums font-bold ${vorColor(player.vor)}`}
                     >
                       {player.vor >= 0 ? "+" : ""}
                       {player.vor.toFixed(2)}
                     </div>
                     {player.uncertainty?.total?.sigma != null && (
                       <div
-                        className={`font-mono text-xs ${sigmaColor(player.uncertainty.total.sigma)}`}
+                        className={`font-mono tabular-nums text-xs ${sigmaColor(player.uncertainty.total.sigma)}`}
                       >
                         Σσ {player.uncertainty.total.sigma.toFixed(0)}
                       </div>
@@ -69,7 +69,7 @@ export function TopPlayers({
                   </div>
                 }
               >
-                <span className="font-mono text-sm text-slate-500">
+                <span className="font-mono tabular-nums text-sm text-slate-500">
                   {player.rank}
                 </span>
                 <div>
@@ -121,13 +121,13 @@ export function TopPlayers({
                 accent="emerald"
                 trailing={
                   <span
-                    className={`font-mono font-bold ${edgeColor(player.draftValue ?? 0)}`}
+                    className={`font-mono tabular-nums font-bold ${edgeColor(player.draftValue ?? 0)}`}
                   >
                     +{player.draftValue}
                   </span>
                 }
               >
-                <span className="font-mono text-sm text-slate-500">
+                <span className="font-mono tabular-nums text-sm text-slate-500">
                   #{player.rank}
                 </span>
                 <div>
@@ -171,13 +171,13 @@ export function TopPlayers({
                   href={playerBoardHref(player.id)}
                   trailing={
                     <span
-                      className={`font-mono font-bold ${sigmaColor(player.uncertainty!.total.sigma)}`}
+                      className={`font-mono tabular-nums font-bold ${sigmaColor(player.uncertainty!.total.sigma)}`}
                     >
                       Σσ {player.uncertainty!.total.sigma.toFixed(0)}
                     </span>
                   }
                 >
-                  <span className="font-mono text-sm text-slate-500">
+                  <span className="font-mono tabular-nums text-sm text-slate-500">
                     #{player.rank}
                   </span>
                   <div>
@@ -214,7 +214,7 @@ export function TopPlayers({
                       dense
                       trailing={
                         <span
-                          className={`shrink-0 font-mono ${vorColor(vorForFilter(p, position))}`}
+                          className={`shrink-0 font-mono tabular-nums ${vorColor(vorForFilter(p, position))}`}
                         >
                           {vorForFilter(p, position).toFixed(1)}
                         </span>
@@ -288,7 +288,7 @@ export function TopPlayers({
                   className="rounded-lg border border-white/10 bg-slate-900/60 px-2 py-1 text-xs text-slate-300"
                 >
                   {CATEGORY_FULL_LABELS[cat]}:{" "}
-                  <span className="font-mono text-cyan-300">
+                  <span className="font-mono tabular-nums text-cyan-300">
                     {categoryWeights.skater[cat].weight.toFixed(2)}×
                   </span>
                 </span>
@@ -301,7 +301,7 @@ export function TopPlayers({
                   className="rounded-lg border border-white/10 bg-slate-900/60 px-2 py-1 text-xs text-slate-300"
                 >
                   {CATEGORY_FULL_LABELS[cat]}:{" "}
-                  <span className="font-mono text-violet-300">
+                  <span className="font-mono tabular-nums text-violet-300">
                     {categoryWeights.goalie[cat].weight.toFixed(2)}×
                   </span>
                 </span>
