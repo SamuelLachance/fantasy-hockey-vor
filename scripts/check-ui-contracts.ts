@@ -55,6 +55,8 @@ const files: Record<string, string[]> = {
     "focusStatsFilterButton",
     "rankings-stat-filters",
     "STICKY_NAME_SHADOW",
+    "scrollPageTop",
+    "scrollToRankings",
   ],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": [
@@ -99,7 +101,7 @@ const files: Record<string, string[]> = {
   "src/components/ScrollToTop.tsx": [
     "Scroll to top",
     "requestAnimationFrame",
-    "prefers-reduced-motion",
+    "scrollPageTop",
   ],
   "src/app/not-found.tsx": ["Page not found", "Back to rankings"],
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
