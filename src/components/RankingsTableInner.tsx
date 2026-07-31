@@ -52,7 +52,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     onHydrate: board.hydrateFromUrl,
   });
 
-  useRankingsHashJump();
+  useRankingsHashJump(board.filtered);
 
   const expandedPlayer = board.expandedId
     ? board.filtered.find((p) => p.id === board.expandedId)

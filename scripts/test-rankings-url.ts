@@ -258,7 +258,23 @@ assert(
 );
 assert(
   !rankingsHashShouldFocusSearch(new URLSearchParams("player=8478402")),
-  "player deep-link skips search focus",
+  "player deep-link skips search focus without board list",
+);
+assert(
+  !rankingsHashShouldFocusSearch(new URLSearchParams("player=8478402"), [
+    { id: 8478402 },
+  ]),
+  "on-board player deep-link skips search focus",
+);
+assert(
+  rankingsHashShouldFocusSearch(new URLSearchParams("player=8478402"), [
+    { id: 1 },
+  ]),
+  "missing player falls back to search focus",
+);
+assert(
+  rankingsHashShouldFocusSearch(new URLSearchParams("player=1"), []),
+  "empty board falls back to search focus",
 );
 
 const viewWithPlayer = {

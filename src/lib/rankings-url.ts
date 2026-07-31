@@ -1,4 +1,5 @@
 import type { Position } from "@/lib/types";
+import { boardHasPlayerId } from "@/lib/board-players";
 import { BOARD_POSITIONS } from "@/lib/board-positions";
 import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 import { coerceSortKeyForPosition, pruneStatRangesForPosition } from "@/lib/rankings-board";
@@ -306,12 +307,17 @@ export function nextRankingsUrlSyncAction(
 
 /**
  * Whether a #rankings hash jump should scroll to the board and focus search.
- * Skip when a player deep-link is present so expand-row scroll/focus wins.
+ * Skip when a player deep-link is still on the (filtered) board so expand
+ * scroll wins; fall back when the id was coerced away (missing/filtered/depth).
  */
 export function rankingsHashShouldFocusSearch(
   params: URLSearchParams,
+  boardPlayers?: readonly { id: number }[],
 ): boolean {
-  return parseRankingsUrl(params).playerId == null;
+  const playerId = parseRankingsUrl(params).playerId;
+  if (playerId == null) return true;
+  if (boardPlayers) return !boardHasPlayerId(boardPlayers, playerId);
+  return false;
 }
 
 /**
