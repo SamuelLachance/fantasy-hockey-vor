@@ -107,8 +107,14 @@ assert(
 assert(edgeBoardHref() === "?sort=draftValue#rankings", "edge board href");
 assert(sigmaBoardHref() === "?sort=sigma#rankings", "sigma board href");
 assert(
-  steadiestBoardHref() === "?sort=sigma&rf=vor:2-#rankings",
+  steadiestBoardHref() === "?sort=sigma&rf=vor%3A2-#rankings",
   "steadiest board href matches top-lists VOR≥2",
+);
+assert(
+  parseRankingsUrl(
+    new URLSearchParams(steadiestBoardHref().replace(/^\?/, "").replace(/#.*$/, "")),
+  ).statRanges.vor?.min === "2",
+  "steadiest href parses VOR min 2",
 );
 
 if (failed) process.exit(1);
