@@ -143,6 +143,12 @@ const files: Record<string, string[]> = {
     "vorForFilter",
     "vorScope",
   ],
+  "src/lib/rankings-csv.ts": [
+    "rankingsToCsv",
+    "fantasy-hockey-vor",
+    "vorScope",
+    "csvEscape",
+  ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "ExpandedPlayerMeta",
     "ExpandedPlayerCategories",
