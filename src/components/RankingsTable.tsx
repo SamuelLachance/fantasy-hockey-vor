@@ -615,7 +615,36 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         </div>
         {filtered.length === 0 && (
           <div className="px-6 py-16 text-center text-slate-400">
-            No players match your filters.
+            <p>No players match your filters.</p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+              {query.trim() !== "" && (
+                <button
+                  type="button"
+                  onClick={() => setQuery("")}
+                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10"
+                >
+                  Clear search
+                </button>
+              )}
+              {activeFilterCount > 0 && (
+                <button
+                  type="button"
+                  onClick={clearStatFilters}
+                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10"
+                >
+                  Clear stat filters
+                </button>
+              )}
+              {position !== "ALL" && (
+                <button
+                  type="button"
+                  onClick={() => startTransition(() => setPosition("ALL"))}
+                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10"
+                >
+                  Show all positions
+                </button>
+              )}
+            </div>
           </div>
         )}
         {filtered.length > renderCount && (
