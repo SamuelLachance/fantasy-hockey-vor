@@ -191,6 +191,8 @@ const files: Record<string, string[]> = {
   "src/components/RankingsToolbar.tsx": [
     "CSV",
     "JSON",
+    "Saved",
+    "exportFlash",
     "Link",
     "Starters",
     'aria-controls="rankings-stat-filters"',

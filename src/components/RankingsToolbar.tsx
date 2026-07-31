@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition } from "react";
+import { startTransition, useState } from "react";
 import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import {
@@ -48,6 +48,15 @@ export function RankingsToolbar({
   showDepthToggle,
   onOpenHelp,
 }: RankingsToolbarProps) {
+  const [exportFlash, setExportFlash] = useState<"idle" | "csv" | "json">(
+    "idle",
+  );
+
+  function flashExport(kind: "csv" | "json") {
+    setExportFlash(kind);
+    window.setTimeout(() => setExportFlash("idle"), 1400);
+  }
+
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <PositionFilterTabs position={position} setPosition={setPosition} />
@@ -102,23 +111,29 @@ export function RankingsToolbar({
           <button
             type="button"
             disabled={filtered.length === 0}
-            onClick={() =>
-              downloadRankingsCsv(filtered, position, tableCategories)
-            }
+            onClick={() => {
+              downloadRankingsCsv(filtered, position, tableCategories);
+              flashExport("csv");
+            }}
             className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
             title="Download filtered rankings as CSV"
+            aria-live="polite"
           >
-            <Download className="h-4 w-4" />
-            CSV
+            <Download className="h-4 w-4" aria-hidden="true" />
+            {exportFlash === "csv" ? "Saved" : "CSV"}
           </button>
           <button
             type="button"
             disabled={filtered.length === 0}
-            onClick={() => downloadRankingsJson(filtered, position)}
+            onClick={() => {
+              downloadRankingsJson(filtered, position);
+              flashExport("json");
+            }}
             className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
             title="Download filtered rankings as JSON"
+            aria-live="polite"
           >
-            JSON
+            {exportFlash === "json" ? "Saved" : "JSON"}
           </button>
         </div>
         <button
