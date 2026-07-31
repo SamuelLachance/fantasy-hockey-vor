@@ -11,8 +11,8 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "l", action: "Copy board link" },
   { keys: "p", action: "Copy expanded player link" },
   { keys: "m", action: "Load more rows" },
-  { keys: "Home", action: "Scroll to top" },
-  { keys: "End", action: "Jump to board + focus search" },
+  { keys: "Home", action: "First player (or page top)" },
+  { keys: "End", action: "Last player (or board + search)" },
   { keys: "Shift+G", action: "Toggle Starters / All goalies" },
   { keys: "[ / ]", action: "Previous / next position tab" },
   { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
@@ -47,7 +47,7 @@ export function boardShortcutsStatusCopy(): string {
   return (
     "Press / to focus search, f filters, r reset, l copy link, p player link, m load more, [ / ] positions, Home/End navigate, " +
     "? for shortcuts. Esc clears search or closes help/filters then the open row; j/k or ↑/↓ move " +
-    "(opens first/last if none); PageUp/PageDown jump 10. Shift+G toggles Starters / All goalies. " +
+    "(opens first/last if none); PageUp/PageDown jump 10; Home/End jump to first/last while on a row. Shift+G toggles Starters / All goalies. " +
     "v/e/u/g sorts by VOR / Edge / Σσ / GP."
   );
 }

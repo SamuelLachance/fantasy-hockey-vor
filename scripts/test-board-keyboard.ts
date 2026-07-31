@@ -4,9 +4,11 @@
  */
 import {
   BOARD_PAGE_JUMP,
+  boardHomeEndPlayerId,
   boardKeyboardNavIds,
   isBoardChromeTarget,
   isBoardImeComposing,
+  isBoardRowNavTarget,
   isBoardRowToggleKey,
   isBoardTypingTarget,
   nextBoardEscapeTypingAction,
@@ -61,6 +63,27 @@ assert(
 assert(
   shouldPrefetchBoardPage(99, 100, 100) === false,
   "no prefetch when fully loaded",
+);
+assert(boardHomeEndPlayerId(ids, "Home") === 10, "Home → first");
+assert(boardHomeEndPlayerId(ids, "End") === 30, "End → last");
+assert(boardHomeEndPlayerId([], "Home") === null, "Home empty");
+assert(
+  isBoardRowNavTarget({
+    tagName: "TR",
+    closest(sel: string) {
+      return sel.includes("player-row") ? ({} as Element) : null;
+    },
+  } as unknown as EventTarget),
+  "row is row-nav target",
+);
+assert(
+  !isBoardRowNavTarget({
+    tagName: "BUTTON",
+    closest() {
+      return null;
+    },
+  } as unknown as EventTarget),
+  "chrome button not row-nav",
 );
 assert(isBoardRowToggleKey("Enter"), "Enter toggles");
 assert(isBoardRowToggleKey(" "), "Space toggles");

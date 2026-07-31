@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
 import {
   BOARD_PAGE_JUMP,
+  boardHomeEndPlayerId,
   boardKeyboardNavIds,
   isBoardImeComposing,
+  isBoardRowNavTarget,
   isBoardTypingTarget,
   nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
@@ -188,14 +190,38 @@ export function useRankingsKeyboard({
 
       if (ignoreBoard || e.metaKey || e.ctrlKey || e.altKey) return;
 
-      if (e.key === "Home") {
+      if (e.key === "Home" || e.key === "End") {
         e.preventDefault();
-        scrollPageTop();
-        return;
-      }
-      if (e.key === "End") {
-        e.preventDefault();
-        scrollToRankings({ focusSearch: true });
+        const rowNav =
+          expandedIdNow != null || isBoardRowNavTarget(e.target);
+        if (rowNav) {
+          const ids = boardKeyboardNavIds(
+            filteredRef.current.map((p) => p.id),
+            renderCountRef.current,
+            expandedIdNow,
+          );
+          const nextId = boardHomeEndPlayerId(
+            ids,
+            e.key === "Home" ? "Home" : "End",
+          );
+          if (nextId != null) {
+            setExpandedIdRef.current(nextId);
+            const nextIdx = ids.indexOf(nextId);
+            if (
+              onLoadMoreRef.current &&
+              shouldPrefetchBoardPage(
+                nextIdx,
+                renderCountRef.current,
+                filteredRef.current.length,
+              )
+            ) {
+              onLoadMoreRef.current();
+            }
+          }
+          return;
+        }
+        if (e.key === "Home") scrollPageTop();
+        else scrollToRankings({ focusSearch: true });
         return;
       }
       if ((e.key === "r" || e.key === "R") && onResetBoardRef.current) {

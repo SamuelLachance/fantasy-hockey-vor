@@ -74,6 +74,25 @@ type BoardFocusEl = {
   closest?: (selector: string) => Element | null;
 };
 
+/** Whether focus is on a player row or its expanded panel. */
+export function isBoardRowNavTarget(target: EventTarget | null): boolean {
+  const el = asFocusEl(target);
+  if (!el || typeof el.closest !== "function") return false;
+  return Boolean(
+    el.closest('tr[id^="player-row-"]') ||
+      el.closest('[id^="player-panel-"]'),
+  );
+}
+
+/** First / last id for Home / End while navigating board rows. */
+export function boardHomeEndPlayerId(
+  playerIds: readonly number[],
+  key: "Home" | "End",
+): number | null {
+  if (playerIds.length === 0) return null;
+  return key === "Home" ? playerIds[0]! : playerIds[playerIds.length - 1]!;
+}
+
 function asFocusEl(target: EventTarget | null): BoardFocusEl | null {
   if (!target || typeof target !== "object") return null;
   return target as BoardFocusEl;
