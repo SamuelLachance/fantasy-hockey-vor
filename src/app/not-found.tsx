@@ -11,8 +11,8 @@ export default function NotFound() {
         That route is not part of the rankings app. Head back to the full board.
       </p>
       <Link
-        href="/"
-        className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
+        href="/#rankings"
+        className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         Back to rankings
       </Link>
