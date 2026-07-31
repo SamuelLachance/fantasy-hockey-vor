@@ -905,6 +905,7 @@ const files: Record<string, string[]> = {
     "dense",
     "hover:bg-white/[0.07]",
     "motion-reduce:transition-none",
+    "min-h-11",
   ],
   "src/app/not-found.tsx": [
     "notFoundTitle",

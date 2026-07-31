@@ -41,7 +41,7 @@ export function TopPlayerLink({
   return (
     <a
       href={href}
-      className={`flex items-center justify-between rounded-xl border border-white/5 bg-white/5 transition motion-reduce:transition-none ${
+      className={`flex min-h-11 items-center justify-between rounded-xl border border-white/5 bg-white/5 transition motion-reduce:transition-none ${
         dense ? "gap-2 px-2 py-1.5" : "px-4 py-3"
       } ${a.hover} hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 ${a.ring}`}
     >
