@@ -3,7 +3,11 @@
 import { startTransition, type KeyboardEvent } from "react";
 import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
+import { downloadTextFile } from "@/lib/rankings-csv";
+import {
+  rankingsCsvString,
+  rankingsJsonString,
+} from "@/lib/rankings-export";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import { copyText } from "@/lib/clipboard";
 import { rankingsUrlSearch } from "@/lib/rankings-url";
@@ -149,11 +153,10 @@ export function RankingsToolbar({
           type="button"
           disabled={filtered.length === 0}
           onClick={() => {
-            const csv = rankingsToCsv(filtered, position, tableCategories);
             const stamp = new Date().toISOString().slice(0, 10);
             downloadTextFile(
               `vor-rankings-${position.toLowerCase()}-${stamp}.csv`,
-              csv,
+              rankingsCsvString(filtered, position, tableCategories),
               "text/csv;charset=utf-8",
             );
           }}
@@ -168,20 +171,9 @@ export function RankingsToolbar({
           disabled={filtered.length === 0}
           onClick={() => {
             const stamp = new Date().toISOString().slice(0, 10);
-            const payload = filtered.map((p) => ({
-              rank: position === "ALL" ? p.rank : (p.positionRank ?? p.rank),
-              id: p.id,
-              name: p.name,
-              team: p.team,
-              positions: p.positions,
-              vor: Number(p.vor.toFixed(3)),
-              edge: p.draftValue ?? 0,
-              sigma: p.uncertainty?.total?.sigma ?? null,
-              gamesPlayed: p.gamesPlayed,
-            }));
             downloadTextFile(
               `vor-rankings-${position.toLowerCase()}-${stamp}.json`,
-              `${JSON.stringify(payload, null, 2)}\n`,
+              rankingsJsonString(filtered, position),
               "application/json;charset=utf-8",
             );
           }}
