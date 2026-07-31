@@ -3,6 +3,7 @@ import { RankingsTable } from "@/components/RankingsTable";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
+import { rankingsJsonLd } from "@/lib/seo-jsonld";
 
 function ageDaysAtBuild(generatedAt: string): number {
   const buildMs = Date.parse(
@@ -21,8 +22,14 @@ export default function HomePage() {
     "/",
   );
 
+  const jsonLd = rankingsJsonLd(data);
+
   return (
     <main className="min-h-screen pb-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <link
         rel="preload"
         href={detailsHref}
@@ -64,7 +71,7 @@ export default function HomePage() {
         </a>
         <span className="mx-2 text-slate-700">·</span>
         <span className="text-slate-600">
-          board: j/k navigate · Esc close · CSV/Link export
+          board: j/k navigate · Esc closes filters/row · CSV/Link export
         </span>
       </footer>
       <ScrollToTop />

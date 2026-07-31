@@ -10,7 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -35,7 +35,7 @@ import {
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
-import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
+import { parseRankingsUrl } from "@/lib/rankings-url";
 import {
   fetchPlayerDetails,
   resetPlayerDetailsCache,
@@ -44,6 +44,7 @@ import {
   detailStatSigma,
   type PlayerDetailRecord,
 } from "@/lib/publish-players";
+import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
@@ -58,7 +59,6 @@ const PAGE_SIZE = 50;
 
 function RankingsTableInner({ players }: RankingsTableProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const [seed] = useState(() => parseRankingsUrl(searchParams));
   const [query, setQuery] = useState(seed.query);
@@ -80,36 +80,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   > | null>(null);
   const [detailsError, setDetailsError] = useState(false);
 
-  useEffect(() => {
-    const next = rankingsUrlSearch({
-      position,
-      query: deferredQuery,
-      sortKey,
-      sortDir,
-      playerId: expandedId,
-      hideDepthGoalies,
-    });
-    const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
-    if (next === current) return;
-    const hash =
-      typeof window !== "undefined" && window.location.hash
-        ? window.location.hash
-        : "";
-    router.replace(
-      `${pathname}${next ? `?${next}` : ""}${hash}`,
-      { scroll: false },
-    );
-  }, [
+  useRankingsUrlSync({
     position,
     deferredQuery,
     sortKey,
     sortDir,
     expandedId,
     hideDepthGoalies,
-    pathname,
-    router,
-    searchParams,
-  ]);
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -739,8 +717,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
-        breakdown. Click column headers to sort. With a row open: j/k or
-        ↑/↓ to move, Esc to close.
+        breakdown. Click column headers to sort. Esc closes filters then
+        the open row; with a row open use j/k or ↑/↓.
       </p>
     </div>
   );
