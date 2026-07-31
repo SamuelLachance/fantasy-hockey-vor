@@ -10,6 +10,6 @@ export function copyTextWithFlash(
 ): void {
   void copyText(text).then((ok) => {
     onStatus(ok ? "ok" : "err");
-    window.setTimeout(() => onStatus("idle"), holdMs);
+    globalThis.setTimeout(() => onStatus("idle"), holdMs);
   });
 }
