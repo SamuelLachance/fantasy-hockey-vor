@@ -1,8 +1,13 @@
 import type { LeagueSettings } from "@/lib/types";
 import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
 import { CATEGORY_FULL_LABELS } from "@/lib/format";
+import {
+  howVorReplacementCopy,
+  howVorScarcityHintCopy,
+  howVorYahooPositionsCopy,
+  howVorZScoreCopy,
+} from "@/lib/how-vor-copy";
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
-import { replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap } from "lucide-react";
 
 interface HowVorWorksProps {
@@ -27,30 +32,20 @@ export function HowVorWorks({
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
           <Zap className="mb-2 h-5 w-5 text-cyan-400" />
           <h3 className="font-medium text-white">Category Z-Scores</h3>
-          <p className="mt-1 text-sm text-slate-400">
-            Each stat is converted to a z-score against the draftable pool,
-            multiplied by a bounded scarcity weight and summed for total
-            fantasy value. Goalie SV% is volume-weighted, and goalie value
-            is discounted for weekly H2H volatility and streamability.
-          </p>
+          <p className="mt-1 text-sm text-slate-400">{howVorZScoreCopy()}</p>
         </div>
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
           <Target className="mb-2 h-5 w-5 text-cyan-400" />
           <h3 className="font-medium text-white">Replacement Level</h3>
           <p className="mt-1 text-sm text-slate-400">
-            Based on a {teams}-team league: C/LW/RW rank{" "}
-            {replacementRank("C", teams, league.roster)}, D rank{" "}
-            {replacementRank("D", teams, league.roster)}, G rank{" "}
-            {replacementRank("G", teams, league.roster)} at each position.
+            {howVorReplacementCopy(teams, league.roster)}
           </p>
         </div>
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
           <Trophy className="mb-2 h-5 w-5 text-cyan-400" />
           <h3 className="font-medium text-white">Yahoo Positions</h3>
           <p className="mt-1 text-sm text-slate-400">
-            VOR uses Yahoo Fantasy eligibility. Multi-position players get
-            VOR at their best eligible slot; position filters show VOR at that
-            position.
+            {howVorYahooPositionsCopy()}
           </p>
         </div>
       </div>
@@ -60,8 +55,7 @@ export function HowVorWorks({
             Category scarcity weights (skaters)
           </h3>
           <p className="mb-3 text-xs text-slate-400">
-            Higher weight = harder to generate vs replacement; counts more toward
-            VOR.
+            {howVorScarcityHintCopy()}
           </p>
           <div className="flex flex-wrap gap-2">
             {SKATER_CATEGORIES.map((cat) => (

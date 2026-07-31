@@ -577,9 +577,19 @@ const files: Record<string, string[]> = {
   ],
   "src/components/HowVorWorks.tsx": [
     "How VOR Works",
-    "replacementRank",
+    "howVorZScoreCopy",
+    "howVorReplacementCopy",
+    "howVorYahooPositionsCopy",
+    "howVorScarcityHintCopy",
     "CATEGORY_FULL_LABELS",
     "Category scarcity weights",
+  ],
+  "src/lib/how-vor-copy.ts": [
+    "howVorZScoreCopy",
+    "howVorReplacementCopy",
+    "howVorYahooPositionsCopy",
+    "howVorScarcityHintCopy",
+    "replacementRank",
   ],
   "src/components/TopLeadersCard.tsx": [
     "TopLeadersCard",
