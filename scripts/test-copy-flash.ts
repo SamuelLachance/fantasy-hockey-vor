@@ -12,38 +12,42 @@ function assert(cond: boolean, msg: string) {
   }
 }
 
-const statuses: string[] = [];
+async function main() {
+  const statuses: string[] = [];
 
-Object.defineProperty(globalThis, "navigator", {
-  value: {
-    clipboard: {
-      writeText: async () => {
-        throw new Error("denied");
+  Object.defineProperty(globalThis, "navigator", {
+    value: {
+      clipboard: {
+        writeText: async () => {
+          throw new Error("denied");
+        },
       },
     },
-  },
-  configurable: true,
-});
-Object.defineProperty(globalThis, "document", {
-  value: undefined,
-  configurable: true,
-});
+    configurable: true,
+  });
+  Object.defineProperty(globalThis, "document", {
+    value: undefined,
+    configurable: true,
+  });
 
-await new Promise<void>((resolve) => {
-  const realTimeout = globalThis.setTimeout;
-  (globalThis as { setTimeout: typeof setTimeout }).setTimeout = ((
-    fn: () => void,
-  ) => {
-    fn();
-    resolve();
-    return 0 as unknown as ReturnType<typeof setTimeout>;
-  }) as typeof setTimeout;
-  copyTextWithFlash("x", (s) => statuses.push(s), 1);
-  (globalThis as { setTimeout: typeof setTimeout }).setTimeout = realTimeout;
-});
+  await new Promise<void>((resolve) => {
+    const realTimeout = globalThis.setTimeout;
+    (globalThis as { setTimeout: typeof setTimeout }).setTimeout = ((
+      fn: () => void,
+    ) => {
+      fn();
+      resolve();
+      return 0 as unknown as ReturnType<typeof setTimeout>;
+    }) as typeof setTimeout;
+    copyTextWithFlash("x", (s) => statuses.push(s), 1);
+    (globalThis as { setTimeout: typeof setTimeout }).setTimeout = realTimeout;
+  });
 
-assert(statuses[0] === "err", `expected err first, got ${statuses[0]}`);
-assert(statuses[1] === "idle", `expected idle second, got ${statuses[1]}`);
+  assert(statuses[0] === "err", `expected err first, got ${statuses[0]}`);
+  assert(statuses[1] === "idle", `expected idle second, got ${statuses[1]}`);
 
-if (failed) process.exit(1);
-console.log("OK: copy-flash");
+  if (failed) process.exit(1);
+  console.log("OK: copy-flash");
+}
+
+void main();
