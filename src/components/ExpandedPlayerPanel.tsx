@@ -42,6 +42,7 @@ export function ExpandedPlayerPanel({
         onCopyLink={onCopyLink}
       />
       <ExpandedPlayerNotes
+        playerId={player.id}
         playerDetails={playerDetails}
         detailsLoading={detailsLoading}
         detailsError={detailsError}

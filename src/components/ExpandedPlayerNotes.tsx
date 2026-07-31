@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
+import { focusPlayerRow } from "@/lib/board-dom";
 import {
   fetchPlayerDetails,
   resetPlayerDetailsCache,
@@ -13,6 +14,7 @@ import {
 } from "@/lib/player-notes-copy";
 
 interface ExpandedPlayerNotesProps {
+  playerId: number;
   playerDetails: PlayerDetailRecord | undefined;
   detailsLoading: boolean;
   detailsError: boolean;
@@ -23,6 +25,7 @@ interface ExpandedPlayerNotesProps {
 
 /** Reasoning / profile / loading / retry for the expanded player panel. */
 export function ExpandedPlayerNotes({
+  playerId,
   playerDetails,
   detailsLoading,
   detailsError,
@@ -44,10 +47,13 @@ export function ExpandedPlayerNotes({
     if (retrying) return;
     setRetrying(true);
     resetPlayerDetailsCache();
-    onClearDetailsError();
+    // Keep the alert/Retry mounted until the fetch settles (do not clear error yet).
     void fetchPlayerDetails()
       .then((d) => {
-        if (aliveRef.current) onDetailsLoaded(d);
+        if (!aliveRef.current) return;
+        onDetailsLoaded(d);
+        onClearDetailsError();
+        focusPlayerRow(playerId);
       })
       .catch(() => {
         if (aliveRef.current) onDetailsError();
@@ -56,6 +62,8 @@ export function ExpandedPlayerNotes({
         if (aliveRef.current) setRetrying(false);
       });
   }
+
+  const showRetry = detailsError || retrying;
 
   return (
     <>
@@ -69,7 +77,7 @@ export function ExpandedPlayerNotes({
           {playerDetails.profileSummary}
         </p>
       )}
-      {detailsLoading && (
+      {detailsLoading && !retrying && (
         <div
           className="mb-3 space-y-2"
           role="status"
@@ -82,7 +90,7 @@ export function ExpandedPlayerNotes({
           <span className="sr-only">{playerNotesLoadingLabel()}…</span>
         </div>
       )}
-      {detailsError && (
+      {showRetry && (
         <p className="mb-3 text-xs text-amber-400/90" role="alert">
           {playerNotesUnavailableCopy()}
           <button

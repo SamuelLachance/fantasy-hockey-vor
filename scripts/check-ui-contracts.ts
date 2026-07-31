@@ -196,6 +196,7 @@ const files: Record<string, string[]> = {
     "hasStatFilters",
     "All goalies",
     "showingAllGoalies",
+    "focusAfterActiveFilterClear",
   ],
   "src/lib/board-active-filter-chips.ts": [
     "boardActiveStatChips",
@@ -389,6 +390,9 @@ const files: Record<string, string[]> = {
   ],
   "src/components/ExpandedPlayerNotes.tsx": [
     "aliveRef",
+    "playerId",
+    "focusPlayerRow",
+    "showRetry",
     "playerNotesLoadingLabel",
     "playerNotesUnavailableCopy",
     "playerNotesRetryLabel",
