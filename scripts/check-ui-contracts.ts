@@ -472,6 +472,7 @@ const files: Record<string, string[]> = {
   "src/hooks/useRankingsUrlSync.ts": [
     "history.replaceState",
     "rankingsUrlSyncHref",
+    "parseLiveRankingsUrl",
     "rankingsUrlSearch",
     "nextRankingsUrlSyncAction",
     "onHydrate",
@@ -520,6 +521,7 @@ const files: Record<string, string[]> = {
     "HIGHLIGHT_QUERY_MAX",
     "RANGE_BOUND_MAX",
     "nextRankingsUrlSyncAction",
+    "parseLiveRankingsUrl",
     "rankingsHashShouldFocusSearch",
     "rankingsUrlSyncHref",
     "pruneStatRangesForPosition",

@@ -7,6 +7,7 @@ import {
   encodeStatRanges,
   edgeBoardHref,
   nextRankingsUrlSyncAction,
+  parseLiveRankingsUrl,
   parseRankingsUrl,
   playerBoardHref,
   rankingsHashShouldFocusSearch,
@@ -211,6 +212,20 @@ assert(
   rankingsUrlSyncHref("/", "pos=D", "#rankings", "/fantasy-hockey-vor") ===
     "/fantasy-hockey-vor/?pos=D#rankings",
   "sync href basePath + query + hash",
+);
+
+assert(
+  parseLiveRankingsUrl({ toString: () => "pos=C" }, null).position === "C",
+  "live parse falls back to searchParams",
+);
+assert(
+  parseLiveRankingsUrl({ toString: () => "pos=C" }, "?pos=D").position === "D",
+  "live parse prefers location.search",
+);
+assert(
+  parseLiveRankingsUrl({ toString: () => "pos=C" }, "pos=G&g=all")
+    .hideDepthGoalies === false,
+  "live parse without leading ?",
 );
 
 assert(

@@ -6,7 +6,7 @@ import type { Position } from "@/lib/types";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import {
   nextRankingsUrlSyncAction,
-  parseRankingsUrl,
+  parseLiveRankingsUrl,
   rankingsUrlSearch,
   rankingsUrlSyncHref,
   type RankingsUrlState,
@@ -53,7 +53,7 @@ export function useRankingsUrlSync({
       hideDepthGoalies,
       statRanges,
     });
-    const urlState = parseRankingsUrl(searchParams);
+    const urlState = parseLiveRankingsUrl(searchParams);
     const urlSearch = rankingsUrlSearch(urlState);
     const action = nextRankingsUrlSyncAction(
       lastPushedRef.current,

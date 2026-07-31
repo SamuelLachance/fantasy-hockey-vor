@@ -227,11 +227,33 @@ export type RankingsUrlSyncAction =
   | { type: "hydrate"; search: string };
 
 /**
+ * Parse board URL state from the live address bar when available.
+ * Prefer `location.search` over React `searchParams` so sync stays correct
+ * immediately after `history.replaceState` (Next restores searchParams async).
+ */
+export function parseLiveRankingsUrl(
+  searchParams: { toString(): string },
+  locationSearch:
+    | string
+    | null
+    | undefined = typeof window !== "undefined"
+      ? window.location.search
+      : null,
+): RankingsUrlState {
+  const raw =
+    typeof locationSearch === "string"
+      ? locationSearch
+      : searchParams.toString();
+  const q = raw.startsWith("?") ? raw.slice(1) : raw;
+  return parseRankingsUrl(new URLSearchParams(q));
+}
+
+/**
  * Decide whether local board state should write the URL, or the URL
  * (Back/Forward / external) should hydrate board state.
  *
  * When local state and the address bar both diverge from `lastPushed`, prefer
- * push — `router.replace` may still be in flight and `searchParams` can lag.
+ * push — the address bar can lag briefly after a write.
  */
 export function nextRankingsUrlSyncAction(
   lastPushed: string | null,
