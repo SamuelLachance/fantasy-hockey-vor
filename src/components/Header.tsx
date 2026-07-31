@@ -3,6 +3,7 @@
 import { Snowflake } from "lucide-react";
 import { formatCount } from "@/lib/format";
 import { scrollToRankings } from "@/lib/board-dom";
+import { formatProjectionEngine } from "@/lib/projection-engine-label";
 import {
   isProjectionStale,
   isProjectionVeryStale,
@@ -72,7 +73,7 @@ export function Header({
             {(projectionEngine || generatedLabel) && (
               <p className="mt-2 text-sm text-cyan-400/80">
                 {projectionEngine
-                  ? `Engine: ${projectionEngine.replace(/-/g, " ")}`
+                  ? `Engine: ${formatProjectionEngine(projectionEngine)}`
                   : null}
                 {aiModel ? ` · ${aiModel}` : ""}
                 {generatedLabel ? (

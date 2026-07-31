@@ -5,6 +5,7 @@ import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
 import { boardShortcutsFooterChip } from "@/lib/board-shortcuts";
 import { formatCount } from "@/lib/format";
+import { formatProjectionEngine } from "@/lib/projection-engine-label";
 import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
 import { rankingsJsonLd } from "@/lib/seo-jsonld";
 import { playerDetailsHref } from "@/lib/site";
@@ -56,7 +57,7 @@ export default function HomePage() {
           {new Date(data.generatedAt).toISOString().slice(0, 10)}
         </time>{" "}
         · {data.season}{" "}
-        · {(data.projectionEngine ?? "contextual").replace(/-/g, " ")} · NHL
+        · {formatProjectionEngine(data.projectionEngine ?? "contextual")} · NHL
         API
         {" · "}
         <a
