@@ -6,13 +6,12 @@ import { copyTextWithFlash } from "@/lib/copy-flash";
 import type { RankingsUrlState } from "@/lib/rankings-url";
 import { rankingsShareUrl } from "@/lib/rankings-url";
 
-type ShareStateFor = (expandedId: number | null) => RankingsUrlState;
+type ShareStateFor = (playerId: number | null) => RankingsUrlState;
 
 /** Board + per-player share-link copy with brief ok/err flash. */
 export function useBoardCopyLinks(
   pathname: string,
   boardShareState: ShareStateFor,
-  expandedId: number | null,
 ) {
   const [boardLinkStatus, setBoardLinkStatus] = useState<CopyFlash>("idle");
   const [playerLinkStatus, setPlayerLinkStatus] = useState<{
@@ -21,11 +20,12 @@ export function useBoardCopyLinks(
   }>({ id: null, status: "idle" });
 
   function copyBoardLink() {
+    // Board view share never includes an expanded player (that is `p` / copyPlayerLink).
     copyTextWithFlash(
       rankingsShareUrl(
         window.location.origin,
         pathname,
-        boardShareState(expandedId),
+        boardShareState(null),
       ),
       setBoardLinkStatus,
     );

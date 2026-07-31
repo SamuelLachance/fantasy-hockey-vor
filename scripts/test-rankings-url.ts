@@ -198,5 +198,24 @@ assert(
   "player deep-link skips search focus",
 );
 
+const viewWithPlayer = {
+  position: "C" as const,
+  query: "",
+  sortKey: "vor" as const,
+  sortDir: "desc" as const,
+  playerId: 8478402,
+  hideDepthGoalies: true,
+  statRanges: {},
+};
+const boardShare = rankingsShareUrl(
+  "https://example.com",
+  "/",
+  { ...viewWithPlayer, playerId: null },
+);
+const playerShare = rankingsShareUrl("https://example.com", "/", viewWithPlayer);
+assert(boardShare.includes("pos=C"), "board share keeps filters");
+assert(!boardShare.includes("player="), "board share omits player");
+assert(playerShare.includes("player=8478402"), "player share keeps player");
+
 if (failed) process.exit(1);
 console.log("OK: rankings-url");

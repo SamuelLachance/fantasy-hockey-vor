@@ -42,7 +42,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   const [seed] = useState(() => parseRankingsUrl(searchParams));
   const board = useRankingsBoardState(players, seed);
   const { boardLinkStatus, playerLinkStatus, copyBoardLink, copyPlayerLink } =
-    useBoardCopyLinks(pathname, board.boardShareState, board.expandedId);
+    useBoardCopyLinks(pathname, board.boardShareState);
   const { details, detailsError, setDetails, setDetailsError } =
     usePlayerDetails(board.expandedId);
 

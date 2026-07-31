@@ -54,6 +54,7 @@ const files: Record<string, string[]> = {
     "rankingsShareUrl",
     "copyBoardLink",
     "copyPlayerLink",
+    "boardShareState(null)",
   ],
   "src/hooks/useRankingsHashJump.ts": [
     "useRankingsHashJump",
