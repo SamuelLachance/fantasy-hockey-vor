@@ -294,6 +294,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
             activeFilterCount={activeFilterCount}
             onUpdateRange={updateRange}
             onClear={clearStatFilters}
+            onDone={() => setFiltersOpen(false)}
           />
         )}
       </div>

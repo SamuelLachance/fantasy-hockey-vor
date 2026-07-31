@@ -13,6 +13,7 @@ interface RankingsStatFiltersProps {
   activeFilterCount: number;
   onUpdateRange: (key: RangeKey, field: "min" | "max", value: string) => void;
   onClear: () => void;
+  onDone?: () => void;
 }
 
 export function RankingsStatFilters({
@@ -21,6 +22,7 @@ export function RankingsStatFilters({
   activeFilterCount,
   onUpdateRange,
   onClear,
+  onDone,
 }: RankingsStatFiltersProps) {
   return (
     <div
@@ -63,6 +65,9 @@ export function RankingsStatFilters({
                 aria-label={`${rangeLabel(key)} minimum`}
                 value={statRanges[key]?.min ?? ""}
                 onChange={(e) => onUpdateRange(key, "min", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onDone?.();
+                }}
                 className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
               />
               <span className="text-slate-600">–</span>
@@ -73,6 +78,9 @@ export function RankingsStatFilters({
                 aria-label={`${rangeLabel(key)} maximum`}
                 value={statRanges[key]?.max ?? ""}
                 onChange={(e) => onUpdateRange(key, "max", e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") onDone?.();
+                }}
                 className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
               />
             </div>
