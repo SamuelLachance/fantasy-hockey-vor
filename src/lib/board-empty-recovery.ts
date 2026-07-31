@@ -39,7 +39,7 @@ export function emptyBoardStatusCopy(): string {
   return "No players match your filters.";
 }
 
-/** Hint under the empty-board status (keyboard recovery). */
+/** Hint under the empty-board status (pointer-first, keyboard secondary). */
 export function emptyBoardHintCopy(): string {
-  return "Press r to reset the board, or Esc after clearing search.";
+  return "Use the buttons below to clear filters or reset the board. Keyboard: r resets; Esc clears search.";
 }

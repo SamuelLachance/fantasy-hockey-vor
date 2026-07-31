@@ -43,7 +43,9 @@ assert(
   emptyBoardStatusCopy().includes("No players match"),
   "status copy",
 );
-assert(emptyBoardHintCopy().includes("Press r"), "hint mentions r");
+assert(emptyBoardHintCopy().includes("buttons below"), "hint mentions buttons");
+assert(emptyBoardHintCopy().includes("Keyboard:"), "hint mentions keyboard");
+assert(emptyBoardHintCopy().includes("r resets"), "hint mentions r");
 assert(emptyBoardHintCopy().includes("Esc"), "hint mentions Esc");
 assert(
   EMPTY_BOARD_ACTION_LABELS.resetBoard === "Reset board view",

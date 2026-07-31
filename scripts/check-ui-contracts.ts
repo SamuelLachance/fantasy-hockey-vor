@@ -284,6 +284,8 @@ const files: Record<string, string[]> = {
     "emptyBoardRecoveryFlags",
     "emptyBoardStatusCopy",
     "emptyBoardHintCopy",
+    "Use the buttons below",
+    "Keyboard:",
     "EMPTY_BOARD_ACTION_LABELS",
     "clearBoardFiltersCopy",
     "canShowAllGoalies",
