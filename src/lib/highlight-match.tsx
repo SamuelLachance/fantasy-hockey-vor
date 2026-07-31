@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
 import { Fragment } from "react";
 
+/** Keep search highlight + input maxLength in sync. */
+export const HIGHLIGHT_QUERY_MAX = 48;
+
 /** Case-insensitive highlight of every `query` occurrence inside `text`. */
 export function highlightMatch(text: string, query: string): ReactNode {
-  const q = query.trim().slice(0, 48);
+  const q = query.trim().slice(0, HIGHLIGHT_QUERY_MAX);
   if (!q) return text;
   const lower = text.toLowerCase();
   const needle = q.toLowerCase();

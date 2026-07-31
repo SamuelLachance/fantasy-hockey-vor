@@ -2,7 +2,7 @@
  * Unit check: highlightMatch returns plain string when no match.
  * Run: npx tsx scripts/test-highlight-match.ts
  */
-import { highlightMatch } from "../src/lib/highlight-match";
+import { HIGHLIGHT_QUERY_MAX, highlightMatch } from "../src/lib/highlight-match";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -23,6 +23,7 @@ assert(
     typeof highlightMatch("McDavid", "x".repeat(80)) === "object",
   "long query capped without throw",
 );
+assert(HIGHLIGHT_QUERY_MAX === 48, "shared max length");
 
 if (failed) process.exit(1);
 console.log("OK: highlight-match");

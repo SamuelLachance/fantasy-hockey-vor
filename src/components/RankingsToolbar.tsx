@@ -7,6 +7,7 @@ import {
   downloadRankingsCsv,
   downloadRankingsJson,
 } from "@/lib/rankings-export";
+import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
 
@@ -103,7 +104,7 @@ export function RankingsToolbar({
             type="search"
             aria-label="Search players or teams"
             aria-keyshortcuts="Slash"
-            maxLength={48}
+            maxLength={HIGHLIGHT_QUERY_MAX}
             placeholder="Search players or teams..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
