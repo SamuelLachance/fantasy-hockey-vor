@@ -1163,6 +1163,8 @@ const files: Record<string, string[]> = {
   "src/components/SiteFooter.tsx": [
     "boardShortcutsFooterChip",
     "footerDraftableCopy",
+    "footerSourceLinkCopy",
+    "footerSourceLinkTitle",
     "FOOTER_SOURCE_HREF",
     "formatProjectionEngine",
     "Projections generated",
@@ -1172,6 +1174,10 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/site-footer.ts": [
     "footerDraftableCopy",
+    "footerSourceLinkCopy",
+    "footerSourceLinkTitle",
+    "GitHub",
+    "View source on GitHub",
     "FOOTER_SOURCE_HREF",
   ],
   "src/app/globals.css": [

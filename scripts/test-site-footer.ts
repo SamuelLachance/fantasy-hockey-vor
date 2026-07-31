@@ -1,10 +1,12 @@
 /**
- * Unit checks for site footer helpers.
+ * Unit checks for site footer copy helpers.
  * Run: npx tsx scripts/test-site-footer.ts
  */
 import {
   FOOTER_SOURCE_HREF,
   footerDraftableCopy,
+  footerSourceLinkCopy,
+  footerSourceLinkTitle,
 } from "../src/lib/site-footer";
 
 let failed = 0;
@@ -16,6 +18,11 @@ function assert(cond: boolean, msg: string) {
 }
 
 assert(footerDraftableCopy(1311) === "1,311 draftable", "draftable count");
+assert(footerSourceLinkCopy() === "GitHub", "source label");
+assert(
+  footerSourceLinkTitle() === "View source on GitHub",
+  "source title",
+);
 assert(FOOTER_SOURCE_HREF.includes("github.com"), "source href");
 
 if (failed) process.exit(1);

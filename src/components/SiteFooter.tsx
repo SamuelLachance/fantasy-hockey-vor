@@ -6,6 +6,8 @@ import {
 import {
   FOOTER_SOURCE_HREF,
   footerDraftableCopy,
+  footerSourceLinkCopy,
+  footerSourceLinkTitle,
 } from "@/lib/site-footer";
 
 interface SiteFooterProps {
@@ -38,9 +40,10 @@ export function SiteFooter({
         href={FOOTER_SOURCE_HREF}
         target="_blank"
         rel="noopener noreferrer"
+        title={footerSourceLinkTitle()}
         className="rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
       >
-        source
+        {footerSourceLinkCopy()}
       </a>
       <span className="mx-2 text-slate-700">·</span>
       <span className="text-slate-400">{boardShortcutsFooterChip()}</span>
