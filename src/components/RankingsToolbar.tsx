@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition } from "react";
 import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/lib/rankings-export";
 import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
 import { GOALIE_DEPTH_MAX_GP } from "@/lib/goalie-depth";
+import { useTimedFlash } from "@/hooks/useTimedFlash";
 import { PositionFilterTabs } from "./PositionFilterTabs";
 
 interface RankingsToolbarProps {
@@ -48,29 +49,9 @@ export function RankingsToolbar({
   showDepthToggle,
   onOpenHelp,
 }: RankingsToolbarProps) {
-  const [exportFlash, setExportFlash] = useState<"idle" | "csv" | "json">(
+  const [exportFlash, flashExport] = useTimedFlash<"idle" | "csv" | "json">(
     "idle",
   );
-  const exportFlashTimer = useRef<number | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (exportFlashTimer.current != null) {
-        window.clearTimeout(exportFlashTimer.current);
-      }
-    };
-  }, []);
-
-  function flashExport(kind: "csv" | "json") {
-    if (exportFlashTimer.current != null) {
-      window.clearTimeout(exportFlashTimer.current);
-    }
-    setExportFlash(kind);
-    exportFlashTimer.current = window.setTimeout(() => {
-      setExportFlash("idle");
-      exportFlashTimer.current = null;
-    }, 1400);
-  }
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

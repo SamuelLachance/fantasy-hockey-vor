@@ -24,6 +24,11 @@ const files: Record<string, string[]> = {
     "useBoardDocumentTitle",
     "hashchange",
   ],
+  "src/hooks/useTimedFlash.ts": [
+    "useTimedFlash",
+    "clearTimeout",
+    "holdMs",
+  ],
   "src/hooks/useBoardDocumentTitle.ts": [
     "useBoardDocumentTitle",
     "boardDocumentTitle",
@@ -193,6 +198,7 @@ const files: Record<string, string[]> = {
     "JSON",
     "Saved",
     "exportFlash",
+    "useTimedFlash",
     "Link",
     "Starters",
     'aria-controls="rankings-stat-filters"',
