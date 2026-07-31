@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { boardShortcutsCloseAriaLabel } from "@/lib/board-help-copy";
 import {
   BOARD_SHORTCUT_ROWS,
   BOARD_SHORTCUTS_DIALOG_ID,
@@ -41,6 +42,8 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
           <button
             type="button"
             onClick={onClose}
+            aria-label={boardShortcutsCloseAriaLabel()}
+            aria-keyshortcuts="Escape"
             className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             Esc

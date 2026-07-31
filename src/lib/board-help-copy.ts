@@ -7,3 +7,8 @@ export function boardHelpTitle(): string {
 export function boardHelpAriaLabel(): string {
   return "Keyboard shortcuts";
 }
+
+/** Shortcuts dialog close control accessible name. */
+export function boardShortcutsCloseAriaLabel(): string {
+  return "Close shortcuts";
+}

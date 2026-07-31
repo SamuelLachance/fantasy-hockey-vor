@@ -337,6 +337,8 @@ const files: Record<string, string[]> = {
     "createPortal",
     "data-dialog-portal",
     "useDialogFocusTrap",
+    "boardShortcutsCloseAriaLabel",
+    'aria-keyshortcuts="Escape"',
   ],
   "src/hooks/useDialogFocusTrap.ts": [
     "useDialogFocusTrap",
@@ -538,6 +540,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-help-copy.ts": [
     "boardHelpTitle",
     "boardHelpAriaLabel",
+    "boardShortcutsCloseAriaLabel",
   ],
   "src/lib/goalie-depth-toggle.ts": [
     "canToggleDepthGoalies",
