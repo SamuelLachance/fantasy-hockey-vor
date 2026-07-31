@@ -39,6 +39,7 @@ import { copyText } from "@/lib/clipboard";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
+import { BoardShortcutsHelp } from "./BoardShortcutsHelp";
 import { ExpandedPlayerPanel } from "./ExpandedPlayerPanel";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
@@ -70,6 +71,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [copiedPlayerId, setCopiedPlayerId] = useState<number | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const { details, detailsError, setDetails, setDetailsError } =
     usePlayerDetails(expandedId);
 
@@ -248,12 +250,27 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       const inField =
         tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
       if (e.key === "Escape") {
+        if (helpOpen) {
+          setHelpOpen(false);
+          return;
+        }
         if (filtersOpen) {
           setFiltersOpen(false);
           return;
         }
         if (inField) return;
         setExpandedId(null);
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        (e.key === "?" || (e.key === "/" && e.shiftKey))
+      ) {
+        e.preventDefault();
+        setHelpOpen((o) => !o);
         return;
       }
       if (
@@ -271,7 +288,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           ?.focus();
         return;
       }
-      if (inField || expandedId == null) return;
+      if (inField || helpOpen || expandedId == null) return;
       if (
         e.key !== "j" &&
         e.key !== "k" &&
@@ -290,7 +307,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [expandedId, filtered, filtersOpen]);
+  }, [expandedId, filtered, filtersOpen, helpOpen]);
 
   function toggleSort(key: SortKey) {
     startTransition(() => {
@@ -326,6 +343,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
 
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
+      <BoardShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       <div className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md">
         <RankingsToolbar
           position={position}
@@ -350,6 +368,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           hideDepthGoalies={hideDepthGoalies}
           setHideDepthGoalies={setHideDepthGoalies}
           showDepthToggle={position === "G" || position === "ALL"}
+          onOpenHelp={() => setHelpOpen(true)}
         />
 
         {filtersOpen && (
@@ -649,8 +668,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
-        breakdown. Click column headers to sort. Press / to focus search.
-        Esc closes filters then the open row; with a row open use j/k or ↑/↓.
+        breakdown. Click column headers to sort. Press / to focus search, ? for
+        shortcuts. Esc closes help/filters then the open row; with a row open
+        use j/k or ↑/↓.
       </p>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, type KeyboardEvent } from "react";
-import { Download, Filter, Link2, X } from "lucide-react";
+import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import type { SortKey } from "@/lib/rankings-filters";
@@ -30,6 +30,7 @@ interface RankingsToolbarProps {
   hideDepthGoalies: boolean;
   setHideDepthGoalies: (v: boolean | ((prev: boolean) => boolean)) => void;
   showDepthToggle: boolean;
+  onOpenHelp: () => void;
 }
 
 export function RankingsToolbar({
@@ -52,6 +53,7 @@ export function RankingsToolbar({
   hideDepthGoalies,
   setHideDepthGoalies,
   showDepthToggle,
+  onOpenHelp,
 }: RankingsToolbarProps) {
   function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
     if (
@@ -196,6 +198,15 @@ export function RankingsToolbar({
             {hideDepthGoalies ? "Starters" : "All G"}
           </button>
         )}
+        <button
+          type="button"
+          onClick={onOpenHelp}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          title="Keyboard shortcuts (?)"
+          aria-label="Keyboard shortcuts"
+        >
+          <CircleHelp className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

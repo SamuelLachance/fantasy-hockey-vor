@@ -19,7 +19,9 @@ const files: Record<string, string[]> = {
     "ExpandedPlayerPanel",
     'e.key === "/"',
     'column="sigma"',
+    "BoardShortcutsHelp",
   ],
+  "src/components/BoardShortcutsHelp.tsx": ["Board shortcuts", "Focus search"],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",
     "detailStatSigma",
