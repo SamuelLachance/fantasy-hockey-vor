@@ -180,7 +180,14 @@ const files: Record<string, string[]> = {
     "scrollToRankings",
     "focusSearch: true",
     "isProjectionStale",
+    "HeaderStaleBanner",
   ],
+  "src/components/HeaderStaleBanner.tsx": [
+    "npm run generate",
+    "refresh urgently",
+    'role="status"',
+  ],
+  "src/lib/clipboard.ts": ["copyText", "execCommand"],
   "src/lib/projection-age.ts": [
     "projectionAgeDays",
     "isProjectionVeryStale",

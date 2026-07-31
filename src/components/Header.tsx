@@ -7,6 +7,7 @@ import {
   isProjectionStale,
   isProjectionVeryStale,
 } from "@/lib/projection-age";
+import { HeaderStaleBanner } from "./HeaderStaleBanner";
 
 interface HeaderProps {
   season: string;
@@ -113,21 +114,7 @@ export function Header({
           </div>
         </div>
         {stale && (
-          <div
-            role="status"
-            className={`rounded-xl px-4 py-3 text-sm ${
-              veryStale
-                ? "border border-rose-500/40 bg-rose-500/10 text-rose-100/90"
-                : "border border-amber-500/30 bg-amber-500/10 text-amber-100/90"
-            }`}
-          >
-            Rankings data is {Math.floor(ageDays)} days old
-            {veryStale ? " (refresh urgently)" : ""} — re-run{" "}
-            <code className={veryStale ? "text-rose-200" : "text-amber-200"}>
-              npm run generate
-            </code>{" "}
-            after refresh/train for current projections.
-          </div>
+          <HeaderStaleBanner ageDays={ageDays} veryStale={veryStale} />
         )}
         <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
           <Search className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" />
