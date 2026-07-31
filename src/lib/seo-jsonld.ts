@@ -93,6 +93,23 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           },
         })),
       },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          {
+            "@type": "ListItem",
+            position: 1,
+            name: "Fantasy Hockey VOR",
+            item: SITE_URL,
+          },
+          {
+            "@type": "ListItem",
+            position: 2,
+            name: `${data.season} Rankings`,
+            item: `${SITE_URL}#rankings`,
+          },
+        ],
+      },
     ],
   };
 }
