@@ -1,6 +1,7 @@
 "use client";
 
 import type { Position } from "@/lib/types";
+import { emptyBoardRecoveryFlags } from "@/lib/board-empty-recovery";
 
 interface RankingsEmptyStateProps {
   query: string;
@@ -53,6 +54,13 @@ export function RankingsEmptyState({
   onShowAllGoalies,
   onResetBoard,
 }: RankingsEmptyStateProps) {
+  const actions = emptyBoardRecoveryFlags({
+    query,
+    activeFilterCount,
+    position,
+    canShowAllGoalies,
+  });
+
   return (
     <div className="px-6 py-16 text-center text-slate-400" role="status">
       <p>No players match your filters.</p>
@@ -60,22 +68,22 @@ export function RankingsEmptyState({
         Press r to reset the board, or Esc after clearing search.
       </p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-        {query.trim() !== "" && (
+        {actions.clearSearch && (
           <EmptyAction label="Clear search" onClick={onClearSearch} />
         )}
-        {activeFilterCount > 0 && (
+        {actions.clearStatFilters && (
           <EmptyAction
             label="Clear stat filters"
             onClick={onClearStatFilters}
           />
         )}
-        {position !== "ALL" && (
+        {actions.showAllPositions && (
           <EmptyAction
             label="Show all positions"
             onClick={onShowAllPositions}
           />
         )}
-        {canShowAllGoalies && (
+        {actions.showAllGoalies && (
           <EmptyAction
             label="Include depth goalies"
             onClick={onShowAllGoalies}

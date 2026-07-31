@@ -122,6 +122,11 @@ const files: Record<string, string[]> = {
     "Include depth goalies",
     "keyshortcuts",
     "EmptyAction",
+    "emptyBoardRecoveryFlags",
+  ],
+  "src/lib/board-empty-recovery.ts": [
+    "emptyBoardRecoveryFlags",
+    "canShowAllGoalies",
   ],
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",
@@ -285,7 +290,11 @@ const files: Record<string, string[]> = {
     "rankings-board-table",
     'aria-keyshortcuts="[ ]"',
   ],
-  "src/lib/board-positions.ts": ["BOARD_POSITIONS", "nextBoardPositionIndex"],
+  "src/lib/board-positions.ts": [
+    "BOARD_POSITIONS",
+    "nextBoardPositionIndex",
+    "cycleBoardPosition",
+  ],
   "src/lib/rankings-url.ts": [
     "hideDepthGoalies",
     "playerId",
