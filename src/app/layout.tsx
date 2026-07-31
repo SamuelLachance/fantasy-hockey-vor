@@ -13,9 +13,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://samuellachance.github.io/fantasy-hockey-vor/"),
   title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
   description:
     "2026-27 NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble (GBDT + ridge + Marcel), with draft Edge vs synthetic consensus and calibrated uncertainty.",
+  themeColor: "#020617",
   openGraph: {
     title: "Fantasy Hockey VOR | 2026-27 ML Rankings",
     description:
@@ -23,6 +25,7 @@ export const metadata: Metadata = {
     url: "https://samuellachance.github.io/fantasy-hockey-vor/",
     siteName: "Fantasy Hockey VOR",
     type: "website",
+    locale: "en_US",
   },
   twitter: {
     card: "summary",
@@ -30,6 +33,7 @@ export const metadata: Metadata = {
     description:
       "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
   },
+  applicationName: "Fantasy Hockey VOR",
 };
 
 export default function RootLayout({
