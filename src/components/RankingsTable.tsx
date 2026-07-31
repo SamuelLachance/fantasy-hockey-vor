@@ -444,6 +444,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                   <Fragment key={player.id}>
                     <tr
                       id={`player-row-${player.id}`}
+                      style={{ contentVisibility: "auto", containIntrinsicSize: "0 52px" }}
                       onClick={() =>
                         setExpandedId(isExpanded ? null : player.id)
                       }
