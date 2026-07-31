@@ -18,12 +18,14 @@ export function RankingsStatusBar({
   return (
     <p className="text-center text-xs text-slate-400">
       <span
-        className="tabular-nums"
+        className={`tabular-nums${searchPending ? " opacity-70" : ""}`}
         aria-live="polite"
         aria-atomic="true"
         aria-busy={searchPending || undefined}
       >
-        {boardShowingSummary(renderCount, filteredCount, totalCount)}
+        {boardShowingSummary(renderCount, filteredCount, totalCount, {
+          searchPending,
+        })}
       </span>{" "}
       Click or Enter/Space a row for category breakdown. Click column headers to
       sort. {boardShortcutsStatusCopy()}

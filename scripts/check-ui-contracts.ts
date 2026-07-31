@@ -287,11 +287,17 @@ const files: Record<string, string[]> = {
     "aria-busy",
     "searchPending",
     "boardShowingSummary",
+    "opacity-70",
     "Enter/Space",
     "boardShortcutsStatusCopy",
     "tabular-nums",
   ],
-  "src/lib/board-status.ts": ["boardShowingSummary", "formatCount"],
+  "src/lib/board-status.ts": [
+    "boardShowingSummary",
+    "formatCount",
+    "searchPending",
+    "Updating…",
+  ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',
     "!helpOpenNow",

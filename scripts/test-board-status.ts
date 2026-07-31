@@ -27,6 +27,18 @@ assert(
     "Showing 0 of 0 matching players (0 total).",
   "clamps negatives",
 );
+assert(
+  boardShowingSummary(50, 200, 1311, { searchPending: true }).endsWith(
+    "Updating…",
+  ),
+  "pending suffix",
+);
+assert(
+  !boardShowingSummary(50, 200, 1311, { searchPending: false }).includes(
+    "Updating",
+  ),
+  "settled has no pending suffix",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-status");
