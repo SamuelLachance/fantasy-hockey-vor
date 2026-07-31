@@ -1,7 +1,7 @@
 "use client";
 
 import { boardRowTabStopId } from "@/lib/board-visible";
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { SortKey } from "@/lib/rankings-filters";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
@@ -77,7 +77,11 @@ export function RankingsBoardTable({
   onShowAllGoalies,
   onResetBoard,
 }: RankingsBoardTableProps) {
-  const tabStopId = boardRowTabStopId(visiblePlayers, expandedId);
+  const [anchorId, setAnchorId] = useState<number | null>(expandedId);
+  if (expandedId != null && expandedId !== anchorId) {
+    setAnchorId(expandedId);
+  }
+  const tabStopId = boardRowTabStopId(visiblePlayers, expandedId, anchorId);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">

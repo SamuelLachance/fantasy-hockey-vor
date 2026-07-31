@@ -11,14 +11,18 @@ export function visibleBoardPlayers(
 
 /**
  * Which mounted row is the single Tab stop (roving tabindex).
- * Expanded row wins; otherwise the first visible row.
+ * Expanded row wins; else last-expanded anchor if still mounted; else first row.
  */
 export function boardRowTabStopId(
   visiblePlayers: readonly { id: number }[],
   expandedId: number | null,
+  anchorId: number | null = null,
 ): number | null {
   if (expandedId != null) {
     if (visiblePlayers.some((p) => p.id === expandedId)) return expandedId;
+  }
+  if (anchorId != null && visiblePlayers.some((p) => p.id === anchorId)) {
+    return anchorId;
   }
   return visiblePlayers[0]?.id ?? null;
 }

@@ -8,7 +8,7 @@ import {
   shouldIgnoreBoardShortcut,
 } from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
-import { focusStatsFilterButton, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
+import { focusStatsFilterButton, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
@@ -117,6 +117,7 @@ export function useRankingsKeyboard({
           }
           return;
         }
+        focusPlayerRowIfPanelFocused(expandedIdNow);
         setExpandedIdRef.current(null);
         return;
       }
@@ -171,6 +172,7 @@ export function useRankingsKeyboard({
       }
       if ((e.key === "r" || e.key === "R") && onResetBoardRef.current) {
         e.preventDefault();
+        focusPlayerRowIfPanelFocused(expandedIdNow);
         onResetBoardRef.current();
         return;
       }

@@ -5,6 +5,7 @@
 import {
   STICKY_NAME_SHADOW,
   focusPlayerRow,
+  focusPlayerRowIfPanelFocused,
   focusStatsFilterButton,
   prefersReducedMotion,
   scrollExpandedRowIntoView,
@@ -37,6 +38,7 @@ assert(
 try {
   focusStatsFilterButton();
   focusPlayerRow(1);
+  focusPlayerRowIfPanelFocused(1);
   scrollPageTop();
   scrollToRankings();
   scrollExpandedRowIntoView(1);
@@ -45,6 +47,10 @@ try {
 }
 
 assert(typeof focusPlayerRow === "function", "focusPlayerRow exported");
+assert(
+  typeof focusPlayerRowIfPanelFocused === "function",
+  "focusPlayerRowIfPanelFocused exported",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-dom");

@@ -47,6 +47,7 @@ const files: Record<string, string[]> = {
     "group/hscroll",
     "overscroll-x-contain",
     "boardRowTabStopId",
+    "anchorId",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
@@ -204,6 +205,7 @@ const files: Record<string, string[]> = {
     "nextExpandedPlayerId",
     "shouldIgnoreBoardShortcut",
     "isBoardTypingTarget",
+    "focusPlayerRowIfPanelFocused",
     "onToggleDepthGoalies",
     "onLoadMore",
     "onClearSearch",
@@ -258,6 +260,7 @@ const files: Record<string, string[]> = {
     "scrollToRankings",
     "scrollExpandedRowIntoView",
     "focusPlayerRow",
+    "focusPlayerRowIfPanelFocused",
     "prefersReducedMotion",
   ],
   "src/lib/rankings-export.ts": [

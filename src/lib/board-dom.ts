@@ -53,6 +53,18 @@ export function focusPlayerRow(playerId: number): void {
   row.focus({ preventScroll: true });
 }
 
+/**
+ * Before collapsing an expanded panel, move focus back to the row when focus
+ * was inside the panel so unmount does not dump focus to body.
+ */
+export function focusPlayerRowIfPanelFocused(expandedId: number | null): void {
+  if (expandedId == null || typeof document === "undefined") return;
+  const active = document.activeElement;
+  if (!(active instanceof Element)) return;
+  if (!active.closest('[id^="player-panel-"]')) return;
+  focusPlayerRow(expandedId);
+}
+
 /** Keep an expanded player row in view without jumping the page harshly. */
 export function scrollExpandedRowIntoView(playerId: number): void {
   if (typeof document === "undefined") return;

@@ -26,6 +26,14 @@ assert(boardRowTabStopId(players, null) === 1, "first row tab stop");
 assert(boardRowTabStopId(players, 2) === 2, "expanded tab stop");
 assert(boardRowTabStopId(players, 99) === 1, "missing expand → first");
 assert(boardRowTabStopId([], null) === null, "empty no tab stop");
+assert(
+  boardRowTabStopId(players, null, 3) === 3,
+  "collapse keeps anchor tab stop",
+);
+assert(
+  boardRowTabStopId(players, null, 99) === 1,
+  "missing anchor → first",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-visible");
