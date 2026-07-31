@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, type KeyboardEvent } from "react";
-import { Download, Filter, Link2 } from "lucide-react";
+import { Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 import type { SortKey } from "@/lib/rankings-filters";
@@ -98,14 +98,26 @@ export function RankingsToolbar({
         ))}
       </div>
       <div className="flex w-full flex-col gap-2 sm:max-w-xl sm:flex-row">
-        <input
-          type="search"
-          aria-label="Search players or teams"
-          placeholder="Search players or teams..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
-        />
+        <div className="relative w-full">
+          <input
+            type="search"
+            aria-label="Search players or teams"
+            placeholder="Search players or teams..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+          />
+          {query.trim() !== "" && (
+            <button
+              type="button"
+              aria-label="Clear search"
+              onClick={() => setQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 transition hover:bg-white/10 hover:text-slate-200"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
