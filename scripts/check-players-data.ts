@@ -14,6 +14,8 @@ import {
   inactiveFileIssues,
   loadInactivePlayersFile,
 } from "../src/lib/inactive-players";
+import { PROJECTION_SEASON } from "../src/lib/nhl-api";
+import { DEFAULT_PROJECTION_ENGINE } from "../src/lib/projection-engine-label";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -59,17 +61,17 @@ if (!Number.isFinite(generatedAt)) {
 }
 
 if (!data.season) errors.push("season is missing");
-else if (data.season !== "2026-27") {
+else if (data.season !== PROJECTION_SEASON) {
   errors.push(
-    `season is "${data.season}" (expected 2026-27 — update check when rolling seasons)`,
+    `season is "${data.season}" (expected ${PROJECTION_SEASON})`,
   );
 }
 
 if (!data.projectionEngine) {
   errors.push("projectionEngine is missing");
-} else if (data.projectionEngine !== "stacked-ensemble") {
+} else if (data.projectionEngine !== DEFAULT_PROJECTION_ENGINE) {
   errors.push(
-    `projectionEngine is "${data.projectionEngine}" (expected stacked-ensemble for published ranks)`,
+    `projectionEngine is "${data.projectionEngine}" (expected ${DEFAULT_PROJECTION_ENGINE} for published ranks)`,
   );
 }
 

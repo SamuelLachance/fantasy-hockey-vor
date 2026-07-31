@@ -58,6 +58,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-document-title.ts": [
     "boardDocumentTitle",
     "Fantasy Hockey VOR",
+    "siteDefaultTitle",
   ],
   "src/hooks/useRankingsBoardState.ts": [
     "useRankingsBoardState",
@@ -362,7 +363,26 @@ const files: Record<string, string[]> = {
     "playerDetailsHref",
     "normalizePlayerDetailsPayload",
   ],
-  "src/app/layout.tsx": ["keywords", "robots", "category"],
+  "src/app/layout.tsx": [
+    "keywords",
+    "robots",
+    "category",
+    "siteDefaultTitle",
+    "siteDefaultDescription",
+    "PROJECTION_SEASON",
+  ],
+  "src/lib/site-meta.ts": [
+    "siteDefaultTitle",
+    "siteDefaultDescription",
+    "siteManifestDescription",
+    "PROJECTION_SEASON",
+  ],
+  "src/app/manifest.ts": [
+    "siteManifestDescription",
+    "standalone",
+    "Fantasy Hockey VOR",
+    "categories",
+  ],
   "src/lib/rankings-board.ts": [
     "filterAndSortBoard",
     "hideDepthGoalies",
@@ -435,7 +455,6 @@ const files: Record<string, string[]> = {
     'role="status"',
     "BrandEyebrow",
   ],
-  "src/app/manifest.ts": ["Fantasy Hockey VOR", "categories", "standalone"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
   "src/lib/format.ts": ["sigmaColor", "edgeColor", "formatSigned"],
