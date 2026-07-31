@@ -10,7 +10,8 @@ const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
     "RankingsTableInner",
     "Suspense",
-    "Loading rankings",
+    "loadingRankingsCopy",
+    'role="status"',
   ],
   "src/components/RankingsTableInner.tsx": [
     'id="rankings"',
