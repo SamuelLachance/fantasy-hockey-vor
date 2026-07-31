@@ -147,6 +147,7 @@ const files: Record<string, string[]> = {
     "shouldIgnoreBoardShortcut",
     "boardKeyboardNavIds",
     "nextBoardEscapeTypingAction",
+    "isBoardImeComposing",
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",

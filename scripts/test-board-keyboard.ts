@@ -5,6 +5,7 @@
 import {
   boardKeyboardNavIds,
   isBoardChromeTarget,
+  isBoardImeComposing,
   isBoardRowToggleKey,
   isBoardTypingTarget,
   nextBoardEscapeTypingAction,
@@ -130,6 +131,13 @@ assert(
   } as unknown as EventTarget).type === "noop-typing",
   "Esc in textarea stays typing",
 );
+
+assert(!isBoardImeComposing({ key: "Escape" }), "normal Esc not composing");
+assert(
+  isBoardImeComposing({ key: "Escape", isComposing: true }),
+  "isComposing blocks",
+);
+assert(isBoardImeComposing({ key: "Process" }), "Process key blocks");
 
 if (failed) process.exit(1);
 console.log("OK: board-keyboard");

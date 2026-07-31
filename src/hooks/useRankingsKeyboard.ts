@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
 import {
   boardKeyboardNavIds,
+  isBoardImeComposing,
   isBoardTypingTarget,
   nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
@@ -94,6 +95,7 @@ export function useRankingsKeyboard({
 
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
+      if (isBoardImeComposing(e)) return;
       const typing = isBoardTypingTarget(e.target);
       const helpOpenNow = helpOpenRef.current;
       const filtersOpenNow = filtersOpenRef.current;

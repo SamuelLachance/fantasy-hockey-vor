@@ -89,6 +89,14 @@ export type BoardEscapeAction =
   | { type: "dismiss-row"; blurSearch: boolean }
   | { type: "noop-typing" };
 
+/** True while an IME composition session is active (CJK etc.). */
+export function isBoardImeComposing(e: {
+  isComposing?: boolean;
+  key: string;
+}): boolean {
+  return Boolean(e.isComposing) || e.key === "Process";
+}
+
 /**
  * Escape while typing: clear non-empty search, otherwise dismiss the expanded
  * row (blur empty search so focus leaves the field).
