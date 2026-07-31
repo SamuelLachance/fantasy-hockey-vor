@@ -139,17 +139,22 @@ const files: Record<string, string[]> = {
   "src/components/RankingsEmptyState.tsx": [
     "emptyBoardStatusCopy",
     "emptyBoardHintCopy",
-    "Reset board view",
-    'role="status"',
-    "Include depth goalies",
-    'keyshortcuts="Escape"',
+    "EMPTY_BOARD_ACTION_LABELS",
     "EmptyAction",
+    'role="status"',
+    'keyshortcuts="Escape"',
     "emptyBoardRecoveryFlags",
+  ],
+  "src/components/EmptyAction.tsx": [
+    "EmptyAction",
+    "aria-keyshortcuts",
+    "primary",
   ],
   "src/lib/board-empty-recovery.ts": [
     "emptyBoardRecoveryFlags",
     "emptyBoardStatusCopy",
     "emptyBoardHintCopy",
+    "EMPTY_BOARD_ACTION_LABELS",
     "canShowAllGoalies",
   ],
   "src/components/RankingsStatusBar.tsx": [

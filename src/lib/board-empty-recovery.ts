@@ -20,6 +20,15 @@ export function emptyBoardRecoveryFlags(input: {
   };
 }
 
+/** Labels for empty-board recovery actions. */
+export const EMPTY_BOARD_ACTION_LABELS = {
+  clearSearch: "Clear search",
+  clearStatFilters: "Clear stat filters",
+  showAllPositions: "Show all positions",
+  showAllGoalies: "Include depth goalies",
+  resetBoard: "Reset board view",
+} as const;
+
 /** Primary empty-board status line. */
 export function emptyBoardStatusCopy(): string {
   return "No players match your filters.";

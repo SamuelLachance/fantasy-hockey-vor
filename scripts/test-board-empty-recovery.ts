@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/test-board-empty-recovery.ts
  */
 import {
+  EMPTY_BOARD_ACTION_LABELS,
   emptyBoardHintCopy,
   emptyBoardRecoveryFlags,
   emptyBoardStatusCopy,
@@ -43,6 +44,14 @@ assert(
 );
 assert(emptyBoardHintCopy().includes("Press r"), "hint mentions r");
 assert(emptyBoardHintCopy().includes("Esc"), "hint mentions Esc");
+assert(
+  EMPTY_BOARD_ACTION_LABELS.resetBoard === "Reset board view",
+  "reset label",
+);
+assert(
+  EMPTY_BOARD_ACTION_LABELS.showAllGoalies === "Include depth goalies",
+  "depth label",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-empty-recovery");
