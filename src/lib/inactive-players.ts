@@ -46,6 +46,8 @@ export function inactiveFileIssues(
     } else if (new Set(file.names.map((n) => n.trim().toLowerCase())).size !== file.names.length) {
       issues.push("duplicate names in inactive denylist");
     }
+  } else if (file.ids.length > 0) {
+    issues.push("names array required when ids are listed");
   }
   return issues;
 }
