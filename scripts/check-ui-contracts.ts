@@ -1047,6 +1047,10 @@ const files: Record<string, string[]> = {
     'type="text"',
     "inputMode",
     "tabular-nums",
+    "min-h-11",
+    "min-w-[2.75rem]",
+    "inline-flex",
+    "items-center",
   ],
   "src/lib/stat-filters-copy.ts": [
     "statFiltersHintCopy",
