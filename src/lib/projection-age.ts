@@ -4,6 +4,9 @@ export const PROJECTION_STALE_DAYS = 21;
 /** Hard freshness threshold (days) before the assertive stale banner. */
 export const PROJECTION_VERY_STALE_DAYS = 45;
 
+/** Age (days) at/under which the sitemap claims daily changeFrequency. */
+export const SITEMAP_DAILY_MAX_AGE_DAYS = 7;
+
 /** Days between projection generation and build/reference time. */
 export function projectionAgeDays(
   generatedAt: string,
@@ -21,4 +24,11 @@ export function isProjectionStale(ageDays: number): boolean {
 
 export function isProjectionVeryStale(ageDays: number): boolean {
   return ageDays > PROJECTION_VERY_STALE_DAYS;
+}
+
+/** Sitemap changeFrequency based on projection freshness. */
+export function sitemapChangeFrequency(
+  ageDays: number,
+): "daily" | "weekly" {
+  return ageDays <= SITEMAP_DAILY_MAX_AGE_DAYS ? "daily" : "weekly";
 }

@@ -1,6 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getProjections } from "@/lib/data";
-import { projectionAgeDays } from "@/lib/projection-age";
+import {
+  projectionAgeDays,
+  sitemapChangeFrequency,
+} from "@/lib/projection-age";
 import { SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -21,7 +24,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       url: SITE_URL,
       lastModified,
-      changeFrequency: age <= 7 ? "daily" : "weekly",
+      changeFrequency: sitemapChangeFrequency(age),
       priority: 1,
     },
   ];

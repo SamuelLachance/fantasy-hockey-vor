@@ -8,6 +8,8 @@ import {
   projectionAgeDays,
   PROJECTION_STALE_DAYS,
   PROJECTION_VERY_STALE_DAYS,
+  SITEMAP_DAILY_MAX_AGE_DAYS,
+  sitemapChangeFrequency,
 } from "../src/lib/projection-age";
 
 let failed = 0;
@@ -20,6 +22,10 @@ function assert(cond: boolean, msg: string) {
 
 assert(PROJECTION_STALE_DAYS === 21, "stale threshold");
 assert(PROJECTION_VERY_STALE_DAYS === 45, "very stale threshold");
+assert(SITEMAP_DAILY_MAX_AGE_DAYS === 7, "sitemap daily max");
+assert(sitemapChangeFrequency(0) === "daily", "fresh → daily");
+assert(sitemapChangeFrequency(7) === "daily", "7 → daily");
+assert(sitemapChangeFrequency(8) === "weekly", "8 → weekly");
 assert(
   projectionAgeDays("2026-07-01T00:00:00.000Z", "2026-07-11T00:00:00.000Z") ===
     10,
