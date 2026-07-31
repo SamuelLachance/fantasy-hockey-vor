@@ -18,6 +18,7 @@ import { isBoardRowToggleKey } from "@/lib/board-keyboard";
 import {
   boardRowAriaLabel,
   boardRowDetailsAriaLabel,
+  boardTableAriaRowIndex,
   edgeCellTitle,
   sigmaCellDisplay,
   sigmaCellTitle,
@@ -85,7 +86,7 @@ export function RankingsPlayerRow({
       <tr
         id={`player-row-${player.id}`}
         tabIndex={isTabStop ? 0 : -1}
-        aria-rowindex={idx + 1}
+        aria-rowindex={boardTableAriaRowIndex(idx)}
         aria-selected={isExpanded || undefined}
         aria-expanded={isExpanded}
         aria-controls={

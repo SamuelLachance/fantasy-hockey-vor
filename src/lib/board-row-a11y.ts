@@ -1,5 +1,21 @@
 import type { PlayerProjection, Position } from "@/lib/types";
 
+/**
+ * Header + filtered data rows for virtualized/partial DOM tables.
+ * Omit when there are no data rows.
+ */
+export function boardTableAriaRowCount(
+  filteredCount: number,
+): number | undefined {
+  if (filteredCount <= 0) return undefined;
+  return filteredCount + 1;
+}
+
+/** 1-based data-row index; header occupies row 1. */
+export function boardTableAriaRowIndex(visibleIndex: number): number {
+  return visibleIndex + 2;
+}
+
 /** Accessible name for a board table row. */
 export function boardRowAriaLabel(
   player: Pick<PlayerProjection, "name" | "rank"> & {

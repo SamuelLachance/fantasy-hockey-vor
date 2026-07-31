@@ -1,6 +1,7 @@
 "use client";
 
 import { boardRowTabStopId } from "@/lib/board-visible";
+import { boardTableAriaRowCount } from "@/lib/board-row-a11y";
 import { useState, type RefObject } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { SortKey } from "@/lib/rankings-filters";
@@ -100,7 +101,7 @@ export function RankingsBoardTable({
           id="rankings-board-table"
           aria-label="Fantasy hockey VOR rankings"
           aria-busy={searchPending || undefined}
-          aria-rowcount={filteredCount > 0 ? filteredCount : undefined}
+          aria-rowcount={boardTableAriaRowCount(filteredCount)}
           className="min-w-full text-left text-sm"
         >
           <RankingsTableHead

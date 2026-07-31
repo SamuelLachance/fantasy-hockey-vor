@@ -64,6 +64,7 @@ const files: Record<string, string[]> = {
     "searchPending",
     "aria-busy",
     "aria-rowcount",
+    "boardTableAriaRowCount",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
@@ -165,6 +166,7 @@ const files: Record<string, string[]> = {
     "isBoardRowToggleKey",
     "boardRowAriaLabel",
     "boardRowDetailsAriaLabel",
+    "boardTableAriaRowIndex",
     "edgeCellTitle",
     "sigmaCellTitle",
     "sigmaCellDisplay",
@@ -173,6 +175,8 @@ const files: Record<string, string[]> = {
   "src/lib/board-row-a11y.ts": [
     "boardRowAriaLabel",
     "boardRowDetailsAriaLabel",
+    "boardTableAriaRowCount",
+    "boardTableAriaRowIndex",
     "edgeCellTitle",
     "sigmaCellTitle",
     "sigmaCellDisplay",
@@ -224,6 +228,7 @@ const files: Record<string, string[]> = {
     'scope="col"',
     "motion-reduce:bg-slate-950",
     "BOARD_STICKY_TOP_CLASS",
+    "aria-rowindex={1}",
   ],
   "src/components/RankingsEmptyState.tsx": [
     "emptyBoardStatusCopy",
