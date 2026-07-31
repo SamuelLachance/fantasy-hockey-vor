@@ -92,6 +92,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     setSortDir: (dir) => startTransition(() => board.setSortDir(dir)),
     onResetBoard: board.resetBoardView,
     onCopyBoardLink: copyBoardLink,
+    onCopyPlayerLink: copyPlayerLink,
     onToggleDepthGoalies: board.toggleDepthGoalies,
     onLoadMore: () => {
       if (canLoadMore) loadMore();

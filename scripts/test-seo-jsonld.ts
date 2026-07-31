@@ -51,6 +51,10 @@ assert(
   JSON.stringify(faq).includes("Esc clears search"),
   "FAQ keyboard mentions Esc",
 );
+assert(
+  JSON.stringify(faq).includes("p copy expanded player link"),
+  "FAQ keyboard mentions player link",
+);
 assert(graph[1]?.dateModified === data.generatedAt, "dateModified wired");
 assert(graph[1]?.license === "https://opensource.org/licenses/MIT", "license");
 assert(graph[1]?.isAccessibleForFree === true, "free");

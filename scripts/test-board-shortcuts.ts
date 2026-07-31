@@ -45,9 +45,18 @@ assert(
   "FAQ mentions Esc",
 );
 assert(
+  boardShortcutsFaqAnswer().includes("p copy expanded player link"),
+  "FAQ mentions p player link",
+);
+assert(
   boardShortcutsFaqAnswer().includes("Enter/Space expand"),
   "FAQ mentions expand",
 );
+assert(
+  BOARD_SHORTCUT_ROWS.some((r) => r.keys === "p"),
+  "p in catalogue",
+);
+assert(boardShortcutsFooterChip().includes("· p ·"), "footer chip has p");
 
 const keys = BOARD_SHORTCUT_ROWS.map((r) => r.keys);
 assert(new Set(keys).size === keys.length, "unique shortcut keys");

@@ -30,6 +30,7 @@ const files: Record<string, string[]> = {
     "visibleBoardPlayers",
     "onCyclePosition",
     "boardPositionTabId",
+    "onCopyPlayerLink",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -165,6 +166,7 @@ const files: Record<string, string[]> = {
     "filteredRef",
     "focusStatsFilterButton",
     "onCopyBoardLink",
+    "onCopyPlayerLink",
     'e.key === "Home"',
     'e.key === "End"',
     "nextExpandedPlayerId",
@@ -174,6 +176,7 @@ const files: Record<string, string[]> = {
     "onCyclePosition",
     'e.key === "G"',
     'e.key === "m"',
+    'e.key === "p"',
     'e.key === "["',
   ],
   "src/components/BoardShortcutsHelp.tsx": [
@@ -200,6 +203,7 @@ const files: Record<string, string[]> = {
     "boardShortcutsFaqAnswer",
     "Shift+G",
     "Load more rows",
+    "Copy expanded player link",
     "Previous / next position tab",
   ],
   "src/lib/copy-flash.ts": [
@@ -266,6 +270,7 @@ const files: Record<string, string[]> = {
   "src/components/ExpandedPlayerMeta.tsx": [
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
+    'aria-keyshortcuts="p"',
     "Consensus #",
     'aria-live="polite"',
     "projectionMethodLabel",

@@ -19,13 +19,14 @@ interface RankingsKeyboardInput {
   setSortDir: (dir: "asc" | "desc") => void;
   onResetBoard?: () => void;
   onCopyBoardLink?: () => void;
+  onCopyPlayerLink?: (playerId: number) => void;
   onToggleDepthGoalies?: () => void;
   onLoadMore?: () => void;
   onClearSearch?: () => void;
   onCyclePosition?: (direction: 1 | -1) => void;
 }
 
-/** Global board shortcuts: Esc, /, ?, j/k, r, l, m, [/]. */
+/** Global board shortcuts: Esc, /, ?, j/k, r, l, p, m, [/]. */
 export function useRankingsKeyboard({
   filtered,
   expandedId,
@@ -38,6 +39,7 @@ export function useRankingsKeyboard({
   setSortDir,
   onResetBoard,
   onCopyBoardLink,
+  onCopyPlayerLink,
   onToggleDepthGoalies,
   onLoadMore,
   onClearSearch,
@@ -55,6 +57,7 @@ export function useRankingsKeyboard({
   const setSortDirRef = useRef(setSortDir);
   const onResetBoardRef = useRef(onResetBoard);
   const onCopyBoardLinkRef = useRef(onCopyBoardLink);
+  const onCopyPlayerLinkRef = useRef(onCopyPlayerLink);
   const onToggleDepthGoaliesRef = useRef(onToggleDepthGoalies);
   const onLoadMoreRef = useRef(onLoadMore);
   const onClearSearchRef = useRef(onClearSearch);
@@ -72,6 +75,7 @@ export function useRankingsKeyboard({
     setSortDirRef.current = setSortDir;
     onResetBoardRef.current = onResetBoard;
     onCopyBoardLinkRef.current = onCopyBoardLink;
+    onCopyPlayerLinkRef.current = onCopyPlayerLink;
     onToggleDepthGoaliesRef.current = onToggleDepthGoalies;
     onLoadMoreRef.current = onLoadMore;
     onClearSearchRef.current = onClearSearch;
@@ -208,6 +212,20 @@ export function useRankingsKeyboard({
       ) {
         e.preventDefault();
         onCopyBoardLinkRef.current();
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
+        (e.key === "p" || e.key === "P") &&
+        expandedIdNow != null &&
+        onCopyPlayerLinkRef.current
+      ) {
+        e.preventDefault();
+        onCopyPlayerLinkRef.current(expandedIdNow);
         return;
       }
       if (

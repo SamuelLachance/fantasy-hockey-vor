@@ -9,6 +9,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "f", action: "Toggle stat filters" },
   { keys: "r", action: "Reset board view" },
   { keys: "l", action: "Copy board link" },
+  { keys: "p", action: "Copy expanded player link" },
   { keys: "m", action: "Load more rows" },
   { keys: "Home", action: "Scroll to top" },
   { keys: "End", action: "Jump to board + focus search" },
@@ -34,8 +35,8 @@ export const BOARD_SORT_HOTKEYS: Readonly<Record<string, SortKey>> = {
 /** Compact FAQ answer for keyboard shortcuts (JSON-LD + docs). */
 export function boardShortcutsFaqAnswer(): string {
   return (
-    "Press ? for the full list. Highlights: / search, f filters, r reset, l copy link, " +
-    "m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
+    "Press ? for the full list. Highlights: / search, f filters, r reset, l copy board link, " +
+    "p copy expanded player link, m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
     "j/k move rows, Enter/Space expand, v/e/u/g sort, Shift+G toggle starter goalies."
   );
 }
@@ -43,7 +44,7 @@ export function boardShortcutsFaqAnswer(): string {
 /** Compact footer/status line listing primary shortcuts. */
 export function boardShortcutsStatusCopy(): string {
   return (
-    "Press / to focus search, f filters, r reset, l copy link, m load more, [ / ] positions, Home/End navigate, " +
+    "Press / to focus search, f filters, r reset, l copy link, p player link, m load more, [ / ] positions, Home/End navigate, " +
     "? for shortcuts. Esc clears search or closes help/filters then the open row; j/k or ↑/↓ move " +
     "(opens first/last if none). Shift+G toggles Starters / All goalies. " +
     "v/e/u/g sorts by VOR / Edge / Σσ / GP."
@@ -52,5 +53,5 @@ export function boardShortcutsStatusCopy(): string {
 
 /** Compact site footer chip for board hotkeys. */
 export function boardShortcutsFooterChip(): string {
-  return "board: / · f · r · l · m · [/] · Home/End · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link";
+  return "board: / · f · r · l · p · m · [/] · Home/End · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link";
 }
