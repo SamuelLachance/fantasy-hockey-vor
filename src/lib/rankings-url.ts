@@ -136,3 +136,48 @@ export function rankingsUrlSearch(state: RankingsUrlState): string {
   if (rf) p.set("rf", rf);
   return p.toString();
 }
+
+export function defaultRankingsUrlState(): RankingsUrlState {
+  return {
+    position: "ALL",
+    query: "",
+    sortKey: "vor",
+    sortDir: "desc",
+    playerId: null,
+    hideDepthGoalies: true,
+    statRanges: {},
+  };
+}
+
+function boardHref(state: RankingsUrlState): string {
+  const q = rankingsUrlSearch(state);
+  return q ? `?${q}#rankings` : "#rankings";
+}
+
+/** Top Edge card → board sorted by draft value. */
+export function edgeBoardHref(): string {
+  return boardHref({
+    ...defaultRankingsUrlState(),
+    sortKey: "draftValue",
+    sortDir: "desc",
+  });
+}
+
+/** Σσ sort deep-link (default asc). */
+export function sigmaBoardHref(): string {
+  return boardHref({
+    ...defaultRankingsUrlState(),
+    sortKey: "sigma",
+    sortDir: "asc",
+  });
+}
+
+/** Steadiest card → Σσ asc with VOR ≥ 2 filter (matches top-lists criteria). */
+export function steadiestBoardHref(): string {
+  return boardHref({
+    ...defaultRankingsUrlState(),
+    sortKey: "sigma",
+    sortDir: "asc",
+    statRanges: { vor: { min: "2", max: "" } },
+  });
+}

@@ -5,8 +5,11 @@
 import {
   decodeStatRanges,
   encodeStatRanges,
+  edgeBoardHref,
   parseRankingsUrl,
   rankingsUrlSearch,
+  sigmaBoardHref,
+  steadiestBoardHref,
 } from "../src/lib/rankings-url";
 
 let failed = 0;
@@ -99,6 +102,13 @@ assert(
     sortDir: "desc",
   }) === "sort=sigma&dir=desc",
   "serialize sigma keeps non-default dir",
+);
+
+assert(edgeBoardHref() === "?sort=draftValue#rankings", "edge board href");
+assert(sigmaBoardHref() === "?sort=sigma#rankings", "sigma board href");
+assert(
+  steadiestBoardHref() === "?sort=sigma&rf=vor:2-#rankings",
+  "steadiest board href matches top-lists VOR≥2",
 );
 
 if (failed) process.exit(1);

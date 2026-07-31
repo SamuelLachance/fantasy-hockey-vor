@@ -10,6 +10,11 @@ import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
 import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap, Gauge } from "lucide-react";
 import { steadiestSkaters, topEdgeSkaters } from "@/lib/top-lists";
+import {
+  edgeBoardHref,
+  sigmaBoardHref,
+  steadiestBoardHref,
+} from "@/lib/rankings-url";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
 
 function playerHref(id: number): string {
@@ -103,13 +108,13 @@ export function TopPlayers({
           </div>
           <div className="flex items-center gap-3 text-xs">
             <a
-              href="?sort=draftValue#rankings"
+              href={edgeBoardHref()}
               className="text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
             >
               Sort by Edge
             </a>
             <a
-              href="?sort=sigma#rankings"
+              href={sigmaBoardHref()}
               className="text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               Sort by Σσ
@@ -162,7 +167,7 @@ export function TopPlayers({
               </h2>
             </div>
             <a
-              href="?sort=sigma&rf=vor:2-#rankings"
+              href={steadiestBoardHref()}
               className="text-xs text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               Board view
