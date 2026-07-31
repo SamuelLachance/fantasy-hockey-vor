@@ -114,6 +114,15 @@ export function vorColor(vor: number): string {
   return "text-rose-400";
 }
 
+/** Color for calibrated aggregate uncertainty (lower is better). */
+export function sigmaColor(sigma: number): string {
+  if (!Number.isFinite(sigma)) return "text-slate-500";
+  if (sigma < 40) return "text-emerald-400";
+  if (sigma < 70) return "text-slate-300";
+  if (sigma < 100) return "text-amber-300";
+  return "text-rose-300";
+}
+
 /** Color for consensus-minus-model Edge (draftValue). */
 export function edgeColor(edge: number): string {
   if (edge > 0) return "text-emerald-400";

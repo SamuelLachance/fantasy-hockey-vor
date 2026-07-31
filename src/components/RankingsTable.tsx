@@ -19,6 +19,7 @@ import {
   formatCount,
   formatStat,
   playerCategories,
+  sigmaColor,
   vorColor,
 } from "@/lib/format";
 import {
@@ -441,10 +442,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                         {player.draftValue ?? 0}
                       </td>
                       <td
-                        className="px-3 py-3 font-mono text-sm text-slate-400"
+                        className={`px-3 py-3 font-mono text-sm ${
+                          player.uncertainty?.total?.sigma != null
+                            ? sigmaColor(player.uncertainty.total.sigma)
+                            : "text-slate-500"
+                        }`}
                         title={
                           player.uncertainty?.total?.sigma != null
-                            ? `Σσ ${player.uncertainty.total.sigma.toFixed(1)}`
+                            ? `Σσ ${player.uncertainty.total.sigma.toFixed(1)} (lower = more confident)`
                             : "No calibrated uncertainty"
                         }
                       >
