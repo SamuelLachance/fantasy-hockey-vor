@@ -83,15 +83,58 @@ export function focusPlayerRowIfPanelFocused(expandedId: number | null): void {
 export const BOARD_STICKY_CHROME_SELECTOR =
   "#rankings [data-board-sticky-chrome]" as const;
 
-/** Height of sticky board chrome covering the top of the viewport (0 if absent). */
-export function boardStickyTopInset(
-  doc: Pick<Document, "querySelector"> | null =
+/** Sticky column header band under the chrome. */
+export const BOARD_STICKY_THEAD_SELECTOR = "#rankings thead" as const;
+
+/** CSS custom property set on `#rankings` for thead `top` offset. */
+export const BOARD_STICKY_CHROME_HEIGHT_VAR =
+  "--board-sticky-chrome-height" as const;
+
+type QueryDoc = {
+  querySelector: (selectors: string) => Element | null;
+  getElementById?: (elementId: string) => HTMLElement | null;
+};
+
+function elementHeight(el: Element | null): number {
+  if (!el || typeof el.getBoundingClientRect !== "function") return 0;
+  return Math.max(0, el.getBoundingClientRect().height);
+}
+
+/** Height of sticky board chrome only (for CSS thead offset). */
+export function boardStickyChromeHeight(
+  doc: QueryDoc | null =
     typeof document !== "undefined" ? document : null,
 ): number {
   if (!doc) return 0;
-  const el = doc.querySelector(BOARD_STICKY_CHROME_SELECTOR);
-  if (!el || typeof el.getBoundingClientRect !== "function") return 0;
-  return Math.max(0, el.getBoundingClientRect().height);
+  return elementHeight(doc.querySelector(BOARD_STICKY_CHROME_SELECTOR));
+}
+
+/**
+ * Combined sticky top inset (chrome + table head) covering the viewport.
+ * Used so expand / j-k scroll clears both sticky bands.
+ */
+export function boardStickyTopInset(
+  doc: QueryDoc | null =
+    typeof document !== "undefined" ? document : null,
+): number {
+  if (!doc) return 0;
+  return (
+    boardStickyChromeHeight(doc) +
+    elementHeight(doc.querySelector(BOARD_STICKY_THEAD_SELECTOR))
+  );
+}
+
+/** Publish chrome height as a CSS var so thead sticks just below it. */
+export function syncBoardStickyChromeHeight(
+  doc: QueryDoc | null =
+    typeof document !== "undefined" ? document : null,
+): number {
+  const h = boardStickyChromeHeight(doc);
+  const root = doc?.getElementById?.("rankings");
+  if (root) {
+    root.style.setProperty(BOARD_STICKY_CHROME_HEIGHT_VAR, `${Math.round(h)}px`);
+  }
+  return h;
 }
 
 /**

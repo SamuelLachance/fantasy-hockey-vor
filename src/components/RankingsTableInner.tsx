@@ -13,6 +13,7 @@ import { useBoardCopyLinks } from "@/hooks/useBoardCopyLinks";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardDocumentTitle } from "@/hooks/useBoardDocumentTitle";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
+import { useBoardStickyChromeHeight } from "@/hooks/useBoardStickyChromeHeight";
 import { useExpandedRowScroll } from "@/hooks/useExpandedRowScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
@@ -69,6 +70,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
 
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   useHorizontalScrollShadow(tableScrollRef);
+  useBoardStickyChromeHeight();
 
   const { loadMoreRef, renderCount, loadMore, canLoadMore } =
     useBoardInfiniteScroll(

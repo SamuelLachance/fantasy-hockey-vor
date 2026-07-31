@@ -3,8 +3,11 @@
  * Run: npx tsx scripts/test-board-dom.ts
  */
 import {
+  BOARD_STICKY_CHROME_HEIGHT_VAR,
   BOARD_STICKY_CHROME_SELECTOR,
+  BOARD_STICKY_THEAD_SELECTOR,
   STICKY_NAME_SHADOW,
+  boardStickyChromeHeight,
   boardStickyTopInset,
   focusBoardSearch,
   focusPlayerRow,
@@ -16,6 +19,7 @@ import {
   scrollPageTop,
   scrollToRankings,
   stickyAwareScrollDelta,
+  syncBoardStickyChromeHeight,
 } from "../src/lib/board-dom";
 
 let failed = 0;
@@ -68,6 +72,37 @@ assert(
   "sticky chrome selector",
 );
 assert(boardStickyTopInset(null) === 0, "sticky inset null doc → 0");
+assert(boardStickyChromeHeight(null) === 0, "chrome height null → 0");
+assert(syncBoardStickyChromeHeight(null) === 0, "sync null → 0");
+
+const fakeDoc = {
+  querySelector(sel: string) {
+    if (sel === BOARD_STICKY_CHROME_SELECTOR) {
+      return {
+        getBoundingClientRect: () => ({ height: 100 }),
+      } as Element;
+    }
+    if (sel === BOARD_STICKY_THEAD_SELECTOR) {
+      return {
+        getBoundingClientRect: () => ({ height: 40 }),
+      } as Element;
+    }
+    return null;
+  },
+  getElementById() {
+    return null;
+  },
+};
+assert(boardStickyChromeHeight(fakeDoc) === 100, "chrome height only");
+assert(boardStickyTopInset(fakeDoc) === 140, "inset chrome + thead");
+assert(
+  BOARD_STICKY_CHROME_HEIGHT_VAR === "--board-sticky-chrome-height",
+  "css var name",
+);
+assert(
+  BOARD_STICKY_THEAD_SELECTOR.includes("thead"),
+  "thead selector",
+);
 assert(
   stickyAwareScrollDelta(50, 90, 120, 700) === 50 - 128,
   "scroll up out from under sticky chrome",
