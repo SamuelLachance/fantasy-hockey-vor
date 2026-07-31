@@ -33,8 +33,8 @@ import {
   boardFilterKeys,
   filterAndSortBoard,
 } from "@/lib/rankings-board";
-import { copyText } from "@/lib/clipboard";
 import { highlightMatch } from "@/lib/highlight-match";
+import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import { focusStatsFilterButton } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
@@ -90,8 +90,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   );
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [copiedPlayerId, setCopiedPlayerId] = useState<number | null>(null);
-  const [playerLinkFailed, setPlayerLinkFailed] = useState(false);
+  const [playerLinkStatus, setPlayerLinkStatus] = useState<{
+    id: number | null;
+    status: "idle" | "ok" | "err";
+  }>({ id: null, status: "idle" });
   const [helpOpen, setHelpOpen] = useState(false);
   const { details, detailsError, setDetails, setDetailsError } =
     usePlayerDetails(expandedId);
@@ -254,10 +256,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       hideDepthGoalies,
       statRanges,
     });
-    void copyText(url).then((ok) => {
-      setBoardLinkStatus(ok ? "ok" : "err");
-      window.setTimeout(() => setBoardLinkStatus("idle"), 1600);
-    });
+    copyTextWithFlash(url, setBoardLinkStatus);
   }
 
   useRankingsKeyboard({
@@ -543,8 +542,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                             playerDetails={playerDetails}
                             detailsLoading={details === null && !detailsError}
                             detailsError={detailsError && details === null}
-                            linkCopied={copiedPlayerId === player.id}
-                            linkCopyFailed={playerLinkFailed}
+                            linkCopied={
+                              playerLinkStatus.id === player.id &&
+                              playerLinkStatus.status === "ok"
+                            }
+                            linkCopyFailed={
+                              playerLinkStatus.id === player.id &&
+                              playerLinkStatus.status === "err"
+                            }
                             onCopyLink={() => {
                               const url = rankingsShareUrl(
                                 window.location.origin,
@@ -559,22 +564,15 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                                   statRanges,
                                 },
                               );
-                              void copyText(url).then((ok) => {
-                                if (!ok) {
-                                  setCopiedPlayerId(null);
-                                  setPlayerLinkFailed(true);
-                                  window.setTimeout(
-                                    () => setPlayerLinkFailed(false),
-                                    1600,
-                                  );
-                                  return;
-                                }
-                                setPlayerLinkFailed(false);
-                                setCopiedPlayerId(player.id);
-                                window.setTimeout(
-                                  () => setCopiedPlayerId(null),
-                                  1600,
-                                );
+                              setPlayerLinkStatus({
+                                id: player.id,
+                                status: "idle",
+                              });
+                              copyTextWithFlash(url, (status) => {
+                                setPlayerLinkStatus({
+                                  id: player.id,
+                                  status,
+                                });
                               });
                             }}
                             onDetailsLoaded={(d) => {

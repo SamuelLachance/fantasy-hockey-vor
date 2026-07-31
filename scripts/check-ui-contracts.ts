@@ -46,6 +46,7 @@ const files: Record<string, string[]> = {
     "focusStatsFilterButton",
     "onCopyBoardLink",
   ],
+  "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
   "src/lib/board-dom.ts": ["focusStatsFilterButton", "rankings-stat-filters"],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": [
