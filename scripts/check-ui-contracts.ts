@@ -716,10 +716,17 @@ const files: Record<string, string[]> = {
     "dateTime",
     "scrollToRankings",
     "focusSearch: true",
+    "useLiveProjectionAge",
     "isProjectionStale",
     "HeaderStaleBanner",
     "HeaderRosterNote",
     "Jump to board + focus search",
+  ],
+  "src/hooks/useLiveProjectionAge.ts": [
+    "useLiveProjectionAge",
+    "projectionAgeDays",
+    "visibilitychange",
+    "new Date().toISOString()",
   ],
   "src/lib/header-copy.ts": [
     "headerEyebrowCopy",

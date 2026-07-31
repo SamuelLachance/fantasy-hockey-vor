@@ -8,6 +8,7 @@ import {
   isProjectionStale,
   isProjectionVeryStale,
 } from "@/lib/projection-age";
+import { useLiveProjectionAge } from "@/hooks/useLiveProjectionAge";
 import {
   headerEyebrowCopy,
   headerHeroTitle,
@@ -23,7 +24,7 @@ interface HeaderProps {
   playerCount: number;
   leagueTeams?: number;
   generatedAt?: string;
-  /** Precomputed age in days (from server) — avoids impure Date.now in render. */
+  /** Precomputed age in days (from build) — first paint; live age updates after mount. */
   projectionAgeDays?: number;
   projectionEngine?: string;
   aiModel?: string;
@@ -41,7 +42,7 @@ export function Header({
   const generatedLabel = generatedAt
     ? new Date(generatedAt).toISOString().slice(0, 10)
     : null;
-  const ageDays = projectionAgeDays;
+  const ageDays = useLiveProjectionAge(generatedAt, projectionAgeDays);
   const stale = isProjectionStale(ageDays);
   const veryStale = isProjectionVeryStale(ageDays);
   return (
