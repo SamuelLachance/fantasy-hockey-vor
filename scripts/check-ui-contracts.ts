@@ -47,6 +47,7 @@ const files: Record<string, string[]> = {
     "filteredRef",
     "focusStatsFilterButton",
     "onCopyBoardLink",
+    'e.key === "Home"',
   ],
   "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
   "src/lib/board-dom.ts": [
@@ -60,6 +61,7 @@ const files: Record<string, string[]> = {
     "Focus search",
     "Reset board view",
     "Copy board link",
+    "Scroll to top",
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",
