@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
+import { focusFirstStatFilterInput } from "@/lib/board-dom";
 import {
   isInvertedRangeBound,
   normalizeRangeInput,
@@ -59,7 +60,10 @@ export function RankingsStatFilters({
           {activeFilterCount > 0 && (
             <button
               type="button"
-              onClick={onClear}
+              onClick={() => {
+                onClear();
+                queueMicrotask(focusFirstStatFilterInput);
+              }}
               className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               <X className="h-3.5 w-3.5" />

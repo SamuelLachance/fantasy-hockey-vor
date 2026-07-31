@@ -1062,6 +1062,8 @@ const files: Record<string, string[]> = {
     "min-w-[2.75rem]",
     "inline-flex",
     "items-center",
+    "focusFirstStatFilterInput",
+    "queueMicrotask",
   ],
   "src/lib/stat-filters-copy.ts": [
     "statFiltersHintCopy",
