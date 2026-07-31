@@ -80,9 +80,19 @@ export function TopPlayers({
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6">
-        <div className="mb-4 flex items-center gap-2 text-emerald-400">
-          <Zap className="h-5 w-5" />
-          <h2 className="text-lg font-semibold text-white">Top Edge (undervalued)</h2>
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-emerald-400">
+            <Zap className="h-5 w-5" />
+            <h2 className="text-lg font-semibold text-white">
+              Top Edge (undervalued)
+            </h2>
+          </div>
+          <a
+            href="?sort=draftValue"
+            className="text-xs text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline"
+          >
+            Sort board
+          </a>
         </div>
         <p className="mb-3 text-xs text-slate-500">
           Consensus rank − model rank. Positive = model likes them more than
