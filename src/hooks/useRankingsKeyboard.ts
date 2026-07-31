@@ -151,6 +151,24 @@ export function useRankingsKeyboard({
         !e.ctrlKey &&
         !e.altKey &&
         !helpOpenNow &&
+        e.key === "End"
+      ) {
+        e.preventDefault();
+        const reduce = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        document.getElementById("rankings")?.scrollIntoView({
+          behavior: reduce ? "auto" : "smooth",
+          block: "start",
+        });
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
         (e.key === "r" || e.key === "R") &&
         onResetBoardRef.current
       ) {
