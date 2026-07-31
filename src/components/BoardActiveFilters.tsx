@@ -45,7 +45,9 @@ export function BoardActiveFilters({
         Object.entries(statRanges) as Array<
           [RangeKey, { min: string; max: string } | undefined]
         >
-      ).filter(([, b]) => b && (b.min.trim() !== "" || b.max.trim() !== ""))
+      ).filter(
+        ([, b]) => b && formatRangeChip(b.min ?? "", b.max ?? "") !== "",
+      )
     : [];
 
   const hasAnything =
