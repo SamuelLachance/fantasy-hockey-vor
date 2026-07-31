@@ -27,6 +27,7 @@ const files: Record<string, string[]> = {
     "RankingsBoardTable",
     "BoardShortcutsHelp",
     'from "./BoardShortcutsHelp"',
+    "searchQueryIsClearable",
     "RankingsBoardChrome",
     "RankingsStatusBar",
     "useHorizontalScrollShadow",
@@ -575,6 +576,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsSearchField.tsx": [
     "searchQueryNearCap",
     "searchQueryLengthLabel",
+    "searchQueryIsClearable",
     "searchFieldAriaLabel",
     "searchFieldPlaceholder",
     "clearSearchAriaLabel",
@@ -589,6 +591,7 @@ const files: Record<string, string[]> = {
     "SEARCH_NEAR_CAP_REMAINING",
     "searchQueryNearCap",
     "searchQueryLengthLabel",
+    "searchQueryIsClearable",
     "searchFieldAriaLabel",
     "searchFieldPlaceholder",
     "clearSearchAriaLabel",

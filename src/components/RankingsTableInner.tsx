@@ -4,6 +4,7 @@ import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { focusBoardSearch } from "@/lib/board-dom";
 import { visibleBoardPlayers } from "@/lib/board-visible";
+import { searchQueryIsClearable } from "@/lib/highlight-match";
 import { startTransition, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection } from "@/lib/types";
@@ -97,7 +98,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     onLoadMore: () => {
       if (canLoadMore) loadMore();
     },
-    hasQuery: board.query.trim() !== "",
+    hasQuery: searchQueryIsClearable(board.query),
     onClearSearch: () => {
       board.setQuery("");
       queueMicrotask(focusBoardSearch);

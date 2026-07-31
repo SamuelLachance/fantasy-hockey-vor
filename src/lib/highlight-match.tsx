@@ -40,6 +40,11 @@ export function clearSearchAriaLabel(): string {
   return "Clear search";
 }
 
+/** True when Clear / Esc should wipe the search field (includes whitespace-only). */
+export function searchQueryIsClearable(query: string): boolean {
+  return query.length > 0;
+}
+
 /** Case- and accent-insensitive highlight of every `query` occurrence. */
 export function highlightMatch(text: string, query: string): ReactNode {
   const q = query.trim().slice(0, HIGHLIGHT_QUERY_MAX);

@@ -8,6 +8,7 @@ import {
   highlightMatch,
   searchFieldAriaLabel,
   searchFieldPlaceholder,
+  searchQueryIsClearable,
   searchQueryLengthLabel,
   searchQueryNearCap,
 } from "../src/lib/highlight-match";
@@ -39,6 +40,9 @@ assert(searchQueryLengthLabel(12) === "12/48", "length label");
 assert(searchFieldAriaLabel().includes("players"), "search aria");
 assert(searchFieldPlaceholder().endsWith("..."), "placeholder");
 assert(clearSearchAriaLabel() === "Clear search", "clear aria");
+assert(searchQueryIsClearable("") === false, "empty not clearable");
+assert(searchQueryIsClearable("   ") === true, "whitespace clearable");
+assert(searchQueryIsClearable("a") === true, "text clearable");
 
 if (failed) process.exit(1);
 console.log("OK: highlight-match");
