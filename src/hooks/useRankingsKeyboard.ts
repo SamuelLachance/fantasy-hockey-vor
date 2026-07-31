@@ -42,16 +42,18 @@ export function useRankingsKeyboard({
   const setSortDirRef = useRef(setSortDir);
   const onResetBoardRef = useRef(onResetBoard);
 
-  filteredRef.current = filtered;
-  expandedIdRef.current = expandedId;
-  filtersOpenRef.current = filtersOpen;
-  helpOpenRef.current = helpOpen;
-  setExpandedIdRef.current = setExpandedId;
-  setFiltersOpenRef.current = setFiltersOpen;
-  setHelpOpenRef.current = setHelpOpen;
-  setSortKeyRef.current = setSortKey;
-  setSortDirRef.current = setSortDir;
-  onResetBoardRef.current = onResetBoard;
+  useEffect(() => {
+    filteredRef.current = filtered;
+    expandedIdRef.current = expandedId;
+    filtersOpenRef.current = filtersOpen;
+    helpOpenRef.current = helpOpen;
+    setExpandedIdRef.current = setExpandedId;
+    setFiltersOpenRef.current = setFiltersOpen;
+    setHelpOpenRef.current = setHelpOpen;
+    setSortKeyRef.current = setSortKey;
+    setSortDirRef.current = setSortDir;
+    onResetBoardRef.current = onResetBoard;
+  });
 
   useEffect(() => {
     function onKey(e: globalThis.KeyboardEvent) {
