@@ -649,10 +649,12 @@ const files: Record<string, string[]> = {
     "focusFirstStatFilterInput",
     "queueMicrotask",
     'aria-hidden="true"',
+    "min-h-11",
   ],
   "src/components/RankingsBoardLinkButton.tsx": [
     "boardLinkButtonLabel",
     "boardLinkTitle",
+    "min-h-11",
     "boardLinkAriaLabel",
     'aria-keyshortcuts="l"',
     'aria-live="polite"',
@@ -670,6 +672,7 @@ const files: Record<string, string[]> = {
     "helpOpen",
     "onOpenHelp",
     'aria-hidden="true"',
+    "min-h-11",
   ],
   "src/lib/board-help-copy.ts": [
     "boardHelpTitle",
@@ -698,6 +701,7 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="Shift+G"',
     "GOALIE_DEPTH_MAX_GP",
     "aria-pressed",
+    "min-h-11",
   ],
   "src/components/RankingsSearchField.tsx": [
     "searchQueryNearCap",
