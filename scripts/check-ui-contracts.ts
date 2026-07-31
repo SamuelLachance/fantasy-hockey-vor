@@ -263,7 +263,11 @@ const files: Record<string, string[]> = {
     "Back to rankings",
     "homeRankingsHref",
   ],
-  "src/app/loading.tsx": ["Loading rankings", "role=\"status\""],
+  "src/app/loading.tsx": [
+    "Loading rankings",
+    "role=\"status\"",
+    "Fantasy Hockey VOR",
+  ],
   "src/app/manifest.ts": ["Fantasy Hockey VOR", "categories", "standalone"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
