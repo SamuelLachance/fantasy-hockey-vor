@@ -6,6 +6,7 @@
   --ice: #38bdf8;
   --ice-dim: #0c4a6e;
   --board-safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --board-safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 @theme inline {

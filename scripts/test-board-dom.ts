@@ -10,6 +10,7 @@ import {
   BOARD_STICKY_THEAD_SELECTOR,
   BOARD_STICKY_TOP_CLASS,
   STICKY_NAME_SHADOW,
+  boardSafeAreaInsetBottom,
   boardSafeAreaInsetTop,
   boardStickyChromeHeight,
   boardStickyTopInset,
@@ -128,6 +129,11 @@ assert(
 );
 assert(typeof boardSafeAreaInsetTop === "function", "safe-area helper");
 assert(boardSafeAreaInsetTop(null) === 0, "safe-area null → 0");
+assert(
+  typeof boardSafeAreaInsetBottom === "function",
+  "safe-area bottom helper",
+);
+assert(boardSafeAreaInsetBottom(null) === 0, "safe-area bottom null → 0");
 assert(
   boardVisualViewportFrame(null).height === 0,
   "visualViewport null → empty frame",

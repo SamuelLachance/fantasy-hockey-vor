@@ -29,17 +29,30 @@ export const STICKY_NAME_BASE =
 export const BOARD_STICKY_TOP_CLASS =
   "top-[calc(var(--board-safe-area-inset-top,0px)+var(--board-sticky-chrome-height,0px))]" as const;
 
+function cssPxVar(
+  prop: string,
+  doc: { documentElement?: Element | null } | null,
+): number {
+  const root = doc?.documentElement;
+  if (!root || typeof getComputedStyle !== "function") return 0;
+  const n = Number.parseFloat(getComputedStyle(root).getPropertyValue(prop));
+  return Number.isFinite(n) ? n : 0;
+}
+
 /** Resolved safe-area top (px) for sticky scroll math. */
 export function boardSafeAreaInsetTop(
   doc: { documentElement?: Element | null } | null =
     typeof document !== "undefined" ? document : null,
 ): number {
-  const root = doc?.documentElement;
-  if (!root || typeof getComputedStyle !== "function") return 0;
-  const n = Number.parseFloat(
-    getComputedStyle(root).getPropertyValue("--board-safe-area-inset-top"),
-  );
-  return Number.isFinite(n) ? n : 0;
+  return cssPxVar("--board-safe-area-inset-top", doc);
+}
+
+/** Resolved safe-area bottom (px) for expand scroll / home-indicator clearance. */
+export function boardSafeAreaInsetBottom(
+  doc: { documentElement?: Element | null } | null =
+    typeof document !== "undefined" ? document : null,
+): number {
+  return cssPxVar("--board-safe-area-inset-bottom", doc);
 }
 
 /** Whether the user prefers reduced motion (SSR-safe → true). */
@@ -328,11 +341,15 @@ function scrollExpandedTargetIntoView(
     panel?.getBoundingClientRect(),
   );
   const frame = boardVisualViewportFrame();
+  const usableHeight = Math.max(
+    0,
+    frame.height - boardSafeAreaInsetBottom(),
+  );
   const delta = stickyAwareScrollDelta(
     bounds.top - frame.offsetTop,
     bounds.bottom - frame.offsetTop,
     boardStickyTopInset(),
-    frame.height,
+    usableHeight,
   );
   if (delta !== 0) {
     window.scrollBy({ top: delta, behavior });
