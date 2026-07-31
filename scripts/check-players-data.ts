@@ -175,7 +175,11 @@ if (boardBloat > 0) {
 }
 
 const playersBytes = readFileSync(PLAYERS_PATH).length;
-if (playersBytes > 1.3e6) {
+if (playersBytes > 1.5e6) {
+  errors.push(
+    `players.json is ${(playersBytes / 1e6).toFixed(2)}MB (max 1.5MB slim board) — re-run slim/regenerate`,
+  );
+} else if (playersBytes > 1.1e6) {
   warnings.push(
     `players.json is ${(playersBytes / 1e6).toFixed(2)}MB (target ≤1.0MB slim board)`,
   );
@@ -184,7 +188,11 @@ if (playersBytes > 1.3e6) {
 const detailsBytes = existsSync(DETAILS_PATH)
   ? readFileSync(DETAILS_PATH).length
   : 0;
-if (detailsBytes > 2.0e6) {
+if (detailsBytes > 2.5e6) {
+  errors.push(
+    `player-details.json is ${(detailsBytes / 1e6).toFixed(2)}MB (max 2.5MB)`,
+  );
+} else if (detailsBytes > 1.8e6) {
   warnings.push(
     `player-details.json is ${(detailsBytes / 1e6).toFixed(2)}MB (target ≤1.5MB)`,
   );
