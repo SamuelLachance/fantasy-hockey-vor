@@ -31,7 +31,7 @@ export function RankingsTableHead({
           sortDir={sortDir}
           onToggle={onToggleSort}
           onReset={onResetSort}
-          className={`sticky left-0 ${BOARD_STICKY_TOP_CLASS} z-[5] bg-slate-950/95 px-4 py-3`}
+          className={`sticky left-0 ${BOARD_STICKY_TOP_CLASS} z-[5] w-10 min-w-10 max-w-10 bg-slate-950/95 px-1 py-3 text-center sm:w-12 sm:min-w-12 sm:max-w-12`}
         />
         <SortHeader
           column="name"

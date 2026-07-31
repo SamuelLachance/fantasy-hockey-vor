@@ -99,7 +99,7 @@ export function RankingsPlayerRow({
         }`}
       >
         <td
-          className={`sticky left-0 z-[1] px-4 py-3 font-mono tabular-nums text-slate-400 ${stickyBg}`}
+          className={`sticky left-0 z-[1] w-10 min-w-10 max-w-10 px-1 py-3 text-center font-mono tabular-nums text-slate-400 sm:w-12 sm:min-w-12 sm:max-w-12 ${stickyBg}`}
         >
           {position === "ALL"
             ? player.rank

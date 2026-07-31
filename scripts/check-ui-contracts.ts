@@ -12,6 +12,7 @@ const files: Record<string, string[]> = {
     "Suspense",
     "loadingRankingsCopy",
     'role="status"',
+    'aria-busy="true"',
   ],
   "src/components/RankingsTableInner.tsx": [
     'id="rankings"',
@@ -196,6 +197,8 @@ const files: Record<string, string[]> = {
   "src/components/RankingsTableHead.tsx": [
     'column="sigma"',
     "sticky left-10",
+    "w-10 min-w-10 max-w-10",
+    "sm:w-12 sm:min-w-12 sm:max-w-12",
     "STICKY_NAME_SHADOW",
     "onResetSort",
     'scope="col"',
