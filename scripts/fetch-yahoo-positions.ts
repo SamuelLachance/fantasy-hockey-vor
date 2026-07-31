@@ -8,7 +8,9 @@ import {
   fetchYahooNhlGameKey,
   matchYahooToNhlIds,
   yahooAuthUrl,
+  type NhlMatchPlayer,
 } from "../src/lib/yahoo-fantasy";
+import type { Position } from "../src/lib/types";
 
 function loadEnvLocal(): void {
   const path = join(process.cwd(), ".env.local");
