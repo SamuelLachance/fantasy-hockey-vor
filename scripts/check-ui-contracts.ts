@@ -620,6 +620,8 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="Enter"',
     "normalizeRangeInput",
     "statFiltersHintCopy",
+    'role="region"',
+    "rankings-stat-filters-hint",
     'type="text"',
     "inputMode",
     "tabular-nums",

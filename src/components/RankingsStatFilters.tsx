@@ -29,12 +29,25 @@ export function RankingsStatFilters({
   return (
     <div
       id="rankings-stat-filters"
+      role="region"
+      aria-labelledby="rankings-stat-filters-title"
+      aria-describedby="rankings-stat-filters-hint"
       className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-lg"
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-white">Filter by stats</h3>
-          <p className="text-xs text-slate-500">{statFiltersHintCopy()}</p>
+          <h3
+            id="rankings-stat-filters-title"
+            className="text-sm font-semibold text-white"
+          >
+            Filter by stats
+          </h3>
+          <p
+            id="rankings-stat-filters-hint"
+            className="text-xs text-slate-500"
+          >
+            {statFiltersHintCopy()}
+          </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {activeFilterCount > 0 && (
