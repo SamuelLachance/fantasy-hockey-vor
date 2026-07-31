@@ -848,6 +848,8 @@ const files: Record<string, string[]> = {
     "buttonRef",
     "pointer-events-none",
     "scrollToTopVisible",
+    "visualViewport",
+    "pageTop",
     "motion-reduce:transition-none",
     "motion-reduce:backdrop-blur-none",
   ],

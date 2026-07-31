@@ -22,14 +22,25 @@ export function ScrollToTop() {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        const y = window.scrollY;
+        const vv = window.visualViewport;
+        const y =
+          vv && typeof vv.pageTop === "number"
+            ? vv.pageTop
+            : window.scrollY;
         setVisible((was) => scrollToTopVisible(y, was));
         ticking = false;
       });
     }
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const vv = window.visualViewport;
+    vv?.addEventListener("scroll", onScroll, { passive: true });
+    vv?.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      vv?.removeEventListener("scroll", onScroll);
+      vv?.removeEventListener("resize", onScroll);
+    };
   }, []);
 
   useEffect(() => {
