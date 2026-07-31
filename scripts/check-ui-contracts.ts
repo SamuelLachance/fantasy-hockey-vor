@@ -281,8 +281,10 @@ const files: Record<string, string[]> = {
   ],
   "src/components/ExpandedPlayerCategories.tsx": [
     "categoryZBarWidth",
+    "categoryZScoreLabel",
+    "categoryZMeterAriaLabel",
+    "categoryProjectionPrefix",
     "detailStatSigma",
-    "Proj:",
     'role="meter"',
     "aria-valuetext",
     "tabular-nums",
@@ -291,6 +293,9 @@ const files: Record<string, string[]> = {
     "categoryZBarWidth",
     "categorySigmaDigits",
     "categoryZMeterValue",
+    "categoryZScoreLabel",
+    "categoryZMeterAriaLabel",
+    "categoryProjectionPrefix",
   ],
   "src/components/ExpandedPlayerMeta.tsx": [
     "playerLinkButtonLabel",

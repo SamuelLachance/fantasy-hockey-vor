@@ -1,9 +1,12 @@
 import type { Category, PlayerProjection } from "@/lib/types";
-import { CATEGORY_LABELS, formatSigned, formatStat } from "@/lib/format";
+import { CATEGORY_LABELS, formatStat } from "@/lib/format";
 import {
+  categoryProjectionPrefix,
   categorySigmaDigits,
   categoryZBarWidth,
+  categoryZMeterAriaLabel,
   categoryZMeterValue,
+  categoryZScoreLabel,
 } from "@/lib/category-z-bar";
 import {
   detailStatSigma,
@@ -37,17 +40,17 @@ export function ExpandedPlayerCategories({
               <span
                 className={`tabular-nums ${z >= 0 ? "text-emerald-400" : "text-rose-400"}`}
               >
-                {formatSigned(z, { digits: 2, plusZero: true })} z
+                {categoryZScoreLabel(z)}
               </span>
             </div>
             <div
               className="h-2 overflow-hidden rounded-full bg-slate-800"
               role="meter"
-              aria-label={`${CATEGORY_LABELS[cat]} category z-score`}
+              aria-label={categoryZMeterAriaLabel(CATEGORY_LABELS[cat])}
               aria-valuemin={-4}
               aria-valuemax={4}
               aria-valuenow={categoryZMeterValue(z)}
-              aria-valuetext={`${formatSigned(z, { digits: 2, plusZero: true })} z`}
+              aria-valuetext={categoryZScoreLabel(z)}
             >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-[width] duration-300 motion-reduce:transition-none"
@@ -56,7 +59,7 @@ export function ExpandedPlayerCategories({
               />
             </div>
             <div className="mt-1 text-sm font-medium tabular-nums text-white">
-              Proj: {formatStat(player, cat)}
+              {categoryProjectionPrefix()} {formatStat(player, cat)}
               {sigma != null && cat !== "savePct" && (
                 <span className="ml-1 text-xs font-normal text-slate-500">
                   ±{sigma.toFixed(categorySigmaDigits(cat))}
