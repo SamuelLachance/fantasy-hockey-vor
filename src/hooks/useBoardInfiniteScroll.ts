@@ -34,6 +34,18 @@ export function expandVisibleFloor(
   return Math.min(filtered.length, idx + 1 + pageSize);
 }
 
+/** Next mounted-row count for this render (reset + expand floor applied). */
+export function resolveVisibleCount(opts: {
+  visibleCount: number;
+  pageSize: number;
+  reset: boolean;
+  expandFloor: number;
+}): number {
+  let next = opts.reset ? opts.pageSize : opts.visibleCount;
+  if (opts.expandFloor > next) next = opts.expandFloor;
+  return next;
+}
+
 interface BoardInfiniteScrollResult {
   loadMoreRef: RefObject<HTMLDivElement | null>;
   renderCount: number;
@@ -52,18 +64,23 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
   const [visibleCount, setVisibleCount] = useState(pageSize);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [prevToken, setPrevToken] = useState(resetToken);
-  if (resetToken !== prevToken) {
+  const reset = resetToken !== prevToken;
+  if (reset) {
     setPrevToken(resetToken);
-    setVisibleCount(pageSize);
   }
 
-  // Persist expand-driven growth so collapsing a deep row does not yank rows away.
   const expandFloor = expandVisibleFloor(filtered, expandedId, pageSize);
-  if (expandFloor > visibleCount) {
-    setVisibleCount(expandFloor);
+  // Persist expand-driven growth so collapsing a deep row does not yank rows away.
+  const renderCount = resolveVisibleCount({
+    visibleCount,
+    pageSize,
+    reset,
+    expandFloor,
+  });
+  if (renderCount !== visibleCount) {
+    setVisibleCount(renderCount);
   }
 
-  const renderCount = Math.max(visibleCount, expandFloor);
   const filteredLength = filtered.length;
   const canLoadMore = filteredLength > renderCount;
 

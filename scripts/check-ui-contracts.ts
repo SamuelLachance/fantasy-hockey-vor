@@ -428,6 +428,7 @@ const files: Record<string, string[]> = {
     "loadMore",
     "nextVisibleCount",
     "expandVisibleFloor",
+    "resolveVisibleCount",
     "collapsing a deep row does not yank",
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
@@ -453,6 +454,7 @@ const files: Record<string, string[]> = {
     "scheduleIdle",
     "fetchPlayerDetails",
     "expandedId == null || details != null",
+    "Stay silent on idle failure",
   ],
   "src/lib/schedule-idle.ts": [
     "scheduleIdle",

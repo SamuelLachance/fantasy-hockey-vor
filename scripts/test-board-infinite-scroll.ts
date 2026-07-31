@@ -6,6 +6,7 @@ import {
   BOARD_PAGE_SIZE,
   expandVisibleFloor,
   nextVisibleCount,
+  resolveVisibleCount,
 } from "../src/hooks/useBoardInfiniteScroll";
 
 let failed = 0;
@@ -27,6 +28,34 @@ assert(expandVisibleFloor(list, null, 100) === 0, "no expand floor");
 assert(expandVisibleFloor(list, 50, 100) === 150, "mid expand floor");
 assert(expandVisibleFloor(list, 999, 100) === 0, "missing id");
 assert(expandVisibleFloor(list, 240, 100) === 250, "near end clamps");
+
+assert(
+  resolveVisibleCount({
+    visibleCount: 400,
+    pageSize: 100,
+    reset: true,
+    expandFloor: 0,
+  }) === 100,
+  "reset snaps to page size same render",
+);
+assert(
+  resolveVisibleCount({
+    visibleCount: 400,
+    pageSize: 100,
+    reset: true,
+    expandFloor: 150,
+  }) === 150,
+  "reset still respects expand floor",
+);
+assert(
+  resolveVisibleCount({
+    visibleCount: 200,
+    pageSize: 100,
+    reset: false,
+    expandFloor: 0,
+  }) === 200,
+  "no reset keeps window",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-infinite-scroll");
