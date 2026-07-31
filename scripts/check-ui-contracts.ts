@@ -61,7 +61,12 @@ const files: Record<string, string[]> = {
     "scrollToRankings",
     "scrollExpandedRowIntoView",
   ],
-  "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
+  "src/lib/rankings-export.ts": [
+    "rankingsToJsonRows",
+    "rankingsCsvString",
+    "downloadRankingsCsv",
+    "downloadRankingsJson",
+  ],
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",
     "Focus search",

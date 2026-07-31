@@ -2,7 +2,11 @@
  * Unit checks for board JSON export rows.
  * Run: npx tsx scripts/test-rankings-export.ts
  */
-import { rankingsToJsonRows } from "../src/lib/rankings-export";
+import {
+  downloadRankingsCsv,
+  downloadRankingsJson,
+  rankingsToJsonRows,
+} from "../src/lib/rankings-export";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -31,6 +35,8 @@ assert(rows[0]!.rank === 2, "position rank");
 assert(rows[0]!.vor === 3.142, "vor rounded");
 assert(rows[0]!.sigma === 41.2, "sigma");
 assert(rows[0]!.edge === 4, "edge");
+assert(typeof downloadRankingsCsv === "function", "csv download helper");
+assert(typeof downloadRankingsJson === "function", "json download helper");
 
 if (failed) process.exit(1);
 console.log("OK: rankings-export");

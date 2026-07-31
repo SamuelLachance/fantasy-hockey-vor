@@ -3,10 +3,9 @@
 import { startTransition, type KeyboardEvent } from "react";
 import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import { downloadTextFile } from "@/lib/rankings-csv";
 import {
-  rankingsCsvString,
-  rankingsJsonString,
+  downloadRankingsCsv,
+  downloadRankingsJson,
 } from "@/lib/rankings-export";
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
@@ -148,14 +147,9 @@ export function RankingsToolbar({
           <button
             type="button"
             disabled={filtered.length === 0}
-            onClick={() => {
-              const stamp = new Date().toISOString().slice(0, 10);
-              downloadTextFile(
-                `vor-rankings-${position.toLowerCase()}-${stamp}.csv`,
-                rankingsCsvString(filtered, position, tableCategories),
-                "text/csv;charset=utf-8",
-              );
-            }}
+            onClick={() =>
+              downloadRankingsCsv(filtered, position, tableCategories)
+            }
             className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
             title="Download filtered rankings as CSV"
           >
@@ -165,14 +159,7 @@ export function RankingsToolbar({
           <button
             type="button"
             disabled={filtered.length === 0}
-            onClick={() => {
-              const stamp = new Date().toISOString().slice(0, 10);
-              downloadTextFile(
-                `vor-rankings-${position.toLowerCase()}-${stamp}.json`,
-                rankingsJsonString(filtered, position),
-                "application/json;charset=utf-8",
-              );
-            }}
+            onClick={() => downloadRankingsJson(filtered, position)}
             className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
             title="Download filtered rankings as JSON"
           >

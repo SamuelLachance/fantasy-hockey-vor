@@ -1,5 +1,5 @@
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import { rankingsToCsv } from "@/lib/rankings-csv";
+import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 
 export interface BoardExportRow {
   rank: number;
@@ -43,4 +43,31 @@ export function rankingsCsvString(
   categories: readonly Category[],
 ): string {
   return rankingsToCsv(players, position, categories);
+}
+
+function stamp(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function downloadRankingsCsv(
+  players: PlayerProjection[],
+  position: Position | "ALL",
+  categories: readonly Category[],
+): void {
+  downloadTextFile(
+    `vor-rankings-${position.toLowerCase()}-${stamp()}.csv`,
+    rankingsCsvString(players, position, categories),
+    "text/csv;charset=utf-8",
+  );
+}
+
+export function downloadRankingsJson(
+  players: PlayerProjection[],
+  position: Position | "ALL",
+): void {
+  downloadTextFile(
+    `vor-rankings-${position.toLowerCase()}-${stamp()}.json`,
+    rankingsJsonString(players, position),
+    "application/json;charset=utf-8",
+  );
 }
