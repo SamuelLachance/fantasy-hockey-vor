@@ -67,6 +67,8 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     position: board.position,
     query: board.deferredQuery,
     playerName: expandedPlayer?.name ?? null,
+    sortKey: board.sortKey,
+    sortDir: board.sortDir,
   });
 
   const tableScrollRef = useRef<HTMLDivElement | null>(null);

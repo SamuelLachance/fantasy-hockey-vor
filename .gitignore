@@ -39,3 +39,7 @@ next-env.d.ts
 src/data/ml/dataset.json
 # Raw per-season game logs (large; durability.json derived from them is committed)
 src/data/ml/gamelog-cache/
+
+# Local GH Pages static-serve mirror
+.serve-gh/
+
