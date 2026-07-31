@@ -2,6 +2,8 @@
  * Unit check: board scroll helpers / sticky shadow constant.
  * Run: npx tsx scripts/test-board-dom.ts
  */
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   BOARD_STICKY_CHROME_HEIGHT_VAR,
   BOARD_STICKY_CHROME_SELECTOR,
@@ -51,10 +53,12 @@ try {
   focusStatsFilterButton();
   focusFirstStatFilterInput();
   focusBoardSearch();
+  focusBoardSearch({ preventScroll: true });
   focusPlayerRow(1);
   focusPlayerRowIfPanelFocused(1);
   scrollPageTop();
   scrollToRankings();
+  scrollToRankings({ focusSearch: true });
   scrollExpandedRowIntoView(1);
 } catch (e) {
   assert(false, `board-dom helpers threw in Node: ${e}`);
@@ -141,6 +145,15 @@ withPinnedWindowScroll(() => {
   pinnedWrote = true;
 });
 assert(pinnedWrote, "withPinnedWindowScroll invokes write");
+
+const boardDomSrc = readFileSync(
+  join(process.cwd(), "src/lib/board-dom.ts"),
+  "utf8",
+);
+assert(
+  boardDomSrc.includes("focusBoardSearch({ preventScroll: true })"),
+  "scrollToRankings focusSearch uses preventScroll",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-dom");

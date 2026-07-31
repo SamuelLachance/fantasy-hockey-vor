@@ -383,6 +383,8 @@ const files: Record<string, string[]> = {
     "playerLinkTitle",
   ],
   "src/lib/board-dom.ts": [
+    "preventScroll: true",
+    "focusBoardSearch({ preventScroll",
     "focusStatsFilterButton",
     "focusFirstStatFilterInput",
     "focusBoardSearch",

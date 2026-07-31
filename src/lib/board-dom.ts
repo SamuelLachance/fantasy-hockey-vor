@@ -36,11 +36,11 @@ export function prefersReducedMotion(): boolean {
 }
 
 /** Focus the board search field. */
-export function focusBoardSearch(): void {
+export function focusBoardSearch(options?: { preventScroll?: boolean }): void {
   if (typeof document === "undefined") return;
   document
     .querySelector<HTMLInputElement>('#rankings input[type="search"]')
-    ?.focus();
+    ?.focus({ preventScroll: options?.preventScroll === true });
 }
 
 /** Focus a position filter tab (defaults to ALL). */
@@ -124,7 +124,8 @@ export function scrollToRankings(options?: { focusSearch?: boolean }): void {
     block: "start",
   });
   if (options?.focusSearch) {
-    queueMicrotask(focusBoardSearch);
+    // Do not let focus scroll fight the in-flight smooth scroll to #rankings.
+    queueMicrotask(() => focusBoardSearch({ preventScroll: true }));
   }
 }
 
