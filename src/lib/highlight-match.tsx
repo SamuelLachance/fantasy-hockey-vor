@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Fragment } from "react";
+import { foldSearchTextWithMap } from "@/lib/search-fold";
 
 /** Keep search highlight + input maxLength in sync. */
 export const HIGHLIGHT_QUERY_MAX = 48;
@@ -39,31 +40,40 @@ export function clearSearchAriaLabel(): string {
   return "Clear search";
 }
 
-/** Case-insensitive highlight of every `query` occurrence inside `text`. */
+/** Case- and accent-insensitive highlight of every `query` occurrence. */
 export function highlightMatch(text: string, query: string): ReactNode {
   const q = query.trim().slice(0, HIGHLIGHT_QUERY_MAX);
   if (!q) return text;
-  const lower = text.toLowerCase();
-  const needle = q.toLowerCase();
-  if (!lower.includes(needle)) return text;
+  const { folded, map } = foldSearchTextWithMap(text);
+  const needle = foldSearchTextWithMap(q).folded;
+  if (!needle || !folded.includes(needle)) return text;
 
   const parts: ReactNode[] = [];
-  let start = 0;
-  let idx = lower.indexOf(needle, start);
+  let startOrig = 0;
+  let foldedStart = 0;
+  let idx = folded.indexOf(needle, foldedStart);
   let key = 0;
   while (idx >= 0) {
-    if (idx > start) parts.push(text.slice(start, idx));
+    const matchOrigStart = map[idx]!;
+    const matchOrigEndExclusive =
+      idx + needle.length < map.length
+        ? map[idx + needle.length]!
+        : text.length;
+    if (matchOrigStart > startOrig) {
+      parts.push(text.slice(startOrig, matchOrigStart));
+    }
     parts.push(
       <mark
         key={`h-${key++}`}
         className="rounded-sm bg-cyan-500/25 px-0.5 text-inherit"
       >
-        {text.slice(idx, idx + needle.length)}
+        {text.slice(matchOrigStart, matchOrigEndExclusive)}
       </mark>,
     );
-    start = idx + needle.length;
-    idx = lower.indexOf(needle, start);
+    startOrig = matchOrigEndExclusive;
+    foldedStart = idx + needle.length;
+    idx = folded.indexOf(needle, foldedStart);
   }
-  if (start < text.length) parts.push(text.slice(start));
+  if (startOrig < text.length) parts.push(text.slice(startOrig));
   return <Fragment>{parts}</Fragment>;
 }

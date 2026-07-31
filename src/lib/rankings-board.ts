@@ -13,6 +13,7 @@ import {
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
+import { foldSearchText } from "@/lib/search-fold";
 
 export function boardCategories(position: Position | "ALL"): readonly Category[] {
   return position === "G"
@@ -81,7 +82,7 @@ export function filterAndSortBoard(
   players: PlayerProjection[],
   q: BoardQuery,
 ): PlayerProjection[] {
-  const needle = q.query.trim().toLowerCase();
+  const needle = foldSearchText(q.query.trim());
   const keys = boardFilterKeys(q.position);
   let list = players;
 
@@ -96,8 +97,8 @@ export function filterAndSortBoard(
   if (needle) {
     list = list.filter(
       (p) =>
-        p.name.toLowerCase().includes(needle) ||
-        p.team.toLowerCase().includes(needle),
+        foldSearchText(p.name).includes(needle) ||
+        foldSearchText(p.team).includes(needle),
     );
   }
 
