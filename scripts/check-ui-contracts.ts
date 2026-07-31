@@ -797,6 +797,8 @@ const files: Record<string, string[]> = {
     "prefersSaveData",
     "requestIdleCallback",
     "cancelIdleCallback",
+    "visibilityState",
+    "visibilitychange",
   ],
   "src/components/PositionFilterTabs.tsx": [
     'role="tablist"',

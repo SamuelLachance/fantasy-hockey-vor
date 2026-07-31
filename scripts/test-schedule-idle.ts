@@ -50,6 +50,31 @@ async function main() {
   assert(seenTimeout === 123, "ric receives timeout option");
   g.window = prevWindow;
 
+  let ranHidden = false;
+  const gDoc = globalThis as { document?: Document };
+  const prevDoc = gDoc.document;
+  let attached = false;
+  gDoc.document = {
+    visibilityState: "hidden",
+    addEventListener() {
+      attached = true;
+    },
+    removeEventListener() {
+      attached = false;
+    },
+  } as unknown as Document;
+  const cancelHidden = scheduleIdle(() => {
+    ranHidden = true;
+  }, 10);
+  await new Promise((r) => setTimeout(r, 30));
+  assert(ranHidden === false, "hidden tab defers idle");
+  assert(attached, "waits on visibilitychange");
+  cancelHidden();
+  assert(!attached, "cancel detaches visibility listener");
+  await new Promise((r) => setTimeout(r, 30));
+  assert(ranHidden === false, "cancel while hidden skips callback");
+  gDoc.document = prevDoc;
+
   if (failed) process.exit(1);
   console.log("OK: schedule-idle");
 }
