@@ -742,6 +742,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/SortIcon.tsx": [
     "ArrowUpDown",
+    "compact",
     'aria-hidden="true"',
   ],
   "src/components/SortHeader.tsx": [
@@ -749,7 +750,9 @@ const files: Record<string, string[]> = {
     "sortHeaderAriaLabel",
     "sortHeaderResetTitle",
     "aria-sort",
+    "compact",
   ],
+
   "src/lib/sort-header.ts": [
     "sortHeaderAriaSort",
     "sortHeaderAriaLabel",
