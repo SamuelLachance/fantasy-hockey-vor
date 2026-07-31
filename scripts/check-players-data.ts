@@ -116,6 +116,15 @@ if (goalieSavePcts.length >= 20 && uniqueSv.size < 5) {
   );
 }
 
+const topGoalie = [...players]
+  .filter((p) => p.isGoalie)
+  .sort((a, b) => b.vor - a.vor)[0];
+if (topGoalie && topGoalie.gamesPlayed < 35) {
+  warnings.push(
+    `top goalie ${topGoalie.name} has only ${topGoalie.gamesPlayed} GP — check tandem allocation`,
+  );
+}
+
 const yahooPos = players.filter((p) => p.positionSource === "yahoo").length;
 if (players.length > 500 && yahooPos < players.length * 0.9) {
   warnings.push(
