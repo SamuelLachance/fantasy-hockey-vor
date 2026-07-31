@@ -1282,6 +1282,8 @@ const files: Record<string, string[]> = {
   "src/app/globals.css": [
     "--board-safe-area-inset-top",
     "safe-area-inset-top",
+    "100dvh",
+    "touch-action: manipulation",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",

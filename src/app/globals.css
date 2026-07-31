@@ -23,6 +23,17 @@ body {
     radial-gradient(ellipse 80% 50% at 50% -20%, rgba(56, 189, 248, 0.12), transparent),
     linear-gradient(to bottom, #020617, #0f172a);
   min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Drop legacy double-tap zoom delay on interactive controls. */
+a,
+button,
+[role="button"],
+input,
+label,
+summary {
+  touch-action: manipulation;
 }
 
 ::selection {
