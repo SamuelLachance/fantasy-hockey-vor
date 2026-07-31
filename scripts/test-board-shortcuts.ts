@@ -56,6 +56,12 @@ assert(
   BOARD_SHORTCUT_ROWS.some((r) => r.keys === "p"),
   "p in catalogue",
 );
+assert(
+  BOARD_SHORTCUT_ROWS.some((r) => r.keys === "PgDn / PgUp"),
+  "page jump in catalogue",
+);
+assert(boardShortcutsFooterChip().includes("PgUp/PgDn"), "footer has page jump");
+assert(boardShortcutsStatusCopy().includes("PageUp/PageDown"), "status page jump");
 assert(boardShortcutsFooterChip().includes("· p ·"), "footer chip has p");
 
 const keys = BOARD_SHORTCUT_ROWS.map((r) => r.keys);

@@ -3,11 +3,13 @@
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
 import {
+  BOARD_PAGE_JUMP,
   boardKeyboardNavIds,
   isBoardImeComposing,
   isBoardTypingTarget,
   nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
+  nextExpandedPlayerIdByStep,
   shouldIgnoreBoardShortcut,
 } from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
@@ -246,7 +248,9 @@ export function useRankingsKeyboard({
         e.key !== "j" &&
         e.key !== "k" &&
         e.key !== "ArrowDown" &&
-        e.key !== "ArrowUp"
+        e.key !== "ArrowUp" &&
+        e.key !== "PageDown" &&
+        e.key !== "PageUp"
       ) {
         return;
       }
@@ -256,9 +260,20 @@ export function useRankingsKeyboard({
         renderCountRef.current,
         expandedIdNow,
       );
+      const pageJump =
+        e.key === "PageDown" || e.key === "PageUp";
       const direction =
-        e.key === "j" || e.key === "ArrowDown" ? (1 as const) : (-1 as const);
-      const nextId = nextExpandedPlayerId(ids, expandedIdNow, direction);
+        e.key === "j" || e.key === "ArrowDown" || e.key === "PageDown"
+          ? (1 as const)
+          : (-1 as const);
+      const nextId = pageJump
+        ? nextExpandedPlayerIdByStep(
+            ids,
+            expandedIdNow,
+            direction,
+            BOARD_PAGE_JUMP,
+          )
+        : nextExpandedPlayerId(ids, expandedIdNow, direction);
       if (nextId != null) setExpandedIdRef.current(nextId);
     }
     window.addEventListener("keydown", onKey);

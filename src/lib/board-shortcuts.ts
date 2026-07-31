@@ -20,6 +20,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "Esc", action: "Clear search / close help / filters / row" },
   { keys: "j / ↓", action: "Next player (opens first if none)" },
   { keys: "k / ↑", action: "Previous player (opens last if none)" },
+  { keys: "PgDn / PgUp", action: "Jump 10 players down / up" },
   { keys: "Enter / Space", action: "Expand / collapse focused row" },
   { keys: "Double-click header", action: "Reset sort to VOR" },
 ];
@@ -37,7 +38,7 @@ export function boardShortcutsFaqAnswer(): string {
   return (
     "Press ? for the full list. Highlights: / search, f filters, r reset, l copy board link, " +
     "p copy expanded player link, m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
-    "j/k move rows, Enter/Space expand, v/e/u/g sort, Shift+G toggle starter goalies."
+    "j/k move rows, PageUp/PageDown jump 10, Enter/Space expand, v/e/u/g sort, Shift+G toggle starter goalies."
   );
 }
 
@@ -46,12 +47,12 @@ export function boardShortcutsStatusCopy(): string {
   return (
     "Press / to focus search, f filters, r reset, l copy link, p player link, m load more, [ / ] positions, Home/End navigate, " +
     "? for shortcuts. Esc clears search or closes help/filters then the open row; j/k or ↑/↓ move " +
-    "(opens first/last if none). Shift+G toggles Starters / All goalies. " +
+    "(opens first/last if none); PageUp/PageDown jump 10. Shift+G toggles Starters / All goalies. " +
     "v/e/u/g sorts by VOR / Edge / Σσ / GP."
   );
 }
 
 /** Compact site footer chip for board hotkeys. */
 export function boardShortcutsFooterChip(): string {
-  return "board: / · f · r · l · p · m · [/] · Home/End · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link";
+  return "board: / · f · r · l · p · m · [/] · Home/End · PgUp/PgDn · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link";
 }

@@ -4,7 +4,21 @@ export function nextExpandedPlayerId(
   expandedId: number | null,
   direction: 1 | -1,
 ): number | null {
+  return nextExpandedPlayerIdByStep(playerIds, expandedId, direction, 1);
+}
+
+/** Rows skipped by PageUp / PageDown on the board. */
+export const BOARD_PAGE_JUMP = 10;
+
+/** Jump several rows for PageUp / PageDown (clamped to list ends). */
+export function nextExpandedPlayerIdByStep(
+  playerIds: readonly number[],
+  expandedId: number | null,
+  direction: 1 | -1,
+  step: number,
+): number | null {
   if (playerIds.length === 0) return null;
+  const stride = Math.max(1, Math.floor(step));
   if (expandedId == null) {
     return direction > 0 ? playerIds[0]! : playerIds[playerIds.length - 1]!;
   }
@@ -12,8 +26,10 @@ export function nextExpandedPlayerId(
   if (idx < 0) {
     return direction > 0 ? playerIds[0]! : playerIds[playerIds.length - 1]!;
   }
-  const next = idx + direction;
-  if (next < 0 || next >= playerIds.length) return expandedId;
+  const next = Math.max(
+    0,
+    Math.min(playerIds.length - 1, idx + direction * stride),
+  );
   return playerIds[next]!;
 }
 

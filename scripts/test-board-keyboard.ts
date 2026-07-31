@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/test-board-keyboard.ts
  */
 import {
+  BOARD_PAGE_JUMP,
   boardKeyboardNavIds,
   isBoardChromeTarget,
   isBoardImeComposing,
@@ -10,6 +11,7 @@ import {
   isBoardTypingTarget,
   nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
+  nextExpandedPlayerIdByStep,
   shouldIgnoreBoardShortcut,
 } from "../src/lib/board-keyboard";
 
@@ -32,6 +34,21 @@ assert(nextExpandedPlayerId(ids, 10, -1) === 10, "k at first stays");
 assert(nextExpandedPlayerId(ids, 30, 1) === 30, "j at last stays");
 assert(nextExpandedPlayerId(ids, 999, 1) === 10, "missing id → first");
 assert(nextExpandedPlayerId(ids, 999, -1) === 30, "missing id → last");
+assert(BOARD_PAGE_JUMP === 10, "page jump size");
+assert(
+  nextExpandedPlayerIdByStep([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 1, 1, 10) ===
+    11,
+  "PageDown jumps 10",
+);
+assert(
+  nextExpandedPlayerIdByStep([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], 11, -1, 10) ===
+    1,
+  "PageUp jumps 10",
+);
+assert(
+  nextExpandedPlayerIdByStep(ids, 10, 1, 10) === 30,
+  "PageDown clamps to last",
+);
 assert(isBoardRowToggleKey("Enter"), "Enter toggles");
 assert(isBoardRowToggleKey(" "), "Space toggles");
 assert(!isBoardRowToggleKey("a"), "letter no toggle");

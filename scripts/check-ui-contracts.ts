@@ -155,6 +155,8 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/board-keyboard.ts": [
     "nextExpandedPlayerId",
+    "nextExpandedPlayerIdByStep",
+    "BOARD_PAGE_JUMP",
     "isBoardRowToggleKey",
     "isBoardTypingTarget",
     "isBoardChromeTarget",
@@ -232,6 +234,8 @@ const files: Record<string, string[]> = {
     'e.key === "Home"',
     'e.key === "End"',
     "nextExpandedPlayerId",
+    "nextExpandedPlayerIdByStep",
+    "BOARD_PAGE_JUMP",
     "boardKeyboardNavIds",
     "nextBoardEscapeTypingAction",
     "shouldIgnoreBoardShortcut",
@@ -243,6 +247,7 @@ const files: Record<string, string[]> = {
     "onClearSearch",
     "onCyclePosition",
     'e.key === "G"',
+    'e.key === "PageDown"',
     'e.key === "m"',
     'e.key === "p"',
     'e.key === "["',
@@ -277,6 +282,7 @@ const files: Record<string, string[]> = {
     "Load more rows",
     "Copy expanded player link",
     "Previous / next position tab",
+    "PgDn / PgUp",
   ],
   "src/lib/copy-flash.ts": [
     "copyTextWithFlash",
