@@ -52,6 +52,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsBoardChrome.tsx": [
     'aria-label="Board filters"',
     "motion-reduce:backdrop-blur-none",
+    "motion-reduce:bg-slate-950",
     "BoardActiveFilters",
     "RankingsToolbar",
   ],
