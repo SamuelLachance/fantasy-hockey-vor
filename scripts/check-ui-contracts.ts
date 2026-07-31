@@ -256,9 +256,14 @@ const files: Record<string, string[]> = {
   ],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": [
-    "requestIdleCallback",
+    "scheduleIdle",
     "fetchPlayerDetails",
     "expandedId == null || details != null",
+  ],
+  "src/lib/schedule-idle.ts": [
+    "scheduleIdle",
+    "requestIdleCallback",
+    "cancelIdleCallback",
   ],
   "src/components/PositionFilterTabs.tsx": [
     'role="tablist"',

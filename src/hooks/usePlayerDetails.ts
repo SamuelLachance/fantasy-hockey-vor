@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { fetchPlayerDetails } from "@/lib/player-details-client";
+import { scheduleIdle } from "@/lib/schedule-idle";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 
 interface PlayerDetailsState {
@@ -20,20 +21,7 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
   const [detailsError, setDetailsError] = useState(false);
 
   useEffect(() => {
-    const ric =
-      window.requestIdleCallback ??
-      ((cb: IdleRequestCallback) =>
-        window.setTimeout(
-          () =>
-            cb({
-              didTimeout: false,
-              timeRemaining: () => 0,
-            } as IdleDeadline),
-          200,
-        ));
-    const cancel =
-      window.cancelIdleCallback ?? ((id: number) => window.clearTimeout(id));
-    const id = ric(() => {
+    return scheduleIdle(() => {
       void fetchPlayerDetails()
         .then((d) => {
           setDetailsError(false);
@@ -41,7 +29,6 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
         })
         .catch(() => setDetailsError(true));
     });
-    return () => cancel(id as number);
   }, []);
 
   useEffect(() => {
