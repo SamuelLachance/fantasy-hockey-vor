@@ -10,12 +10,19 @@ const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
     "RankingsTableInner",
     "Suspense",
-    "loadingRankingsCopy",
-    'role="status"',
-    'aria-busy="true"',
+    "RankingsLoadingStatus",
     'id="rankings"',
     "rankings-heading",
     "VOR rankings",
+  ],
+  "src/components/RankingsLoadingStatus.tsx": [
+    "BrandEyebrow",
+    "loadingRankingsCopy",
+    'role="status"',
+    'aria-busy="true"',
+    "animate-pulse",
+    "motion-reduce:animate-none",
+    "aria-hidden",
   ],
   "src/components/RankingsTableInner.tsx": [
     "usePlayerDetails",
@@ -998,10 +1005,7 @@ const files: Record<string, string[]> = {
     "useEffect",
   ],
   "src/app/loading.tsx": [
-    "loadingRankingsCopy",
-    'role="status"',
-    'aria-busy="true"',
-    "BrandEyebrow",
+    "RankingsLoadingStatus",
   ],
   "src/lib/app-shell-copy.ts": [
     "loadingRankingsCopy",
