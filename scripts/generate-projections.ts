@@ -437,6 +437,16 @@ async function main() {
       )
       .join("\n"),
   );
+  const topG = ranked.filter((p) => p.isGoalie).slice(0, 5);
+  console.log(
+    "Top 5 G:",
+    topG
+      .map(
+        (p) =>
+          `${p.rank}. ${p.name} (${p.team}) GP ${p.gamesPlayed} VOR ${p.vor.toFixed(2)}`,
+      )
+      .join("\n"),
+  );
 }
 
 main().catch((e) => {
