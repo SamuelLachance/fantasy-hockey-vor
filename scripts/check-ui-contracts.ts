@@ -259,6 +259,7 @@ const files: Record<string, string[]> = {
     'role="status"',
     'keyshortcuts="Escape"',
     "emptyBoardRecoveryFlags",
+    "text-slate-400",
   ],
   "src/components/EmptyAction.tsx": [
     "EmptyAction",
