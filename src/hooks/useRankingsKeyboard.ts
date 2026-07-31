@@ -143,16 +143,29 @@ export function useRankingsKeyboard({
         return;
       }
 
-      if (ignoreBoard || e.metaKey || e.ctrlKey || e.altKey) return;
-
-      if (e.key === "/") {
+      // / and f work from toolbar chrome (e.g. Stats after Esc) but not while typing/help.
+      if (
+        !typing &&
+        !helpOpenNow &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        e.key === "/"
+      ) {
         e.preventDefault();
         document
           .querySelector<HTMLInputElement>('#rankings input[type="search"]')
           ?.focus();
         return;
       }
-      if (e.key === "f" || e.key === "F") {
+      if (
+        !typing &&
+        !helpOpenNow &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        (e.key === "f" || e.key === "F")
+      ) {
         e.preventDefault();
         setFiltersOpenRef.current((open) => {
           const next = !open;
@@ -169,6 +182,9 @@ export function useRankingsKeyboard({
         });
         return;
       }
+
+      if (ignoreBoard || e.metaKey || e.ctrlKey || e.altKey) return;
+
       if (e.key === "Home") {
         e.preventDefault();
         scrollPageTop();

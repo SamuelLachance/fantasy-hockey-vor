@@ -201,6 +201,7 @@ const files: Record<string, string[]> = {
   "src/lib/board-status.ts": ["boardShowingSummary", "formatCount"],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',
+    "!helpOpenNow",
     "ArrowDown",
     "BOARD_SORT_HOTKEYS",
     "onResetBoard",
@@ -566,6 +567,7 @@ const files: Record<string, string[]> = {
     "attempt < 2",
     "playerDetailsHref",
     "normalizePlayerDetailsPayload",
+    'credentials: "omit"',
   ],
   "src/app/layout.tsx": [
     "keywords",
