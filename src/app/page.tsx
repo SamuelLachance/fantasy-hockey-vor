@@ -3,6 +3,7 @@ import { RankingsTable } from "@/components/RankingsTable";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
+import { boardShortcutsFooterChip } from "@/lib/board-shortcuts";
 import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
 import { rankingsJsonLd } from "@/lib/seo-jsonld";
 import { playerDetailsHref } from "@/lib/site";
@@ -67,7 +68,7 @@ export default function HomePage() {
         </a>
         <span className="mx-2 text-slate-700">·</span>
         <span className="text-slate-600">
-          board: / · f · r · l · Home/End · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link
+          {boardShortcutsFooterChip()}
         </span>
         <span className="mx-2 text-slate-700">·</span>
         <span className="text-slate-600">

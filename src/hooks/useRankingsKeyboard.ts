@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
 import { nextExpandedPlayerId } from "@/lib/board-keyboard";
+import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
 import { focusStatsFilterButton, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
@@ -207,13 +208,7 @@ export function useRankingsKeyboard({
         !e.shiftKey &&
         !helpOpenNow
       ) {
-        const sortHotkeys: Record<string, SortKey> = {
-          v: "vor",
-          e: "draftValue",
-          u: "sigma",
-          g: "gamesPlayed",
-        };
-        const sortKey = sortHotkeys[e.key.toLowerCase()];
+        const sortKey = BOARD_SORT_HOTKEYS[e.key.toLowerCase()];
         if (sortKey) {
           e.preventDefault();
           setSortKeyRef.current(sortKey);

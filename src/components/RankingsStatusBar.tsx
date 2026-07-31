@@ -1,4 +1,5 @@
 import { formatCount } from "@/lib/format";
+import { boardShortcutsStatusCopy } from "@/lib/board-shortcuts";
 
 interface RankingsStatusBarProps {
   renderCount: number;
@@ -20,10 +21,7 @@ export function RankingsStatusBar({
       Showing {formatCount(Math.min(renderCount, filteredCount))} of{" "}
       {formatCount(filteredCount)} matching players (
       {formatCount(totalCount)} total). Click or Enter/Space a row for category
-      breakdown. Click column headers to sort. Press / to focus search, r to
-      reset, l to copy link, Home/End to navigate, ? for shortcuts. Esc closes
-      help/filters then the open row; j/k or ↑/↓ move (opens first/last if
-      none). Shift+G toggles Starters / All goalies.
+      breakdown. Click column headers to sort. {boardShortcutsStatusCopy()}
     </p>
   );
 }

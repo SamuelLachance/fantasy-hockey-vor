@@ -1,28 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { BOARD_SHORTCUT_ROWS } from "@/lib/board-shortcuts";
 
 interface BoardShortcutsHelpProps {
   open: boolean;
   onClose: () => void;
 }
-
-const ROWS: Array<{ keys: string; action: string }> = [
-  { keys: "/", action: "Focus search" },
-  { keys: "f", action: "Toggle stat filters" },
-  { keys: "r", action: "Reset board view" },
-  { keys: "l", action: "Copy board link" },
-  { keys: "Home", action: "Scroll to top" },
-  { keys: "End", action: "Jump to board + focus search" },
-  { keys: "Shift+G", action: "Toggle Starters / All goalies" },
-  { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
-  { keys: "?", action: "Toggle this help" },
-  { keys: "Esc", action: "Close help / filters / row" },
-  { keys: "j / ↓", action: "Next player (opens first if none)" },
-  { keys: "k / ↑", action: "Previous player (opens last if none)" },
-  { keys: "Enter / Space", action: "Expand / collapse focused row" },
-  { keys: "Double-click header", action: "Reset sort to VOR" },
-];
 
 export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
   const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -91,7 +75,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
           </button>
         </div>
         <ul className="space-y-2 text-sm">
-          {ROWS.map((row) => (
+          {BOARD_SHORTCUT_ROWS.map((row) => (
             <li
               key={row.keys}
               className="flex items-center justify-between gap-4 border-b border-white/5 pb-2 last:border-0"
