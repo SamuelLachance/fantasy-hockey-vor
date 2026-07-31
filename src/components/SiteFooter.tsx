@@ -6,6 +6,8 @@ import {
 import {
   FOOTER_SOURCE_HREF,
   footerDraftableCopy,
+  footerGeneratedPrefixCopy,
+  footerNhlApiCopy,
   footerSourceLinkCopy,
   footerSourceLinkTitle,
 } from "@/lib/site-footer";
@@ -26,7 +28,7 @@ export function SiteFooter({
 }: SiteFooterProps) {
   return (
     <footer className="border-t border-white/10 py-6 pb-[max(1.5rem,env(safe-area-inset-bottom,0px))] text-center text-xs text-slate-400">
-      Projections generated{" "}
+      {footerGeneratedPrefixCopy()}{" "}
       <time dateTime={generatedAt}>
         {new Date(generatedAt).toISOString().slice(0, 10)}
       </time>{" "}
@@ -34,7 +36,7 @@ export function SiteFooter({
       {formatProjectionEngine(
         projectionEngine ?? DEFAULT_PROJECTION_ENGINE,
       )}{" "}
-      · NHL API
+      · {footerNhlApiCopy()}
       {" · "}
       <a
         href={FOOTER_SOURCE_HREF}

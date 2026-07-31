@@ -1,5 +1,15 @@
 import { formatCount } from "@/lib/format";
 
+/** Leading provenance phrase before the generated date. */
+export function footerGeneratedPrefixCopy(): string {
+  return "Projections generated";
+}
+
+/** Data-source chip after the projection engine label. */
+export function footerNhlApiCopy(): string {
+  return "NHL API";
+}
+
 /** Trailing footer chip for draftable pool size. */
 export function footerDraftableCopy(playerCount: number): string {
   return `${formatCount(playerCount)} draftable`;

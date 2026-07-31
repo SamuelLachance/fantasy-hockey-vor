@@ -5,6 +5,8 @@
 import {
   FOOTER_SOURCE_HREF,
   footerDraftableCopy,
+  footerGeneratedPrefixCopy,
+  footerNhlApiCopy,
   footerSourceLinkCopy,
   footerSourceLinkTitle,
 } from "../src/lib/site-footer";
@@ -18,6 +20,11 @@ function assert(cond: boolean, msg: string) {
 }
 
 assert(footerDraftableCopy(1311) === "1,311 draftable", "draftable count");
+assert(
+  footerGeneratedPrefixCopy() === "Projections generated",
+  "generated prefix",
+);
+assert(footerNhlApiCopy() === "NHL API", "nhl api chip");
 assert(footerSourceLinkCopy() === "GitHub", "source label");
 assert(
   footerSourceLinkTitle() === "View source on GitHub",
