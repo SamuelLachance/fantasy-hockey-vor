@@ -9,7 +9,11 @@ import {
   findUnderloadedGoalieTeams,
   topGoalieGpTooLow,
 } from "../src/lib/goalie-tandem-guards";
-import { loadInactivePlayerIds, inactiveFileIssues } from "../src/lib/inactive-players";
+import {
+  loadInactivePlayerIds,
+  inactiveFileIssues,
+  loadInactivePlayersFile,
+} from "../src/lib/inactive-players";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -119,6 +123,20 @@ if (inactiveOnBoard.length > 0) {
       .slice(0, 3)
       .map((p) => p.name)
       .join(", ")}) — run drop-inactive-players or regenerate`,
+  );
+}
+const inactiveNames = new Set(
+  (loadInactivePlayersFile().names ?? []).map((n) => n.trim().toLowerCase()),
+);
+const inactiveNameHits = players.filter((p) =>
+  inactiveNames.has(p.name.trim().toLowerCase()),
+);
+if (inactiveNameHits.length > 0) {
+  errors.push(
+    `${inactiveNameHits.length} board name(s) match inactive denylist (e.g. ${inactiveNameHits
+      .slice(0, 3)
+      .map((p) => p.name)
+      .join(", ")}) — id drift or missed drop`,
   );
 }
 
