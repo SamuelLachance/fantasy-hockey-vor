@@ -176,7 +176,6 @@ const files: Record<string, string[]> = {
     "scrollToRankings",
     "focusSearch: true",
   ],
-  "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
   "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],
   "src/app/loading.tsx": ["Loading rankings", "role=\"status\""],

@@ -19,11 +19,12 @@ function withFlashTimeout(run: () => void): Promise<void> {
       fn: () => void,
     ) => {
       fn();
+      (globalThis as { setTimeout: typeof setTimeout }).setTimeout =
+        realTimeout;
       resolve();
       return 0 as unknown as ReturnType<typeof setTimeout>;
     }) as typeof setTimeout;
     run();
-    (globalThis as { setTimeout: typeof setTimeout }).setTimeout = realTimeout;
   });
 }
 
