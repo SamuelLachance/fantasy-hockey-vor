@@ -9,11 +9,7 @@ import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import { clampSkaterProjection } from "../src/lib/projection-sanity";
 import { applyVor } from "../src/lib/vor";
-import type {
-  Category,
-  PlayerProjection,
-  ProjectionsDataset,
-} from "../src/lib/types";
+import type { Category, ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS = join(process.cwd(), "src", "data", "players.json");
 const DETAILS = join(process.cwd(), "public", "player-details.json");
