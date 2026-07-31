@@ -35,7 +35,7 @@ export function RankingsStatsFilterButton({
           : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
       }`}
     >
-      <Filter className="h-4 w-4" />
+      <Filter className="h-4 w-4" aria-hidden="true" />
       {statsFilterButtonLabel()}
       {activeFilterCount > 0 && (
         <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-950">

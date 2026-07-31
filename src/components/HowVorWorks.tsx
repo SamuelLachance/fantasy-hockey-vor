@@ -35,7 +35,7 @@ export function HowVorWorks({
       className="[content-visibility:auto] [contain-intrinsic-size:auto_22rem] rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3"
     >
       <div className="mb-4 flex items-center gap-2 text-emerald-400">
-        <Shield className="h-5 w-5" />
+        <Shield className="h-5 w-5" aria-hidden="true" />
         <h2
           id="how-vor-works-title"
           className="text-lg font-semibold text-white"
@@ -45,19 +45,19 @@ export function HowVorWorks({
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
-          <Zap className="mb-2 h-5 w-5 text-cyan-400" />
+          <Zap className="mb-2 h-5 w-5 text-cyan-400" aria-hidden="true" />
           <h3 className="font-medium text-white">{howVorZScoreTitleCopy()}</h3>
           <p className="mt-1 text-sm text-slate-400">{howVorZScoreCopy()}</p>
         </div>
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
-          <Target className="mb-2 h-5 w-5 text-cyan-400" />
+          <Target className="mb-2 h-5 w-5 text-cyan-400" aria-hidden="true" />
           <h3 className="font-medium text-white">{howVorReplacementTitleCopy()}</h3>
           <p className="mt-1 text-sm text-slate-400">
             {howVorReplacementCopy(teams, league.roster)}
           </p>
         </div>
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
-          <Trophy className="mb-2 h-5 w-5 text-cyan-400" />
+          <Trophy className="mb-2 h-5 w-5 text-cyan-400" aria-hidden="true" />
           <h3 className="font-medium text-white">{howVorYahooPositionsTitleCopy()}</h3>
           <p className="mt-1 text-sm text-slate-400">
             {howVorYahooPositionsCopy()}

@@ -26,7 +26,7 @@ export function RankingsHelpButton({
       aria-expanded={helpOpen}
       aria-controls={helpOpen ? BOARD_SHORTCUTS_DIALOG_ID : undefined}
     >
-      <CircleHelp className="h-4 w-4" />
+      <CircleHelp className="h-4 w-4" aria-hidden="true" />
     </button>
   );
 }

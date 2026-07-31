@@ -261,6 +261,7 @@ const files: Record<string, string[]> = {
     "All goalies",
     "showingAllGoalies",
     "focusAfterActiveFilterClear",
+    'aria-hidden="true"',
   ],
   "src/lib/board-active-filter-chips.ts": [
     "boardActiveStatChips",
@@ -598,6 +599,7 @@ const files: Record<string, string[]> = {
     "statsFilterButtonLabel",
     "focusFirstStatFilterInput",
     "queueMicrotask",
+    'aria-hidden="true"',
   ],
   "src/components/RankingsBoardLinkButton.tsx": [
     "boardLinkButtonLabel",
@@ -617,6 +619,7 @@ const files: Record<string, string[]> = {
     "BOARD_SHORTCUTS_DIALOG_ID",
     "helpOpen",
     "onOpenHelp",
+    'aria-hidden="true"',
   ],
   "src/lib/board-help-copy.ts": [
     "boardHelpTitle",
@@ -648,6 +651,7 @@ const files: Record<string, string[]> = {
     "autoComplete",
     'aria-keyshortcuts="Slash"',
     "focusBoardSearch",
+    'aria-hidden="true"',
   ],
   "src/lib/highlight-match.tsx": [
     "HIGHLIGHT_QUERY_MAX",
@@ -927,6 +931,7 @@ const files: Record<string, string[]> = {
     "isProjectionStale",
     "HeaderStaleBanner",
     "HeaderRosterNote",
+    'aria-hidden="true"',
     "Jump to board + focus search",
     "safe-area-inset-top",
   ],
@@ -1098,6 +1103,7 @@ const files: Record<string, string[]> = {
     "howVorZScoreTitleCopy",
     "howVorReplacementTitleCopy",
     "howVorYahooPositionsTitleCopy",
+    'aria-hidden="true"',
     "how-vor-works-title",
     "aria-labelledby",
     "content-visibility:auto",
@@ -1134,6 +1140,7 @@ const files: Record<string, string[]> = {
     "TopLeadersCard",
     "accentClass",
     "headerExtra",
+    'aria-hidden="true"',
     "aria-labelledby",
     "top-leaders-",
   ],
@@ -1178,6 +1185,7 @@ const files: Record<string, string[]> = {
     "rankings-stat-filters-hint",
     'type="text"',
     "inputMode",
+    'aria-hidden="true"',
     "tabular-nums",
     "min-h-11",
     "min-w-[2.75rem]",

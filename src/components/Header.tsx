@@ -61,7 +61,7 @@ export function Header({
       <div className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
       <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 text-cyan-400">
-          <Snowflake className="h-5 w-5" />
+          <Snowflake className="h-5 w-5" aria-hidden="true" />
           <span className="text-sm font-medium uppercase tracking-[0.2em]">
             {headerEyebrowCopy()}
           </span>

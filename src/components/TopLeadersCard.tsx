@@ -32,7 +32,9 @@ export function TopLeadersCard({
     >
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className={`flex items-center gap-2 ${accentClass}`}>
-          {icon}
+          <span aria-hidden="true" className="inline-flex shrink-0">
+            {icon}
+          </span>
           <h2 id={headingId} className="text-lg font-semibold text-white">
             {title}
           </h2>
