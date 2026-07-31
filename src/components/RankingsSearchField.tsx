@@ -5,8 +5,10 @@ import { focusBoardSearch } from "@/lib/board-dom";
 import {
   HIGHLIGHT_QUERY_MAX,
   clearSearchAriaLabel,
+  clearSearchTitle,
   searchFieldAriaLabel,
   searchFieldPlaceholder,
+  searchFieldTitle,
   searchQueryIsClearable,
   searchQueryLengthLabel,
   searchQueryNearCap,
@@ -34,6 +36,7 @@ export function RankingsSearchField({
       <input
         type="search"
         aria-label={searchFieldAriaLabel()}
+        title={searchFieldTitle()}
         aria-keyshortcuts="Slash"
         aria-describedby={nearQueryCap ? "rankings-search-limit" : undefined}
         autoComplete="off"
@@ -48,6 +51,7 @@ export function RankingsSearchField({
         <button
           type="button"
           aria-label={clearSearchAriaLabel()}
+          title={clearSearchTitle()}
           onClick={clearSearch}
           className="absolute right-1.5 top-1/2 inline-flex min-h-6 min-w-6 -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >

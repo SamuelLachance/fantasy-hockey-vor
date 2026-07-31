@@ -30,6 +30,11 @@ export function searchFieldAriaLabel(): string {
   return "Search players or teams";
 }
 
+/** Tooltip for the board search input. */
+export function searchFieldTitle(): string {
+  return "Search players or teams (/)";
+}
+
 /** Placeholder for the board search input. */
 export function searchFieldPlaceholder(): string {
   return "Search players or teams...";
@@ -38,6 +43,11 @@ export function searchFieldPlaceholder(): string {
 /** Accessible name for the clear-search control. */
 export function clearSearchAriaLabel(): string {
   return "Clear search";
+}
+
+/** Tooltip for the clear-search control. */
+export function clearSearchTitle(): string {
+  return "Clear search (Esc)";
 }
 
 /** True when Clear / Esc should wipe the search field (includes whitespace-only). */

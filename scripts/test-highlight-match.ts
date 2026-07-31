@@ -5,9 +5,11 @@
 import {
   HIGHLIGHT_QUERY_MAX,
   clearSearchAriaLabel,
+  clearSearchTitle,
   highlightMatch,
   searchFieldAriaLabel,
   searchFieldPlaceholder,
+  searchFieldTitle,
   searchQueryIsClearable,
   searchQueryLengthLabel,
   searchQueryNearCap,
@@ -38,8 +40,10 @@ assert(searchQueryNearCap(40) === true, "at near-cap threshold");
 assert(searchQueryNearCap(48) === true, "at max");
 assert(searchQueryLengthLabel(12) === "12/48", "length label");
 assert(searchFieldAriaLabel().includes("players"), "search aria");
+assert(searchFieldTitle() === "Search players or teams (/)", "search title");
 assert(searchFieldPlaceholder().endsWith("..."), "placeholder");
 assert(clearSearchAriaLabel() === "Clear search", "clear aria");
+assert(clearSearchTitle() === "Clear search (Esc)", "clear title");
 assert(searchQueryIsClearable("") === false, "empty not clearable");
 assert(searchQueryIsClearable("   ") === true, "whitespace clearable");
 assert(searchQueryIsClearable("a") === true, "text clearable");
