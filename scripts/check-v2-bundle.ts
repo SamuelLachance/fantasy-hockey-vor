@@ -14,18 +14,23 @@ if (!existsSync(PATH)) {
 
 const bundle = JSON.parse(readFileSync(PATH, "utf8")) as {
   trainedAt?: string;
+  datasetBuiltAt?: string;
   projectionSeasonId?: number;
+  marketTraining?: unknown;
   skater?: {
     gbdt?: unknown;
     ridge?: unknown;
     gpMeta?: unknown;
+    rateMetas?: unknown;
     gbdtGp?: unknown;
     ridgeGp?: unknown;
   };
   goalie?: {
     gbdt?: unknown;
     ridge?: unknown;
-    savePctMeta?: unknown;
+    gbdtGp?: unknown;
+    ridgeGp?: unknown;
+    metas?: unknown;
   };
 };
 
@@ -45,16 +50,39 @@ if (!bundle.trainedAt || !Number.isFinite(Date.parse(bundle.trainedAt))) {
     warnings.push(`v2 bundle trainedAt is ${ageDays.toFixed(0)} days old`);
   }
 }
+
+if (
+  bundle.datasetBuiltAt &&
+  !Number.isFinite(Date.parse(bundle.datasetBuiltAt))
+) {
+  errors.push("datasetBuiltAt is invalid");
+} else if (!bundle.datasetBuiltAt) {
+  warnings.push("datasetBuiltAt missing");
+}
+
 if (!bundle.projectionSeasonId) errors.push("projectionSeasonId missing");
+if (bundle.marketTraining == null) {
+  warnings.push("marketTraining section missing");
+}
+
 if (!bundle.skater?.gbdt || !bundle.skater?.ridge) {
   errors.push("skater gbdt/ridge models missing");
 }
 if (!bundle.skater?.gbdtGp || !bundle.skater?.ridgeGp) {
   errors.push("skater GP models (gbdtGp/ridgeGp) missing");
 }
+if (!bundle.skater?.gpMeta) errors.push("skater gpMeta missing");
+if (!bundle.skater?.rateMetas) errors.push("skater rateMetas missing");
+
 if (!bundle.goalie) errors.push("goalie section missing");
-else if (!bundle.goalie.gbdt && !bundle.goalie.ridge) {
-  errors.push("goalie models empty");
+else {
+  if (!bundle.goalie.gbdt || !bundle.goalie.ridge) {
+    errors.push("goalie gbdt/ridge models missing");
+  }
+  if (!bundle.goalie.gbdtGp || !bundle.goalie.ridgeGp) {
+    errors.push("goalie GP models (gbdtGp/ridgeGp) missing");
+  }
+  if (!bundle.goalie.metas) errors.push("goalie metas missing");
 }
 
 for (const w of warnings) console.warn(`WARN: ${w}`);
