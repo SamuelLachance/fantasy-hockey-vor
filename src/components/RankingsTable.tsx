@@ -91,6 +91,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [copiedPlayerId, setCopiedPlayerId] = useState<number | null>(null);
+  const [playerLinkFailed, setPlayerLinkFailed] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const { details, detailsError, setDetails, setDetailsError } =
     usePlayerDetails(expandedId);
@@ -543,6 +544,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                             detailsLoading={details === null && !detailsError}
                             detailsError={detailsError && details === null}
                             linkCopied={copiedPlayerId === player.id}
+                            linkCopyFailed={playerLinkFailed}
                             onCopyLink={() => {
                               const url = rankingsShareUrl(
                                 window.location.origin,
@@ -560,13 +562,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                               void copyText(url).then((ok) => {
                                 if (!ok) {
                                   setCopiedPlayerId(null);
-                                  setBoardLinkStatus("err");
+                                  setPlayerLinkFailed(true);
                                   window.setTimeout(
-                                    () => setBoardLinkStatus("idle"),
+                                    () => setPlayerLinkFailed(false),
                                     1600,
                                   );
                                   return;
                                 }
+                                setPlayerLinkFailed(false);
                                 setCopiedPlayerId(player.id);
                                 window.setTimeout(
                                   () => setCopiedPlayerId(null),

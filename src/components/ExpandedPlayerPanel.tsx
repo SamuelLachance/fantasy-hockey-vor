@@ -18,6 +18,7 @@ interface ExpandedPlayerPanelProps {
   detailsLoading: boolean;
   detailsError: boolean;
   linkCopied: boolean;
+  linkCopyFailed?: boolean;
   onCopyLink: () => void;
   onDetailsLoaded: (details: Record<string, PlayerDetailRecord>) => void;
   onDetailsError: () => void;
@@ -31,6 +32,7 @@ export function ExpandedPlayerPanel({
   detailsLoading,
   detailsError,
   linkCopied,
+  linkCopyFailed = false,
   onCopyLink,
   onDetailsLoaded,
   onDetailsError,
@@ -88,7 +90,11 @@ export function ExpandedPlayerPanel({
             onCopyLink();
           }}
         >
-          {linkCopied ? "Link copied" : "Copy player link"}
+          {linkCopied
+            ? "Link copied"
+            : linkCopyFailed
+              ? "Copy failed"
+              : "Copy player link"}
         </button>
       </div>
       {playerDetails?.reasoning && (
