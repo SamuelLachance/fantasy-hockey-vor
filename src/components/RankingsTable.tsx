@@ -37,15 +37,10 @@ import {
 } from "@/lib/rankings-filters";
 import { copyText } from "@/lib/clipboard";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
-import {
-  fetchPlayerDetails,
-  resetPlayerDetailsCache,
-} from "@/lib/player-details-client";
-import {
-  detailStatSigma,
-  type PlayerDetailRecord,
-} from "@/lib/publish-players";
+import { fetchPlayerDetails } from "@/lib/player-details-client";
+import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
+import { ExpandedPlayerPanel } from "./ExpandedPlayerPanel";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
@@ -530,162 +525,43 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                     </tr>
                     {isExpanded && (
                       <tr className="bg-slate-950/40">
-                        <td colSpan={7 + tableCategories.length} className="px-6 py-4">
-                          <div className="mb-4 flex flex-wrap items-center gap-2">
-                            <span
-                              className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                                player.projectionMethod === "ai"
-                                  ? "bg-violet-500/20 text-violet-300 ring-1 ring-violet-500/30"
-                                  : player.projectionMethod === "ml"
-                                    ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30"
-                                    : "bg-amber-500/20 text-amber-300 ring-1 ring-amber-500/30"
-                              }`}
-                            >
-                              {player.projectionMethod === "ai"
-                                ? "AI projection"
-                                : player.projectionMethod === "ml"
-                                  ? "ML stacked ensemble"
-                                  : "Contextual model"}
-                            </span>
-                            {player.confidence != null && (
-                              <span className="text-xs text-slate-400">
-                                Confidence: {(player.confidence * 100).toFixed(0)}%
-                              </span>
-                            )}
-                            {player.uncertainty && (
-                              <span
-                                className="text-xs text-slate-400"
-                                title="1σ season-total uncertainty. Aleatoric share = irreducible noise vs model disagreement."
-                              >
-                                ±{player.uncertainty.gamesPlayedSigma.toFixed(0)} GP
-                                {player.uncertainty.total?.sigma != null
-                                  ? ` · Σσ ${player.uncertainty.total.sigma.toFixed(1)}`
-                                  : ""}
-                                {" · "}
-                                {(player.uncertainty.aleatoricShare * 100).toFixed(0)}%
-                                irreducible
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const qs = rankingsUrlSearch({
-                                  position,
-                                  query: deferredQuery,
-                                  sortKey,
-                                  sortDir,
-                                  playerId: player.id,
-                                  hideDepthGoalies,
-                                });
-                                const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
-                                void copyText(url).then((ok) => {
-                                  if (!ok) return;
-                                  setCopiedPlayerId(player.id);
-                                  window.setTimeout(
-                                    () => setCopiedPlayerId(null),
-                                    1600,
-                                  );
-                                });
-                              }}
-                            >
-                              {copiedPlayerId === player.id
-                                ? "Link copied"
-                                : "Copy player link"}
-                            </button>
-                          </div>
-                          {playerDetails?.reasoning && (
-                            <p className="mb-3 text-sm leading-relaxed text-slate-300">
-                              {playerDetails.reasoning}
-                            </p>
-                          )}
-                          {playerDetails?.profileSummary && (
-                            <p className="mb-4 rounded-xl border border-white/5 bg-white/5 p-3 text-xs leading-relaxed text-slate-400">
-                              {playerDetails.profileSummary}
-                            </p>
-                          )}
-                          {isExpanded && details === null && !detailsError && (
-                            <p className="mb-3 text-xs text-slate-500">
-                              Loading player notes...
-                            </p>
-                          )}
-                          {isExpanded && detailsError && details === null && (
-                            <p className="mb-3 text-xs text-amber-400/90">
-                              Player notes unavailable — expand again to retry.
-                              <button
-                                type="button"
-                                className="ml-2 underline decoration-amber-400/50 hover:text-amber-300"
-                                onClick={() => {
-                                  resetPlayerDetailsCache();
-                                  setDetailsError(false);
-                                  void fetchPlayerDetails()
-                                    .then((d) => {
-                                      setDetailsError(false);
-                                      setDetails(d);
-                                    })
-                                    .catch(() => setDetailsError(true));
-                                }}
-                              >
-                                Retry
-                              </button>
-                            </p>
-                          )}
-                          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                            {cats.map((cat) => {
-                              const z = player.categoryZScores[cat] ?? 0;
-                              const width = Math.min(
-                                100,
-                                Math.max(8, 50 + z * 12),
-                              );
-                              return (
-                                <div
-                                  key={cat}
-                                  className="rounded-xl border border-white/5 bg-white/5 p-3"
-                                >
-                                  <div className="mb-1 flex justify-between text-xs text-slate-400">
-                                    <span>{CATEGORY_LABELS[cat]}</span>
-                                    <span
-                                      className={
-                                        z >= 0
-                                          ? "text-emerald-400"
-                                          : "text-rose-400"
-                                      }
-                                    >
-                                      {z >= 0 ? "+" : ""}
-                                      {z.toFixed(2)} z
-                                    </span>
-                                  </div>
-                                  <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                                    <div
-                                      className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500"
-                                      style={{ width: `${width}%` }}
-                                    />
-                                  </div>
-                                  <div className="mt-1 text-sm font-medium text-white">
-                                    Proj: {formatStat(player, cat)}
-                                    {detailStatSigma(playerDetails, cat) !=
-                                      null &&
-                                      cat !== "savePct" && (
-                                        <span className="ml-1 text-xs font-normal text-slate-500">
-                                          ±
-                                          {detailStatSigma(
-                                            playerDetails,
-                                            cat,
-                                          )!.toFixed(
-                                            cat === "goals" ||
-                                              cat === "assists" ||
-                                              cat === "powerplayPoints"
-                                              ? 1
-                                              : 0,
-                                          )}
-                                        </span>
-                                      )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
+                        <td
+                          colSpan={7 + tableCategories.length}
+                          className="px-6 py-4"
+                        >
+                          <ExpandedPlayerPanel
+                            player={player}
+                            cats={cats}
+                            playerDetails={playerDetails}
+                            detailsLoading={details === null && !detailsError}
+                            detailsError={detailsError && details === null}
+                            linkCopied={copiedPlayerId === player.id}
+                            onCopyLink={() => {
+                              const qs = rankingsUrlSearch({
+                                position,
+                                query: deferredQuery,
+                                sortKey,
+                                sortDir,
+                                playerId: player.id,
+                                hideDepthGoalies,
+                              });
+                              const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
+                              void copyText(url).then((ok) => {
+                                if (!ok) return;
+                                setCopiedPlayerId(player.id);
+                                window.setTimeout(
+                                  () => setCopiedPlayerId(null),
+                                  1600,
+                                );
+                              });
+                            }}
+                            onDetailsLoaded={(d) => {
+                              setDetailsError(false);
+                              setDetails(d);
+                            }}
+                            onDetailsError={() => setDetailsError(true)}
+                            onClearDetailsError={() => setDetailsError(false)}
+                          />
                         </td>
                       </tr>
                     )}
