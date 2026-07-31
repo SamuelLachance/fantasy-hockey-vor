@@ -264,6 +264,11 @@ const files: Record<string, string[]> = {
     "EmptyAction",
     "aria-keyshortcuts",
     "primary",
+    "min-h-11",
+    "min-w-[2.75rem]",
+    "inline-flex",
+    "items-center",
+    "justify-center",
   ],
   "src/lib/board-empty-recovery.ts": [
     "emptyBoardRecoveryFlags",
