@@ -3,10 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { focusPlayerRow } from "@/lib/board-dom";
-import {
-  fetchPlayerDetails,
-  resetPlayerDetailsCache,
-} from "@/lib/player-details-client";
+import { fetchPlayerDetails } from "@/lib/player-details-client";
 import {
   playerNotesLoadingLabel,
   playerNotesRetryLabel,
@@ -46,7 +43,7 @@ export function ExpandedPlayerNotes({
   function retryDetails() {
     if (retrying) return;
     setRetrying(true);
-    resetPlayerDetailsCache();
+    // Join any in-flight expand fetch — do not reset the cache (orphans its reject).
     // Keep the alert/Retry mounted until the fetch settles (do not clear error yet).
     void fetchPlayerDetails()
       .then((d) => {

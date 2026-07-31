@@ -444,7 +444,7 @@ const files: Record<string, string[]> = {
     "playerNotesUnavailableCopy",
     "playerNotesRetryLabel",
     "sr-only",
-    "resetPlayerDetailsCache",
+    "Join any in-flight expand fetch",
     'role="alert"',
     'aria-busy="true"',
   ],
@@ -624,6 +624,8 @@ const files: Record<string, string[]> = {
     "fetchPlayerDetails",
     "expandedId == null || details != null",
     "Stay silent on idle failure",
+    "expandRequestIdRef",
+    "requestId",
   ],
   "src/lib/schedule-idle.ts": [
     "scheduleIdle",

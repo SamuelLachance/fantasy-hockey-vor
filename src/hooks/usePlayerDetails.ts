@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetchPlayerDetails } from "@/lib/player-details-client";
 import { prefersSaveData, scheduleIdle } from "@/lib/schedule-idle";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
@@ -19,6 +19,7 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
     PlayerDetailRecord
   > | null>(null);
   const [detailsError, setDetailsError] = useState(false);
+  const expandRequestIdRef = useRef(0);
 
   useEffect(() => {
     // Skip background prefetch on Save-Data; expand still fetches on demand.
@@ -44,22 +45,25 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
   useEffect(() => {
     // Retry on expand even after a prior failure (detailsError must not block).
     if (expandedId == null || details != null) return;
-    let cancelled = false;
+    const requestId = ++expandRequestIdRef.current;
     queueMicrotask(() => {
-      if (!cancelled) setDetailsError(false);
+      if (expandRequestIdRef.current === requestId) setDetailsError(false);
     });
     fetchPlayerDetails()
       .then((d) => {
-        if (!cancelled) {
-          setDetailsError(false);
-          setDetails(d);
-        }
+        if (expandRequestIdRef.current !== requestId) return;
+        setDetailsError(false);
+        setDetails(d);
       })
       .catch(() => {
-        if (!cancelled) setDetailsError(true);
+        if (expandRequestIdRef.current !== requestId) return;
+        setDetailsError(true);
       });
     return () => {
-      cancelled = true;
+      // Invalidate so a late settle cannot resurrect error after a newer load.
+      if (expandRequestIdRef.current === requestId) {
+        expandRequestIdRef.current += 1;
+      }
     };
   }, [expandedId, details]);
 
