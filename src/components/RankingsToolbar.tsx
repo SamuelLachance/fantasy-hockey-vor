@@ -138,6 +138,7 @@ export function RankingsToolbar({
           onClick={() => setFiltersOpen((o) => !o)}
           aria-keyshortcuts="f"
           aria-expanded={filtersOpen}
+          aria-controls="rankings-stat-filters"
           className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
             filtersOpen || activeFilterCount > 0
               ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"

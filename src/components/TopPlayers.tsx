@@ -43,9 +43,8 @@ export function TopPlayers({
     .filter(
       (p) =>
         !p.isGoalie &&
-        p.vor >= 1.5 &&
-        p.uncertainty?.total?.sigma != null &&
-        p.uncertainty.total.sigma < 80,
+        p.vor >= 2 &&
+        p.uncertainty?.total?.sigma != null,
     )
     .sort(
       (a, b) =>
@@ -168,14 +167,14 @@ export function TopPlayers({
               </h2>
             </div>
             <a
-              href="?sort=sigma&rf=vor:1.5-,sigma:-80#rankings"
+              href="?sort=sigma&rf=vor:2-#rankings"
               className="text-xs text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               Board view
             </a>
           </div>
           <p className="mb-3 text-xs text-slate-500">
-            High-VOR skaters with the tightest calibrated uncertainty bands.
+            Among skaters with VOR ≥ 2, the five with the tightest Σσ bands.
           </p>
           <ul className="space-y-3">
             {steadiest.map((player) => (
