@@ -24,12 +24,32 @@ import {
   sigmaCellTitle,
 } from "@/lib/board-row-a11y";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
+import { playerPanelLoadingLabel } from "@/lib/player-notes-copy";
 import { PositionBadges } from "./PositionBadge";
+
+function ExpandedPlayerPanelFallback() {
+  return (
+    <div
+      className="space-y-2"
+      role="status"
+      aria-busy="true"
+      aria-label={playerPanelLoadingLabel()}
+    >
+      <div className="h-3 w-full animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
+      <div className="h-3 w-5/6 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
+      <div className="h-3 w-2/3 animate-pulse rounded bg-white/10 motion-reduce:animate-none" />
+      <span className="sr-only">{playerPanelLoadingLabel()}…</span>
+    </div>
+  );
+}
 
 const ExpandedPlayerPanel = dynamic(
   () =>
     import("./ExpandedPlayerPanel").then((m) => m.ExpandedPlayerPanel),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <ExpandedPlayerPanelFallback />,
+  },
 );
 
 interface RankingsPlayerRowProps {

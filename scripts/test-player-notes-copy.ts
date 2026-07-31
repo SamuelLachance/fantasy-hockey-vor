@@ -6,6 +6,7 @@ import {
   playerNotesLoadingLabel,
   playerNotesRetryLabel,
   playerNotesUnavailableCopy,
+  playerPanelLoadingLabel,
 } from "../src/lib/player-notes-copy";
 
 let failed = 0;
@@ -17,6 +18,10 @@ function assert(cond: boolean, msg: string) {
 }
 
 assert(playerNotesLoadingLabel() === "Loading player notes", "loading");
+assert(
+  playerPanelLoadingLabel() === "Loading player details",
+  "panel loading",
+);
 assert(
   playerNotesUnavailableCopy() === "Player notes unavailable.",
   "unavailable",
