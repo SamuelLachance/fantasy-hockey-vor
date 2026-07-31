@@ -10,7 +10,7 @@ import {
   shouldIgnoreBoardShortcut,
 } from "@/lib/board-keyboard";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
-import { focusStatsFilterButton, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
+import { focusFirstStatFilterInput, focusStatsFilterButton, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
@@ -167,18 +167,11 @@ export function useRankingsKeyboard({
         (e.key === "f" || e.key === "F")
       ) {
         e.preventDefault();
-        setFiltersOpenRef.current((open) => {
-          const next = !open;
-          if (next) {
-            queueMicrotask(() => {
-              document
-                .querySelector<HTMLInputElement>(
-                  '#rankings input[aria-label$="minimum"]',
-                )
-                ?.focus();
-            });
-          }
-          return next;
+        const next = !filtersOpenNow;
+        setFiltersOpenRef.current(next);
+        queueMicrotask(() => {
+          if (next) focusFirstStatFilterInput();
+          else focusStatsFilterButton();
         });
         return;
       }

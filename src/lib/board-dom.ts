@@ -8,6 +8,16 @@ export function focusStatsFilterButton(): void {
     ?.focus();
 }
 
+/** Focus the first min bound input in the open stats filter panel. */
+export function focusFirstStatFilterInput(): void {
+  if (typeof document === "undefined") return;
+  document
+    .querySelector<HTMLInputElement>(
+      '#rankings input[aria-label$="minimum"]',
+    )
+    ?.focus();
+}
+
 /** Right-edge shadow for sticky Player column after horizontal scroll (CSS-gated). */
 export const STICKY_NAME_SHADOW =
   "group-data-[scrolled]/hscroll:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]" as const;

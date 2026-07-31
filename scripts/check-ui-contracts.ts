@@ -210,6 +210,7 @@ const files: Record<string, string[]> = {
     "filteredRef",
     "renderCountRef",
     "focusStatsFilterButton",
+    "focusFirstStatFilterInput",
     "onCopyBoardLink",
     "onCopyPlayerLink",
     'e.key === "Home"',
@@ -271,6 +272,7 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/board-dom.ts": [
     "focusStatsFilterButton",
+    "focusFirstStatFilterInput",
     "rankings-stat-filters",
     "STICKY_NAME_SHADOW",
     "STICKY_NAME_BASE",

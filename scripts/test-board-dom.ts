@@ -6,6 +6,7 @@ import {
   STICKY_NAME_SHADOW,
   focusPlayerRow,
   focusPlayerRowIfPanelFocused,
+  focusFirstStatFilterInput,
   focusStatsFilterButton,
   prefersReducedMotion,
   scrollExpandedRowIntoView,
@@ -37,6 +38,7 @@ assert(
 // Node has no document/window — helpers must no-op without throwing.
 try {
   focusStatsFilterButton();
+  focusFirstStatFilterInput();
   focusPlayerRow(1);
   focusPlayerRowIfPanelFocused(1);
   scrollPageTop();
@@ -50,6 +52,10 @@ assert(typeof focusPlayerRow === "function", "focusPlayerRow exported");
 assert(
   typeof focusPlayerRowIfPanelFocused === "function",
   "focusPlayerRowIfPanelFocused exported",
+);
+assert(
+  typeof focusFirstStatFilterInput === "function",
+  "focusFirstStatFilterInput exported",
 );
 
 if (failed) process.exit(1);
