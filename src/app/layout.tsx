@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { PROJECTION_SEASON } from "@/lib/nhl-api";
-import { SITE_URL } from "@/lib/site";
+import { SITE_BRAND, SITE_URL } from "@/lib/site";
 import {
   siteDefaultDescription,
   siteDefaultTitle,
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     description:
       "Stacked-ensemble VOR rankings for H2H categories — Edge, uncertainty, Yahoo positions.",
     url: SITE_URL,
-    siteName: "Fantasy Hockey VOR",
+    siteName: SITE_BRAND,
     type: "website",
     locale: "en_US",
   },
@@ -58,7 +58,7 @@ export const metadata: Metadata = {
     description:
       "Stacked-ensemble VOR rankings with draft Edge and calibrated uncertainty.",
   },
-  applicationName: "Fantasy Hockey VOR",
+  applicationName: SITE_BRAND,
   alternates: {
     canonical: "/",
   },

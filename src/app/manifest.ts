@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
+import { SITE_BRAND, SITE_SHORT_NAME } from "@/lib/site";
 import { siteManifestDescription } from "@/lib/site-meta";
 
 export const dynamic = "force-static";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Fantasy Hockey VOR",
-    short_name: "VOR Hockey",
+    name: SITE_BRAND,
+    short_name: SITE_SHORT_NAME,
     description: siteManifestDescription(),
     start_url: "./",
     display: "standalone",

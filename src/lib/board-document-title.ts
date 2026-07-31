@@ -1,8 +1,8 @@
 import type { Position } from "@/lib/types";
+import { SITE_BRAND } from "@/lib/site";
 import { siteDefaultTitle } from "@/lib/site-meta";
 
 const BASE_TITLE = siteDefaultTitle();
-const BRAND = "Fantasy Hockey VOR";
 
 /** Tab title reflecting board position / search / expanded player. */
 export function boardDocumentTitle(opts: {
@@ -18,5 +18,5 @@ export function boardDocumentTitle(opts: {
     parts.push(`“${q.length > 24 ? `${q.slice(0, 23)}…` : q}”`);
   }
   if (parts.length === 0) return BASE_TITLE;
-  return `${BRAND} · ${parts.join(" · ")}`;
+  return `${SITE_BRAND} · ${parts.join(" · ")}`;
 }

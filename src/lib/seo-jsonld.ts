@@ -1,11 +1,11 @@
 import type { ProjectionsDataset } from "@/lib/types";
 import { boardShortcutsFaqAnswer } from "@/lib/board-shortcuts";
 import { DEFAULT_PROJECTION_ENGINE } from "@/lib/projection-engine-label";
-import { SITE_URL } from "@/lib/site";
+import { SITE_BRAND, SITE_URL } from "@/lib/site";
 
 const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
   {
-    q: "What is Fantasy Hockey VOR?",
+    q: `What is ${SITE_BRAND}?`,
     a: "Value Over Replacement ranks players by how much fantasy production they add above a replacement-level starter at their Yahoo-eligible position.",
   },
   {
@@ -33,7 +33,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
     "@graph": [
       {
         "@type": "WebApplication",
-        name: "Fantasy Hockey VOR",
+        name: SITE_BRAND,
         url: SITE_URL,
         applicationCategory: "SportsApplication",
         operatingSystem: "Any",
@@ -47,7 +47,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
       },
       {
         "@type": "Dataset",
-        name: `${data.season} Fantasy Hockey VOR Rankings`,
+        name: `${data.season} ${SITE_BRAND} Rankings`,
         description:
           "Player VOR rankings with draft Edge and calibrated uncertainty for H2H category leagues.",
         url: SITE_URL,
@@ -106,7 +106,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           {
             "@type": "ListItem",
             position: 1,
-            name: "Fantasy Hockey VOR",
+            name: SITE_BRAND,
             item: SITE_URL,
           },
           {
@@ -119,7 +119,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
       },
       {
         "@type": "HowTo",
-        name: "How to use Fantasy Hockey VOR rankings",
+        name: `How to use ${SITE_BRAND} rankings`,
         description:
           "Filter, sort, and deep-link the board to draft with VOR, Edge, and Σσ.",
         step: [

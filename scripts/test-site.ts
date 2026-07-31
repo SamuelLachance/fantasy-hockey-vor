@@ -5,7 +5,9 @@
 import {
   homeRankingsHref,
   playerDetailsHref,
+  SITE_BRAND,
   SITE_ORIGIN,
+  SITE_SHORT_NAME,
   SITE_URL,
 } from "../src/lib/site";
 
@@ -19,6 +21,8 @@ function assert(cond: boolean, msg: string) {
 
 assert(SITE_URL.startsWith(SITE_ORIGIN), "SITE_URL under origin");
 assert(SITE_URL.endsWith("/"), "SITE_URL trailing slash");
+assert(SITE_BRAND === "Fantasy Hockey VOR", "brand");
+assert(SITE_SHORT_NAME === "VOR Hockey", "short name");
 
 const prev = process.env.NEXT_PUBLIC_BASE_PATH;
 delete process.env.NEXT_PUBLIC_BASE_PATH;

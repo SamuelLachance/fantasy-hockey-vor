@@ -4,6 +4,12 @@ export const SITE_ORIGIN =
 
 export const SITE_URL = `${SITE_ORIGIN}/`;
 
+/** Product / brand display name (titles, OG, eyebrow). */
+export const SITE_BRAND = "Fantasy Hockey VOR";
+
+/** Compact PWA short name. */
+export const SITE_SHORT_NAME = "VOR Hockey";
+
 function withBasePath(suffix: string): string {
   return `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${suffix}`.replace(
     /\/{2,}/g,

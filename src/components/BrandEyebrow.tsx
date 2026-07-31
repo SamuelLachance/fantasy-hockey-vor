@@ -1,3 +1,5 @@
+import { SITE_BRAND } from "@/lib/site";
+
 interface BrandEyebrowProps {
   className?: string;
 }
@@ -8,7 +10,7 @@ export function BrandEyebrow({
 }: BrandEyebrowProps) {
   return (
     <p className={`font-medium uppercase tracking-[0.2em] ${className}`.trim()}>
-      Fantasy Hockey VOR
+      {SITE_BRAND}
     </p>
   );
 }

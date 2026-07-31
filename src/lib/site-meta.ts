@@ -1,8 +1,9 @@
 import { PROJECTION_SEASON } from "@/lib/nhl-api";
+import { SITE_BRAND } from "@/lib/site";
 
 /** Default document / OG title for the rankings app. */
 export function siteDefaultTitle(season = PROJECTION_SEASON): string {
-  return `Fantasy Hockey VOR | ${season} ML Rankings`;
+  return `${SITE_BRAND} | ${season} ML Rankings`;
 }
 
 /** Short meta description pinned to the projection season. */

@@ -69,7 +69,7 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/board-document-title.ts": [
     "boardDocumentTitle",
-    "Fantasy Hockey VOR",
+    "SITE_BRAND",
     "siteDefaultTitle",
   ],
   "src/hooks/useRankingsBoardState.ts": [
@@ -449,10 +449,13 @@ const files: Record<string, string[]> = {
     "National Hockey League",
     "sameAs",
     "boardShortcutsFaqAnswer",
+    "SITE_BRAND",
   ],
   "src/lib/site.ts": [
     "SITE_ORIGIN",
     "SITE_URL",
+    "SITE_BRAND",
+    "SITE_SHORT_NAME",
     "homeRankingsHref",
     "playerDetailsHref",
     "NEXT_PUBLIC_BUILD_TIME",
@@ -481,7 +484,8 @@ const files: Record<string, string[]> = {
   "src/app/manifest.ts": [
     "siteManifestDescription",
     "standalone",
-    "Fantasy Hockey VOR",
+    "SITE_BRAND",
+    "SITE_SHORT_NAME",
     "categories",
   ],
   "src/lib/rankings-board.ts": [
@@ -555,7 +559,7 @@ const files: Record<string, string[]> = {
     "isProjectionVeryStale",
   ],
   "src/components/BrandEyebrow.tsx": [
-    "Fantasy Hockey VOR",
+    "SITE_BRAND",
     "tracking-[0.2em]",
   ],
   "src/app/error.tsx": [
