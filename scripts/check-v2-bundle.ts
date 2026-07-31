@@ -58,6 +58,11 @@ if (!bundle.datasetBuiltAt) {
 }
 
 if (!bundle.projectionSeasonId) errors.push("projectionSeasonId missing");
+else if (bundle.projectionSeasonId !== 20262027) {
+  errors.push(
+    `projectionSeasonId ${bundle.projectionSeasonId} != 20262027 (update check when rolling seasons)`,
+  );
+}
 if (bundle.marketTraining == null) {
   errors.push("marketTraining section missing");
 }
