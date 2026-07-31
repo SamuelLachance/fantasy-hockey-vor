@@ -1,7 +1,22 @@
 import type { ProjectionsDataset } from "@/lib/types";
 import { SITE_URL } from "@/lib/site";
 
-/** JSON-LD for the rankings homepage (Dataset + WebApplication). */
+const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
+  {
+    q: "What is Fantasy Hockey VOR?",
+    a: "Value Over Replacement ranks players by how much fantasy production they add above a replacement-level starter at their Yahoo-eligible position.",
+  },
+  {
+    q: "What does Edge mean?",
+    a: "Edge is consensus market rank minus model rank. Positive Edge means the model likes a player more than the synthetic consensus.",
+  },
+  {
+    q: "What is Σσ?",
+    a: "Σσ is calibrated aggregate projection uncertainty (1σ). Lower values mean the model is more confident in the projection.",
+  },
+];
+
+/** JSON-LD for the rankings homepage (Dataset + WebApplication + FAQ). */
 export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
@@ -62,6 +77,17 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           "games played",
           "skater and goalie counting stats",
         ],
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: FAQ_ENTRIES.map(({ q, a }) => ({
+          "@type": "Question",
+          name: q,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: a,
+          },
+        })),
       },
     ],
   };

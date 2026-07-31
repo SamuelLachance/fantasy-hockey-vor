@@ -21,9 +21,13 @@ const data = {
 
 const ld = rankingsJsonLd(data);
 const graph = ld["@graph"] as Array<Record<string, unknown>>;
-assert(Array.isArray(graph) && graph.length === 2, "graph has 2 nodes");
+assert(Array.isArray(graph) && graph.length === 3, "graph has 3 nodes");
 assert(graph[0]?.["@type"] === "WebApplication", "WebApplication node");
 assert(graph[1]?.["@type"] === "Dataset", "Dataset node");
+assert(graph[2]?.["@type"] === "FAQPage", "FAQPage node");
+const faq = graph[2]?.mainEntity as Array<Record<string, unknown>>;
+assert(Array.isArray(faq) && faq.length >= 3, "FAQ entries");
+assert(faq[0]?.["@type"] === "Question", "FAQ question type");
 assert(graph[1]?.dateModified === data.generatedAt, "dateModified wired");
 assert(graph[1]?.license === "https://opensource.org/licenses/MIT", "license");
 assert(graph[1]?.isAccessibleForFree === true, "free");

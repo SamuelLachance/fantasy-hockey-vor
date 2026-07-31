@@ -266,6 +266,7 @@ const files: Record<string, string[]> = {
   "src/lib/seo-jsonld.ts": [
     "WebApplication",
     "Dataset",
+    "FAQPage",
     "isAccessibleForFree",
     "keywords",
     "National Hockey League",
