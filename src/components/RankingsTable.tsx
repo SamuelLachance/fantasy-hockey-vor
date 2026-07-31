@@ -1,32 +1,9 @@
 "use client";
 
-import {
-  Suspense,
-  startTransition,
-  useDeferredValue,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Suspense, startTransition, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
-import type { PlayerProjection, Position } from "@/lib/types";
-import {
-  defaultSortDir,
-  type RangeKey,
-  type SortKey,
-  type StatRanges,
-} from "@/lib/rankings-filters";
-import {
-  boardCategories,
-  boardFilterKeys,
-  coerceSortKeyForPosition,
-  filterAndSortBoard,
-} from "@/lib/rankings-board";
-import { countActiveStatFilters } from "@/lib/board-active-filters";
-import { boardHasPlayerId } from "@/lib/board-players";
-import { boardFilterResetToken } from "@/lib/board-reset-token";
+import type { PlayerProjection } from "@/lib/types";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import {
@@ -36,6 +13,7 @@ import {
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
+import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { RankingsBoardChrome } from "./RankingsBoardChrome";
@@ -58,41 +36,25 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const [seed] = useState(() => parseRankingsUrl(searchParams));
-  const [query, setQuery] = useState(seed.query);
-  const deferredQuery = useDeferredValue(query);
-  const [position, setPosition] = useState<Position | "ALL">(seed.position);
-  const [sortKey, setSortKey] = useState<SortKey>(seed.sortKey);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">(seed.sortDir);
-  const [statRanges, setStatRanges] = useState<StatRanges>(seed.statRanges);
-  const [filtersOpen, setFiltersOpen] = useState(
-    () =>
-      Object.values(seed.statRanges).some(
-        (b) => b?.min?.trim() || b?.max?.trim(),
-      ),
-  );
+  const board = useRankingsBoardState(players, seed);
   const [boardLinkStatus, setBoardLinkStatus] = useState<
     "idle" | "ok" | "err"
   >("idle");
-  const [hideDepthGoalies, setHideDepthGoalies] = useState(
-    seed.hideDepthGoalies,
-  );
-  const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [playerLinkStatus, setPlayerLinkStatus] = useState<{
     id: number | null;
     status: "idle" | "ok" | "err";
   }>({ id: null, status: "idle" });
-  const [helpOpen, setHelpOpen] = useState(false);
   const { details, detailsError, setDetails, setDetailsError } =
-    usePlayerDetails(expandedId);
+    usePlayerDetails(board.expandedId);
 
   useRankingsUrlSync({
-    position,
-    deferredQuery,
-    sortKey,
-    sortDir,
-    expandedId,
-    hideDepthGoalies,
-    statRanges,
+    position: board.position,
+    deferredQuery: board.deferredQuery,
+    sortKey: board.sortKey,
+    sortDir: board.sortDir,
+    expandedId: board.expandedId,
+    hideDepthGoalies: board.hideDepthGoalies,
+    statRanges: board.statRanges,
   });
 
   useEffect(() => {
@@ -101,115 +63,27 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     scrollToRankings({ focusSearch: true });
   }, []);
 
-  // Drop deep-linked expand ids that are no longer on the board dataset.
-  if (expandedId != null && !boardHasPlayerId(players, expandedId)) {
-    setExpandedId(null);
-  }
-
-  const filterRangeKeys = useMemo(
-    () => boardFilterKeys(position),
-    [position],
-  );
-
-  const activeFilterCount = useMemo(
-    () => countActiveStatFilters(statRanges, filterRangeKeys),
-    [statRanges, filterRangeKeys],
-  );
-
-  const filterKey = boardFilterResetToken(
-    position,
-    deferredQuery,
-    statRanges,
-    hideDepthGoalies,
-  );
-  const [prevPosition, setPrevPosition] = useState(position);
-  if (position !== prevPosition) {
-    setPrevPosition(position);
-    // Drop sorts on categories that disappear under the new filter (e.g. FOW on D).
-    const nextKey = coerceSortKeyForPosition(sortKey, position);
-    if (nextKey !== sortKey) {
-      setSortKey(nextKey);
-      setSortDir("desc");
-    }
-  }
-
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
   const showStickyShadow = useHorizontalScrollShadow(tableScrollRef);
 
-  const filtered = useMemo(
-    () =>
-      filterAndSortBoard(players, {
-        position,
-        query: deferredQuery,
-        sortKey,
-        sortDir,
-        statRanges,
-        hideDepthGoalies,
-      }),
-    [
-      players,
-      deferredQuery,
-      position,
-      sortKey,
-      sortDir,
-      statRanges,
-      hideDepthGoalies,
-    ],
-  );
-
   const { loadMoreRef, renderCount, loadMore, canLoadMore } =
-    useBoardInfiniteScroll(filtered, expandedId, filterKey);
+    useBoardInfiniteScroll(
+      board.filtered,
+      board.expandedId,
+      board.filterKey,
+    );
 
   useEffect(() => {
-    if (expandedId == null) return;
-    scrollExpandedRowIntoView(expandedId);
-  }, [expandedId, renderCount]);
-
-  function clearStatFilters() {
-    startTransition(() => setStatRanges({}));
-  }
-
-  function removeStatFilter(key: RangeKey) {
-    startTransition(() => {
-      setStatRanges((prev) => {
-        const next = { ...prev };
-        delete next[key];
-        return next;
-      });
-    });
-  }
-
-  function resetBoardView() {
-    setQuery("");
-    clearStatFilters();
-    setFiltersOpen(false);
-    setExpandedId(null);
-    startTransition(() => {
-      setPosition("ALL");
-      setHideDepthGoalies(true);
-      setSortKey("vor");
-      setSortDir("desc");
-    });
-  }
-
-  function boardShareState(playerId: number | null) {
-    return {
-      position,
-      query: deferredQuery,
-      sortKey,
-      sortDir,
-      playerId,
-      hideDepthGoalies,
-      statRanges,
-    };
-  }
+    if (board.expandedId == null) return;
+    scrollExpandedRowIntoView(board.expandedId);
+  }, [board.expandedId, renderCount]);
 
   function copyBoardLink() {
     copyTextWithFlash(
       rankingsShareUrl(
         window.location.origin,
         pathname,
-        boardShareState(expandedId),
+        board.boardShareState(board.expandedId),
       ),
       setBoardLinkStatus,
     );
@@ -221,7 +95,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       rankingsShareUrl(
         window.location.origin,
         pathname,
-        boardShareState(playerId),
+        board.boardShareState(playerId),
       ),
       (status) => {
         setPlayerLinkStatus({ id: playerId, status });
@@ -230,102 +104,71 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }
 
   useRankingsKeyboard({
-    filtered,
-    expandedId,
-    setExpandedId,
-    filtersOpen,
-    setFiltersOpen,
-    helpOpen,
-    setHelpOpen,
-    setSortKey: (key) => startTransition(() => setSortKey(key)),
-    setSortDir: (dir) => startTransition(() => setSortDir(dir)),
-    onResetBoard: resetBoardView,
+    filtered: board.filtered,
+    expandedId: board.expandedId,
+    setExpandedId: board.setExpandedId,
+    filtersOpen: board.filtersOpen,
+    setFiltersOpen: board.setFiltersOpen,
+    helpOpen: board.helpOpen,
+    setHelpOpen: board.setHelpOpen,
+    setSortKey: (key) => startTransition(() => board.setSortKey(key)),
+    setSortDir: (dir) => startTransition(() => board.setSortDir(dir)),
+    onResetBoard: board.resetBoardView,
     onCopyBoardLink: copyBoardLink,
-    onToggleDepthGoalies: () => {
-      if (position !== "G" && position !== "ALL") return;
-      startTransition(() => setHideDepthGoalies((v) => !v));
-    },
+    onToggleDepthGoalies: board.toggleDepthGoalies,
   });
-
-  function toggleSort(key: SortKey) {
-    startTransition(() => {
-      if (sortKey === key) {
-        setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-      } else {
-        setSortKey(key);
-        setSortDir(defaultSortDir(key));
-      }
-    });
-  }
-
-  function resetSortToVor() {
-    startTransition(() => {
-      setSortKey("vor");
-      setSortDir("desc");
-    });
-  }
-
-  function updateRange(key: RangeKey, field: "min" | "max", value: string) {
-    startTransition(() => {
-      setStatRanges((prev) => ({
-        ...prev,
-        [key]: { min: "", max: "", ...prev[key], [field]: value },
-      }));
-    });
-  }
-
-  const tableCategories = boardCategories(position);
-  const showingAllGoalies =
-    !hideDepthGoalies && (position === "G" || position === "ALL");
 
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
-      <BoardShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <BoardShortcutsHelp
+        open={board.helpOpen}
+        onClose={() => board.setHelpOpen(false)}
+      />
       <RankingsBoardChrome
-        position={position}
-        setPosition={setPosition}
-        query={query}
-        setQuery={setQuery}
-        filtersOpen={filtersOpen}
-        setFiltersOpen={setFiltersOpen}
-        activeFilterCount={activeFilterCount}
-        filtered={filtered}
-        tableCategories={tableCategories}
+        position={board.position}
+        setPosition={board.setPosition}
+        query={board.query}
+        setQuery={board.setQuery}
+        filtersOpen={board.filtersOpen}
+        setFiltersOpen={board.setFiltersOpen}
+        activeFilterCount={board.activeFilterCount}
+        filtered={board.filtered}
+        tableCategories={board.tableCategories}
         boardLinkStatus={boardLinkStatus}
         onCopyBoardLink={copyBoardLink}
-        hideDepthGoalies={hideDepthGoalies}
-        setHideDepthGoalies={setHideDepthGoalies}
-        filterRangeKeys={filterRangeKeys}
-        statRanges={statRanges}
-        onUpdateRange={updateRange}
-        onClearStatFilters={clearStatFilters}
-        onRemoveStat={removeStatFilter}
-        showingAllGoalies={showingAllGoalies}
-        onOpenHelp={() => setHelpOpen(true)}
+        hideDepthGoalies={board.hideDepthGoalies}
+        setHideDepthGoalies={board.setHideDepthGoalies}
+        filterRangeKeys={board.filterRangeKeys}
+        statRanges={board.statRanges}
+        onUpdateRange={board.updateRange}
+        onClearStatFilters={board.clearStatFilters}
+        onRemoveStat={board.removeStatFilter}
+        showingAllGoalies={board.showingAllGoalies}
+        onOpenHelp={() => board.setHelpOpen(true)}
       />
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div ref={tableScrollRef} className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <RankingsTableHead
-              sortKey={sortKey}
-              sortDir={sortDir}
-              tableCategories={tableCategories}
+              sortKey={board.sortKey}
+              sortDir={board.sortDir}
+              tableCategories={board.tableCategories}
               showStickyShadow={showStickyShadow}
-              onToggleSort={toggleSort}
-              onResetSort={resetSortToVor}
+              onToggleSort={board.toggleSort}
+              onResetSort={board.resetSortToVor}
             />
             <tbody className="divide-y divide-white/5">
-              {filtered.slice(0, renderCount).map((player, idx) => (
+              {board.filtered.slice(0, renderCount).map((player, idx) => (
                 <RankingsPlayerRow
                   key={player.id}
                   player={player}
                   idx={idx}
-                  position={position}
-                  deferredQuery={deferredQuery}
-                  isExpanded={expandedId === player.id}
+                  position={board.position}
+                  deferredQuery={board.deferredQuery}
+                  isExpanded={board.expandedId === player.id}
                   showStickyShadow={showStickyShadow}
-                  tableCategories={tableCategories}
+                  tableCategories={board.tableCategories}
                   playerDetails={details?.[String(player.id)]}
                   detailsLoading={details === null && !detailsError}
                   detailsError={detailsError && details === null}
@@ -338,7 +181,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                     playerLinkStatus.status === "err"
                   }
                   onToggle={() =>
-                    setExpandedId((cur) =>
+                    board.setExpandedId((cur) =>
                       cur === player.id ? null : player.id,
                     )
                   }
@@ -355,24 +198,24 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           </table>
         </div>
         <RankingsBoardFooter
-          query={query}
-          activeFilterCount={activeFilterCount}
-          position={position}
-          filteredCount={filtered.length}
+          query={board.query}
+          activeFilterCount={board.activeFilterCount}
+          position={board.position}
+          filteredCount={board.filtered.length}
           canLoadMore={canLoadMore}
           loadMoreRef={loadMoreRef}
           onLoadMore={loadMore}
-          onClearSearch={() => setQuery("")}
-          onClearStatFilters={clearStatFilters}
+          onClearSearch={() => board.setQuery("")}
+          onClearStatFilters={board.clearStatFilters}
           onShowAllPositions={() =>
-            startTransition(() => setPosition("ALL"))
+            startTransition(() => board.setPosition("ALL"))
           }
-          onResetBoard={resetBoardView}
+          onResetBoard={board.resetBoardView}
         />
       </div>
       <RankingsStatusBar
         renderCount={renderCount}
-        filteredCount={filtered.length}
+        filteredCount={board.filtered.length}
         totalCount={players.length}
       />
     </div>

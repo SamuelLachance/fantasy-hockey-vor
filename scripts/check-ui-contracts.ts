@@ -9,10 +9,8 @@ const root = process.cwd();
 const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
     'id="rankings"',
-    "hideDepthGoalies",
     "usePlayerDetails",
-    "resetSortToVor",
-    "boardFilterResetToken",
+    "useRankingsBoardState",
     "useRankingsUrlSync",
     "useRankingsKeyboard",
     "RankingsPlayerRow",
@@ -22,9 +20,15 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "RankingsBoardFooter",
     "useHorizontalScrollShadow",
-    "Drop deep-linked expand ids",
+  ],
+  "src/hooks/useRankingsBoardState.ts": [
+    "useRankingsBoardState",
+    "boardFilterResetToken",
     "boardHasPlayerId",
     "countActiveStatFilters",
+    "resetSortToVor",
+    "toggleDepthGoalies",
+    "Drop deep-linked expand ids",
     'position !== "G"',
   ],
   "src/components/RankingsBoardChrome.tsx": [
