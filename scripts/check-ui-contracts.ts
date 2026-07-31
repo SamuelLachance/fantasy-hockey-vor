@@ -22,6 +22,7 @@ const files: Record<string, string[]> = {
     "BoardActiveFilters",
     "RankingsEmptyState",
     "RankingsStatusBar",
+    "useHorizontalScrollShadow",
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
@@ -71,6 +72,10 @@ const files: Record<string, string[]> = {
     'aria-controls="rankings-stat-filters"',
     "onCopyBoardLink",
     'aria-keyshortcuts="l"',
+  ],
+  "src/hooks/useHorizontalScrollShadow.ts": [
+    "useHorizontalScrollShadow",
+    "scrollLeft",
   ],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],

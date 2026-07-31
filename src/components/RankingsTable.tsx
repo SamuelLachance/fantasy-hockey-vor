@@ -38,6 +38,7 @@ import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import { focusStatsFilterButton } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
+import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { BoardActiveFilters } from "./BoardActiveFilters";
@@ -159,6 +160,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const tableScrollRef = useRef<HTMLDivElement | null>(null);
+  const showStickyShadow = useHorizontalScrollShadow(tableScrollRef);
 
   const filtered = useMemo(
     () =>
@@ -383,7 +386,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
-        <div className="overflow-x-auto">
+        <div ref={tableScrollRef} className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm">
               <tr>
@@ -403,7 +406,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                   sortDir={sortDir}
                   onToggle={toggleSort}
                   onReset={resetSortToVor}
-                  className="sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12"
+                  className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${
+                    showStickyShadow
+                      ? "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]"
+                      : ""
+                  }`}
                 />
                 <th className="px-4 py-3">Pos</th>
                 <SortHeader
@@ -494,7 +501,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                           : (player.positionRank ?? idx + 1)}
                       </td>
                       <td
-                        className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12 sm:max-w-[14rem] ${
+                        className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${
+                          showStickyShadow
+                            ? "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]"
+                            : ""
+                        } ${
                           isExpanded ? "bg-slate-900" : "bg-slate-950/95"
                         }`}
                         title={player.name}
