@@ -23,7 +23,10 @@ export function RankingsStatFilters({
   onClear,
 }: RankingsStatFiltersProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-lg">
+    <div
+      id="rankings-stat-filters"
+      className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-lg"
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-white">Filter by stats</h3>

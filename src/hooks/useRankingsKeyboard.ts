@@ -8,7 +8,7 @@ interface RankingsKeyboardInput {
   expandedId: number | null;
   setExpandedId: (id: number | null) => void;
   filtersOpen: boolean;
-  setFiltersOpen: (open: boolean) => void;
+  setFiltersOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
   helpOpen: boolean;
   setHelpOpen: (open: boolean | ((o: boolean) => boolean)) => void;
 }
@@ -73,7 +73,19 @@ export function useRankingsKeyboard({
         (e.key === "f" || e.key === "F")
       ) {
         e.preventDefault();
-        setFiltersOpen(!filtersOpen);
+        setFiltersOpen((open) => {
+          const next = !open;
+          if (next) {
+            queueMicrotask(() => {
+              document
+                .querySelector<HTMLInputElement>(
+                  '#rankings input[aria-label$="minimum"]',
+                )
+                ?.focus();
+            });
+          }
+          return next;
+        });
         return;
       }
       if (inField || helpOpen || expandedId == null) return;
