@@ -33,6 +33,7 @@ import {
   filterAndSortBoard,
 } from "@/lib/rankings-board";
 import { copyText } from "@/lib/clipboard";
+import { highlightMatch } from "@/lib/highlight-match";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
@@ -399,7 +400,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                         }`}
                         title={player.name}
                       >
-                        {player.name}
+                        {highlightMatch(player.name, deferredQuery)}
                       </td>
                       <td className="px-4 py-3">
                         <PositionBadges
@@ -408,7 +409,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                         />
                       </td>
                       <td className="px-4 py-3 font-mono text-slate-300">
-                        {player.team}
+                        {highlightMatch(player.team, deferredQuery)}
                       </td>
                       <td
                         className={`px-4 py-3 font-mono font-semibold ${vorColor(vorForFilter(player, position))}`}
