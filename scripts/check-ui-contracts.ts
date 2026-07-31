@@ -26,6 +26,7 @@ const files: Record<string, string[]> = {
     "boardHasPlayerId",
     "countActiveStatFilters",
     "motion-reduce:backdrop-blur-none",
+    'aria-label="Board filters"',
   ],
   "src/components/RankingsBoardFooter.tsx": [
     "Load more players",
