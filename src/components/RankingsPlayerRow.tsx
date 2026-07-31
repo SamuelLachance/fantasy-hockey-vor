@@ -73,7 +73,9 @@ export function RankingsPlayerRow({
 }: RankingsPlayerRowProps) {
   const cats = playerCategories(player);
   const vor = vorForFilter(player, position);
-  const stickyBg = isExpanded ? "bg-slate-900" : "bg-slate-950/95";
+  const stickyBg = isExpanded
+    ? "bg-slate-900"
+    : "bg-slate-950/95 max-md:bg-slate-950";
 
   function onRowKeyDown(e: KeyboardEvent<HTMLTableRowElement>) {
     if (!isBoardRowToggleKey(e.key)) return;

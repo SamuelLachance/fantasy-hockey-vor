@@ -173,6 +173,7 @@ const files: Record<string, string[]> = {
     "sigmaCellTitle",
     "sigmaCellDisplay",
     "tabular-nums",
+    "bg-slate-950/95 max-md:bg-slate-950",
   ],
   "src/lib/board-row-a11y.ts": [
     "boardRowAriaLabel",
@@ -235,6 +236,7 @@ const files: Record<string, string[]> = {
     'scope="col"',
     "max-md:backdrop-blur-none",
     "max-md:bg-slate-950",
+    "bg-slate-950/95 max-md:bg-slate-950",
     "motion-reduce:bg-slate-950",
     "BOARD_STICKY_TOP_CLASS",
     "aria-rowindex={1}",
