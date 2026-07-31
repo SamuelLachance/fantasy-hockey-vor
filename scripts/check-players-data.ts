@@ -65,13 +65,10 @@ else if (data.season !== "2026-27") {
   );
 }
 
-if (
-  data.projectionEngine &&
-  !["stacked-ensemble", "hybrid-ml-contextual", "ml-timeseries"].includes(
-    data.projectionEngine,
-  )
-) {
-  warnings.push(
+if (!data.projectionEngine) {
+  errors.push("projectionEngine is missing");
+} else if (data.projectionEngine !== "stacked-ensemble") {
+  errors.push(
     `projectionEngine is "${data.projectionEngine}" (expected stacked-ensemble for published ranks)`,
   );
 }
