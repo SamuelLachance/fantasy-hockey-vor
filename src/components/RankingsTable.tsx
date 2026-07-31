@@ -241,6 +241,23 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }
 
+  function copyBoardLink() {
+    const url = rankingsShareUrl(window.location.origin, pathname, {
+      position,
+      query: deferredQuery,
+      sortKey,
+      sortDir,
+      playerId: expandedId,
+      hideDepthGoalies,
+      statRanges,
+    });
+    void copyText(url).then((ok) => {
+      if (!ok) return;
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 1600);
+    });
+  }
+
   useRankingsKeyboard({
     filtered,
     expandedId,
@@ -252,6 +269,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     setSortKey: (key) => startTransition(() => setSortKey(key)),
     setSortDir: (dir) => startTransition(() => setSortDir(dir)),
     onResetBoard: resetBoardView,
+    onCopyBoardLink: copyBoardLink,
   });
 
   function toggleSort(key: SortKey) {
@@ -292,26 +310,17 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           setPosition={setPosition}
           query={query}
           setQuery={setQuery}
-          deferredQuery={deferredQuery}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          pathname={pathname}
           filtersOpen={filtersOpen}
           setFiltersOpen={setFiltersOpen}
           activeFilterCount={activeFilterCount}
           filtered={filtered}
           tableCategories={tableCategories}
           linkCopied={linkCopied}
-          onLinkCopied={() => {
-            setLinkCopied(true);
-            window.setTimeout(() => setLinkCopied(false), 1600);
-          }}
-          expandedId={expandedId}
+          onCopyBoardLink={copyBoardLink}
           hideDepthGoalies={hideDepthGoalies}
           setHideDepthGoalies={setHideDepthGoalies}
           showDepthToggle={position === "G" || position === "ALL"}
           onOpenHelp={() => setHelpOpen(true)}
-          statRanges={statRanges}
         />
 
         {filtersOpen && (

@@ -8,9 +8,6 @@ import {
   rankingsCsvString,
   rankingsJsonString,
 } from "@/lib/rankings-export";
-import type { SortKey, StatRanges } from "@/lib/rankings-filters";
-import { copyText } from "@/lib/clipboard";
-import { rankingsShareUrl } from "@/lib/rankings-url";
 
 const POSITIONS: Array<Position | "ALL"> = ["ALL", "C", "LW", "RW", "D", "G"];
 
@@ -19,23 +16,17 @@ interface RankingsToolbarProps {
   setPosition: (pos: Position | "ALL") => void;
   query: string;
   setQuery: (q: string) => void;
-  deferredQuery: string;
-  sortKey: SortKey;
-  sortDir: "asc" | "desc";
-  pathname: string;
   filtersOpen: boolean;
   setFiltersOpen: (open: boolean | ((o: boolean) => boolean)) => void;
   activeFilterCount: number;
   filtered: PlayerProjection[];
   tableCategories: readonly Category[];
   linkCopied: boolean;
-  onLinkCopied: () => void;
-  expandedId: number | null;
+  onCopyBoardLink: () => void;
   hideDepthGoalies: boolean;
   setHideDepthGoalies: (v: boolean | ((prev: boolean) => boolean)) => void;
   showDepthToggle: boolean;
   onOpenHelp: () => void;
-  statRanges: StatRanges;
 }
 
 export function RankingsToolbar({
@@ -43,23 +34,17 @@ export function RankingsToolbar({
   setPosition,
   query,
   setQuery,
-  deferredQuery,
-  sortKey,
-  sortDir,
-  pathname,
   filtersOpen,
   setFiltersOpen,
   activeFilterCount,
   filtered,
   tableCategories,
   linkCopied,
-  onLinkCopied,
-  expandedId,
+  onCopyBoardLink,
   hideDepthGoalies,
   setHideDepthGoalies,
   showDepthToggle,
   onOpenHelp,
-  statRanges,
 }: RankingsToolbarProps) {
   function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
     if (
@@ -194,22 +179,10 @@ export function RankingsToolbar({
         </div>
         <button
           type="button"
-          onClick={() => {
-            const url = rankingsShareUrl(window.location.origin, pathname, {
-              position,
-              query: deferredQuery,
-              sortKey,
-              sortDir,
-              playerId: expandedId,
-              hideDepthGoalies,
-              statRanges,
-            });
-            void copyText(url).then((ok) => {
-              if (ok) onLinkCopied();
-            });
-          }}
+          onClick={onCopyBoardLink}
           className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          title="Copy link to this board view"
+          title="Copy link to this board view (l)"
+          aria-keyshortcuts="l"
         >
           <Link2 className="h-4 w-4" />
           {linkCopied ? "Copied" : "Link"}

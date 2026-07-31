@@ -16,9 +16,10 @@ interface RankingsKeyboardInput {
   setSortKey: (key: SortKey) => void;
   setSortDir: (dir: "asc" | "desc") => void;
   onResetBoard?: () => void;
+  onCopyBoardLink?: () => void;
 }
 
-/** Global board shortcuts: Esc, /, ?, j/k, r. */
+/** Global board shortcuts: Esc, /, ?, j/k, r, l. */
 export function useRankingsKeyboard({
   filtered,
   expandedId,
@@ -30,6 +31,7 @@ export function useRankingsKeyboard({
   setSortKey,
   setSortDir,
   onResetBoard,
+  onCopyBoardLink,
 }: RankingsKeyboardInput): void {
   // Keep latest handlers/state without rebinding the window listener every render.
   const filteredRef = useRef(filtered);
@@ -42,6 +44,7 @@ export function useRankingsKeyboard({
   const setSortKeyRef = useRef(setSortKey);
   const setSortDirRef = useRef(setSortDir);
   const onResetBoardRef = useRef(onResetBoard);
+  const onCopyBoardLinkRef = useRef(onCopyBoardLink);
 
   useEffect(() => {
     filteredRef.current = filtered;
@@ -54,6 +57,7 @@ export function useRankingsKeyboard({
     setSortKeyRef.current = setSortKey;
     setSortDirRef.current = setSortDir;
     onResetBoardRef.current = onResetBoard;
+    onCopyBoardLinkRef.current = onCopyBoardLink;
   });
 
   useEffect(() => {
@@ -137,6 +141,19 @@ export function useRankingsKeyboard({
       ) {
         e.preventDefault();
         onResetBoardRef.current();
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
+        (e.key === "l" || e.key === "L") &&
+        onCopyBoardLinkRef.current
+      ) {
+        e.preventDefault();
+        onCopyBoardLinkRef.current();
         return;
       }
       if (!inField && !e.metaKey && !e.ctrlKey && !e.altKey && !helpOpenNow) {
