@@ -56,6 +56,7 @@ const files: Record<string, string[]> = {
     "focusStatsFilterButton",
     "rankings-stat-filters",
     "STICKY_NAME_SHADOW",
+    "STICKY_NAME_BASE",
     "scrollPageTop",
     "scrollToRankings",
     "scrollExpandedRowIntoView",

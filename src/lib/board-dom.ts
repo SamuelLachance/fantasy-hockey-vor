@@ -12,6 +12,9 @@ export function focusStatsFilterButton(): void {
 export const STICKY_NAME_SHADOW =
   "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]" as const;
 
+export const STICKY_NAME_BASE =
+  "transition-shadow duration-150 motion-reduce:transition-none" as const;
+
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return true;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;

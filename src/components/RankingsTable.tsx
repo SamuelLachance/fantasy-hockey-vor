@@ -36,7 +36,7 @@ import {
 import { highlightMatch } from "@/lib/highlight-match";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
-import { focusStatsFilterButton, STICKY_NAME_SHADOW, scrollExpandedRowIntoView, scrollToRankings } from "@/lib/board-dom";
+import { focusStatsFilterButton, STICKY_NAME_BASE, STICKY_NAME_SHADOW, scrollExpandedRowIntoView, scrollToRankings } from "@/lib/board-dom";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
@@ -363,7 +363,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                   sortDir={sortDir}
                   onToggle={toggleSort}
                   onReset={resetSortToVor}
-                  className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${
+                  className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${
                     showStickyShadow ? STICKY_NAME_SHADOW : ""
                   }`}
                 />
@@ -456,7 +456,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                           : (player.positionRank ?? idx + 1)}
                       </td>
                       <td
-                        className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${
+                        className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${STICKY_NAME_BASE} ${
                           showStickyShadow ? STICKY_NAME_SHADOW : ""
                         } ${
                           isExpanded ? "bg-slate-900" : "bg-slate-950/95"
