@@ -90,6 +90,7 @@ const files: Record<string, string[]> = {
     "STICKY_NAME_SHADOW",
     "onResetSort",
     'scope="col"',
+    "motion-reduce:bg-slate-950",
   ],
   "src/components/RankingsEmptyState.tsx": [
     "No players match your filters",
