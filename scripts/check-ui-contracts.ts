@@ -17,6 +17,7 @@ const files: Record<string, string[]> = {
   "src/lib/rankings-url.ts": ["hideDepthGoalies", "playerId"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
+  "src/components/TopPlayers.tsx": ["gamesPlayed > 8", "playerHref"],
 };
 
 let failed = 0;
