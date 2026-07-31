@@ -136,6 +136,21 @@ export function useRankingsKeyboard({
         !e.ctrlKey &&
         !e.altKey &&
         !helpOpenNow &&
+        e.key === "Home"
+      ) {
+        e.preventDefault();
+        const reduce = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
         (e.key === "r" || e.key === "R") &&
         onResetBoardRef.current
       ) {
