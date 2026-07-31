@@ -919,6 +919,11 @@ const files: Record<string, string[]> = {
     "homeRankingsHref",
     "BrandEyebrow",
     "focus-visible:ring-2",
+    "globals.css",
+    "--font-geist-sans",
+    "console.error",
+    "error.digest",
+    "useEffect",
   ],
   "src/app/loading.tsx": [
     "loadingRankingsCopy",
