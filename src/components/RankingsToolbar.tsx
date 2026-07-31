@@ -153,7 +153,11 @@ export function RankingsToolbar({
             </span>
           )}
         </button>
-        <div className="inline-flex shrink-0 overflow-hidden rounded-xl border border-white/10">
+        <div
+          className="inline-flex shrink-0 overflow-hidden rounded-xl border border-white/10"
+          role="group"
+          aria-label="Export filtered rankings"
+        >
           <button
             type="button"
             disabled={filtered.length === 0}
