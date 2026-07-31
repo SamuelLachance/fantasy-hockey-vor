@@ -4,6 +4,7 @@
  */
 import {
   BOARD_PAGE_SIZE,
+  expandVisibleFloor,
   nextVisibleCount,
 } from "../src/hooks/useBoardInfiniteScroll";
 
@@ -20,6 +21,12 @@ assert(BOARD_PAGE_SIZE >= 60, "page size not tiny");
 assert(nextVisibleCount(100, 100, 250) === 200, "grows by page");
 assert(nextVisibleCount(200, 100, 250) === 250, "clamps to total");
 assert(nextVisibleCount(250, 100, 250) === 250, "at end stays");
+
+const list = Array.from({ length: 250 }, (_, i) => ({ id: i + 1 }));
+assert(expandVisibleFloor(list, null, 100) === 0, "no expand floor");
+assert(expandVisibleFloor(list, 50, 100) === 150, "mid expand floor");
+assert(expandVisibleFloor(list, 999, 100) === 0, "missing id");
+assert(expandVisibleFloor(list, 240, 100) === 250, "near end clamps");
 
 if (failed) process.exit(1);
 console.log("OK: board-infinite-scroll");

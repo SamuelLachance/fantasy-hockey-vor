@@ -402,6 +402,8 @@ const files: Record<string, string[]> = {
     "IntersectionObserver",
     "loadMore",
     "nextVisibleCount",
+    "expandVisibleFloor",
+    "collapsing a deep row does not yank",
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
     "useHorizontalScrollShadow",

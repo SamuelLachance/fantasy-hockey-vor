@@ -3,7 +3,6 @@
 import {
   startTransition,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type RefObject,
@@ -18,6 +17,21 @@ export function nextVisibleCount(
   total: number,
 ): number {
   return Math.min(current + pageSize, total);
+}
+
+/**
+ * Minimum rows to keep mounted so an expanded player (and a page of context)
+ * stay in the DOM. Persisted into visibleCount so collapse does not shrink.
+ */
+export function expandVisibleFloor(
+  filtered: readonly { id: number }[],
+  expandedId: number | null,
+  pageSize: number,
+): number {
+  if (expandedId == null) return 0;
+  const idx = filtered.findIndex((p) => p.id === expandedId);
+  if (idx < 0) return 0;
+  return Math.min(filtered.length, idx + 1 + pageSize);
 }
 
 interface BoardInfiniteScrollResult {
@@ -43,16 +57,13 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
     setVisibleCount(pageSize);
   }
 
-  const renderCount = useMemo(() => {
-    if (expandedId == null) return visibleCount;
-    const idx = filtered.findIndex((p) => p.id === expandedId);
-    if (idx < 0) return visibleCount;
-    return Math.max(
-      visibleCount,
-      Math.min(filtered.length, idx + 1 + pageSize),
-    );
-  }, [expandedId, filtered, visibleCount, pageSize]);
+  // Persist expand-driven growth so collapsing a deep row does not yank rows away.
+  const expandFloor = expandVisibleFloor(filtered, expandedId, pageSize);
+  if (expandFloor > visibleCount) {
+    setVisibleCount(expandFloor);
+  }
 
+  const renderCount = Math.max(visibleCount, expandFloor);
   const filteredLength = filtered.length;
   const canLoadMore = filteredLength > renderCount;
 
