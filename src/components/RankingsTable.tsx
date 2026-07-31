@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection, Position } from "@/lib/types";
 import {
@@ -38,12 +39,21 @@ import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
-import { BoardShortcutsHelp } from "./BoardShortcutsHelp";
-import { ExpandedPlayerPanel } from "./ExpandedPlayerPanel";
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
 import { SortHeader } from "./SortHeader";
+
+const BoardShortcutsHelp = dynamic(
+  () =>
+    import("./BoardShortcutsHelp").then((m) => m.BoardShortcutsHelp),
+  { ssr: false },
+);
+const ExpandedPlayerPanel = dynamic(
+  () =>
+    import("./ExpandedPlayerPanel").then((m) => m.ExpandedPlayerPanel),
+  { ssr: false },
+);
 
 interface RankingsTableProps {
   players: PlayerProjection[];

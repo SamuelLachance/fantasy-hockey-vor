@@ -27,6 +27,7 @@ const files: Record<string, string[]> = {
     "Copy player link",
     "detailStatSigma",
     "Loading player notes",
+    "Consensus #",
   ],
   "src/components/RankingsToolbar.tsx": ["CSV", "Link", "Starters"],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
