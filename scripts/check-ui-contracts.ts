@@ -27,8 +27,10 @@ const files: Record<string, string[]> = {
     "useHorizontalScrollShadow",
     "useBoardDocumentTitle",
     "useExpandedRowScroll",
+    "visibleBoardPlayers",
     "onCyclePosition",
   ],
+  "src/lib/board-visible.ts": ["visibleBoardPlayers"],
   "src/hooks/useExpandedRowScroll.ts": [
     "useExpandedRowScroll",
     "scrollExpandedRowIntoView",
