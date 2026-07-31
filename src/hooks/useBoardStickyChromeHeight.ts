@@ -18,17 +18,25 @@ export function useBoardStickyChromeHeight(): void {
       syncBoardStickyChromeHeight();
     };
     update();
-    if (!(chrome instanceof Element)) {
-      return () => {
-        document
-          .getElementById("rankings")
-          ?.style.removeProperty(BOARD_STICKY_CHROME_HEIGHT_VAR);
-      };
+
+    const cleanups: Array<() => void> = [];
+    window.addEventListener("resize", update);
+    cleanups.push(() => window.removeEventListener("resize", update));
+
+    const vv = window.visualViewport;
+    if (vv) {
+      vv.addEventListener("resize", update);
+      cleanups.push(() => vv.removeEventListener("resize", update));
     }
-    const ro = new ResizeObserver(update);
-    ro.observe(chrome);
+
+    if (chrome instanceof Element) {
+      const ro = new ResizeObserver(update);
+      ro.observe(chrome);
+      cleanups.push(() => ro.disconnect());
+    }
+
     return () => {
-      ro.disconnect();
+      for (const fn of cleanups) fn();
       document
         .getElementById("rankings")
         ?.style.removeProperty(BOARD_STICKY_CHROME_HEIGHT_VAR);

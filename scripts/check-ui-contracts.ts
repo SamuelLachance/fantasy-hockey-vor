@@ -120,6 +120,8 @@ const files: Record<string, string[]> = {
     "BOARD_STICKY_CHROME_SELECTOR",
     "BOARD_STICKY_CHROME_HEIGHT_VAR",
     "ResizeObserver",
+    "visualViewport",
+    'addEventListener("resize"',
   ],
   "src/hooks/useBoardDocumentTitle.ts": [
     "useBoardDocumentTitle",
