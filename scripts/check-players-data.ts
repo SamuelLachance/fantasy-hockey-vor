@@ -307,7 +307,11 @@ const mlWithUnc = players.filter((p) => p.projectionMethod === "ml" && p.uncerta
   .length;
 const mlSkaters = players.filter((p) => p.projectionMethod === "ml" && !p.isGoalie)
   .length;
-if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.5) {
+if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.4) {
+  errors.push(
+    `only ${mlWithUnc}/${mlSkaters} ML skaters carry uncertainty — regenerate after train-v2`,
+  );
+} else if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.8) {
   warnings.push(
     `only ${mlWithUnc}/${mlSkaters} ML skaters carry uncertainty — regenerate after train-v2`,
   );
