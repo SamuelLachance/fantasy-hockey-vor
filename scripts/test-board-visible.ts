@@ -2,7 +2,10 @@
  * Unit checks for progressive board window slicing.
  * Run: npx tsx scripts/test-board-visible.ts
  */
-import { visibleBoardPlayers } from "../src/lib/board-visible";
+import {
+  boardRowTabStopId,
+  visibleBoardPlayers,
+} from "../src/lib/board-visible";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -18,6 +21,11 @@ assert(visibleBoardPlayers(players, 2).map((p) => p.id).join() === "1,2", "slice
 assert(visibleBoardPlayers(players, 10).length === 3, "cap to filtered");
 assert(visibleBoardPlayers(players, -1).length === 0, "neg → empty");
 assert(visibleBoardPlayers([], 5).length === 0, "empty filtered");
+
+assert(boardRowTabStopId(players, null) === 1, "first row tab stop");
+assert(boardRowTabStopId(players, 2) === 2, "expanded tab stop");
+assert(boardRowTabStopId(players, 99) === 1, "missing expand → first");
+assert(boardRowTabStopId([], null) === null, "empty no tab stop");
 
 if (failed) process.exit(1);
 console.log("OK: board-visible");

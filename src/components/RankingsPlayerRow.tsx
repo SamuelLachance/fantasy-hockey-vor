@@ -37,6 +37,7 @@ interface RankingsPlayerRowProps {
   position: Position | "ALL";
   deferredQuery: string;
   isExpanded: boolean;
+  isTabStop: boolean;
   tableCategories: readonly Category[];
   playerDetails: PlayerDetailRecord | undefined;
   detailsLoading: boolean;
@@ -56,6 +57,7 @@ export function RankingsPlayerRow({
   position,
   deferredQuery,
   isExpanded,
+  isTabStop,
   tableCategories,
   playerDetails,
   detailsLoading,
@@ -82,7 +84,7 @@ export function RankingsPlayerRow({
     <Fragment>
       <tr
         id={`player-row-${player.id}`}
-        tabIndex={0}
+        tabIndex={isTabStop ? 0 : -1}
         aria-expanded={isExpanded}
         aria-controls={`player-panel-${player.id}`}
         aria-label={boardRowAriaLabel(player, position, idx)}

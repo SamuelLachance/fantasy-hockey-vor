@@ -33,7 +33,7 @@ const files: Record<string, string[]> = {
     "boardPositionTabId",
     "onCopyPlayerLink",
   ],
-  "src/lib/board-visible.ts": ["visibleBoardPlayers"],
+  "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
     "useExpandedRowScroll",
     "scrollExpandedRowIntoView",
@@ -46,6 +46,7 @@ const files: Record<string, string[]> = {
     "RankingsBoardFooter",
     "group/hscroll",
     "overscroll-x-contain",
+    "boardRowTabStopId",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
@@ -105,6 +106,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
     "aria-controls",
+    "isTabStop",
     'role="region"',
     "aria-busy",
     "vorForFilter",

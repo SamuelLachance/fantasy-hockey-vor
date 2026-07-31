@@ -1,5 +1,6 @@
 "use client";
 
+import { boardRowTabStopId } from "@/lib/board-visible";
 import type { RefObject } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { SortKey } from "@/lib/rankings-filters";
@@ -76,6 +77,8 @@ export function RankingsBoardTable({
   onShowAllGoalies,
   onResetBoard,
 }: RankingsBoardTableProps) {
+  const tabStopId = boardRowTabStopId(visiblePlayers, expandedId);
+
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
       <div
@@ -103,6 +106,7 @@ export function RankingsBoardTable({
                 position={position}
                 deferredQuery={deferredQuery}
                 isExpanded={expandedId === player.id}
+                isTabStop={player.id === tabStopId}
                 tableCategories={tableCategories}
                 playerDetails={details?.[String(player.id)]}
                 detailsLoading={details === null && !detailsError}
