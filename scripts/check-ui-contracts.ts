@@ -798,6 +798,8 @@ const files: Record<string, string[]> = {
     "sameAs",
     "boardShortcutsFaqAnswer",
     "SITE_BRAND",
+    "siteDefaultDescription",
+    "siteDefaultDescription(data.season)",
     "serializeJsonLd",
     "replace(/</g",
     "\\u003c",

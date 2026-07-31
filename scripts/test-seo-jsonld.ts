@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/test-seo-jsonld.ts
  */
 import { rankingsJsonLd, serializeJsonLd } from "../src/lib/seo-jsonld";
+import { siteDefaultDescription } from "../src/lib/site-meta";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 let failed = 0;
@@ -23,6 +24,14 @@ const ld = rankingsJsonLd(data);
 const graph = ld["@graph"] as Array<Record<string, unknown>>;
 assert(Array.isArray(graph) && graph.length === 5, "graph has 5 nodes");
 assert(graph[0]?.["@type"] === "WebApplication", "WebApplication node");
+assert(
+  graph[0]?.description === siteDefaultDescription(data.season),
+  "WebApplication description matches site-meta",
+);
+assert(
+  String(graph[0]?.description).includes(data.season),
+  "WebApplication description includes season",
+);
 assert(graph[1]?.["@type"] === "Dataset", "Dataset node");
 assert(graph[2]?.["@type"] === "FAQPage", "FAQPage node");
 assert(graph[3]?.["@type"] === "BreadcrumbList", "BreadcrumbList node");

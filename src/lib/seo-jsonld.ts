@@ -2,6 +2,7 @@ import type { ProjectionsDataset } from "@/lib/types";
 import { boardShortcutsFaqAnswer } from "@/lib/board-shortcuts";
 import { DEFAULT_PROJECTION_ENGINE } from "@/lib/projection-engine-label";
 import { SITE_BRAND, SITE_URL } from "@/lib/site";
+import { siteDefaultDescription } from "@/lib/site-meta";
 
 const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
   {
@@ -37,8 +38,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
         url: SITE_URL,
         applicationCategory: "SportsApplication",
         operatingSystem: "Any",
-        description:
-          "NHL fantasy hockey Value Over Replacement rankings from a stacked ML ensemble.",
+        description: siteDefaultDescription(data.season),
         offers: {
           "@type": "Offer",
           price: "0",
