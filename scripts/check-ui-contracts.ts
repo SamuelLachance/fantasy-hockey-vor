@@ -8,6 +8,11 @@ import { join } from "path";
 const root = process.cwd();
 const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
+    "RankingsTableInner",
+    "Suspense",
+    "Loading rankings",
+  ],
+  "src/components/RankingsTableInner.tsx": [
     'id="rankings"',
     'id="rankings-board-table"',
     "usePlayerDetails",
@@ -25,6 +30,7 @@ const files: Record<string, string[]> = {
     "useHorizontalScrollShadow",
     "useBoardDocumentTitle",
     "overscroll-x-contain",
+    "onCyclePosition",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
