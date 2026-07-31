@@ -75,6 +75,7 @@ const files: Record<string, string[]> = {
     "matching players",
     "Enter/Space",
     "opens first/last",
+    "Shift+G",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',
@@ -292,6 +293,7 @@ const files: Record<string, string[]> = {
     "r · l",
     "Home/End",
     "Enter",
+    "Shift+G",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",
