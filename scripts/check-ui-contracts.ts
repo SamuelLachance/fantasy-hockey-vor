@@ -21,7 +21,13 @@ const files: Record<string, string[]> = {
     'column="sigma"',
     "BoardShortcutsHelp",
   ],
-  "src/hooks/useRankingsKeyboard.ts": ['e.key === "/"', "ArrowDown"],
+  "src/hooks/useRankingsKeyboard.ts": [
+    'e.key === "/"',
+    "ArrowDown",
+    "draftValue",
+    "sigma",
+  ],
+  "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
   "src/components/BoardShortcutsHelp.tsx": ["Board shortcuts", "Focus search"],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",
