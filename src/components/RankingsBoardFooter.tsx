@@ -6,6 +6,7 @@ import { focusPlayerRow } from "@/lib/board-dom";
 import {
   loadMoreAriaLabel,
   loadMoreLabel,
+  loadMoreTitle,
   remainingBoardRows,
 } from "@/lib/board-remaining";
 import { RankingsEmptyState } from "./RankingsEmptyState";
@@ -94,6 +95,7 @@ export function RankingsBoardFooter({
               onLoadMore();
             }}
             aria-keyshortcuts="m"
+            title={loadMoreTitle()}
             aria-label={loadMoreAriaLabel(remaining)}
             className="inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-lg px-3 py-2 text-xs tabular-nums text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >

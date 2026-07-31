@@ -5,6 +5,7 @@
 import {
   loadMoreAriaLabel,
   loadMoreLabel,
+  loadMoreTitle,
   remainingBoardRows,
 } from "../src/lib/board-remaining";
 
@@ -25,6 +26,7 @@ assert(
   loadMoreAriaLabel(42) === "Load more players, 42 remaining",
   "aria label",
 );
+assert(loadMoreTitle() === "Load more rows (m)", "title");
 
 if (failed) process.exit(1);
 console.log("OK: board-remaining");

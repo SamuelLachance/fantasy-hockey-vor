@@ -174,6 +174,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsBoardFooter.tsx": [
     "loadMoreLabel",
     "loadMoreAriaLabel",
+    "loadMoreTitle",
     "remainingBoardRows",
     "RankingsEmptyState",
     'aria-keyshortcuts="m"',
@@ -1062,6 +1063,8 @@ const files: Record<string, string[]> = {
     "remainingBoardRows",
     "loadMoreLabel",
     "loadMoreAriaLabel",
+    "loadMoreTitle",
+    "Load more rows (m)",
   ],
   "src/lib/clipboard.ts": ["copyText", "execCommand"],
   "src/lib/projection-age.ts": [

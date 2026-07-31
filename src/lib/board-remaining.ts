@@ -17,3 +17,8 @@ export function loadMoreLabel(remaining: number): string {
 export function loadMoreAriaLabel(remaining: number): string {
   return `Load more players, ${formatCount(remaining)} remaining`;
 }
+
+/** Tooltip for the load-more control. */
+export function loadMoreTitle(): string {
+  return "Load more rows (m)";
+}
