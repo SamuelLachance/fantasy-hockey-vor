@@ -44,7 +44,7 @@ import {
 import { PositionBadges } from "./PositionBadge";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
-import { SortIcon } from "./SortIcon";
+import { SortHeader } from "./SortHeader";
 
 interface RankingsTableProps {
   players: PlayerProjection[];
@@ -384,76 +384,74 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           <table className="min-w-full text-left text-sm">
             <thead className="sticky top-0 z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm">
               <tr>
-                <th className="sticky left-0 z-[5] bg-slate-950/95 px-4 py-3">
-                  <button
-                    onClick={() => toggleSort("rank")}
-                    onDoubleClick={resetSortToVor}
-                    title="Double-click any header to reset sort to VOR"
-                    className="inline-flex items-center gap-1 hover:text-white"
-                  >
-                    # <SortIcon column="rank" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-                <th className="sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12">
-                  <button
-                    onClick={() => toggleSort("name")}
-                    onDoubleClick={resetSortToVor}
-                    className="inline-flex items-center gap-1 hover:text-white"
-                  >
-                    Player <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
+                <SortHeader
+                  column="rank"
+                  label="#"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
+                  className="sticky left-0 z-[5] bg-slate-950/95 px-4 py-3"
+                />
+                <SortHeader
+                  column="name"
+                  label="Player"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
+                  className="sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12"
+                />
                 <th className="px-4 py-3">Pos</th>
-                <th className="px-4 py-3">
-                  <button
-                    onClick={() => toggleSort("team")}
-                    onDoubleClick={resetSortToVor}
-                    className="inline-flex items-center gap-1 hover:text-white"
-                  >
-                    Team <SortIcon column="team" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-                <th className="px-4 py-3">
-                  <button
-                    onClick={() => toggleSort("vor")}
-                    onDoubleClick={resetSortToVor}
-                    className="inline-flex items-center gap-1 hover:text-white"
-                  >
-                    VOR <SortIcon column="vor" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-                <th
+                <SortHeader
+                  column="team"
+                  label="Team"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
+                  className="px-4 py-3"
+                />
+                <SortHeader
+                  column="vor"
+                  label="VOR"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
+                  className="px-4 py-3"
+                />
+                <SortHeader
+                  column="draftValue"
+                  label="Edge"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
                   className="px-4 py-3"
                   title="Consensus rank − model rank. Positive = undervalued vs synthetic market (Marcel/EWMA/lag1)."
-                >
-                  <button
-                    onClick={() => toggleSort("draftValue")}
-                    onDoubleClick={resetSortToVor}
-                    className="inline-flex items-center gap-1 hover:text-white"
-                  >
-                    Edge <SortIcon column="draftValue" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
-                <th className="px-4 py-3">
-                  <button
-                    onClick={() => toggleSort("gamesPlayed")}
-                    onDoubleClick={resetSortToVor}
-                    className="inline-flex items-center gap-1 hover:text-white"
-                  >
-                    GP <SortIcon column="gamesPlayed" sortKey={sortKey} sortDir={sortDir} />
-                  </button>
-                </th>
+                />
+                <SortHeader
+                  column="gamesPlayed"
+                  label="GP"
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onToggle={toggleSort}
+                  onReset={resetSortToVor}
+                  className="px-4 py-3"
+                />
                 {tableCategories.map((cat) => (
-                  <th key={cat} className="px-3 py-3 text-center">
-                    <button
-                      onClick={() => toggleSort(cat)}
-                      onDoubleClick={resetSortToVor}
-                      className="inline-flex w-full items-center justify-center gap-1 hover:text-white"
-                    >
-                      {CATEGORY_LABELS[cat]}
-                      <SortIcon column={cat} sortKey={sortKey} sortDir={sortDir} />
-                    </button>
-                  </th>
+                  <SortHeader
+                    key={cat}
+                    column={cat}
+                    label={CATEGORY_LABELS[cat]}
+                    sortKey={sortKey}
+                    sortDir={sortDir}
+                    onToggle={toggleSort}
+                    onReset={resetSortToVor}
+                    className="px-3 py-3 text-center"
+                    center
+                  />
                 ))}
               </tr>
             </thead>
