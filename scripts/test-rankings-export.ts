@@ -9,6 +9,7 @@ import {
   exportButtonTitle,
   exportCategoryStat,
   exportGroupAriaLabel,
+  exportStatRanges,
   rankingsJsonExport,
   rankingsToJsonRows,
 } from "../src/lib/rankings-export";
@@ -72,6 +73,25 @@ assert(bundle.categories.join(",") === "goals,assists", "bundle categories");
 assert(bundle.filters.query === "mcd", "bundle query provenance");
 assert(bundle.filters.sortKey === "vor", "bundle sort provenance");
 assert(bundle.filters.statRanges.vor?.min === "2", "bundle range provenance");
+assert(
+  rankingsJsonExport([sample], {
+    position: "C",
+    categories: cats,
+    filters: {
+      ...filters,
+      statRanges: { vor: { min: "5", max: "1" } },
+    },
+  }).filters.statRanges.vor === undefined,
+  "inverted ranges omitted from JSON provenance",
+);
+assert(
+  exportStatRanges({ vor: { min: "5", max: "1" } }).vor === undefined,
+  "exportStatRanges drops inverted",
+);
+assert(
+  exportStatRanges({ vor: { min: "2", max: "" } }).vor?.min === "2",
+  "exportStatRanges keeps valid",
+);
 assert(bundle.players[0]!.vor === 1.235, "bundle rows");
 assert(bundle.players[0]!.stats.goals === 40, "bundle stats");
 assert(bundle.exportedAt.startsWith("2026"), "bundle timestamp");

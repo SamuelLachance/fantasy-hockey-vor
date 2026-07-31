@@ -1,11 +1,28 @@
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { projectionStatValue } from "@/lib/format";
 import {
+  isInvertedRangeBound,
   vorForFilter,
+  type RangeKey,
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
+
+/** Provenance ranges for JSON export — omit empty and inverted bounds. */
+export function exportStatRanges(ranges: StatRanges): StatRanges {
+  const out: StatRanges = {};
+  for (const [key, b] of Object.entries(ranges) as [
+    RangeKey,
+    { min: string; max: string } | undefined,
+  ][]) {
+    if (!b) continue;
+    if (!b.min?.trim() && !b.max?.trim()) continue;
+    if (isInvertedRangeBound(key, b.min, b.max)) continue;
+    out[key] = { min: b.min, max: b.max };
+  }
+  return out;
+}
 
 export interface BoardExportRow {
   rank: number;
@@ -98,7 +115,7 @@ export function rankingsJsonExport(
       sortKey: filters.sortKey,
       sortDir: filters.sortDir,
       hideDepthGoalies: filters.hideDepthGoalies,
-      statRanges: { ...filters.statRanges },
+      statRanges: exportStatRanges(filters.statRanges),
     },
     playerCount: players.length,
     players: rankingsToJsonRows(players, position, categories),

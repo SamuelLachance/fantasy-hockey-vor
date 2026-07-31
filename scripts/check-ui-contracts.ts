@@ -430,6 +430,8 @@ const files: Record<string, string[]> = {
     "downloadRankingsCsv",
     "downloadRankingsJson",
     "exportCategoryStat",
+    "exportStatRanges",
+    "isInvertedRangeBound",
     "RankingsExportContext",
     "RankingsJsonExportFilters",
     "categories:",
