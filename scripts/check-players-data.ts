@@ -138,6 +138,15 @@ if (noTeam > 0) errors.push(`${noTeam} players missing team`);
 const noName = players.filter((p) => !p.name?.trim()).length;
 if (noName > 0) errors.push(`${noName} players missing name`);
 
+const goalieFlagMismatch = players.filter(
+  (p) => Boolean(p.isGoalie) !== p.positions.includes("G"),
+).length;
+if (goalieFlagMismatch > 0) {
+  errors.push(
+    `${goalieFlagMismatch} players with isGoalie vs positions[] G mismatch`,
+  );
+}
+
 const goalies = players.filter((p) => p.isGoalie).length;
 const skaters = players.length - goalies;
 if (goalies < 80) errors.push(`only ${goalies} goalies (expected >= 80)`);
