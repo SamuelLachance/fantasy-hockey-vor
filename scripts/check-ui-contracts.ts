@@ -71,7 +71,10 @@ const files: Record<string, string[]> = {
     "resetSortToVor",
     "toggleDepthGoalies",
     "Drop deep-linked expand ids",
-    'position !== "G"',
+    "canToggleDepthGoalies",
+  ],
+  "src/lib/goalie-depth-toggle.ts": [
+    "canToggleDepthGoalies",
   ],
   "src/components/RankingsBoardChrome.tsx": [
     'aria-label="Board filters"',

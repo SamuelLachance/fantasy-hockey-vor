@@ -4,6 +4,7 @@ import { startTransition } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
 import { focusStatsFilterButton } from "@/lib/board-dom";
+import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
 import { BoardActiveFilters } from "./BoardActiveFilters";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
@@ -75,7 +76,7 @@ export function RankingsBoardChrome({
         onCopyBoardLink={onCopyBoardLink}
         hideDepthGoalies={hideDepthGoalies}
         setHideDepthGoalies={setHideDepthGoalies}
-        showDepthToggle={position === "G" || position === "ALL"}
+        showDepthToggle={canToggleDepthGoalies(position)}
         onOpenHelp={onOpenHelp}
       />
 

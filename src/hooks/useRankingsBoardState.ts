@@ -22,6 +22,7 @@ import {
 import { countActiveStatFilters } from "@/lib/board-active-filters";
 import { boardHasPlayerId } from "@/lib/board-players";
 import { boardFilterResetToken } from "@/lib/board-reset-token";
+import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
 import type { RankingsUrlState } from "@/lib/rankings-url";
 
 export interface RankingsBoardSeed {
@@ -177,13 +178,13 @@ export function useRankingsBoardState(
   }
 
   function toggleDepthGoalies() {
-    if (position !== "G" && position !== "ALL") return;
+    if (!canToggleDepthGoalies(position)) return;
     startTransition(() => setHideDepthGoalies((v) => !v));
   }
 
   const tableCategories = boardCategories(position);
   const showingAllGoalies =
-    !hideDepthGoalies && (position === "G" || position === "ALL");
+    !hideDepthGoalies && canToggleDepthGoalies(position);
 
   return {
     query,
