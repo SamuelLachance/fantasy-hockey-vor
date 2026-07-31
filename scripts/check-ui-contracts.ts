@@ -724,6 +724,8 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="Slash"',
     "focusBoardSearch",
     'aria-hidden="true"',
+    "min-h-11",
+    "min-w-11",
   ],
   "src/lib/highlight-match.tsx": [
     "HIGHLIGHT_QUERY_MAX",

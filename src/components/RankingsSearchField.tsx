@@ -49,7 +49,7 @@ export function RankingsSearchField({
         placeholder={searchFieldPlaceholder()}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-10 text-base text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus-visible:ring-cyan-300/70"
+        className="min-h-11 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 pr-12 text-base text-white placeholder:text-slate-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus-visible:ring-cyan-300/70"
       />
       {searchQueryIsClearable(query) && (
         <button
@@ -57,7 +57,7 @@ export function RankingsSearchField({
           aria-label={clearSearchAriaLabel()}
           title={clearSearchTitle()}
           onClick={clearSearch}
-          className="absolute right-1.5 top-1/2 inline-flex min-h-6 min-w-6 -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+          className="absolute right-1 top-1/2 inline-flex min-h-11 min-w-11 -translate-y-1/2 items-center justify-center rounded-md p-1.5 text-slate-500 transition hover:bg-white/10 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
