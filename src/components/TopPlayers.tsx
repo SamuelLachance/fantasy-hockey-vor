@@ -55,7 +55,7 @@ export function TopPlayers({
             <li key={player.id}>
               <a
                 href={playerHref(player.id)}
-                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07]"
+                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm text-slate-500">
@@ -90,7 +90,7 @@ export function TopPlayers({
           </div>
           <a
             href="?sort=draftValue#rankings"
-            className="text-xs text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline"
+            className="text-xs text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
           >
             Sort board
           </a>
@@ -104,7 +104,7 @@ export function TopPlayers({
             <li key={player.id}>
               <a
                 href={playerHref(player.id)}
-                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-emerald-500/30 hover:bg-white/[0.07]"
+                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-emerald-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
               >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-sm text-slate-500">
@@ -148,7 +148,7 @@ export function TopPlayers({
                   <li key={p.id}>
                     <a
                       href={playerHref(p.id)}
-                      className="flex justify-between gap-2 text-sm text-slate-300 transition hover:text-white"
+                      className="flex justify-between gap-2 rounded-md text-sm text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
                     >
                       <span className="truncate">
                         {p.name}
