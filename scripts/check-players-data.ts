@@ -112,6 +112,11 @@ if (!data.league) {
       `league.goalieVorFactor is ${data.league.goalieVorFactor} (default 0.2)`,
     );
   }
+  if (data.league.season && data.league.season !== data.season) {
+    errors.push(
+      `league.season "${data.league.season}" != dataset season "${data.season}"`,
+    );
+  }
 }
 
 const players = data.players ?? [];

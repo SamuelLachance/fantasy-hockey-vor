@@ -54,7 +54,7 @@ export function ExpandedPlayerCategories({
                 aria-hidden="true"
               />
             </div>
-            <div className="mt-1 text-sm font-medium text-white">
+            <div className="mt-1 text-sm font-medium tabular-nums text-white">
               Proj: {formatStat(player, cat)}
               {sigma != null && cat !== "savePct" && (
                 <span className="ml-1 text-xs font-normal text-slate-500">
