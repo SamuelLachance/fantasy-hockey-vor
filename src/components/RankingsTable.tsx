@@ -30,7 +30,6 @@ import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
 import {
-  focusStatsFilterButton,
   scrollExpandedRowIntoView,
   scrollToRankings,
 } from "@/lib/board-dom";
@@ -39,13 +38,11 @@ import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
-import { BoardActiveFilters } from "./BoardActiveFilters";
+import { RankingsBoardChrome } from "./RankingsBoardChrome";
 import { RankingsBoardFooter } from "./RankingsBoardFooter";
 import { RankingsPlayerRow } from "./RankingsPlayerRow";
-import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsStatusBar } from "./RankingsStatusBar";
 import { RankingsTableHead } from "./RankingsTableHead";
-import { RankingsToolbar } from "./RankingsToolbar";
 
 const BoardShortcutsHelp = dynamic(
   () =>
@@ -280,67 +277,28 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
       <BoardShortcutsHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
-      <div
-        className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md motion-reduce:backdrop-blur-none"
-        role="region"
-        aria-label="Board filters"
-      >
-        <RankingsToolbar
-          position={position}
-          setPosition={setPosition}
-          query={query}
-          setQuery={setQuery}
-          filtersOpen={filtersOpen}
-          setFiltersOpen={setFiltersOpen}
-          activeFilterCount={activeFilterCount}
-          filtered={filtered}
-          tableCategories={tableCategories}
-          linkCopied={boardLinkStatus === "ok"}
-          linkCopyFailed={boardLinkStatus === "err"}
-          onCopyBoardLink={copyBoardLink}
-          hideDepthGoalies={hideDepthGoalies}
-          setHideDepthGoalies={setHideDepthGoalies}
-          showDepthToggle={position === "G" || position === "ALL"}
-          onOpenHelp={() => setHelpOpen(true)}
-        />
-
-        {filtersOpen && (
-          <RankingsStatFilters
-            filterRangeKeys={filterRangeKeys}
-            statRanges={statRanges}
-            activeFilterCount={activeFilterCount}
-            onUpdateRange={updateRange}
-            onClear={clearStatFilters}
-            onDone={() => {
-              setFiltersOpen(false);
-              queueMicrotask(focusStatsFilterButton);
-            }}
-          />
-        )}
-        {(activeFilterCount > 0 ||
-          position !== "ALL" ||
-          query.trim() !== "" ||
-          showingAllGoalies) && (
-          <BoardActiveFilters
-            position={position}
-            query={query}
-            statRanges={statRanges}
-            showStatChips={!filtersOpen && activeFilterCount > 0}
-            hasStatFilters={activeFilterCount > 0}
-            showingAllGoalies={showingAllGoalies}
-            onClearPosition={() =>
-              startTransition(() => setPosition("ALL"))
-            }
-            onClearQuery={() => setQuery("")}
-            onOpenStats={() => setFiltersOpen(true)}
-            onClearStats={clearStatFilters}
-            onRemoveStat={removeStatFilter}
-            onShowStarterGoalies={() =>
-              startTransition(() => setHideDepthGoalies(true))
-            }
-          />
-        )}
-      </div>
+      <RankingsBoardChrome
+        position={position}
+        setPosition={setPosition}
+        query={query}
+        setQuery={setQuery}
+        filtersOpen={filtersOpen}
+        setFiltersOpen={setFiltersOpen}
+        activeFilterCount={activeFilterCount}
+        filtered={filtered}
+        tableCategories={tableCategories}
+        boardLinkStatus={boardLinkStatus}
+        onCopyBoardLink={copyBoardLink}
+        hideDepthGoalies={hideDepthGoalies}
+        setHideDepthGoalies={setHideDepthGoalies}
+        filterRangeKeys={filterRangeKeys}
+        statRanges={statRanges}
+        onUpdateRange={updateRange}
+        onClearStatFilters={clearStatFilters}
+        onRemoveStat={removeStatFilter}
+        showingAllGoalies={showingAllGoalies}
+        onOpenHelp={() => setHelpOpen(true)}
+      />
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div ref={tableScrollRef} className="overflow-x-auto">
