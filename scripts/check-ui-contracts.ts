@@ -430,6 +430,8 @@ const files: Record<string, string[]> = {
     "expandVisibleFloor",
     "resolveVisibleCount",
     "skipIoRef",
+    "tokenMountedRef",
+    "requestAnimationFrame",
     "collapsing a deep row does not yank",
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [

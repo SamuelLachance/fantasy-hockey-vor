@@ -65,12 +65,17 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [prevToken, setPrevToken] = useState(resetToken);
   const skipIoRef = useRef(false);
+  const tokenMountedRef = useRef(false);
   const reset = resetToken !== prevToken;
   if (reset) {
     setPrevToken(resetToken);
   }
 
   useEffect(() => {
+    if (!tokenMountedRef.current) {
+      tokenMountedRef.current = true;
+      return;
+    }
     // Arm after token change so a bottom-clamped sentinel cannot undo the reset.
     skipIoRef.current = true;
   }, [resetToken]);
@@ -99,11 +104,17 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
   useEffect(() => {
     const el = loadMoreRef.current;
     if (!el || !canLoadMore) return;
+    let raf = 0;
     const obs = new IntersectionObserver(
       (entries) => {
         if (!entries.some((e) => e.isIntersecting)) return;
         if (skipIoRef.current) {
           skipIoRef.current = false;
+          // Re-check next frame so a still-visible sentinel can resume load-more.
+          raf = requestAnimationFrame(() => {
+            obs.unobserve(el);
+            obs.observe(el);
+          });
           return;
         }
         startTransition(() => {
@@ -115,8 +126,13 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
       { rootMargin: "240px 0px" },
     );
     obs.observe(el);
-    return () => obs.disconnect();
-  }, [filteredLength, renderCount, pageSize, canLoadMore]);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      obs.disconnect();
+    };
+    // Omit renderCount: keep one observer across page growth so skip+reobserve
+    // can resume without reconnecting on every load-more.
+  }, [filteredLength, pageSize, canLoadMore]);
 
   return {
     loadMoreRef,
