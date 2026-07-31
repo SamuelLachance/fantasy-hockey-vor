@@ -5,6 +5,11 @@ export function goalieDepthToggleLabel(hideDepthGoalies: boolean): string {
   return hideDepthGoalies ? "Starters" : "All G";
 }
 
+/** Tooltip for the Starters / All G control. */
+export function goalieDepthToggleTitle(maxGp: number): string {
+  return `Hide org-depth goalies at 4–${maxGp} GP (Shift+G)`;
+}
+
 /** Starters / All G toggle only applies on goalie-inclusive board views. */
 export function canToggleDepthGoalies(position: Position | "ALL"): boolean {
   return position === "G" || position === "ALL";

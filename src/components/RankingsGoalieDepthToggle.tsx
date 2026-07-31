@@ -2,7 +2,10 @@
 
 import { startTransition } from "react";
 import { GOALIE_DEPTH_MAX_GP } from "@/lib/goalie-depth";
-import { goalieDepthToggleLabel } from "@/lib/goalie-depth-toggle";
+import {
+  goalieDepthToggleLabel,
+  goalieDepthToggleTitle,
+} from "@/lib/goalie-depth-toggle";
 
 interface RankingsGoalieDepthToggleProps {
   hideDepthGoalies: boolean;
@@ -24,7 +27,7 @@ export function RankingsGoalieDepthToggle({
           ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
           : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
       }`}
-      title={`Hide org-depth goalies at 4–${GOALIE_DEPTH_MAX_GP} GP (Shift+G)`}
+      title={goalieDepthToggleTitle(GOALIE_DEPTH_MAX_GP)}
       aria-keyshortcuts="Shift+G"
     >
       {goalieDepthToggleLabel(hideDepthGoalies)}

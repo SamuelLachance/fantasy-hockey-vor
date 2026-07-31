@@ -341,9 +341,14 @@ const files: Record<string, string[]> = {
     "onCopyBoardLink",
   ],
   "src/components/RankingsHelpButton.tsx": [
-    "Keyboard shortcuts",
+    "boardHelpTitle",
+    "boardHelpAriaLabel",
     'aria-keyshortcuts="Shift+Slash"',
     "onOpenHelp",
+  ],
+  "src/lib/board-help-copy.ts": [
+    "boardHelpTitle",
+    "boardHelpAriaLabel",
   ],
   "src/components/RankingsGoalieDepthToggle.tsx": [
     "goalieDepthToggleLabel",
