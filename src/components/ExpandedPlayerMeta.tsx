@@ -55,6 +55,13 @@ export function ExpandedPlayerMeta({
         type="button"
         className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         aria-live="polite"
+        aria-label={
+          linkCopied
+            ? `Link copied for ${player.name}`
+            : linkCopyFailed
+              ? `Copy failed for ${player.name}`
+              : `Copy link for ${player.name}`
+        }
         onClick={(e) => {
           e.stopPropagation();
           onCopyLink();
