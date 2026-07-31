@@ -1,4 +1,5 @@
 import type { PlayerProjection } from "@/lib/types";
+import { formatSigned } from "@/lib/format";
 import {
   projectionMethodLabel,
   projectionMethodTone,
@@ -34,7 +35,7 @@ export function ExpandedPlayerMeta({
         <span className="text-xs tabular-nums text-slate-400">
           Consensus #{player.syntheticMarketRank} · model #{player.rank}
           {player.draftValue != null
-            ? ` · Edge ${player.draftValue > 0 ? "+" : ""}${player.draftValue}`
+            ? ` · Edge ${formatSigned(player.draftValue)}`
             : ""}
         </span>
       )}

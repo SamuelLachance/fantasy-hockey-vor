@@ -3,6 +3,7 @@ import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
 import {
   CATEGORY_FULL_LABELS,
   edgeColor,
+  formatSigned,
   sigmaColor,
   vorColor,
 } from "@/lib/format";
@@ -56,8 +57,7 @@ export function TopPlayers({
                     <div
                       className={`font-mono tabular-nums font-bold ${vorColor(player.vor)}`}
                     >
-                      {player.vor >= 0 ? "+" : ""}
-                      {player.vor.toFixed(2)}
+                      {formatSigned(player.vor, { digits: 2, plusZero: true })}
                     </div>
                     {player.uncertainty?.total?.sigma != null && (
                       <div
@@ -123,7 +123,7 @@ export function TopPlayers({
                   <span
                     className={`font-mono tabular-nums font-bold ${edgeColor(player.draftValue ?? 0)}`}
                   >
-                    +{player.draftValue}
+                    {formatSigned(player.draftValue ?? 0)}
                   </span>
                 }
               >
@@ -183,7 +183,8 @@ export function TopPlayers({
                   <div>
                     <div className="font-medium text-white">{player.name}</div>
                     <div className="text-xs text-slate-400">
-                      {player.team} · VOR {player.vor.toFixed(1)}
+                      {player.team} · VOR{" "}
+                      {formatSigned(player.vor, { digits: 1, plusZero: true })}
                     </div>
                   </div>
                 </TopPlayerLink>

@@ -2,7 +2,7 @@
  * Unit checks for display color helpers.
  * Run: npx tsx scripts/test-format.ts
  */
-import { edgeColor, sigmaColor, vorColor } from "../src/lib/format";
+import { edgeColor, formatSigned, sigmaColor, vorColor } from "../src/lib/format";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -12,6 +12,12 @@ function assert(cond: boolean, msg: string) {
   }
 }
 
+assert(formatSigned(2.5, { digits: 2, plusZero: true }) === "+2.50", "vor+");
+assert(formatSigned(0, { digits: 2, plusZero: true }) === "+0.00", "vor0");
+assert(formatSigned(-1.2, { digits: 2, plusZero: true }) === "-1.20", "vor-");
+assert(formatSigned(3) === "+3", "edge+");
+assert(formatSigned(0) === "0", "edge0");
+assert(formatSigned(-2) === "-2", "edge-");
 assert(vorColor(5).includes("emerald"), "high VOR emerald");
 assert(vorColor(2.5).includes("cyan"), "mid VOR cyan");
 assert(vorColor(0.5).includes("slate"), "small VOR slate");

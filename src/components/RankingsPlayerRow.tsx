@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import {
   edgeColor,
+  formatSigned,
   formatStat,
   playerCategories,
   sigmaColor,
@@ -111,8 +112,7 @@ export function RankingsPlayerRow({
           {highlightMatch(player.team, deferredQuery)}
         </td>
         <td className={`px-4 py-3 font-mono tabular-nums font-semibold ${vorColor(vor)}`}>
-          {vor >= 0 ? "+" : ""}
-          {vor.toFixed(2)}
+          {formatSigned(vor, { digits: 2, plusZero: true })}
         </td>
         <td
           className={`px-4 py-3 font-mono tabular-nums text-sm ${edgeColor(player.draftValue ?? 0)}`}
@@ -122,8 +122,7 @@ export function RankingsPlayerRow({
               : undefined
           }
         >
-          {(player.draftValue ?? 0) > 0 ? "+" : ""}
-          {player.draftValue ?? 0}
+          {formatSigned(player.draftValue ?? 0)}
         </td>
         <td
           className={`px-3 py-3 font-mono tabular-nums text-sm ${

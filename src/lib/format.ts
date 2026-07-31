@@ -54,6 +54,20 @@ export function formatCount(value: number): string {
   return value.toLocaleString("en-US");
 }
 
+/**
+ * Signed display for VOR/Edge. `plusZero` matches VOR cells (+0.00);
+ * Edge uses plusZero=false so zero stays bare.
+ */
+export function formatSigned(
+  value: number,
+  opts?: { digits?: number; plusZero?: boolean },
+): string {
+  const body =
+    opts?.digits == null ? String(value) : value.toFixed(opts.digits);
+  const showPlus = value > 0 || (Boolean(opts?.plusZero) && value >= 0);
+  return showPlus ? `+${body}` : body;
+}
+
 export function formatStat(
   player: PlayerProjection,
   category: Category,
