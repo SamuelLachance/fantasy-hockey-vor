@@ -96,7 +96,7 @@ export function RankingsToolbar({
           <Filter className="h-4 w-4" />
           Stats
           {activeFilterCount > 0 && (
-            <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-bold text-slate-950">
+            <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-950">
               {activeFilterCount}
             </span>
           )}
