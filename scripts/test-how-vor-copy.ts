@@ -4,7 +4,10 @@
  */
 import {
   howVorReplacementCopy,
+  howVorScarcityGoaliesLabel,
   howVorScarcityHintCopy,
+  howVorScarcitySkatersLabel,
+  howVorScarcityTitleCopy,
   howVorYahooPositionsCopy,
   howVorZScoreCopy,
 } from "../src/lib/how-vor-copy";
@@ -30,6 +33,13 @@ assert(
 );
 assert(howVorYahooPositionsCopy().includes("Yahoo"), "Yahoo copy");
 assert(howVorScarcityHintCopy().includes("Higher weight"), "scarcity hint");
+assert(
+  howVorScarcityTitleCopy() === "Category scarcity weights",
+  "scarcity title",
+);
+assert(!howVorScarcityTitleCopy().includes("(skaters)"), "title not skaters-only");
+assert(howVorScarcitySkatersLabel() === "Skaters", "skaters label");
+assert(howVorScarcityGoaliesLabel() === "Goalies", "goalies label");
 
 if (failed) process.exit(1);
 console.log("OK: how-vor-copy");

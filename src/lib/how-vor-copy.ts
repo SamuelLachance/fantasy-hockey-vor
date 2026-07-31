@@ -32,6 +32,21 @@ export function howVorYahooPositionsCopy(): string {
   );
 }
 
+/** Scarcity weights panel title (covers skaters and goalies). */
+export function howVorScarcityTitleCopy(): string {
+  return "Category scarcity weights";
+}
+
+/** Label above skater scarcity weight chips. */
+export function howVorScarcitySkatersLabel(): string {
+  return "Skaters";
+}
+
+/** Label above goalie scarcity weight chips. */
+export function howVorScarcityGoaliesLabel(): string {
+  return "Goalies";
+}
+
 /** Scarcity weights panel blurb. */
 export function howVorScarcityHintCopy(): string {
   return "Higher weight = harder to generate vs replacement; counts more toward VOR.";

@@ -3,7 +3,10 @@ import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
 import { CATEGORY_FULL_LABELS } from "@/lib/format";
 import {
   howVorReplacementCopy,
+  howVorScarcityGoaliesLabel,
   howVorScarcityHintCopy,
+  howVorScarcitySkatersLabel,
+  howVorScarcityTitleCopy,
   howVorYahooPositionsCopy,
   howVorZScoreCopy,
 } from "@/lib/how-vor-copy";
@@ -60,10 +63,13 @@ export function HowVorWorks({
       {categoryWeights && (
         <div className="mt-6 rounded-xl border border-white/5 bg-white/5 p-4">
           <h3 className="mb-3 text-sm font-medium text-white">
-            Category scarcity weights (skaters)
+            {howVorScarcityTitleCopy()}
           </h3>
           <p className="mb-3 text-xs text-slate-400">
             {howVorScarcityHintCopy()}
+          </p>
+          <p className="mb-2 text-xs font-medium text-slate-300">
+            {howVorScarcitySkatersLabel()}
           </p>
           <div className="flex flex-wrap gap-2">
             {SKATER_CATEGORIES.map((cat) => (
@@ -78,7 +84,10 @@ export function HowVorWorks({
               </span>
             ))}
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <p className="mb-2 mt-3 text-xs font-medium text-slate-300">
+            {howVorScarcityGoaliesLabel()}
+          </p>
+          <div className="flex flex-wrap gap-2">
             {GOALIE_CATEGORIES.map((cat) => (
               <span
                 key={cat}
