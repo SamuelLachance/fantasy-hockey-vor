@@ -20,7 +20,7 @@ import {
   filterAndSortBoard,
 } from "@/lib/rankings-board";
 import { countActiveStatFilters } from "@/lib/board-active-filters";
-import { boardHasPlayerId } from "@/lib/board-players";
+import { coerceExpandedPlayerId } from "@/lib/board-players";
 import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
 import type { RankingsUrlState } from "@/lib/rankings-url";
@@ -57,11 +57,6 @@ export function useRankingsBoardState(
   );
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [helpOpen, setHelpOpen] = useState(false);
-
-  // Drop deep-linked expand ids that are no longer on the board dataset.
-  if (expandedId != null && !boardHasPlayerId(players, expandedId)) {
-    setExpandedId(null);
-  }
 
   const filterRangeKeys = useMemo(
     () => boardFilterKeys(position),
@@ -110,6 +105,12 @@ export function useRankingsBoardState(
       hideDepthGoalies,
     ],
   );
+
+  // Drop expand when the player leaves the filtered board (dataset or filters).
+  const nextExpandedId = coerceExpandedPlayerId(filtered, expandedId);
+  if (nextExpandedId !== expandedId) {
+    setExpandedId(nextExpandedId);
+  }
 
   function clearStatFilters() {
     startTransition(() => setStatRanges({}));
