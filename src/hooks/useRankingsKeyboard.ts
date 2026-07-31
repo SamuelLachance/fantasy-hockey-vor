@@ -261,8 +261,12 @@ export function useRankingsKeyboard({
           }
           return;
         }
-        if (e.key === "Home") scrollPageTop();
-        else scrollToRankings({ focusSearch: true });
+        if (e.key === "Home") {
+          scrollPageTop();
+          queueMicrotask(() => focusBoardSearch({ preventScroll: true }));
+        } else {
+          scrollToRankings({ focusSearch: true });
+        }
         return;
       }
       if ((e.key === "l" || e.key === "L") && onCopyBoardLinkRef.current) {

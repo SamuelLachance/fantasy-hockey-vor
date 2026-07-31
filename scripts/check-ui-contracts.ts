@@ -382,6 +382,7 @@ const files: Record<string, string[]> = {
     "onCopyPlayerLink",
     'e.key === "Home"',
     'e.key === "End"',
+    "focusBoardSearch({ preventScroll: true })",
     "nextExpandedPlayerId",
     "nextExpandedPlayerIdByStep",
     "BOARD_PAGE_JUMP",
