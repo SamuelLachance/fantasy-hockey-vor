@@ -1,6 +1,9 @@
 "use client";
 
-import { cycleBoardPosition } from "@/lib/board-positions";
+import {
+  boardPositionTabId,
+  cycleBoardPosition,
+} from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { visibleBoardPlayers } from "@/lib/board-visible";
 import { startTransition, useRef, useState } from "react";
@@ -98,7 +101,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
       const pos = cycleBoardPosition(board.position, direction);
       startTransition(() => board.setPosition(pos));
       queueMicrotask(() => {
-        document.getElementById(`board-pos-tab-${pos}`)?.focus();
+        document.getElementById(boardPositionTabId(pos))?.focus();
       });
     },
   });

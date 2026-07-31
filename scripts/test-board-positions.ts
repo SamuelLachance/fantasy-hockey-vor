@@ -4,8 +4,10 @@
  */
 import {
   BOARD_POSITIONS,
+  boardPositionTabId,
   cycleBoardPosition,
   nextBoardPositionIndex,
+  positionFilterAnnounce,
 } from "../src/lib/board-positions";
 
 let failed = 0;
@@ -28,6 +30,12 @@ assert(cycleBoardPosition("ALL", 1) === "C", "cycle ALL → C");
 assert(cycleBoardPosition("G", 1) === "ALL", "cycle G wraps to ALL");
 assert(cycleBoardPosition("C", -1) === "ALL", "cycle back to ALL");
 assert(cycleBoardPosition("LW", -1) === "C", "cycle LW → C");
+assert(boardPositionTabId("C") === "board-pos-tab-C", "tab id C");
+assert(boardPositionTabId("ALL") === "board-pos-tab-ALL", "tab id ALL");
+assert(
+  positionFilterAnnounce("G") === "Position filter G",
+  "announce G",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-positions");

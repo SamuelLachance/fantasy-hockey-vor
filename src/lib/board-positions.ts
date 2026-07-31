@@ -12,6 +12,16 @@ export const BOARD_POSITIONS = [
 
 export type BoardPosition = (typeof BOARD_POSITIONS)[number];
 
+/** Stable DOM id for a position filter tab (focus after [ / ]). */
+export function boardPositionTabId(position: Position | "ALL"): string {
+  return `board-pos-tab-${position}`;
+}
+
+/** Screen-reader announcement when the position filter changes. */
+export function positionFilterAnnounce(position: Position | "ALL"): string {
+  return `Position filter ${position}`;
+}
+
 /** Next tab index for arrow / Home / End keyboard navigation. */
 export function nextBoardPositionIndex(
   currentIndex: number,

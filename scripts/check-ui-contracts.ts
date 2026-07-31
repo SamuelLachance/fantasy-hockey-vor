@@ -29,6 +29,7 @@ const files: Record<string, string[]> = {
     "useExpandedRowScroll",
     "visibleBoardPlayers",
     "onCyclePosition",
+    "boardPositionTabId",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -323,12 +324,15 @@ const files: Record<string, string[]> = {
     "rankings-board-table",
     'aria-keyshortcuts="[ ]"',
     "aria-live",
-    "Position filter",
+    "positionFilterAnnounce",
+    "boardPositionTabId",
   ],
   "src/lib/board-positions.ts": [
     "BOARD_POSITIONS",
     "nextBoardPositionIndex",
     "cycleBoardPosition",
+    "boardPositionTabId",
+    "positionFilterAnnounce",
   ],
   "src/lib/rankings-url.ts": [
     "hideDepthGoalies",
