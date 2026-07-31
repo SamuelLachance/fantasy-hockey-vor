@@ -1284,6 +1284,7 @@ const files: Record<string, string[]> = {
     "safe-area-inset-top",
     "100dvh",
     "touch-action: manipulation",
+    "text-size-adjust: 100%",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",
