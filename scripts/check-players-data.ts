@@ -79,9 +79,7 @@ if (data.positionSource !== "yahoo-fantasy") {
   );
 }
 
-const yahooFetched = Date.parse(
-  (data as { yahooPositionsFetchedAt?: string }).yahooPositionsFetchedAt ?? "",
-);
+const yahooFetched = Date.parse(data.yahooPositionsFetchedAt ?? "");
 if (!Number.isFinite(yahooFetched)) {
   errors.push("yahooPositionsFetchedAt missing/invalid");
 } else {
