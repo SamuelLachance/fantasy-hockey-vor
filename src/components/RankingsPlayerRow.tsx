@@ -15,6 +15,10 @@ import { vorForFilter } from "@/lib/rankings-filters";
 import { highlightMatch } from "@/lib/highlight-match";
 import { STICKY_NAME_BASE, STICKY_NAME_SHADOW } from "@/lib/board-dom";
 import { isBoardRowToggleKey } from "@/lib/board-keyboard";
+import {
+  boardRowAriaLabel,
+  boardRowDetailsAriaLabel,
+} from "@/lib/board-row-a11y";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
 
@@ -81,7 +85,7 @@ export function RankingsPlayerRow({
         role="button"
         aria-expanded={isExpanded}
         aria-controls={`player-panel-${player.id}`}
-        aria-label={`${player.name}, ${position === "ALL" ? `rank ${player.rank}` : `position rank ${player.positionRank ?? idx + 1}`}`}
+        aria-label={boardRowAriaLabel(player, position, idx)}
         onClick={onToggle}
         onKeyDown={onRowKeyDown}
         className={`cursor-pointer transition hover:bg-cyan-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/80 ${
@@ -160,7 +164,7 @@ export function RankingsPlayerRow({
             className="px-6 py-4"
             id={`player-panel-${player.id}`}
             role="region"
-            aria-label={`${player.name} details`}
+            aria-label={boardRowDetailsAriaLabel(player.name)}
             aria-busy={detailsLoading || undefined}
           >
             <ExpandedPlayerPanel

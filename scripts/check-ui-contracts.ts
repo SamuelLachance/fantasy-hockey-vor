@@ -107,7 +107,13 @@ const files: Record<string, string[]> = {
     "vorForFilter",
     "ExpandedPlayerPanel",
     "isBoardRowToggleKey",
+    "boardRowAriaLabel",
+    "boardRowDetailsAriaLabel",
     "tabular-nums",
+  ],
+  "src/lib/board-row-a11y.ts": [
+    "boardRowAriaLabel",
+    "boardRowDetailsAriaLabel",
   ],
   "src/lib/board-reset-token.ts": ["boardFilterResetToken", "g1"],
   "src/lib/board-keyboard.ts": [
