@@ -363,6 +363,18 @@ if (!existsSync(DETAILS_PATH)) {
         perStatUncertainty?: Record<string, unknown>;
       }
     >;
+    const detailIds = new Set(Object.keys(details));
+    const missingDetails = players.filter((p) => !detailIds.has(String(p.id)))
+      .length;
+    if (missingDetails > players.length * 0.05) {
+      errors.push(
+        `${missingDetails}/${players.length} board players missing player-details.json entries (>5%)`,
+      );
+    } else if (missingDetails > 0) {
+      warnings.push(
+        `${missingDetails} board players missing player-details.json entries`,
+      );
+    }
     const withPerStat = Object.values(details).filter(
       (d) =>
         (d.perStatSigma && Object.keys(d.perStatSigma).length > 0) ||
