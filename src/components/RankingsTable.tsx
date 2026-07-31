@@ -35,7 +35,8 @@ import {
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
-import { parseRankingsUrl } from "@/lib/rankings-url";
+import { copyText } from "@/lib/clipboard";
+import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import {
   fetchPlayerDetails,
   resetPlayerDetailsCache,
@@ -79,6 +80,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     PlayerDetailRecord
   > | null>(null);
   const [detailsError, setDetailsError] = useState(false);
+  const [copiedPlayerId, setCopiedPlayerId] = useState<number | null>(null);
 
   useRankingsUrlSync({
     position,
@@ -564,6 +566,34 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                                 irreducible
                               </span>
                             )}
+                            <button
+                              type="button"
+                              className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const qs = rankingsUrlSearch({
+                                  position,
+                                  query: deferredQuery,
+                                  sortKey,
+                                  sortDir,
+                                  playerId: player.id,
+                                  hideDepthGoalies,
+                                });
+                                const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
+                                void copyText(url).then((ok) => {
+                                  if (!ok) return;
+                                  setCopiedPlayerId(player.id);
+                                  window.setTimeout(
+                                    () => setCopiedPlayerId(null),
+                                    1600,
+                                  );
+                                });
+                              }}
+                            >
+                              {copiedPlayerId === player.id
+                                ? "Link copied"
+                                : "Copy player link"}
+                            </button>
                           </div>
                           {playerDetails?.reasoning && (
                             <p className="mb-3 text-sm leading-relaxed text-slate-300">
