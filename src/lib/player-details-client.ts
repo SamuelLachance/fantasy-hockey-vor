@@ -1,14 +1,10 @@
 import type { PlayerDetailRecord } from "@/lib/publish-players";
+import { playerDetailsHref } from "@/lib/site";
 
 let detailsPromise: Promise<Record<string, PlayerDetailRecord>> | null = null;
 
-function detailsUrl(): string {
-  const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  return `${base}/player-details.json`.replace(/\/{2,}/g, "/");
-}
-
 async function loadDetailsOnce(): Promise<Record<string, PlayerDetailRecord>> {
-  const url = detailsUrl();
+  const url = playerDetailsHref();
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {

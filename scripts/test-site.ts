@@ -2,7 +2,12 @@
  * Unit checks for site URL helpers.
  * Run: npx tsx scripts/test-site.ts
  */
-import { homeRankingsHref, SITE_ORIGIN, SITE_URL } from "../src/lib/site";
+import {
+  homeRankingsHref,
+  playerDetailsHref,
+  SITE_ORIGIN,
+  SITE_URL,
+} from "../src/lib/site";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -23,6 +28,12 @@ assert(
   homeRankingsHref() === "/fantasy-hockey-vor/#rankings",
   "with basePath",
 );
+assert(
+  playerDetailsHref() === "/fantasy-hockey-vor/player-details.json",
+  "details with basePath",
+);
+delete process.env.NEXT_PUBLIC_BASE_PATH;
+assert(playerDetailsHref() === "/player-details.json", "details no basePath");
 if (prev === undefined) delete process.env.NEXT_PUBLIC_BASE_PATH;
 else process.env.NEXT_PUBLIC_BASE_PATH = prev;
 
