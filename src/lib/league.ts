@@ -1,9 +1,10 @@
 import type { LeagueSettings } from "./types";
+import { PROJECTION_SEASON } from "./nhl-api";
 
 export const DEFAULT_LEAGUE: LeagueSettings = {
   teams: 12,
   roster: { C: 2, LW: 2, RW: 2, D: 4, G: 2 },
-  season: "2026-27",
+  season: PROJECTION_SEASON,
   // Yahoo H2H categories: goalie value is discounted because weekly goalie
   // starts are volatile, goalie categories are streamable off waivers, and
   // goalie skill stats (SV%/SO) are near-unpredictable season-to-season.
