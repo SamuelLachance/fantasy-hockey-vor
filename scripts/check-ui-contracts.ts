@@ -49,7 +49,7 @@ const files: Record<string, string[]> = {
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/components/Header.tsx": ["Jump to board", "dateTime"],
-  "src/app/globals.css": ["content-visibility", "contain-intrinsic-size"],
+  "src/app/error.tsx": ["Try again", "Back to rankings"],
   "src/app/global-error.tsx": ["Try again"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
