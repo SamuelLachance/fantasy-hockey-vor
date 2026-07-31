@@ -184,6 +184,7 @@ export function useRankingsBoardState(
   }
 
   function hydrateFromUrl(next: RankingsUrlState) {
+    setHelpOpen(false);
     setQuery(next.query);
     setPosition(next.position);
     setSortKey(next.sortKey);

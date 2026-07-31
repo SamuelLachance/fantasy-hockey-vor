@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { Position } from "@/lib/types";
 import { boardDocumentTitle } from "@/lib/board-document-title";
+import { siteDefaultTitle } from "@/lib/site-meta";
 
 /** Keep the browser tab title in sync with board filters / expanded player. */
 export function useBoardDocumentTitle(opts: {
@@ -17,5 +18,8 @@ export function useBoardDocumentTitle(opts: {
       query,
       playerName,
     });
+    return () => {
+      document.title = siteDefaultTitle();
+    };
   }, [position, query, playerName]);
 }
