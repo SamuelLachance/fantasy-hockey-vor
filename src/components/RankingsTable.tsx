@@ -673,7 +673,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10"
+                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
                 >
                   Clear search
                 </button>
@@ -682,7 +682,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <button
                   type="button"
                   onClick={clearStatFilters}
-                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10"
+                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
                 >
                   Clear stat filters
                 </button>
@@ -691,11 +691,28 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <button
                   type="button"
                   onClick={() => startTransition(() => setPosition("ALL"))}
-                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10"
+                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
                 >
                   Show all positions
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery("");
+                  clearStatFilters();
+                  setFiltersOpen(false);
+                  startTransition(() => {
+                    setPosition("ALL");
+                    setHideDepthGoalies(true);
+                    setSortKey("vor");
+                    setSortDir("desc");
+                  });
+                }}
+                className="rounded-full bg-cyan-500/15 px-4 py-1.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+              >
+                Reset board view
+              </button>
             </div>
           </div>
         )}

@@ -15,6 +15,7 @@ const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
 const DETAILS_PATH = join(process.cwd(), "public", "player-details.json");
 const MIN_PLAYERS = 800;
 const STALE_WARN_DAYS = 30;
+const STALE_FAIL_DAYS = 60;
 
 const errors: string[] = [];
 const warnings: string[] = [];
@@ -43,7 +44,11 @@ if (!Number.isFinite(generatedAt)) {
   errors.push(`generatedAt is not a valid date: ${data.generatedAt}`);
 } else {
   const ageDays = (Date.now() - generatedAt) / (24 * 60 * 60 * 1000);
-  if (ageDays > STALE_WARN_DAYS) {
+  if (ageDays > STALE_FAIL_DAYS) {
+    errors.push(
+      `projections are ${ageDays.toFixed(0)} days old (fail after ${STALE_FAIL_DAYS}d) — regenerate before deploy`,
+    );
+  } else if (ageDays > STALE_WARN_DAYS) {
     warnings.push(`projections are ${ageDays.toFixed(0)} days old`);
   }
 }

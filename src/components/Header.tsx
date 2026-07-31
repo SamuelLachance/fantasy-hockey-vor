@@ -28,6 +28,7 @@ export function Header({
     : null;
   const ageDays = projectionAgeDays;
   const stale = ageDays > 21;
+  const veryStale = ageDays > 45;
   return (
     <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <a
@@ -93,10 +94,20 @@ export function Header({
           </div>
         </div>
         {stale && (
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100/90">
-            Rankings data is {Math.floor(ageDays)} days old — re-run{" "}
-            <code className="text-amber-200">npm run generate</code> after
-            refresh/train for current projections.
+          <div
+            role="status"
+            className={`rounded-xl px-4 py-3 text-sm ${
+              veryStale
+                ? "border border-rose-500/40 bg-rose-500/10 text-rose-100/90"
+                : "border border-amber-500/30 bg-amber-500/10 text-amber-100/90"
+            }`}
+          >
+            Rankings data is {Math.floor(ageDays)} days old
+            {veryStale ? " (refresh urgently)" : ""} — re-run{" "}
+            <code className={veryStale ? "text-rose-200" : "text-amber-200"}>
+              npm run generate
+            </code>{" "}
+            after refresh/train for current projections.
           </div>
         )}
         <div className="flex items-start gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm text-cyan-100/90">
