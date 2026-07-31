@@ -26,12 +26,19 @@ export function scrollPageTop(): void {
   });
 }
 
-export function scrollToRankings(): void {
+export function scrollToRankings(options?: { focusSearch?: boolean }): void {
   if (typeof document === "undefined") return;
   document.getElementById("rankings")?.scrollIntoView({
     behavior: prefersReducedMotion() ? "auto" : "smooth",
     block: "start",
   });
+  if (options?.focusSearch) {
+    queueMicrotask(() => {
+      document
+        .querySelector<HTMLInputElement>('#rankings input[type="search"]')
+        ?.focus();
+    });
+  }
 }
 
 /** Keep an expanded player row in view without jumping the page harshly. */

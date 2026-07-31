@@ -151,7 +151,7 @@ export function useRankingsKeyboard({
         e.key === "End"
       ) {
         e.preventDefault();
-        scrollToRankings();
+        scrollToRankings({ focusSearch: true });
         return;
       }
       if (

@@ -67,7 +67,7 @@ const files: Record<string, string[]> = {
     "Reset board view",
     "Copy board link",
     "Scroll to top",
-    "Jump to board",
+    "Jump to board + focus search",
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "Copy player link",
