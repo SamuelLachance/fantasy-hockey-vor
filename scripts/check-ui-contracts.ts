@@ -22,7 +22,6 @@ const files: Record<string, string[]> = {
     "BoardActiveFilters",
     "RankingsEmptyState",
     "RankingsStatusBar",
-    'aria-controls="rankings-stat-filters"',
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",
@@ -44,6 +43,7 @@ const files: Record<string, string[]> = {
     "sigma",
     "onResetBoard",
     "filteredRef",
+    "focusStatsFilterButton",
   ],
   "src/lib/board-dom.ts": ["focusStatsFilterButton", "rankings-stat-filters"],
   "src/lib/rankings-export.ts": ["rankingsToJsonRows", "rankingsCsvString"],
@@ -58,7 +58,13 @@ const files: Record<string, string[]> = {
     "Loading player notes",
     "Consensus #",
   ],
-  "src/components/RankingsToolbar.tsx": ["CSV", "JSON", "Link", "Starters"],
+  "src/components/RankingsToolbar.tsx": [
+    "CSV",
+    "JSON",
+    "Link",
+    "Starters",
+    'aria-controls="rankings-stat-filters"',
+  ],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],
   "src/lib/rankings-url.ts": [
