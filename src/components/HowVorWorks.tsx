@@ -23,10 +23,18 @@ export function HowVorWorks({
   categoryWeights,
 }: HowVorWorksProps) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3">
+    <section
+      aria-labelledby="how-vor-works-title"
+      className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3"
+    >
       <div className="mb-4 flex items-center gap-2 text-emerald-400">
         <Shield className="h-5 w-5" />
-        <h2 className="text-lg font-semibold text-white">How VOR Works</h2>
+        <h2
+          id="how-vor-works-title"
+          className="text-lg font-semibold text-white"
+        >
+          How VOR Works
+        </h2>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
@@ -85,6 +93,6 @@ export function HowVorWorks({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

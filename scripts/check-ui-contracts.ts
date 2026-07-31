@@ -449,6 +449,7 @@ const files: Record<string, string[]> = {
     "boardHelpTitle",
     "boardHelpAriaLabel",
     'aria-keyshortcuts="Shift+Slash"',
+    'aria-haspopup="dialog"',
     "onOpenHelp",
   ],
   "src/lib/board-help-copy.ts": [
