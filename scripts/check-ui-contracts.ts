@@ -254,6 +254,8 @@ const files: Record<string, string[]> = {
     "downloadRankingsCsv",
     "downloadRankingsJson",
     "exportButtonLabel",
+    "exportButtonTitle",
+    "exportGroupAriaLabel",
     "vorForFilter",
     "vorScope",
   ],
@@ -386,10 +388,11 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsExportButtons.tsx": [
     "exportButtonLabel",
+    "exportButtonTitle",
+    "exportGroupAriaLabel",
     "useTimedFlash",
     "downloadRankingsCsv",
     "downloadRankingsJson",
-    "Export filtered rankings",
   ],
   "src/hooks/useBoardInfiniteScroll.ts": [
     "useBoardInfiniteScroll",

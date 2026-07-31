@@ -106,3 +106,15 @@ export function exportButtonLabel(
   if (flash === kind) return "Saved";
   return kind === "csv" ? "CSV" : "JSON";
 }
+
+/** Accessible name for the export button group. */
+export function exportGroupAriaLabel(): string {
+  return "Export filtered rankings";
+}
+
+/** Tooltip for an export format button. */
+export function exportButtonTitle(kind: "csv" | "json"): string {
+  return kind === "csv"
+    ? "Download filtered rankings as CSV"
+    : "Download filtered rankings as JSON";
+}

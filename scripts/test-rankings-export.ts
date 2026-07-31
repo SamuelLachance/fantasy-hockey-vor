@@ -6,6 +6,8 @@ import {
   downloadRankingsCsv,
   downloadRankingsJson,
   exportButtonLabel,
+  exportButtonTitle,
+  exportGroupAriaLabel,
   rankingsJsonExport,
   rankingsToJsonRows,
 } from "../src/lib/rankings-export";
@@ -60,6 +62,9 @@ assert(exportButtonLabel("csv", "idle") === "CSV", "csv idle");
 assert(exportButtonLabel("csv", "csv") === "Saved", "csv flash");
 assert(exportButtonLabel("json", "csv") === "JSON", "json ignores csv flash");
 assert(exportButtonLabel("json", "json") === "Saved", "json flash");
+assert(exportGroupAriaLabel().includes("Export"), "group aria");
+assert(exportButtonTitle("csv").includes("CSV"), "csv title");
+assert(exportButtonTitle("json").includes("JSON"), "json title");
 
 if (failed) process.exit(1);
 console.log("OK: rankings-export");

@@ -6,6 +6,8 @@ import {
   downloadRankingsCsv,
   downloadRankingsJson,
   exportButtonLabel,
+  exportButtonTitle,
+  exportGroupAriaLabel,
 } from "@/lib/rankings-export";
 import { useTimedFlash } from "@/hooks/useTimedFlash";
 
@@ -30,7 +32,7 @@ export function RankingsExportButtons({
     <div
       className="inline-flex shrink-0 overflow-hidden rounded-xl border border-white/10"
       role="group"
-      aria-label="Export filtered rankings"
+      aria-label={exportGroupAriaLabel()}
     >
       <button
         type="button"
@@ -40,7 +42,7 @@ export function RankingsExportButtons({
           flashExport("csv");
         }}
         className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
-        title="Download filtered rankings as CSV"
+        title={exportButtonTitle("csv")}
         aria-live="polite"
       >
         <Download className="h-4 w-4" aria-hidden="true" />
@@ -54,7 +56,7 @@ export function RankingsExportButtons({
           flashExport("json");
         }}
         className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
-        title="Download filtered rankings as JSON"
+        title={exportButtonTitle("json")}
         aria-live="polite"
       >
         {exportButtonLabel("json", exportFlash)}
