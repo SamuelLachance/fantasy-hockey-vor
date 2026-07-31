@@ -142,12 +142,23 @@ function stamp(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Download basename including position + sort so same-day exports differ. */
+export function rankingsExportFilename(
+  ctx: RankingsExportContext,
+  ext: "csv" | "json",
+  date = stamp(),
+): string {
+  const pos = ctx.position.toLowerCase();
+  const sort = `${ctx.filters.sortKey}-${ctx.filters.sortDir}`;
+  return `vor-rankings-${pos}-${sort}-${date}.${ext}`;
+}
+
 export function downloadRankingsCsv(
   players: PlayerProjection[],
   ctx: RankingsExportContext,
 ): void {
   downloadTextFile(
-    `vor-rankings-${ctx.position.toLowerCase()}-${stamp()}.csv`,
+    rankingsExportFilename(ctx, "csv"),
     rankingsCsvString(
       players,
       ctx.position,
@@ -163,7 +174,7 @@ export function downloadRankingsJson(
   ctx: RankingsExportContext,
 ): void {
   downloadTextFile(
-    `vor-rankings-${ctx.position.toLowerCase()}-${stamp()}.json`,
+    rankingsExportFilename(ctx, "json"),
     rankingsJsonString(players, ctx),
     "application/json;charset=utf-8",
   );

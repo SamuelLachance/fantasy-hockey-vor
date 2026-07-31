@@ -511,6 +511,7 @@ const files: Record<string, string[]> = {
     "rankingsCsvString",
     "downloadRankingsCsv",
     "downloadRankingsJson",
+    "rankingsExportFilename",
     "exportCategoryStat",
     "exportStatRanges",
     "isInvertedRangeBound",

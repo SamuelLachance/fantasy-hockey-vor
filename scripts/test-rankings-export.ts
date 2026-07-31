@@ -11,6 +11,7 @@ import {
   exportCategoryStat,
   exportGroupAriaLabel,
   exportStatRanges,
+  rankingsExportFilename,
   rankingsJsonExport,
   rankingsToJsonRows,
 } from "../src/lib/rankings-export";
@@ -126,6 +127,26 @@ assert(
 
 assert(typeof downloadRankingsCsv === "function", "csv download helper");
 assert(typeof downloadRankingsJson === "function", "json download helper");
+assert(
+  rankingsExportFilename(
+    { position: "C", categories: cats, filters },
+    "csv",
+    "2026-07-31",
+  ) === "vor-rankings-c-vor-desc-2026-07-31.csv",
+  "csv filename includes sort",
+);
+assert(
+  rankingsExportFilename(
+    {
+      position: "ALL",
+      categories: cats,
+      filters: { ...filters, sortKey: "name", sortDir: "asc" },
+    },
+    "json",
+    "2026-07-31",
+  ) === "vor-rankings-all-name-asc-2026-07-31.json",
+  "json filename includes sort",
+);
 assert(exportButtonLabel("csv", "idle") === "CSV", "csv idle");
 assert(exportButtonLabel("csv", "csv") === "Saved", "csv flash");
 assert(exportButtonLabel("json", "csv") === "JSON", "json ignores csv flash");
