@@ -571,6 +571,17 @@ const files: Record<string, string[]> = {
     "sortHeaderAriaSort",
     "sortHeaderAriaLabel",
   ],
+  "src/lib/position-badge.ts": [
+    "positionBadgeTitle",
+    "positionBadgeAriaLabel",
+    "uniquePositions",
+  ],
+  "src/components/PositionBadge.tsx": [
+    "positionBadgeTitle",
+    "positionBadgeAriaLabel",
+    "uniquePositions",
+    "POSITION_COLORS",
+  ],
   "src/lib/board-remaining.ts": [
     "remainingBoardRows",
     "loadMoreLabel",

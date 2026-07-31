@@ -1,5 +1,10 @@
 import type { Position } from "@/lib/types";
 import { POSITION_COLORS } from "@/lib/format";
+import {
+  positionBadgeAriaLabel,
+  positionBadgeTitle,
+  uniquePositions,
+} from "@/lib/position-badge";
 
 interface PositionBadgeProps {
   position: Position;
@@ -15,10 +20,8 @@ export function PositionBadge({
   return (
     <span
       className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${POSITION_COLORS[position]} ${highlight ? "ring-2 ring-cyan-400/80" : ""} ${className}`}
-      title={highlight ? `VOR calculated at ${position}` : position}
-      aria-label={
-        highlight ? `${position}, VOR position` : `Position ${position}`
-      }
+      title={positionBadgeTitle(position, highlight)}
+      aria-label={positionBadgeAriaLabel(position, highlight)}
     >
       {position}
     </span>
@@ -36,7 +39,7 @@ export function PositionBadges({
   vorPosition,
   className = "",
 }: PositionBadgesProps) {
-  const unique = [...new Set(positions)];
+  const unique = uniquePositions(positions);
   if (unique.length <= 1) {
     return <PositionBadge position={unique[0] ?? "C"} className={className} />;
   }
