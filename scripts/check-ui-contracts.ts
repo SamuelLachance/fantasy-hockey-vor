@@ -221,6 +221,8 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",
+    "aria-busy",
+    "searchPending",
     "boardShowingSummary",
     "Enter/Space",
     "boardShortcutsStatusCopy",

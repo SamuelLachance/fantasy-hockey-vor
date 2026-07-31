@@ -5,18 +5,22 @@ interface RankingsStatusBarProps {
   renderCount: number;
   filteredCount: number;
   totalCount: number;
+  /** True while live query is ahead of deferred filtering. */
+  searchPending?: boolean;
 }
 
 export function RankingsStatusBar({
   renderCount,
   filteredCount,
   totalCount,
+  searchPending = false,
 }: RankingsStatusBarProps) {
   return (
     <p
       className="text-center text-xs text-slate-500"
       aria-live="polite"
       aria-atomic="true"
+      aria-busy={searchPending || undefined}
     >
       <span className="tabular-nums">
         {boardShowingSummary(renderCount, filteredCount, totalCount)}

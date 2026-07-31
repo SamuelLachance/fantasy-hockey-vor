@@ -196,6 +196,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         renderCount={renderCount}
         filteredCount={board.filtered.length}
         totalCount={players.length}
+        searchPending={board.query !== board.deferredQuery}
       />
     </div>
   );
