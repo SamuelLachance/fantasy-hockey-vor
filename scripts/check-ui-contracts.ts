@@ -208,7 +208,9 @@ const files: Record<string, string[]> = {
     "steadiestBoardHref",
     "edgeBoardHref",
     "vorForFilter",
+    "TopPlayerLink",
   ],
+  "src/components/TopPlayerLink.tsx": ["TopPlayerLink", "hover:bg-white/[0.07]"],
   "src/app/page.tsx": [
     "RankingsTable",
     "TopPlayers",

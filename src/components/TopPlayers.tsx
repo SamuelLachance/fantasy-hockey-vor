@@ -18,6 +18,7 @@ import {
   steadiestBoardHref,
 } from "@/lib/rankings-url";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
+import { TopPlayerLink } from "./TopPlayerLink";
 
 interface TopPlayersProps {
   players: ProjectionsDataset["players"];
@@ -53,37 +54,39 @@ export function TopPlayers({
         <ul className="space-y-3">
           {topOverall.map((player) => (
             <li key={player.id}>
-              <a
+              <TopPlayerLink
                 href={playerBoardHref(player.id)}
-                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm text-slate-500">
-                    {player.rank}
-                  </span>
-                  <div>
-                    <div className="font-medium text-white">{player.name}</div>
-                    <div className="text-xs text-slate-400">{player.team}</div>
-                  </div>
-                  <PositionBadges
-                    positions={player.positions}
-                    vorPosition={player.vorPosition ?? player.position}
-                  />
-                </div>
-                <div className="text-right">
-                  <div className={`font-mono font-bold ${vorColor(player.vor)}`}>
-                    {player.vor >= 0 ? "+" : ""}
-                    {player.vor.toFixed(2)}
-                  </div>
-                  {player.uncertainty?.total?.sigma != null && (
+                accent="amber"
+                trailing={
+                  <div className="text-right">
                     <div
-                      className={`font-mono text-xs ${sigmaColor(player.uncertainty.total.sigma)}`}
+                      className={`font-mono font-bold ${vorColor(player.vor)}`}
                     >
-                      Σσ {player.uncertainty.total.sigma.toFixed(0)}
+                      {player.vor >= 0 ? "+" : ""}
+                      {player.vor.toFixed(2)}
                     </div>
-                  )}
+                    {player.uncertainty?.total?.sigma != null && (
+                      <div
+                        className={`font-mono text-xs ${sigmaColor(player.uncertainty.total.sigma)}`}
+                      >
+                        Σσ {player.uncertainty.total.sigma.toFixed(0)}
+                      </div>
+                    )}
+                  </div>
+                }
+              >
+                <span className="font-mono text-sm text-slate-500">
+                  {player.rank}
+                </span>
+                <div>
+                  <div className="font-medium text-white">{player.name}</div>
+                  <div className="text-xs text-slate-400">{player.team}</div>
                 </div>
-              </a>
+                <PositionBadges
+                  positions={player.positions}
+                  vorPosition={player.vorPosition ?? player.position}
+                />
+              </TopPlayerLink>
             </li>
           ))}
         </ul>
@@ -119,30 +122,30 @@ export function TopPlayers({
         <ul className="space-y-3">
           {topEdge.map((player) => (
             <li key={player.id}>
-              <a
+              <TopPlayerLink
                 href={playerBoardHref(player.id)}
-                className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-emerald-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm text-slate-500">
-                    #{player.rank}
+                accent="emerald"
+                trailing={
+                  <span
+                    className={`font-mono font-bold ${edgeColor(player.draftValue ?? 0)}`}
+                  >
+                    +{player.draftValue}
                   </span>
-                  <div>
-                    <div className="font-medium text-white">{player.name}</div>
-                    <div className="text-xs text-slate-400">
-                      {player.team}
-                      {player.syntheticMarketRank != null
-                        ? ` · mkt #${player.syntheticMarketRank}`
-                        : ""}
-                    </div>
+                }
+              >
+                <span className="font-mono text-sm text-slate-500">
+                  #{player.rank}
+                </span>
+                <div>
+                  <div className="font-medium text-white">{player.name}</div>
+                  <div className="text-xs text-slate-400">
+                    {player.team}
+                    {player.syntheticMarketRank != null
+                      ? ` · mkt #${player.syntheticMarketRank}`
+                      : ""}
                   </div>
                 </div>
-                <span
-                  className={`font-mono font-bold ${edgeColor(player.draftValue ?? 0)}`}
-                >
-                  +{player.draftValue}
-                </span>
-              </a>
+              </TopPlayerLink>
             </li>
           ))}
         </ul>
@@ -170,27 +173,26 @@ export function TopPlayers({
           <ul className="space-y-3">
             {steadiest.map((player) => (
               <li key={player.id}>
-                <a
+                <TopPlayerLink
                   href={playerBoardHref(player.id)}
-                  className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-mono text-sm text-slate-500">
-                      #{player.rank}
+                  trailing={
+                    <span
+                      className={`font-mono font-bold ${sigmaColor(player.uncertainty!.total.sigma)}`}
+                    >
+                      Σσ {player.uncertainty!.total.sigma.toFixed(0)}
                     </span>
-                    <div>
-                      <div className="font-medium text-white">{player.name}</div>
-                      <div className="text-xs text-slate-400">
-                        {player.team} · VOR {player.vor.toFixed(1)}
-                      </div>
+                  }
+                >
+                  <span className="font-mono text-sm text-slate-500">
+                    #{player.rank}
+                  </span>
+                  <div>
+                    <div className="font-medium text-white">{player.name}</div>
+                    <div className="text-xs text-slate-400">
+                      {player.team} · VOR {player.vor.toFixed(1)}
                     </div>
                   </div>
-                  <span
-                    className={`font-mono font-bold ${sigmaColor(player.uncertainty!.total.sigma)}`}
-                  >
-                    Σσ {player.uncertainty!.total.sigma.toFixed(0)}
-                  </span>
-                </a>
+                </TopPlayerLink>
               </li>
             ))}
           </ul>
