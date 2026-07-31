@@ -11,6 +11,7 @@ import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap, Gauge } from "lucide-react";
 import { steadiestSkaters, topEdgeSkaters } from "@/lib/top-lists";
 import { vorForFilter } from "@/lib/rankings-filters";
+import { topByPositionLeaders } from "@/lib/goalie-depth";
 import {
   edgeBoardHref,
   playerBoardHref,
@@ -35,14 +36,7 @@ export function TopPlayers({
   const teams = league.teams;
   const topEdge = topEdgeSkaters(players);
   const steadiest = steadiestSkaters(players);
-  const topByPosition = (["C", "LW", "RW", "D", "G"] as const).map((pos) => ({
-    position: pos,
-    players: players
-      .filter((p) => p.positions.includes(pos))
-      .filter((p) => pos !== "G" || p.gamesPlayed > 8)
-      .sort((a, b) => vorForFilter(b, pos) - vorForFilter(a, pos))
-      .slice(0, 3),
-  }));
+  const topByPosition = topByPositionLeaders(players);
 
   return (
     <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
@@ -214,11 +208,19 @@ export function TopPlayers({
               <ul className="space-y-2">
                 {posPlayers.map((p) => (
                   <li key={p.id}>
-                    <a
+                    <TopPlayerLink
                       href={playerBoardHref(p.id)}
-                      className="flex justify-between gap-2 rounded-md text-sm text-slate-300 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+                      accent="cyan"
+                      dense
+                      trailing={
+                        <span
+                          className={`shrink-0 font-mono ${vorColor(vorForFilter(p, position))}`}
+                        >
+                          {vorForFilter(p, position).toFixed(1)}
+                        </span>
+                      }
                     >
-                      <span className="truncate">
+                      <span className="truncate text-sm text-slate-300">
                         {p.name}
                         {position === "G" ? (
                           <span className="ml-1 text-xs text-slate-500">
@@ -226,12 +228,7 @@ export function TopPlayers({
                           </span>
                         ) : null}
                       </span>
-                      <span
-                        className={`shrink-0 font-mono ${vorColor(vorForFilter(p, position))}`}
-                      >
-                        {vorForFilter(p, position).toFixed(1)}
-                      </span>
-                    </a>
+                    </TopPlayerLink>
                   </li>
                 ))}
               </ul>

@@ -5,6 +5,7 @@ import {
   type Position,
 } from "@/lib/types";
 import { projectionStatValue, skaterCategoriesForFilter } from "@/lib/format";
+import { isStarterEligibleGoalie } from "@/lib/goalie-depth";
 import {
   passesRanges,
   vorForFilter,
@@ -67,7 +68,7 @@ export function filterAndSortBoard(
   }
 
   if (q.hideDepthGoalies && (q.position === "G" || q.position === "ALL")) {
-    list = list.filter((p) => !p.isGoalie || p.gamesPlayed > 8);
+    list = list.filter(isStarterEligibleGoalie);
   }
 
   if (needle) {

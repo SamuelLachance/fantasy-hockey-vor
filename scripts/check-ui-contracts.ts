@@ -212,6 +212,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/TopPlayerLink.tsx": [
     "TopPlayerLink",
+    "dense",
     "hover:bg-white/[0.07]",
     "motion-reduce:transition-none",
   ],
@@ -245,6 +246,12 @@ const files: Record<string, string[]> = {
     "filterAndSortBoard",
     "hideDepthGoalies",
     "coerceSortKeyForPosition",
+    "isStarterEligibleGoalie",
+  ],
+  "src/lib/goalie-depth.ts": [
+    "GOALIE_DEPTH_MAX_GP",
+    "isStarterEligibleGoalie",
+    "topByPositionLeaders",
   ],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/components/Header.tsx": [
@@ -287,7 +294,7 @@ const files: Record<string, string[]> = {
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
   "src/lib/format.ts": ["sigmaColor", "edgeColor"],
   "src/components/TopPlayers.tsx": [
-    "gamesPlayed > 8",
+    "topByPositionLeaders",
     "playerBoardHref",
     "gamesPlayed}gp",
     "Steadiest",
@@ -295,6 +302,7 @@ const files: Record<string, string[]> = {
     "edgeBoardHref",
     "vorForFilter",
     "TopPlayerLink",
+    "dense",
   ],
   "src/app/page.tsx": [
     "RankingsTable",
