@@ -143,7 +143,8 @@ export function RankingsToolbar({
                 ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
                 : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
             }`}
-            title="Hide org-depth goalies at 4–8 GP"
+            title="Hide org-depth goalies at 4–8 GP (Shift+G)"
+            aria-keyshortcuts="Shift+G"
           >
             {hideDepthGoalies ? "Starters" : "All G"}
           </button>

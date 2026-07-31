@@ -156,6 +156,7 @@ const files: Record<string, string[]> = {
     'aria-live="polite"',
     "HIGHLIGHT_QUERY_MAX",
     "PositionFilterTabs",
+    'aria-keyshortcuts="Shift+G"',
   ],
   "src/hooks/useBoardInfiniteScroll.ts": [
     "useBoardInfiniteScroll",
