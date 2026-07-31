@@ -28,6 +28,11 @@ assert(graph[1]?.dateModified === data.generatedAt, "dateModified wired");
 assert(graph[1]?.license === "https://opensource.org/licenses/MIT", "license");
 assert(graph[1]?.isAccessibleForFree === true, "free");
 assert(Array.isArray(graph[1]?.keywords), "keywords");
+assert(
+  (graph[1]?.about as { name?: string } | undefined)?.name ===
+    "National Hockey League",
+  "about NHL",
+);
 
 if (failed) process.exit(1);
 console.log("OK: seo-jsonld");

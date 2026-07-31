@@ -31,6 +31,12 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           "@type": "Person",
           name: "Samuel Lachance",
           url: "https://github.com/SamuelLachance",
+          sameAs: ["https://github.com/SamuelLachance"],
+        },
+        about: {
+          "@type": "Thing",
+          name: "National Hockey League",
+          alternateName: "NHL",
         },
         license: "https://opensource.org/licenses/MIT",
         isAccessibleForFree: true,

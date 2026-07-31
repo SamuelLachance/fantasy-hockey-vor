@@ -207,6 +207,8 @@ const files: Record<string, string[]> = {
     "Dataset",
     "isAccessibleForFree",
     "keywords",
+    "National Hockey League",
+    "sameAs",
   ],
   "src/lib/site.ts": [
     "SITE_ORIGIN",
