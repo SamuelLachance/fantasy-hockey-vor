@@ -10,6 +10,7 @@ import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
 import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
 import { Trophy, Target, Shield, Zap, Gauge } from "lucide-react";
 import { steadiestSkaters, topEdgeSkaters } from "@/lib/top-lists";
+import { vorForFilter } from "@/lib/rankings-filters";
 import {
   edgeBoardHref,
   playerBoardHref,
@@ -22,13 +23,6 @@ interface TopPlayersProps {
   players: ProjectionsDataset["players"];
   categoryWeights?: CategoryDifficultyWeights;
   league?: LeagueSettings;
-}
-
-function vorAtPosition(
-  player: ProjectionsDataset["players"][number],
-  position: ProjectionsDataset["players"][number]["position"],
-): number {
-  return player.vorByPosition?.[position] ?? player.vor;
 }
 
 export function TopPlayers({
@@ -45,7 +39,7 @@ export function TopPlayers({
     players: players
       .filter((p) => p.positions.includes(pos))
       .filter((p) => pos !== "G" || p.gamesPlayed > 8)
-      .sort((a, b) => vorAtPosition(b, pos) - vorAtPosition(a, pos))
+      .sort((a, b) => vorForFilter(b, pos) - vorForFilter(a, pos))
       .slice(0, 3),
   }));
 
@@ -231,9 +225,9 @@ export function TopPlayers({
                         ) : null}
                       </span>
                       <span
-                        className={`shrink-0 font-mono ${vorColor(vorAtPosition(p, position))}`}
+                        className={`shrink-0 font-mono ${vorColor(vorForFilter(p, position))}`}
                       >
-                        {vorAtPosition(p, position).toFixed(1)}
+                        {vorForFilter(p, position).toFixed(1)}
                       </span>
                     </a>
                   </li>
