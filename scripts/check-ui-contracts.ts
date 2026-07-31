@@ -271,6 +271,7 @@ const files: Record<string, string[]> = {
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
     'aria-keyshortcuts="p"',
+    "Copy player link (p)",
     "Consensus #",
     'aria-live="polite"',
     "projectionMethodLabel",
@@ -318,6 +319,8 @@ const files: Record<string, string[]> = {
     "useHorizontalScrollShadow",
     "horizontalScrollShadowVisible",
     "scrollLeft",
+    "requestAnimationFrame",
+    "cancelAnimationFrame",
   ],
   "src/lib/horizontal-scroll-shadow.ts": [
     "HORIZONTAL_SCROLL_SHADOW_PX",
