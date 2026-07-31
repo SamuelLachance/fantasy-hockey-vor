@@ -481,9 +481,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                           : (player.positionRank ?? idx + 1)}
                       </td>
                       <td
-                        className={`sticky left-10 z-[1] px-4 py-3 font-medium text-white shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12 ${
+                        className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)] sm:left-12 sm:max-w-[14rem] ${
                           isExpanded ? "bg-slate-900" : "bg-slate-950/95"
                         }`}
+                        title={player.name}
                       >
                         {player.name}
                       </td>
