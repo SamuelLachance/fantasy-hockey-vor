@@ -155,25 +155,27 @@ export function RankingsPlayerRow({
         <tr className="bg-slate-950/40">
           <td
             colSpan={8 + tableCategories.length}
-            className="px-6 py-4"
+            className="p-0"
             id={`player-panel-${player.id}`}
             role="region"
             aria-label={boardRowDetailsAriaLabel(player.name)}
             aria-busy={detailsLoading || undefined}
           >
-            <ExpandedPlayerPanel
-              player={player}
-              cats={cats}
-              playerDetails={playerDetails}
-              detailsLoading={detailsLoading}
-              detailsError={detailsError}
-              linkCopied={linkCopied}
-              linkCopyFailed={linkCopyFailed}
-              onCopyLink={onCopyLink}
-              onDetailsLoaded={onDetailsLoaded}
-              onDetailsError={onDetailsError}
-              onClearDetailsError={onClearDetailsError}
-            />
+            <div className="sticky left-0 box-border w-[var(--board-hscroll-client-width,100%)] max-w-[var(--board-hscroll-client-width,100%)] px-6 py-4">
+              <ExpandedPlayerPanel
+                player={player}
+                cats={cats}
+                playerDetails={playerDetails}
+                detailsLoading={detailsLoading}
+                detailsError={detailsError}
+                linkCopied={linkCopied}
+                linkCopyFailed={linkCopyFailed}
+                onCopyLink={onCopyLink}
+                onDetailsLoaded={onDetailsLoaded}
+                onDetailsError={onDetailsError}
+                onClearDetailsError={onClearDetailsError}
+              />
+            </div>
           </td>
         </tr>
       )}

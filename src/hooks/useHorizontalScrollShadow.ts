@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, type RefObject } from "react";
-import { applyHorizontalScrollShadow } from "@/lib/horizontal-scroll-shadow";
+import { useLayoutEffect, type RefObject } from "react";
+import { applyHorizontalScrollChrome } from "@/lib/horizontal-scroll-shadow";
 
 /**
- * Toggle data-scrolled on a horizontally scrollable element.
- * Shadow styling is pure CSS (group-data) — no board re-render on scroll.
+ * Toggle data-scrolled + --board-hscroll-client-width on a horizontally
+ * scrollable element. Shadow styling is pure CSS (group-data); expanded panels
+ * read the width var — no board re-render on scroll.
  */
 export function useHorizontalScrollShadow(
   ref: RefObject<HTMLElement | null>,
 ): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     let raf = 0;
     const update = () => {
-      applyHorizontalScrollShadow(el);
+      applyHorizontalScrollChrome(el);
     };
     const onScroll = () => {
       if (raf) return;
