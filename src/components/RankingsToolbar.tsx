@@ -15,6 +15,8 @@ interface RankingsToolbarProps {
   setPosition: (pos: Position | "ALL") => void;
   query: string;
   setQuery: (q: string) => void;
+  /** Settled query used for filtering/export provenance. */
+  deferredQuery: string;
   filtersOpen: boolean;
   setFiltersOpen: (open: boolean | ((o: boolean) => boolean)) => void;
   activeFilterCount: number;
@@ -37,6 +39,7 @@ export function RankingsToolbar({
   setPosition,
   query,
   setQuery,
+  deferredQuery,
   filtersOpen,
   setFiltersOpen,
   activeFilterCount,
@@ -53,6 +56,7 @@ export function RankingsToolbar({
   showDepthToggle,
   onOpenHelp,
 }: RankingsToolbarProps) {
+  const searchPending = query !== deferredQuery;
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <PositionFilterTabs position={position} setPosition={setPosition} />
@@ -67,7 +71,8 @@ export function RankingsToolbar({
           filtered={filtered}
           position={position}
           tableCategories={tableCategories}
-          query={query}
+          query={deferredQuery}
+          searchPending={searchPending}
           sortKey={sortKey}
           sortDir={sortDir}
           hideDepthGoalies={hideDepthGoalies}

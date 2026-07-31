@@ -16,7 +16,10 @@ interface RankingsExportButtonsProps {
   filtered: PlayerProjection[];
   position: Position | "ALL";
   tableCategories: readonly Category[];
+  /** Settled search string that produced `filtered` (deferredQuery). */
   query: string;
+  /** True while live query is ahead of deferred filtering. */
+  searchPending?: boolean;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
   hideDepthGoalies: boolean;
@@ -29,6 +32,7 @@ export function RankingsExportButtons({
   position,
   tableCategories,
   query,
+  searchPending = false,
   sortKey,
   sortDir,
   hideDepthGoalies,
@@ -38,6 +42,7 @@ export function RankingsExportButtons({
     "idle",
   );
   const empty = filtered.length === 0;
+  const blocked = empty || searchPending;
 
   return (
     <div
@@ -47,7 +52,7 @@ export function RankingsExportButtons({
     >
       <button
         type="button"
-        disabled={empty}
+        disabled={blocked}
         onClick={() => {
           const ctx = {
             position,
@@ -64,7 +69,7 @@ export function RankingsExportButtons({
           flashExport("csv");
         }}
         className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
-        title={exportButtonTitle("csv")}
+        title={exportButtonTitle("csv", { searchPending })}
         aria-live="polite"
       >
         <Download className="h-4 w-4" aria-hidden="true" />
@@ -72,7 +77,7 @@ export function RankingsExportButtons({
       </button>
       <button
         type="button"
-        disabled={empty}
+        disabled={blocked}
         onClick={() => {
           const ctx = {
             position,
@@ -89,7 +94,7 @@ export function RankingsExportButtons({
           flashExport("json");
         }}
         className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
-        title={exportButtonTitle("json")}
+        title={exportButtonTitle("json", { searchPending })}
         aria-live="polite"
       >
         {exportButtonLabel("json", exportFlash)}

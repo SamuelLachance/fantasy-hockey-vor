@@ -125,6 +125,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         setPosition={board.setPosition}
         query={board.query}
         setQuery={board.setQuery}
+        deferredQuery={board.deferredQuery}
         filtersOpen={board.filtersOpen}
         setFiltersOpen={board.setFiltersOpen}
         activeFilterCount={board.activeFilterCount}

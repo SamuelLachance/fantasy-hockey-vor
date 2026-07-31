@@ -169,7 +169,13 @@ export function exportGroupAriaLabel(): string {
 }
 
 /** Tooltip for an export format button. */
-export function exportButtonTitle(kind: "csv" | "json"): string {
+export function exportButtonTitle(
+  kind: "csv" | "json",
+  opts?: { searchPending?: boolean },
+): string {
+  if (opts?.searchPending) {
+    return "Wait for search to finish updating before exporting";
+  }
   return kind === "csv"
     ? "Download filtered rankings as CSV"
     : "Download filtered rankings as JSON";

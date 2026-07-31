@@ -15,6 +15,7 @@ interface RankingsBoardChromeProps {
   setPosition: (pos: Position | "ALL") => void;
   query: string;
   setQuery: (q: string) => void;
+  deferredQuery: string;
   filtersOpen: boolean;
   setFiltersOpen: (open: boolean | ((o: boolean) => boolean)) => void;
   activeFilterCount: number;
@@ -41,6 +42,7 @@ export function RankingsBoardChrome({
   setPosition,
   query,
   setQuery,
+  deferredQuery,
   filtersOpen,
   setFiltersOpen,
   activeFilterCount,
@@ -72,6 +74,7 @@ export function RankingsBoardChrome({
         setPosition={setPosition}
         query={query}
         setQuery={setQuery}
+        deferredQuery={deferredQuery}
         filtersOpen={filtersOpen}
         setFiltersOpen={setFiltersOpen}
         activeFilterCount={activeFilterCount}
