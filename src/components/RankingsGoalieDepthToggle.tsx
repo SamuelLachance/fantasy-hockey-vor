@@ -3,6 +3,7 @@
 import { startTransition } from "react";
 import { GOALIE_DEPTH_MAX_GP } from "@/lib/goalie-depth";
 import {
+  goalieDepthToggleAriaLabel,
   goalieDepthToggleLabel,
   goalieDepthToggleTitle,
 } from "@/lib/goalie-depth-toggle";
@@ -27,7 +28,8 @@ export function RankingsGoalieDepthToggle({
           ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
           : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
       }`}
-      title={goalieDepthToggleTitle(GOALIE_DEPTH_MAX_GP)}
+      title={goalieDepthToggleTitle(GOALIE_DEPTH_MAX_GP, hideDepthGoalies)}
+      aria-label={goalieDepthToggleAriaLabel(hideDepthGoalies)}
       aria-keyshortcuts="Shift+G"
     >
       {goalieDepthToggleLabel(hideDepthGoalies)}

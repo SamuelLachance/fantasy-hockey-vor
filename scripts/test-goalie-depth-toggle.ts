@@ -5,6 +5,7 @@
 import {
   canOfferAllGoalies,
   canToggleDepthGoalies,
+  goalieDepthToggleAriaLabel,
   goalieDepthToggleLabel,
   goalieDepthToggleTitle,
 } from "../src/lib/goalie-depth-toggle";
@@ -28,9 +29,21 @@ assert(!canOfferAllGoalies(true, "C"), "no offer on C");
 assert(goalieDepthToggleLabel(true) === "Starters", "starters label");
 assert(goalieDepthToggleLabel(false) === "All G", "all G label");
 assert(
+  goalieDepthToggleAriaLabel(true) === "Starter goalies only",
+  "starters aria",
+);
+assert(
+  goalieDepthToggleAriaLabel(false) === "All goalies including depth",
+  "all G aria",
+);
+assert(
   goalieDepthToggleTitle(8) ===
     "Hide org-depth goalies at 4–8 GP (Shift+G)",
-  "toggle title",
+  "toggle title starters",
+);
+assert(
+  goalieDepthToggleTitle(8, false).includes("Showing all goalies"),
+  "toggle title all G",
 );
 
 if (failed) process.exit(1);
