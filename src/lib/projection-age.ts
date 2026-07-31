@@ -1,3 +1,9 @@
+/** Soft freshness threshold (days) before the amber stale banner. */
+export const PROJECTION_STALE_DAYS = 21;
+
+/** Hard freshness threshold (days) before the assertive stale banner. */
+export const PROJECTION_VERY_STALE_DAYS = 45;
+
 /** Days between projection generation and build/reference time. */
 export function projectionAgeDays(
   generatedAt: string,
@@ -10,9 +16,9 @@ export function projectionAgeDays(
 }
 
 export function isProjectionStale(ageDays: number): boolean {
-  return ageDays > 21;
+  return ageDays > PROJECTION_STALE_DAYS;
 }
 
 export function isProjectionVeryStale(ageDays: number): boolean {
-  return ageDays > 45;
+  return ageDays > PROJECTION_VERY_STALE_DAYS;
 }
