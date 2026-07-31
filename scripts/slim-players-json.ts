@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
+import { filterActivePlayers } from "../src/lib/inactive-players";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import type { PlayerProjection, ProjectionsDataset } from "../src/lib/types";
 
@@ -66,7 +67,7 @@ const boardPlayers: PlayerProjection[] = [];
 const details: Record<string, ReturnType<typeof splitPublishedPlayer>["detail"]> =
   {};
 
-for (const p of data.players) {
+for (const p of filterActivePlayers(data.players)) {
   const prev = existingDetails[String(p.id)];
   // Rehydrate heavy fields from details so re-slim is idempotent.
   const merged: PlayerProjection = {
