@@ -112,7 +112,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
     const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
     if (next === current) return;
-    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+    const hash =
+      typeof window !== "undefined" && window.location.hash
+        ? window.location.hash
+        : "";
+    router.replace(
+      `${pathname}${next ? `?${next}` : ""}${hash}`,
+      { scroll: false },
+    );
   }, [
     position,
     deferredQuery,
@@ -123,6 +130,12 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     router,
     searchParams,
   ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#rankings") return;
+    document.getElementById("rankings")?.scrollIntoView({ block: "start" });
+  }, []);
 
   const filterRangeKeys = useMemo((): RangeKey[] => {
     const cats =
