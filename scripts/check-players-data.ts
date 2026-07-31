@@ -146,6 +146,13 @@ if (skaters < 900) errors.push(`only ${skaters} skaters (expected >= 900)`);
 const ranks = new Set(players.map((p) => p.rank));
 if (ranks.size !== players.length) {
   errors.push("duplicate or missing ranks detected");
+} else {
+  for (let i = 1; i <= players.length; i++) {
+    if (!ranks.has(i)) {
+      errors.push(`rank sequence gap: missing rank ${i}`);
+      break;
+    }
+  }
 }
 
 const ids = new Set(players.map((p) => p.id));
