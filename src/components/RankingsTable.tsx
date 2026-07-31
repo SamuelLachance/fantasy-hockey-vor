@@ -5,16 +5,14 @@ import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection } from "@/lib/types";
 import { parseRankingsUrl } from "@/lib/rankings-url";
-import {
-  scrollExpandedRowIntoView,
-  scrollToRankings,
-} from "@/lib/board-dom";
+import { scrollExpandedRowIntoView } from "@/lib/board-dom";
 import { useBoardCopyLinks } from "@/hooks/useBoardCopyLinks";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardDocumentTitle } from "@/hooks/useBoardDocumentTitle";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
+import { useRankingsHashJump } from "@/hooks/useRankingsHashJump";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { RankingsBoardChrome } from "./RankingsBoardChrome";
@@ -53,15 +51,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     statRanges: board.statRanges,
   });
 
-  useEffect(() => {
-    function jumpIfRankingsHash() {
-      if (window.location.hash !== "#rankings") return;
-      scrollToRankings({ focusSearch: true });
-    }
-    jumpIfRankingsHash();
-    window.addEventListener("hashchange", jumpIfRankingsHash);
-    return () => window.removeEventListener("hashchange", jumpIfRankingsHash);
-  }, []);
+  useRankingsHashJump();
 
   const expandedPlayer = board.expandedId
     ? board.filtered.find((p) => p.id === board.expandedId)
