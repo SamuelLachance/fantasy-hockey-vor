@@ -44,6 +44,7 @@ export function PositionFilterTabs({
       className="flex flex-wrap gap-2"
       role="tablist"
       aria-label="Filter by position"
+      aria-keyshortcuts="[ ]"
     >
       {BOARD_POSITIONS.map((pos, index) => (
         <button
