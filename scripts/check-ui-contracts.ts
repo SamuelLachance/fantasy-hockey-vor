@@ -719,6 +719,9 @@ const files: Record<string, string[]> = {
     "errorBackToRankingsCopy",
     "homeRankingsHref",
     "BrandEyebrow",
+    "export const metadata",
+    "index: false",
+    "robots",
   ],
   "src/lib/seo-jsonld.ts": [
     "WebApplication",

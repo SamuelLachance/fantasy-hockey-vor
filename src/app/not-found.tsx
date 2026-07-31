@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { BrandEyebrow } from "@/components/BrandEyebrow";
 import {
   errorBackToRankingsCopy,
@@ -5,6 +6,12 @@ import {
   notFoundTitle,
 } from "@/lib/app-shell-copy";
 import { homeRankingsHref } from "@/lib/site";
+
+export const metadata: Metadata = {
+  title: notFoundTitle(),
+  description: notFoundBody(),
+  robots: { index: false, follow: true },
+};
 
 export default function NotFound() {
   return (
