@@ -181,7 +181,7 @@ const files: Record<string, string[]> = {
     "onResetSort",
     'scope="col"',
     "motion-reduce:bg-slate-950",
-    "--board-sticky-chrome-height",
+    "BOARD_STICKY_TOP_CLASS",
   ],
   "src/components/RankingsEmptyState.tsx": [
     "emptyBoardStatusCopy",
@@ -299,6 +299,7 @@ const files: Record<string, string[]> = {
     "BOARD_STICKY_CHROME_SELECTOR",
     "BOARD_STICKY_THEAD_SELECTOR",
     "BOARD_STICKY_CHROME_HEIGHT_VAR",
+    "BOARD_STICKY_TOP_CLASS",
     "data-board-sticky-chrome",
     "focusPlayerRow",
     "focusPlayerRowIfPanelFocused",

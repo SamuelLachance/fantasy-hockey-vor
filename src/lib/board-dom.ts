@@ -25,6 +25,10 @@ export const STICKY_NAME_SHADOW =
 export const STICKY_NAME_BASE =
   "transition-shadow duration-150 motion-reduce:transition-none" as const;
 
+/** Tailwind top offset matching `--board-sticky-chrome-height` on `#rankings`. */
+export const BOARD_STICKY_TOP_CLASS =
+  "top-[var(--board-sticky-chrome-height,0px)]" as const;
+
 /** Whether the user prefers reduced motion (SSR-safe → true). */
 export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return true;

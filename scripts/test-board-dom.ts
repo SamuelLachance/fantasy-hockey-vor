@@ -6,6 +6,7 @@ import {
   BOARD_STICKY_CHROME_HEIGHT_VAR,
   BOARD_STICKY_CHROME_SELECTOR,
   BOARD_STICKY_THEAD_SELECTOR,
+  BOARD_STICKY_TOP_CLASS,
   STICKY_NAME_SHADOW,
   boardStickyChromeHeight,
   boardStickyTopInset,
@@ -102,6 +103,10 @@ assert(
 assert(
   BOARD_STICKY_THEAD_SELECTOR.includes("thead"),
   "thead selector",
+);
+assert(
+  BOARD_STICKY_TOP_CLASS.includes("--board-sticky-chrome-height"),
+  "sticky top class uses css var",
 );
 assert(
   stickyAwareScrollDelta(50, 90, 120, 700) === 50 - 128,

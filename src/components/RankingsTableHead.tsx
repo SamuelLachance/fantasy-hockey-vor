@@ -2,7 +2,7 @@
 
 import { CATEGORY_LABELS } from "@/lib/format";
 import type { Category } from "@/lib/types";
-import { STICKY_NAME_BASE, STICKY_NAME_SHADOW } from "@/lib/board-dom";
+import { BOARD_STICKY_TOP_CLASS, STICKY_NAME_BASE, STICKY_NAME_SHADOW } from "@/lib/board-dom";
 import type { SortKey } from "@/lib/rankings-filters";
 import { SortHeader } from "./SortHeader";
 
@@ -22,7 +22,7 @@ export function RankingsTableHead({
   onResetSort,
 }: RankingsTableHeadProps) {
   return (
-    <thead className="sticky top-[var(--board-sticky-chrome-height,0px)] z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none">
+    <thead className={`sticky ${BOARD_STICKY_TOP_CLASS} z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none`}>
       <tr>
         <SortHeader
           column="rank"
@@ -31,7 +31,7 @@ export function RankingsTableHead({
           sortDir={sortDir}
           onToggle={onToggleSort}
           onReset={onResetSort}
-          className="sticky left-0 z-[5] bg-slate-950/95 px-4 py-3"
+          className={`sticky left-0 ${BOARD_STICKY_TOP_CLASS} z-[5] bg-slate-950/95 px-4 py-3`}
         />
         <SortHeader
           column="name"
@@ -40,7 +40,7 @@ export function RankingsTableHead({
           sortDir={sortDir}
           onToggle={onToggleSort}
           onReset={onResetSort}
-          className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW}`}
+          className={`sticky left-10 ${BOARD_STICKY_TOP_CLASS} z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW}`}
         />
         <th scope="col" className="px-4 py-3">
           Pos
