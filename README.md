@@ -71,6 +71,13 @@ Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmar
 - **Skater cats:** G, A, SOG, BLK, HIT, PPP, PIM, FOW (FOW = 0 for D)
 - **Goalie cats:** W, SO, SV, SV%
 
+## Board UX
+
+- URL sync: `pos`, `q`, `sort`, `dir`, `player`, `g=all` (depth goalies)
+- Columns: VOR, Edge (consensus−model), Σσ (calibrated uncertainty), GP, cats
+- Shortcuts: `/` search · `?` help · `j`/`k` move expanded row · `Esc` close
+- Export filtered CSV or copy a shareable board / player link
+
 ## Deploy
 
 Auto-deploys to GitHub Pages on push to `master` (lint → typecheck → data validation → static export). Deploy retries on transient Pages failures.

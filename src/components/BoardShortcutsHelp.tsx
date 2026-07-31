@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 interface BoardShortcutsHelpProps {
   open: boolean;
   onClose: () => void;
@@ -15,6 +17,18 @@ const ROWS: Array<{ keys: string; action: string }> = [
 ];
 
 export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div
@@ -36,6 +50,7 @@ export function BoardShortcutsHelp({ open, onClose }: BoardShortcutsHelpProps) {
             Board shortcuts
           </h2>
           <button
+            ref={closeRef}
             type="button"
             onClick={onClose}
             className="rounded-lg px-2 py-1 text-sm text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
