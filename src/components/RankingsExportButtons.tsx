@@ -6,6 +6,7 @@ import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import {
   downloadRankingsCsv,
   downloadRankingsJson,
+  exportButtonAriaLabel,
   exportButtonLabel,
   exportButtonTitle,
   exportGroupAriaLabel,
@@ -45,6 +46,16 @@ export function RankingsExportButtons({
   const blocked = empty || searchPending;
   const csvTitle = exportButtonTitle("csv", { searchPending, empty });
   const jsonTitle = exportButtonTitle("json", { searchPending, empty });
+  const csvAria = exportButtonAriaLabel("csv", {
+    searchPending,
+    empty,
+    flash: exportFlash,
+  });
+  const jsonAria = exportButtonAriaLabel("json", {
+    searchPending,
+    empty,
+    flash: exportFlash,
+  });
 
   return (
     <div
@@ -72,7 +83,7 @@ export function RankingsExportButtons({
         }}
         className="inline-flex items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
         title={csvTitle}
-        aria-label={blocked ? csvTitle : undefined}
+        aria-label={csvAria}
         aria-live="polite"
       >
         <Download className="h-4 w-4" aria-hidden="true" />
@@ -98,7 +109,7 @@ export function RankingsExportButtons({
         }}
         className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
         title={jsonTitle}
-        aria-label={blocked ? jsonTitle : undefined}
+        aria-label={jsonAria}
         aria-live="polite"
       >
         {exportButtonLabel("json", exportFlash)}

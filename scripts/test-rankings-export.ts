@@ -5,6 +5,7 @@
 import {
   downloadRankingsCsv,
   downloadRankingsJson,
+  exportButtonAriaLabel,
   exportButtonLabel,
   exportButtonTitle,
   exportCategoryStat,
@@ -145,6 +146,29 @@ assert(
     "search",
   ),
   "pending beats empty",
+);
+assert(
+  exportButtonAriaLabel("csv", { flash: "idle" }).includes("CSV"),
+  "idle csv aria",
+);
+assert(
+  exportButtonAriaLabel("csv", { flash: "csv" }) === "CSV rankings saved",
+  "saved csv aria",
+);
+assert(
+  exportButtonAriaLabel("json", { flash: "json" }) === "JSON rankings saved",
+  "saved json aria",
+);
+assert(
+  exportButtonAriaLabel("csv", { flash: "csv" }) !==
+    exportButtonAriaLabel("json", { flash: "json" }),
+  "saved aria keeps format identity",
+);
+assert(
+  exportButtonAriaLabel("csv", { searchPending: true, flash: "csv" }).includes(
+    "search",
+  ),
+  "pending beats saved flash for aria",
 );
 
 if (failed) process.exit(1);
