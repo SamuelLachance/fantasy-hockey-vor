@@ -76,7 +76,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [statRanges, setStatRanges] = useState<StatRanges>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const [hideDepthGoalies, setHideDepthGoalies] = useState(true);
+  const [hideDepthGoalies, setHideDepthGoalies] = useState(
+    seed.hideDepthGoalies,
+  );
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [details, setDetails] = useState<Record<
@@ -91,6 +93,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       sortKey,
       sortDir,
       playerId: expandedId,
+      hideDepthGoalies,
     });
     const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
     if (next === current) return;
@@ -108,6 +111,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     sortKey,
     sortDir,
     expandedId,
+    hideDepthGoalies,
     pathname,
     router,
     searchParams,

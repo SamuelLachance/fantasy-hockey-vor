@@ -30,6 +30,8 @@ export interface RankingsUrlState {
   sortDir: "asc" | "desc";
   /** Expanded player id when deep-linking a row. */
   playerId: number | null;
+  /** When false, org-depth goalies (≤8 GP) stay visible. Default hide. */
+  hideDepthGoalies: boolean;
 }
 
 export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
@@ -48,7 +50,8 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
     Number.isFinite(playerParsed) && playerParsed > 0
       ? Math.trunc(playerParsed)
       : null;
-  return { position, query, sortKey, sortDir, playerId };
+  const hideDepthGoalies = params.get("g") !== "all";
+  return { position, query, sortKey, sortDir, playerId, hideDepthGoalies };
 }
 
 /** Build query string omitting defaults so URLs stay short. */
@@ -59,5 +62,6 @@ export function rankingsUrlSearch(state: RankingsUrlState): string {
   if (state.sortKey !== "vor") p.set("sort", state.sortKey);
   if (state.sortDir !== "desc") p.set("dir", state.sortDir);
   if (state.playerId != null) p.set("player", String(state.playerId));
+  if (!state.hideDepthGoalies) p.set("g", "all");
   return p.toString();
 }

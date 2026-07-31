@@ -168,6 +168,7 @@ export function RankingsToolbar({
               sortKey,
               sortDir,
               playerId: expandedId,
+              hideDepthGoalies,
             });
             const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
             void copyText(url).then((ok) => {
