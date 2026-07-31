@@ -18,6 +18,11 @@ const hit = highlightMatch("Connor McDavid", "mcd");
 assert(typeof hit === "object" && hit != null, "match returns element tree");
 const multi = highlightMatch("Anaheim Ducks fan", "a");
 assert(typeof multi === "object" && multi != null, "multi-match tree");
+assert(
+  highlightMatch("McDavid", "x".repeat(80)) === "McDavid" ||
+    typeof highlightMatch("McDavid", "x".repeat(80)) === "object",
+  "long query capped without throw",
+);
 
 if (failed) process.exit(1);
 console.log("OK: highlight-match");

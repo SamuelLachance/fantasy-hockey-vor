@@ -3,7 +3,7 @@ import { Fragment } from "react";
 
 /** Case-insensitive highlight of every `query` occurrence inside `text`. */
 export function highlightMatch(text: string, query: string): ReactNode {
-  const q = query.trim();
+  const q = query.trim().slice(0, 48);
   if (!q) return text;
   const lower = text.toLowerCase();
   const needle = q.toLowerCase();
