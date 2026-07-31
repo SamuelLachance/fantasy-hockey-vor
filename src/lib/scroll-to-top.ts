@@ -12,6 +12,14 @@ export function scrollToTopVisible(
   return scrollY > SCROLL_TOP_SHOW_AFTER;
 }
 
+/** True when the control auto-hides while still focused (aria-hidden trap). */
+export function scrollToTopShouldRestoreFocus(
+  visible: boolean,
+  isFocused: boolean,
+): boolean {
+  return !visible && isFocused;
+}
+
 /** Accessible name for the floating scroll control. */
 export function scrollToTopAriaLabel(): string {
   return "Scroll to top";

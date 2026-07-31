@@ -1,18 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { focusBoardSearch, scrollPageTop } from "@/lib/board-dom";
 import {
   SCROLL_TOP_HIDE_BELOW,
   SCROLL_TOP_SHOW_AFTER,
   scrollToTopAriaLabel,
+  scrollToTopShouldRestoreFocus,
   scrollToTopTitle,
   scrollToTopVisible,
 } from "@/lib/scroll-to-top";
 
 export function ScrollToTop() {
   const [visible, setVisible] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     let ticking = false;
@@ -30,8 +32,21 @@ export function ScrollToTop() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (
+      !scrollToTopShouldRestoreFocus(
+        visible,
+        document.activeElement === buttonRef.current,
+      )
+    ) {
+      return;
+    }
+    focusBoardSearch();
+  }, [visible]);
+
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={scrollToTopAriaLabel()}
       title={scrollToTopTitle()}

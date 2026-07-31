@@ -641,6 +641,8 @@ const files: Record<string, string[]> = {
     "requestAnimationFrame",
     "scrollPageTop",
     "focusBoardSearch",
+    "scrollToTopShouldRestoreFocus",
+    "buttonRef",
     "pointer-events-none",
     "scrollToTopVisible",
     "motion-reduce:transition-none",
@@ -648,6 +650,7 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/scroll-to-top.ts": [
     "scrollToTopVisible",
+    "scrollToTopShouldRestoreFocus",
     "scrollToTopAriaLabel",
     "scrollToTopTitle",
     "SCROLL_TOP_SHOW_AFTER",

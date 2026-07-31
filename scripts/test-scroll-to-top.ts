@@ -6,6 +6,7 @@ import {
   SCROLL_TOP_HIDE_BELOW,
   SCROLL_TOP_SHOW_AFTER,
   scrollToTopAriaLabel,
+  scrollToTopShouldRestoreFocus,
   scrollToTopTitle,
   scrollToTopVisible,
 } from "../src/lib/scroll-to-top";
@@ -35,6 +36,18 @@ assert(
 );
 assert(scrollToTopAriaLabel() === "Scroll to top", "aria label");
 assert(scrollToTopTitle() === "Scroll to top", "title");
+assert(
+  scrollToTopShouldRestoreFocus(false, true),
+  "restore when hidden and focused",
+);
+assert(
+  !scrollToTopShouldRestoreFocus(true, true),
+  "no restore while visible",
+);
+assert(
+  !scrollToTopShouldRestoreFocus(false, false),
+  "no restore when not focused",
+);
 
 if (failed) process.exit(1);
 console.log("OK: scroll-to-top");
