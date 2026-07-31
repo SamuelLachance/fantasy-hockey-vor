@@ -5,6 +5,7 @@ import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { RangeKey, StatRanges } from "@/lib/rankings-filters";
 import { focusStatsFilterButton } from "@/lib/board-dom";
 import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
+import { boardFiltersRegionLabel } from "@/lib/stat-filters-copy";
 import { BoardActiveFilters } from "./BoardActiveFilters";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
@@ -59,7 +60,7 @@ export function RankingsBoardChrome({
     <div
       className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none"
       role="region"
-      aria-label="Board filters"
+      aria-label={boardFiltersRegionLabel()}
     >
       <RankingsToolbar
         position={position}

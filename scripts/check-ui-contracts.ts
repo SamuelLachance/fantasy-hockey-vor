@@ -84,7 +84,7 @@ const files: Record<string, string[]> = {
     "canToggleDepthGoalies",
   ],
   "src/components/RankingsBoardChrome.tsx": [
-    'aria-label="Board filters"',
+    "boardFiltersRegionLabel",
     "motion-reduce:backdrop-blur-none",
     "motion-reduce:bg-slate-950",
     "BoardActiveFilters",
@@ -742,6 +742,7 @@ const files: Record<string, string[]> = {
     "clearAllStatFiltersCopy",
     "doneStatFiltersCopy",
     "statsFilterButtonLabel",
+    "boardFiltersRegionLabel",
     "91.5%",
     "0.915",
   ],

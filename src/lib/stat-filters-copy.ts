@@ -21,3 +21,8 @@ export function doneStatFiltersCopy(): string {
 export function statsFilterButtonLabel(): string {
   return "Stats";
 }
+
+/** Landmark label for the sticky board filters chrome. */
+export function boardFiltersRegionLabel(): string {
+  return "Board filters";
+}

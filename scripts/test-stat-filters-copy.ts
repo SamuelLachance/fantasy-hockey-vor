@@ -8,6 +8,7 @@ import {
   statFiltersHintCopy,
   statFiltersPanelTitle,
   statsFilterButtonLabel,
+  boardFiltersRegionLabel,
 } from "../src/lib/stat-filters-copy";
 
 let failed = 0;
@@ -27,6 +28,7 @@ assert(statFiltersPanelTitle() === "Filter by stats", "panel title");
 assert(clearAllStatFiltersCopy() === "Clear all", "clear all");
 assert(doneStatFiltersCopy() === "Done", "done");
 assert(statsFilterButtonLabel() === "Stats", "toolbar label");
+assert(boardFiltersRegionLabel() === "Board filters", "chrome region");
 
 if (failed) process.exit(1);
 console.log("OK: stat-filters-copy");
