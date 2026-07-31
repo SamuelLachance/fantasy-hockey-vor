@@ -182,6 +182,7 @@ const files: Record<string, string[]> = {
     "Proj:",
     'role="meter"',
     "aria-valuetext",
+    "tabular-nums",
   ],
   "src/lib/category-z-bar.ts": [
     "categoryZBarWidth",
