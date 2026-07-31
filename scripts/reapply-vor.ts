@@ -6,6 +6,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { attachDraftEdge } from "../src/lib/draft-edge";
+import { filterActivePlayers } from "../src/lib/inactive-players";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import { applyVor } from "../src/lib/vor";
@@ -25,27 +26,29 @@ const details = JSON.parse(readFileSync(DETAILS, "utf8")) as Record<
   }
 >;
 
-const raw = data.players.map((p) => {
-  const {
-    categoryZScores: _z,
-    fantasyValue: _fv,
-    vor: _v,
-    rank: _r,
-    positionRank: _pr,
-    vorByPosition: _vbp,
-    vorPosition: _vp,
-    syntheticMarketRank: _sm,
-    draftValue: _dv,
-    ...rest
-  } = p;
-  const d = details[String(p.id)];
-  return {
-    ...rest,
-    reasoning: d?.reasoning,
-    profileSummary: d?.profileSummary,
-    ...(d?.marketEdge ? { marketEdge: d.marketEdge } : {}),
-  };
-});
+const raw = filterActivePlayers(
+  data.players.map((p) => {
+    const {
+      categoryZScores: _z,
+      fantasyValue: _fv,
+      vor: _v,
+      rank: _r,
+      positionRank: _pr,
+      vorByPosition: _vbp,
+      vorPosition: _vp,
+      syntheticMarketRank: _sm,
+      draftValue: _dv,
+      ...rest
+    } = p;
+    const d = details[String(p.id)];
+    return {
+      ...rest,
+      reasoning: d?.reasoning,
+      profileSummary: d?.profileSummary,
+      ...(d?.marketEdge ? { marketEdge: d.marketEdge } : {}),
+    };
+  }),
+);
 
 const league = data.league ?? DEFAULT_LEAGUE;
 const {
