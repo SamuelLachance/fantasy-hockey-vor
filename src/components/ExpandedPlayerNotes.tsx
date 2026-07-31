@@ -105,7 +105,7 @@ export function ExpandedPlayerNotes({
             type="button"
             disabled={retrying}
             aria-busy={retrying || undefined}
-            className="ml-2 underline decoration-amber-400/50 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-wait disabled:opacity-70"
+            className="ml-2 inline-flex min-h-11 items-center underline decoration-amber-400/50 hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-wait disabled:opacity-70"
             onClick={retryDetails}
           >
             {playerNotesRetryLabel(retrying)}

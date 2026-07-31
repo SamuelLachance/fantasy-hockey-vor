@@ -576,6 +576,7 @@ const files: Record<string, string[]> = {
     "playerNotesLoadingLabel",
     "playerNotesUnavailableCopy",
     "playerNotesRetryLabel",
+    "min-h-11",
     ".trim()",
     "sr-only",
     "Join any in-flight expand fetch",
