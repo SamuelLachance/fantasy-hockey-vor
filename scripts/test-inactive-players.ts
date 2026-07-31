@@ -53,6 +53,14 @@ assert(
   }).some((m) => m.includes("names array required")),
   "requires names when ids present",
 );
+assert(
+  inactiveFileIssues({
+    reason: "x",
+    ids: [1, 2],
+    names: ["OnlyOne"],
+  }).some((m) => m.includes("names length")),
+  "detects names/ids length mismatch",
+);
 
 if (failed) process.exit(1);
 console.log("OK: inactive-players");
