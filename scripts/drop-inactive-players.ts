@@ -4,7 +4,10 @@
  */
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
-import { filterActivePlayers } from "../src/lib/inactive-players";
+import {
+  filterActivePlayers,
+  loadInactivePlayerIds,
+} from "../src/lib/inactive-players";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -12,6 +15,14 @@ const DETAILS_PATH = join(process.cwd(), "public", "player-details.json");
 
 const data = JSON.parse(readFileSync(PLAYERS_PATH, "utf8")) as ProjectionsDataset;
 const before = data.players.length;
+const inactive = loadInactivePlayerIds();
+const removed = data.players.filter((p) => inactive.has(p.id));
+if (removed.length) {
+  console.log(
+    "Dropping:",
+    removed.map((p) => `${p.name} (#${p.rank})`).join(", "),
+  );
+}
 const kept = filterActivePlayers(data.players);
 kept.sort((a, b) => b.vor - a.vor);
 for (let i = 0; i < kept.length; i++) {
