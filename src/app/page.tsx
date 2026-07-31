@@ -76,6 +76,10 @@ export default function HomePage() {
         <span className="text-slate-600">
           board: / · f · v/e/u/g · ? · j/k · Esc · CSV/JSON/Link
         </span>
+        <span className="mx-2 text-slate-700">·</span>
+        <span className="text-slate-600">
+          {data.players.length.toLocaleString()} draftable
+        </span>
       </footer>
       <ScrollToTop />
     </main>
