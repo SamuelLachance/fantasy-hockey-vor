@@ -11,11 +11,11 @@ export function SortIcon({
   sortDir: "asc" | "desc";
 }) {
   if (sortKey !== column) {
-    return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />;
+    return <ArrowUpDown className="h-3.5 w-3.5 opacity-40" aria-hidden="true" />;
   }
   return sortDir === "asc" ? (
-    <ArrowUp className="h-3.5 w-3.5 text-cyan-400" />
+    <ArrowUp className="h-3.5 w-3.5 text-cyan-400" aria-hidden="true" />
   ) : (
-    <ArrowDown className="h-3.5 w-3.5 text-cyan-400" />
+    <ArrowDown className="h-3.5 w-3.5 text-cyan-400" aria-hidden="true" />
   );
 }
