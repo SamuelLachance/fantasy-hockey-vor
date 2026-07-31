@@ -90,8 +90,8 @@ if (badGp > 0) errors.push(`${badGp} players with GP outside 0-82`);
 
 const goalies = players.filter((p) => p.isGoalie).length;
 const skaters = players.length - goalies;
-if (goalies < 40) errors.push(`only ${goalies} goalies (expected >= 40)`);
-if (skaters < 500) errors.push(`only ${skaters} skaters (expected >= 500)`);
+if (goalies < 80) errors.push(`only ${goalies} goalies (expected >= 80)`);
+if (skaters < 900) errors.push(`only ${skaters} skaters (expected >= 900)`);
 
 const ranks = new Set(players.map((p) => p.rank));
 if (ranks.size !== players.length) {
