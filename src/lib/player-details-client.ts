@@ -35,8 +35,10 @@ async function loadDetailsOnce(): Promise<Record<string, PlayerDetailRecord>> {
   const url = playerDetailsHref();
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = globalThis.setTimeout(() => controller.abort(), 8_000);
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) {
         throw new Error(`player-details.json HTTP ${res.status}`);
       }
@@ -46,6 +48,8 @@ async function loadDetailsOnce(): Promise<Record<string, PlayerDetailRecord>> {
       if (attempt === 0) {
         await new Promise((r) => setTimeout(r, 150));
       }
+    } finally {
+      globalThis.clearTimeout(timer);
     }
   }
   throw lastError instanceof Error

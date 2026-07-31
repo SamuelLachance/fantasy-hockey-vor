@@ -22,7 +22,12 @@ const realTimeout = globalThis.setTimeout;
 function installFastTimeout() {
   (globalThis as { setTimeout: typeof setTimeout }).setTimeout = ((
     fn: () => void,
+    ms?: number,
   ) => {
+    // Keep long abort timers inert so retry sleeps still flush instantly.
+    if (typeof ms === "number" && ms >= 1_000) {
+      return 0 as unknown as ReturnType<typeof setTimeout>;
+    }
     fn();
     return 0 as unknown as ReturnType<typeof setTimeout>;
   }) as typeof setTimeout;

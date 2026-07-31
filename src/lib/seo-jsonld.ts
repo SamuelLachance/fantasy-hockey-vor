@@ -14,6 +14,10 @@ const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
     q: "What is Σσ?",
     a: "Σσ is calibrated aggregate projection uncertainty (1σ). Lower values mean the model is more confident in the projection.",
   },
+  {
+    q: "What does Starters mean for goalies?",
+    a: "Starters hides depth goalies projected under 8 games played. Use All goalies (or Shift+G) when you need tandem backups and streaming options.",
+  },
 ];
 
 /** JSON-LD for the rankings homepage (Dataset + WebApplication + FAQ). */
