@@ -267,7 +267,12 @@ const files: Record<string, string[]> = {
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
     "useHorizontalScrollShadow",
+    "horizontalScrollShadowVisible",
     "scrollLeft",
+  ],
+  "src/lib/horizontal-scroll-shadow.ts": [
+    "HORIZONTAL_SCROLL_SHADOW_PX",
+    "horizontalScrollShadowVisible",
   ],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": [
