@@ -149,6 +149,10 @@ const files: Record<string, string[]> = {
     "lastVisiblePlayerId",
     "focusPlayerRow",
     "restoreFocusRef",
+    "min-h-11",
+    "min-w-[2.75rem]",
+    "inline-flex",
+    "items-center",
   ],
   "src/lib/board-players.ts": ["boardHasPlayerId", "coerceExpandedPlayerId"],
   "src/lib/board-active-filters.ts": [

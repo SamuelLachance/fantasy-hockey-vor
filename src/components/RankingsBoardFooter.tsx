@@ -95,7 +95,7 @@ export function RankingsBoardFooter({
             }}
             aria-keyshortcuts="m"
             aria-label={loadMoreAriaLabel(remaining)}
-            className="rounded-lg px-3 py-1.5 text-xs tabular-nums text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 min-w-[2.75rem] items-center justify-center rounded-lg px-3 py-2 text-xs tabular-nums text-slate-400 transition hover:bg-white/5 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
             {loadMoreLabel(remaining)}
           </button>
