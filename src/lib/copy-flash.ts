@@ -12,6 +12,11 @@ export function boardLinkButtonLabel(
   return "Link";
 }
 
+/** Tooltip for the board share-link control. */
+export function boardLinkTitle(): string {
+  return "Copy link to this board view (l)";
+}
+
 /** Expanded-row player link button label. */
 export function playerLinkButtonLabel(
   copied: boolean,

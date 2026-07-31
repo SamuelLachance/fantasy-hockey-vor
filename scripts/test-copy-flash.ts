@@ -4,6 +4,7 @@
  */
 import {
   boardLinkButtonLabel,
+  boardLinkTitle,
   copyTextWithFlash,
   playerLinkAriaLabel,
   playerLinkButtonLabel,
@@ -38,6 +39,7 @@ async function main() {
   assert(boardLinkButtonLabel(false) === "Link", "board idle");
   assert(boardLinkButtonLabel(true) === "Copied", "board ok");
   assert(boardLinkButtonLabel(false, true) === "Failed", "board err");
+  assert(boardLinkTitle() === "Copy link to this board view (l)", "board title");
   assert(playerLinkButtonLabel(false) === "Copy player link", "player idle");
   assert(playerLinkButtonLabel(true) === "Link copied", "player ok");
   assert(playerLinkButtonLabel(false, true) === "Copy failed", "player err");
