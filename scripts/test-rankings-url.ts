@@ -130,6 +130,15 @@ assert(
   }) === "https://example.com/fantasy-hockey-vor/?player=8478402#rankings",
   "share url with player",
 );
+assert(
+  rankingsShareUrl(
+    "https://samuellachance.github.io",
+    "/",
+    { ...defaults, position: "D" },
+    "/fantasy-hockey-vor",
+  ) === "https://samuellachance.github.io/fantasy-hockey-vor/?pos=D#rankings",
+  "share url applies GitHub Pages basePath",
+);
 
 const longQ = "x".repeat(80);
 assert(

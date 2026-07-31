@@ -216,9 +216,10 @@ export function rankingsShareUrl(
   origin: string,
   pathname: string,
   state: RankingsUrlState,
+  basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "",
 ): string {
   const qs = rankingsUrlSearch(state);
-  return `${origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
+  return `${origin}${rankingsUrlSyncHref(pathname, qs, "#rankings", basePath)}`;
 }
 
 export type RankingsUrlSyncAction =
