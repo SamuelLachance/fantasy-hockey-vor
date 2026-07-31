@@ -35,15 +35,17 @@ export function useExpandedRowScroll(
 
   useEffect(() => {
     if (expandedId == null) return;
-    const panel = document.getElementById(`player-panel-${expandedId}`);
-    if (!panel) return;
+    let cancelled = false;
+    let lastHeight = 0;
+    let scrollRaf = 0;
+    let attachRaf = 0;
+    let ro: ResizeObserver | null = null;
 
-    let lastHeight = panel.getBoundingClientRect().height;
-    let raf = 0;
-    const ro = new ResizeObserver(() => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
+    const onResize = (panel: HTMLElement) => {
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        if (cancelled) return;
         const next = panel.getBoundingClientRect().height;
         if (next <= lastHeight + 1) {
           lastHeight = Math.max(lastHeight, next);
@@ -52,11 +54,27 @@ export function useExpandedRowScroll(
         lastHeight = next;
         scrollExpandedRowIntoView(expandedId, { focus: false });
       });
-    });
-    ro.observe(panel);
+    };
+
+    const attach = () => {
+      if (cancelled) return;
+      const panel = document.getElementById(`player-panel-${expandedId}`);
+      if (!panel) {
+        // Dynamic panel may mount a frame later — keep trying briefly.
+        attachRaf = requestAnimationFrame(attach);
+        return;
+      }
+      lastHeight = panel.getBoundingClientRect().height;
+      ro = new ResizeObserver(() => onResize(panel));
+      ro.observe(panel);
+    };
+    attach();
+
     return () => {
-      if (raf) cancelAnimationFrame(raf);
-      ro.disconnect();
+      cancelled = true;
+      if (attachRaf) cancelAnimationFrame(attachRaf);
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      ro?.disconnect();
     };
   }, [expandedId]);
 }

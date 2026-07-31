@@ -45,6 +45,7 @@ const files: Record<string, string[]> = {
     "sortDir",
     "ResizeObserver",
     "player-panel-",
+    "requestAnimationFrame(attach)",
     "focus: false",
     "Intentionally ignores load-more",
     "details panel",
