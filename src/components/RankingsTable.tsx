@@ -1,5 +1,6 @@
 "use client";
 
+import { BOARD_POSITIONS, nextBoardPositionIndex } from "@/lib/board-positions";
 import { Suspense, startTransition, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -95,6 +96,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       if (canLoadMore) loadMore();
     },
     onClearSearch: () => board.setQuery(""),
+    onCyclePosition: (direction) => {
+      const idx = BOARD_POSITIONS.indexOf(board.position);
+      const next = nextBoardPositionIndex(
+        idx < 0 ? 0 : idx,
+        direction === 1 ? "ArrowRight" : "ArrowLeft",
+      );
+      startTransition(() => board.setPosition(BOARD_POSITIONS[next]!));
+    },
   });
 
   return (

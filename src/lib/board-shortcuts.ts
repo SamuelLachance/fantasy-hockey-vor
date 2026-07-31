@@ -13,6 +13,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "Home", action: "Scroll to top" },
   { keys: "End", action: "Jump to board + focus search" },
   { keys: "Shift+G", action: "Toggle Starters / All goalies" },
+  { keys: "[ / ]", action: "Previous / next position tab" },
   { keys: "v / e / u / g", action: "Sort by VOR / Edge / Σσ / GP" },
   { keys: "?", action: "Toggle this help" },
   { keys: "Esc", action: "Clear search / close help / filters / row" },
@@ -33,8 +34,8 @@ export const BOARD_SORT_HOTKEYS: Readonly<Record<string, SortKey>> = {
 /** Compact footer/status line listing primary shortcuts. */
 export function boardShortcutsStatusCopy(): string {
   return (
-    "Press / to focus search, f filters, r reset, l copy link, m load more, Home/End navigate, " +
-    "? for shortcuts. Esc closes help/filters then the open row; j/k or ↑/↓ move " +
+    "Press / to focus search, f filters, r reset, l copy link, m load more, [ / ] positions, Home/End navigate, " +
+    "? for shortcuts. Esc clears search or closes help/filters then the open row; j/k or ↑/↓ move " +
     "(opens first/last if none). Shift+G toggles Starters / All goalies. " +
     "v/e/u/g sorts by VOR / Edge / Σσ / GP."
   );
@@ -42,5 +43,5 @@ export function boardShortcutsStatusCopy(): string {
 
 /** Compact site footer chip for board hotkeys. */
 export function boardShortcutsFooterChip(): string {
-  return "board: / · f · r · l · m · Home/End · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link";
+  return "board: / · f · r · l · m · [/] · Home/End · v/e/u/g · Shift+G · ? · j/k · Enter · Esc · CSV/JSON/Link";
 }

@@ -139,8 +139,10 @@ const files: Record<string, string[]> = {
     "onToggleDepthGoalies",
     "onLoadMore",
     "onClearSearch",
+    "onCyclePosition",
     'e.key === "G"',
     'e.key === "m"',
+    'e.key === "["',
   ],
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",
@@ -155,6 +157,7 @@ const files: Record<string, string[]> = {
     "boardShortcutsFooterChip",
     "Shift+G",
     "Load more rows",
+    "Previous / next position tab",
   ],
   "src/lib/copy-flash.ts": ["copyTextWithFlash", "CopyFlash"],
   "src/lib/board-dom.ts": [

@@ -18,13 +18,16 @@ function assert(cond: boolean, msg: string) {
 }
 
 assert(
-  BOARD_SHORTCUT_ROWS.some((r) => r.keys === "m"),
-  "m load more documented",
+  BOARD_SHORTCUT_ROWS.some((r) => r.keys === "[ / ]"),
+  "[/] position cycle documented",
 );
-assert(boardShortcutsStatusCopy().includes("m load more"), "status mentions m");
 assert(
-  boardShortcutsFooterChip().includes(" · m · "),
-  "footer chip mentions m",
+  boardShortcutsStatusCopy().includes("[ / ] positions"),
+  "status mentions position cycle",
+);
+assert(
+  boardShortcutsFooterChip().includes("[/]"),
+  "footer chip mentions [/]",
 );
 assert(BOARD_SORT_HOTKEYS.v === "vor", "v → vor");
 assert(BOARD_SORT_HOTKEYS.e === "draftValue", "e → edge");

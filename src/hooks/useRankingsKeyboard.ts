@@ -22,9 +22,10 @@ interface RankingsKeyboardInput {
   onToggleDepthGoalies?: () => void;
   onLoadMore?: () => void;
   onClearSearch?: () => void;
+  onCyclePosition?: (direction: 1 | -1) => void;
 }
 
-/** Global board shortcuts: Esc, /, ?, j/k, r, l, m. */
+/** Global board shortcuts: Esc, /, ?, j/k, r, l, m, [/]. */
 export function useRankingsKeyboard({
   filtered,
   expandedId,
@@ -40,6 +41,7 @@ export function useRankingsKeyboard({
   onToggleDepthGoalies,
   onLoadMore,
   onClearSearch,
+  onCyclePosition,
 }: RankingsKeyboardInput): void {
   // Keep latest handlers/state without rebinding the window listener every render.
   const filteredRef = useRef(filtered);
@@ -56,6 +58,7 @@ export function useRankingsKeyboard({
   const onToggleDepthGoaliesRef = useRef(onToggleDepthGoalies);
   const onLoadMoreRef = useRef(onLoadMore);
   const onClearSearchRef = useRef(onClearSearch);
+  const onCyclePositionRef = useRef(onCyclePosition);
 
   useEffect(() => {
     filteredRef.current = filtered;
@@ -72,6 +75,7 @@ export function useRankingsKeyboard({
     onToggleDepthGoaliesRef.current = onToggleDepthGoalies;
     onLoadMoreRef.current = onLoadMore;
     onClearSearchRef.current = onClearSearch;
+    onCyclePositionRef.current = onCyclePosition;
   });
 
   useEffect(() => {
@@ -217,6 +221,19 @@ export function useRankingsKeyboard({
       ) {
         e.preventDefault();
         onLoadMoreRef.current();
+        return;
+      }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        !helpOpenNow &&
+        (e.key === "[" || e.key === "]") &&
+        onCyclePositionRef.current
+      ) {
+        e.preventDefault();
+        onCyclePositionRef.current(e.key === "]" ? 1 : -1);
         return;
       }
       if (

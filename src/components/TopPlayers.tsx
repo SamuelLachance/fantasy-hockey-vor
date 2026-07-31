@@ -217,7 +217,10 @@ export function TopPlayers({
                         <span
                           className={`shrink-0 font-mono tabular-nums ${vorColor(vorForFilter(p, position))}`}
                         >
-                          {vorForFilter(p, position).toFixed(1)}
+                          {formatSigned(vorForFilter(p, position), {
+                            digits: 1,
+                            plusZero: true,
+                          })}
                         </span>
                       }
                     >
