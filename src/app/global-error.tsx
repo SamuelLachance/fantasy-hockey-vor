@@ -1,5 +1,7 @@
 "use client";
 
+import { homeRankingsHref } from "@/lib/site";
+
 export default function GlobalError({
   error,
   reset,
@@ -19,10 +21,16 @@ export default function GlobalError({
           <button
             type="button"
             onClick={() => reset()}
-            className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950"
+            className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition motion-reduce:transition-none hover:bg-cyan-400"
           >
             Try again
           </button>
+          <a
+            href={homeRankingsHref()}
+            className="text-sm text-cyan-400/90 underline-offset-2 hover:underline"
+          >
+            Back to rankings
+          </a>
         </main>
       </body>
     </html>

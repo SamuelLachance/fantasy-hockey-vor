@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { homeRankingsHref } from "@/lib/site";
 
 export default function Error({
   error,
@@ -23,15 +24,12 @@ export default function Error({
       <button
         type="button"
         onClick={() => reset()}
-        className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+        className="rounded-full bg-cyan-500 px-5 py-2 text-sm font-semibold text-slate-950 transition motion-reduce:transition-none hover:bg-cyan-400 focus-visible:ring-2 focus-visible:ring-cyan-200 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
       >
         Try again
       </button>
       <a
-        href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/#rankings`.replace(
-          /\/{2,}/g,
-          "/",
-        )}
+        href={homeRankingsHref()}
         className="text-sm text-cyan-400/90 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
       >
         Back to rankings
