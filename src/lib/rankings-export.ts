@@ -1,4 +1,5 @@
 import type { Category, PlayerProjection, Position } from "@/lib/types";
+import { projectionStatValue } from "@/lib/format";
 import { vorForFilter } from "@/lib/rankings-filters";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
 
@@ -13,52 +14,76 @@ export interface BoardExportRow {
   edge: number;
   sigma: number | null;
   gamesPlayed: number;
+  /** Category totals for the same columns as CSV export. */
+  stats: Partial<Record<Category, number | null>>;
 }
 
 export interface RankingsJsonExport {
   exportedAt: string;
   filterPosition: Position | "ALL";
   vorScope: "overall" | "position";
+  categories: Category[];
   playerCount: number;
   players: BoardExportRow[];
+}
+
+/** Numeric category value for JSON export (savePct rounded like CSV). */
+export function exportCategoryStat(
+  player: PlayerProjection,
+  category: Category,
+): number | null {
+  const v = projectionStatValue(player, category);
+  if (v == null) return null;
+  return category === "savePct" ? Number(v.toFixed(4)) : v;
 }
 
 export function rankingsToJsonRows(
   players: PlayerProjection[],
   position: Position | "ALL",
+  categories: readonly Category[],
 ): BoardExportRow[] {
-  return players.map((p) => ({
-    rank: position === "ALL" ? p.rank : (p.positionRank ?? p.rank),
-    id: p.id,
-    name: p.name,
-    team: p.team,
-    positions: p.positions,
-    vor: Number(vorForFilter(p, position).toFixed(3)),
-    edge: p.draftValue ?? 0,
-    sigma: p.uncertainty?.total?.sigma ?? null,
-    gamesPlayed: p.gamesPlayed,
-  }));
+  return players.map((p) => {
+    const stats: Partial<Record<Category, number | null>> = {};
+    for (const cat of categories) {
+      stats[cat] = exportCategoryStat(p, cat);
+    }
+    return {
+      rank: position === "ALL" ? p.rank : (p.positionRank ?? p.rank),
+      id: p.id,
+      name: p.name,
+      team: p.team,
+      positions: p.positions,
+      vor: Number(vorForFilter(p, position).toFixed(3)),
+      edge: p.draftValue ?? 0,
+      sigma: p.uncertainty?.total?.sigma ?? null,
+      gamesPlayed: p.gamesPlayed,
+      stats,
+    };
+  });
 }
 
 export function rankingsJsonExport(
   players: PlayerProjection[],
   position: Position | "ALL",
+  categories: readonly Category[],
   exportedAt = new Date().toISOString(),
 ): RankingsJsonExport {
   return {
     exportedAt,
     filterPosition: position,
     vorScope: position === "ALL" ? "overall" : "position",
+    categories: [...categories],
     playerCount: players.length,
-    players: rankingsToJsonRows(players, position),
+    players: rankingsToJsonRows(players, position, categories),
   };
 }
 
 export function rankingsJsonString(
   players: PlayerProjection[],
   position: Position | "ALL",
+  categories: readonly Category[],
 ): string {
-  return `${JSON.stringify(rankingsJsonExport(players, position), null, 2)}\n`;
+  return `${JSON.stringify(rankingsJsonExport(players, position, categories), null, 2)}\n`;
 }
 
 export function rankingsCsvString(
@@ -88,10 +113,11 @@ export function downloadRankingsCsv(
 export function downloadRankingsJson(
   players: PlayerProjection[],
   position: Position | "ALL",
+  categories: readonly Category[],
 ): void {
   downloadTextFile(
     `vor-rankings-${position.toLowerCase()}-${stamp()}.json`,
-    rankingsJsonString(players, position),
+    rankingsJsonString(players, position, categories),
     "application/json;charset=utf-8",
   );
 }

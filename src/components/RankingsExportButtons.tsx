@@ -52,7 +52,7 @@ export function RankingsExportButtons({
         type="button"
         disabled={empty}
         onClick={() => {
-          downloadRankingsJson(filtered, position);
+          downloadRankingsJson(filtered, position, tableCategories);
           flashExport("json");
         }}
         className="inline-flex items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
