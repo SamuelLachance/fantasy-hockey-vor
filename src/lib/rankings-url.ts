@@ -279,8 +279,8 @@ export function nextRankingsUrlSyncAction(
 }
 
 /**
- * Whether #rankings hash jump should focus the search field.
- * Skip when a player deep-link is present so expand-row focus wins.
+ * Whether a #rankings hash jump should scroll to the board and focus search.
+ * Skip when a player deep-link is present so expand-row scroll/focus wins.
  */
 export function rankingsHashShouldFocusSearch(
   params: URLSearchParams,

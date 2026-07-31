@@ -112,6 +112,10 @@ assert(exportButtonLabel("json", "json") === "Saved", "json flash");
 assert(exportGroupAriaLabel().includes("Export"), "group aria");
 assert(exportButtonTitle("csv").includes("CSV"), "csv title");
 assert(exportButtonTitle("json").includes("JSON"), "json title");
+assert(
+  exportButtonTitle("csv", { searchPending: true }).includes("search"),
+  "pending title",
+);
 
 if (failed) process.exit(1);
 console.log("OK: rankings-export");

@@ -78,7 +78,8 @@ const files: Record<string, string[]> = {
     "hashchange",
     "scrollToRankings",
     "rankingsHashShouldFocusSearch",
-    "focusSearch",
+    "focusSearch: true",
+    "!rankingsHashShouldFocusSearch",
   ],
   "src/hooks/useTimedFlash.ts": [
     "useTimedFlash",
@@ -520,6 +521,7 @@ const files: Record<string, string[]> = {
     "exportButtonLabel",
     "exportButtonTitle",
     "exportGroupAriaLabel",
+    "searchPending",
     "useTimedFlash",
     "downloadRankingsCsv",
     "downloadRankingsJson",
