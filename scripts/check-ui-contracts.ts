@@ -110,10 +110,16 @@ const files: Record<string, string[]> = {
   ],
   "src/components/ExpandedPlayerPanel.tsx": [
     "ExpandedPlayerMeta",
-    "detailStatSigma",
+    "ExpandedPlayerCategories",
     "Loading player notes",
     "sr-only",
   ],
+  "src/components/ExpandedPlayerCategories.tsx": [
+    "categoryZBarWidth",
+    "detailStatSigma",
+    "Proj:",
+  ],
+  "src/lib/category-z-bar.ts": ["categoryZBarWidth", "categorySigmaDigits"],
   "src/components/ExpandedPlayerMeta.tsx": [
     "Copy player link",
     "Consensus #",
