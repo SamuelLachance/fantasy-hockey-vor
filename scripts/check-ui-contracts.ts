@@ -835,6 +835,8 @@ const files: Record<string, string[]> = {
   ],
   "src/components/HowVorWorks.tsx": [
     "How VOR Works",
+    "how-vor-works-title",
+    "aria-labelledby",
     "howVorZScoreCopy",
     "howVorReplacementCopy",
     "howVorYahooPositionsCopy",
@@ -853,6 +855,8 @@ const files: Record<string, string[]> = {
     "TopLeadersCard",
     "accentClass",
     "headerExtra",
+    "aria-labelledby",
+    "top-leaders-",
   ],
   "src/app/page.tsx": [
     "RankingsTable",
