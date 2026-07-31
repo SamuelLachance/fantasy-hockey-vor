@@ -135,6 +135,7 @@ const files: Record<string, string[]> = {
     "aria-expanded",
     "aria-controls",
     "aria-rowindex",
+    "aria-selected",
     "scroll-mt-[var(--board-sticky-chrome-height,0px)]",
     "isExpanded ? `player-panel-${player.id}` : undefined",
     "isTabStop",
