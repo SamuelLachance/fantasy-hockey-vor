@@ -5,7 +5,7 @@ export default function Loading() {
         className="h-1 w-40 overflow-hidden rounded-full bg-white/10"
         aria-hidden
       >
-        <div className="h-full w-1/2 animate-pulse rounded-full bg-cyan-400/60" />
+        <div className="h-full w-1/2 animate-pulse rounded-full bg-cyan-400/60 motion-reduce:animate-none" />
       </div>
       <p className="text-sm text-slate-400" role="status">
         Loading rankings…
