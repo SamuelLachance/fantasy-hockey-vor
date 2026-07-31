@@ -21,6 +21,11 @@ export default function Error({
         The rankings UI hit an unexpected error. Your data files are usually
         fine — try again, or hard-refresh.
       </p>
+      {error.digest ? (
+        <p className="font-mono text-xs text-slate-600">
+          Ref {error.digest}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={() => reset()}

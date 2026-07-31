@@ -62,6 +62,8 @@ export function RankingsToolbar({
             type="search"
             aria-label="Search players or teams"
             aria-keyshortcuts="Slash"
+            autoComplete="off"
+            spellCheck={false}
             maxLength={HIGHLIGHT_QUERY_MAX}
             placeholder="Search players or teams..."
             value={query}
