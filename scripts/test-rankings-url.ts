@@ -6,6 +6,7 @@ import {
   decodeStatRanges,
   encodeStatRanges,
   edgeBoardHref,
+  nextRankingsUrlSyncAction,
   parseRankingsUrl,
   playerBoardHref,
   rankingsShareUrl,
@@ -141,6 +142,27 @@ assert(
     vor: { min: "9".repeat(40), max: "" },
   }) === `vor:${"9".repeat(24)}-`,
   "encode clamps bound length",
+);
+
+assert(
+  nextRankingsUrlSyncAction(null, "", "").type === "noop",
+  "sync noop when matched",
+);
+assert(
+  nextRankingsUrlSyncAction("", "pos=C", "pos=C").type === "noop",
+  "sync noop matched after push",
+);
+assert(
+  nextRankingsUrlSyncAction("pos=C", "pos=D", "pos=C").type === "hydrate",
+  "sync hydrate on back/forward",
+);
+assert(
+  nextRankingsUrlSyncAction("pos=C", "pos=C", "pos=D").type === "push",
+  "sync push on local change",
+);
+assert(
+  nextRankingsUrlSyncAction(null, "pos=C", "").type === "hydrate",
+  "sync hydrate when first URL differs",
 );
 
 if (failed) process.exit(1);

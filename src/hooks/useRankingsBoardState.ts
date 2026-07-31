@@ -183,6 +183,21 @@ export function useRankingsBoardState(
     startTransition(() => setHideDepthGoalies((v) => !v));
   }
 
+  function hydrateFromUrl(next: RankingsUrlState) {
+    setQuery(next.query);
+    setPosition(next.position);
+    setSortKey(next.sortKey);
+    setSortDir(next.sortDir);
+    setStatRanges(next.statRanges);
+    setHideDepthGoalies(next.hideDepthGoalies);
+    setExpandedId(next.playerId);
+    setFiltersOpen(
+      Object.values(next.statRanges).some(
+        (b) => b?.min?.trim() || b?.max?.trim(),
+      ),
+    );
+  }
+
   const tableCategories = boardCategories(position);
   const showingAllGoalies =
     !hideDepthGoalies && canToggleDepthGoalies(position);
@@ -220,5 +235,6 @@ export function useRankingsBoardState(
     resetSortToVor,
     updateRange,
     toggleDepthGoalies,
+    hydrateFromUrl,
   };
 }

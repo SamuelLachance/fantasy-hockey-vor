@@ -81,6 +81,7 @@ const files: Record<string, string[]> = {
     "countActiveStatFilters",
     "resetSortToVor",
     "toggleDepthGoalies",
+    "hydrateFromUrl",
     "Drop expand when the player leaves",
     "canToggleDepthGoalies",
   ],
@@ -414,7 +415,12 @@ const files: Record<string, string[]> = {
     "horizontalScrollShadowVisible",
     "applyHorizontalScrollShadow",
   ],
-  "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
+  "src/hooks/useRankingsUrlSync.ts": [
+    "router.replace",
+    "rankingsUrlSearch",
+    "nextRankingsUrlSyncAction",
+    "onHydrate",
+  ],
   "src/hooks/usePlayerDetails.ts": [
     "scheduleIdle",
     "fetchPlayerDetails",
@@ -456,6 +462,7 @@ const files: Record<string, string[]> = {
     "rf=${rf}",
     "HIGHLIGHT_QUERY_MAX",
     "RANGE_BOUND_MAX",
+    "nextRankingsUrlSyncAction",
   ],
   "src/components/ScrollToTop.tsx": [
     "scrollToTopAriaLabel",

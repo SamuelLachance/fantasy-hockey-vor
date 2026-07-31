@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Position } from "@/lib/types";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
-import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
+import {
+  nextRankingsUrlSyncAction,
+  parseRankingsUrl,
+  rankingsUrlSearch,
+  type RankingsUrlState,
+} from "@/lib/rankings-url";
 
 interface RankingsUrlSyncInput {
   position: Position | "ALL";
@@ -14,9 +19,10 @@ interface RankingsUrlSyncInput {
   expandedId: number | null;
   hideDepthGoalies: boolean;
   statRanges: StatRanges;
+  onHydrate: (state: RankingsUrlState) => void;
 }
 
-/** Keep the address bar in sync with board filters without scrolling. */
+/** Keep board filters and the address bar in sync (including Back/Forward). */
 export function useRankingsUrlSync({
   position,
   deferredQuery,
@@ -25,13 +31,20 @@ export function useRankingsUrlSync({
   expandedId,
   hideDepthGoalies,
   statRanges,
+  onHydrate,
 }: RankingsUrlSyncInput): void {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const lastPushedRef = useRef<string | null>(null);
+  const onHydrateRef = useRef(onHydrate);
 
   useEffect(() => {
-    const next = rankingsUrlSearch({
+    onHydrateRef.current = onHydrate;
+  }, [onHydrate]);
+
+  useEffect(() => {
+    const stateSearch = rankingsUrlSearch({
       position,
       query: deferredQuery,
       sortKey,
@@ -40,13 +53,31 @@ export function useRankingsUrlSync({
       hideDepthGoalies,
       statRanges,
     });
-    const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
-    if (next === current) return;
+    const urlState = parseRankingsUrl(searchParams);
+    const urlSearch = rankingsUrlSearch(urlState);
+    const action = nextRankingsUrlSyncAction(
+      lastPushedRef.current,
+      urlSearch,
+      stateSearch,
+    );
+
+    if (action.type === "noop") {
+      lastPushedRef.current = action.search;
+      return;
+    }
+
+    if (action.type === "hydrate") {
+      lastPushedRef.current = action.search;
+      onHydrateRef.current(urlState);
+      return;
+    }
+
+    lastPushedRef.current = action.search;
     const hash =
       typeof window !== "undefined" && window.location.hash
         ? window.location.hash
         : "";
-    router.replace(`${pathname}${next ? `?${next}` : ""}${hash}`, {
+    router.replace(`${pathname}${action.search ? `?${action.search}` : ""}${hash}`, {
       scroll: false,
     });
   }, [

@@ -210,3 +210,27 @@ export function rankingsShareUrl(
   const qs = rankingsUrlSearch(state);
   return `${origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
 }
+
+export type RankingsUrlSyncAction =
+  | { type: "noop"; search: string }
+  | { type: "push"; search: string }
+  | { type: "hydrate"; search: string };
+
+/**
+ * Decide whether local board state should write the URL, or the URL
+ * (Back/Forward / external) should hydrate board state.
+ */
+export function nextRankingsUrlSyncAction(
+  lastPushed: string | null,
+  urlSearch: string,
+  stateSearch: string,
+): RankingsUrlSyncAction {
+  if (stateSearch === urlSearch) {
+    return { type: "noop", search: urlSearch };
+  }
+  // URL diverged from what we last wrote → browser history / paste.
+  if (lastPushed === null || urlSearch !== lastPushed) {
+    return { type: "hydrate", search: urlSearch };
+  }
+  return { type: "push", search: stateSearch };
+}

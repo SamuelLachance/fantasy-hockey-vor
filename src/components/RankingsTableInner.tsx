@@ -54,6 +54,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     expandedId: board.expandedId,
     hideDepthGoalies: board.hideDepthGoalies,
     statRanges: board.statRanges,
+    onHydrate: board.hydrateFromUrl,
   });
 
   useRankingsHashJump();
