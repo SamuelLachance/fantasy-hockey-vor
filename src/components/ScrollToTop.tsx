@@ -28,8 +28,9 @@ export function ScrollToTop() {
     <button
       type="button"
       aria-label="Scroll to top"
+      aria-keyshortcuts="Home"
       onClick={scrollPageTop}
-      className="fixed bottom-6 right-6 z-40 rounded-full border border-white/15 bg-slate-900/90 p-3 text-cyan-300 shadow-lg backdrop-blur transition motion-reduce:transition-none hover:border-cyan-500/40 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      className="fixed bottom-6 right-6 z-40 rounded-full border border-white/15 bg-slate-900/90 p-3 text-cyan-300 shadow-lg backdrop-blur transition motion-reduce:backdrop-blur-none motion-reduce:transition-none hover:border-cyan-500/40 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
     >
       <ArrowUp className="h-5 w-5" />
     </button>

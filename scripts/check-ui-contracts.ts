@@ -184,6 +184,8 @@ const files: Record<string, string[]> = {
     "requestAnimationFrame",
     "scrollPageTop",
     "motion-reduce:transition-none",
+    "motion-reduce:backdrop-blur-none",
+    'aria-keyshortcuts="Home"',
   ],
   "src/components/TopPlayerLink.tsx": [
     "TopPlayerLink",
