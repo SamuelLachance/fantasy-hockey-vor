@@ -36,6 +36,7 @@ import {
   type StatRanges,
 } from "@/lib/rankings-filters";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
+import { fetchPlayerDetails } from "@/lib/player-details-client";
 import {
   detailStatSigma,
   type PlayerDetailRecord,
@@ -51,17 +52,6 @@ interface RankingsTableProps {
 
 /** Initial paint budget — infinite scroll grows by this step. */
 const PAGE_SIZE = 50;
-
-let detailsPromise: Promise<Record<string, PlayerDetailRecord>> | null = null;
-
-function fetchPlayerDetails(): Promise<Record<string, PlayerDetailRecord>> {
-  const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const url = `${base}/player-details.json`.replace(/\/{2,}/g, "/");
-  detailsPromise ??= fetch(url)
-    .then((res) => (res.ok ? res.json() : {}))
-    .catch(() => ({}));
-  return detailsPromise;
-}
 
 function RankingsTableInner({ players }: RankingsTableProps) {
   const searchParams = useSearchParams();
