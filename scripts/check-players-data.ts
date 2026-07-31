@@ -147,6 +147,18 @@ if (goalieFlagMismatch > 0) {
   );
 }
 
+const badVorPos = players.filter(
+  (p) =>
+    p.vorPosition != null &&
+    Array.isArray(p.positions) &&
+    !p.positions.includes(p.vorPosition),
+).length;
+if (badVorPos > 0) {
+  errors.push(
+    `${badVorPos} players with vorPosition outside Yahoo positions[]`,
+  );
+}
+
 const goalies = players.filter((p) => p.isGoalie).length;
 const skaters = players.length - goalies;
 if (goalies < 80) errors.push(`only ${goalies} goalies (expected >= 80)`);
