@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  boardPositionTabId,
-  cycleBoardPosition,
-} from "@/lib/board-positions";
+import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { visibleBoardPlayers } from "@/lib/board-visible";
 import { startTransition, useRef, useState } from "react";
@@ -102,10 +99,9 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     onClearSearch: () => board.setQuery(""),
     onCyclePosition: (direction) => {
       const pos = cycleBoardPosition(board.position, direction);
+      // Keep focus on the board (not the tab) so chrome hotkey gating does not
+      // block j/k/l/p after [ / ]. PositionFilterTabs aria-live announces the change.
       startTransition(() => board.setPosition(pos));
-      queueMicrotask(() => {
-        document.getElementById(boardPositionTabId(pos))?.focus();
-      });
     },
   });
 

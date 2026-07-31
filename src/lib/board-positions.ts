@@ -12,7 +12,7 @@ export const BOARD_POSITIONS = [
 
 export type BoardPosition = (typeof BOARD_POSITIONS)[number];
 
-/** Stable DOM id for a position filter tab (focus after [ / ]). */
+/** Stable DOM id for a position filter tab (tablist keyboard focus). */
 export function boardPositionTabId(position: Position | "ALL"): string {
   return `board-pos-tab-${position}`;
 }
