@@ -43,6 +43,7 @@ const files: Record<string, string[]> = {
     "RankingsPlayerRow",
     "RankingsTableHead",
     "RankingsBoardFooter",
+    "group/hscroll",
     "overscroll-x-contain",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
@@ -76,11 +77,11 @@ const files: Record<string, string[]> = {
   "src/hooks/useRankingsBoardState.ts": [
     "useRankingsBoardState",
     "boardFilterResetToken",
-    "boardHasPlayerId",
+    "coerceExpandedPlayerId",
     "countActiveStatFilters",
     "resetSortToVor",
     "toggleDepthGoalies",
-    "Drop deep-linked expand ids",
+    "Drop expand when the player leaves",
     "canToggleDepthGoalies",
   ],
   "src/components/RankingsBoardChrome.tsx": [
@@ -97,7 +98,7 @@ const files: Record<string, string[]> = {
     "RankingsEmptyState",
     'aria-keyshortcuts="m"',
   ],
-  "src/lib/board-players.ts": ["boardHasPlayerId"],
+  "src/lib/board-players.ts": ["boardHasPlayerId", "coerceExpandedPlayerId"],
   "src/lib/board-active-filters.ts": ["countActiveStatFilters"],
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
@@ -403,14 +404,15 @@ const files: Record<string, string[]> = {
   ],
   "src/hooks/useHorizontalScrollShadow.ts": [
     "useHorizontalScrollShadow",
-    "horizontalScrollShadowVisible",
-    "scrollLeft",
+    "applyHorizontalScrollShadow",
     "requestAnimationFrame",
     "cancelAnimationFrame",
   ],
   "src/lib/horizontal-scroll-shadow.ts": [
     "HORIZONTAL_SCROLL_SHADOW_PX",
+    "HORIZONTAL_SCROLL_SCROLLED_ATTR",
     "horizontalScrollShadowVisible",
+    "applyHorizontalScrollShadow",
   ],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": [

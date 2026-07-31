@@ -1,20 +1,21 @@
 "use client";
 
-import { useEffect, useState, type RefObject } from "react";
-import { horizontalScrollShadowVisible } from "@/lib/horizontal-scroll-shadow";
+import { useEffect, type RefObject } from "react";
+import { applyHorizontalScrollShadow } from "@/lib/horizontal-scroll-shadow";
 
-/** True once a horizontally scrollable element has scrolled past the left edge. */
+/**
+ * Toggle data-scrolled on a horizontally scrollable element.
+ * Shadow styling is pure CSS (group-data) — no board re-render on scroll.
+ */
 export function useHorizontalScrollShadow(
   ref: RefObject<HTMLElement | null>,
-): boolean {
-  const [scrolled, setScrolled] = useState(false);
-
+): void {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     let raf = 0;
     const update = () => {
-      setScrolled(horizontalScrollShadowVisible(el.scrollLeft));
+      applyHorizontalScrollShadow(el);
     };
     const onScroll = () => {
       if (raf) return;
@@ -33,6 +34,4 @@ export function useHorizontalScrollShadow(
       ro.disconnect();
     };
   }, [ref]);
-
-  return scrolled;
 }

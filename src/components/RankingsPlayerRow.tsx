@@ -37,7 +37,6 @@ interface RankingsPlayerRowProps {
   position: Position | "ALL";
   deferredQuery: string;
   isExpanded: boolean;
-  showStickyShadow: boolean;
   tableCategories: readonly Category[];
   playerDetails: PlayerDetailRecord | undefined;
   detailsLoading: boolean;
@@ -57,7 +56,6 @@ export function RankingsPlayerRow({
   position,
   deferredQuery,
   isExpanded,
-  showStickyShadow,
   tableCategories,
   playerDetails,
   detailsLoading,
@@ -103,9 +101,7 @@ export function RankingsPlayerRow({
             : (player.positionRank ?? idx + 1)}
         </td>
         <td
-          className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${STICKY_NAME_BASE} ${
-            showStickyShadow ? STICKY_NAME_SHADOW : ""
-          } ${stickyBg}`}
+          className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW} ${stickyBg}`}
           title={player.name}
         >
           {highlightMatch(player.name, deferredQuery)}

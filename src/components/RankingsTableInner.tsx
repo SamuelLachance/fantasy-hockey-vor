@@ -69,7 +69,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   });
 
   const tableScrollRef = useRef<HTMLDivElement | null>(null);
-  const showStickyShadow = useHorizontalScrollShadow(tableScrollRef);
+  useHorizontalScrollShadow(tableScrollRef);
 
   const { loadMoreRef, renderCount, loadMore, canLoadMore } =
     useBoardInfiniteScroll(
@@ -138,7 +138,6 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
 
       <RankingsBoardTable
         tableScrollRef={tableScrollRef}
-        showStickyShadow={showStickyShadow}
         sortKey={board.sortKey}
         sortDir={board.sortDir}
         tableCategories={board.tableCategories}

@@ -8,9 +8,9 @@ export function focusStatsFilterButton(): void {
     ?.focus();
 }
 
-/** Right-edge shadow for sticky Player column after horizontal scroll. */
+/** Right-edge shadow for sticky Player column after horizontal scroll (CSS-gated). */
 export const STICKY_NAME_SHADOW =
-  "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]" as const;
+  "group-data-[scrolled]/hscroll:shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]" as const;
 
 export const STICKY_NAME_BASE =
   "transition-shadow duration-150 motion-reduce:transition-none" as const;

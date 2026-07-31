@@ -10,7 +10,6 @@ interface RankingsTableHeadProps {
   sortKey: SortKey;
   sortDir: "asc" | "desc";
   tableCategories: readonly Category[];
-  showStickyShadow: boolean;
   onToggleSort: (key: SortKey) => void;
   onResetSort: () => void;
 }
@@ -19,7 +18,6 @@ export function RankingsTableHead({
   sortKey,
   sortDir,
   tableCategories,
-  showStickyShadow,
   onToggleSort,
   onResetSort,
 }: RankingsTableHeadProps) {
@@ -42,9 +40,7 @@ export function RankingsTableHead({
           sortDir={sortDir}
           onToggle={onToggleSort}
           onReset={onResetSort}
-          className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${
-            showStickyShadow ? STICKY_NAME_SHADOW : ""
-          }`}
+          className={`sticky left-10 z-[5] bg-slate-950/95 px-4 py-3 sm:left-12 ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW}`}
         />
         <th scope="col" className="px-4 py-3">
           Pos

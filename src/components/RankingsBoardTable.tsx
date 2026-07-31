@@ -10,7 +10,6 @@ import { RankingsTableHead } from "./RankingsTableHead";
 
 interface RankingsBoardTableProps {
   tableScrollRef: RefObject<HTMLDivElement | null>;
-  showStickyShadow: boolean;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
   tableCategories: readonly Category[];
@@ -46,7 +45,6 @@ interface RankingsBoardTableProps {
 /** Scrollable rankings table body + footer (empty / load-more). */
 export function RankingsBoardTable({
   tableScrollRef,
-  showStickyShadow,
   sortKey,
   sortDir,
   tableCategories,
@@ -82,7 +80,7 @@ export function RankingsBoardTable({
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
       <div
         ref={tableScrollRef}
-        className="overflow-x-auto overscroll-x-contain"
+        className="group/hscroll overflow-x-auto overscroll-x-contain"
       >
         <table
           id="rankings-board-table"
@@ -93,7 +91,6 @@ export function RankingsBoardTable({
             sortKey={sortKey}
             sortDir={sortDir}
             tableCategories={tableCategories}
-            showStickyShadow={showStickyShadow}
             onToggleSort={onToggleSort}
             onResetSort={onResetSort}
           />
@@ -106,7 +103,6 @@ export function RankingsBoardTable({
                 position={position}
                 deferredQuery={deferredQuery}
                 isExpanded={expandedId === player.id}
-                showStickyShadow={showStickyShadow}
                 tableCategories={tableCategories}
                 playerDetails={details?.[String(player.id)]}
                 detailsLoading={details === null && !detailsError}

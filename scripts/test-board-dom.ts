@@ -21,8 +21,8 @@ function assert(cond: boolean, msg: string) {
 }
 
 assert(
-  STICKY_NAME_SHADOW.includes("shadow-"),
-  "sticky shadow class present",
+  STICKY_NAME_SHADOW.includes("group-data-[scrolled]/hscroll:shadow-"),
+  "sticky shadow gated by scroll group",
 );
 assert(
   typeof STICKY_NAME_SHADOW === "string" && STICKY_NAME_SHADOW.length > 10,
