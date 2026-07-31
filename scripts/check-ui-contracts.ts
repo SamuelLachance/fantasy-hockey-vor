@@ -186,6 +186,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/ExpandedPlayerMeta.tsx": [
     "Copy player link",
+    "Copy link for",
     "Consensus #",
     'aria-live="polite"',
     "projectionMethodLabel",
