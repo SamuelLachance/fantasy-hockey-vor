@@ -4,12 +4,16 @@
  */
 import {
   howVorReplacementCopy,
+  howVorReplacementTitleCopy,
   howVorScarcityGoaliesLabel,
   howVorScarcityHintCopy,
   howVorScarcitySkatersLabel,
   howVorScarcityTitleCopy,
+  howVorSectionTitleCopy,
   howVorYahooPositionsCopy,
+  howVorYahooPositionsTitleCopy,
   howVorZScoreCopy,
+  howVorZScoreTitleCopy,
 } from "../src/lib/how-vor-copy";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 
@@ -21,6 +25,16 @@ function assert(cond: boolean, msg: string) {
   }
 }
 
+assert(howVorSectionTitleCopy() === "How VOR Works", "section title");
+assert(howVorZScoreTitleCopy() === "Category Z-Scores", "z-score title");
+assert(
+  howVorReplacementTitleCopy() === "Replacement Level",
+  "replacement title",
+);
+assert(
+  howVorYahooPositionsTitleCopy() === "Yahoo Positions",
+  "yahoo title",
+);
 assert(howVorZScoreCopy().includes("z-score"), "z-score copy");
 assert(howVorZScoreCopy().includes("SV%"), "mentions SV%");
 assert(

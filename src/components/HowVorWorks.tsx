@@ -3,12 +3,16 @@ import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
 import { CATEGORY_FULL_LABELS } from "@/lib/format";
 import {
   howVorReplacementCopy,
+  howVorReplacementTitleCopy,
   howVorScarcityGoaliesLabel,
   howVorScarcityHintCopy,
   howVorScarcitySkatersLabel,
   howVorScarcityTitleCopy,
+  howVorSectionTitleCopy,
   howVorYahooPositionsCopy,
+  howVorYahooPositionsTitleCopy,
   howVorZScoreCopy,
+  howVorZScoreTitleCopy,
 } from "@/lib/how-vor-copy";
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
 import { Trophy, Target, Shield, Zap } from "lucide-react";
@@ -36,25 +40,25 @@ export function HowVorWorks({
           id="how-vor-works-title"
           className="text-lg font-semibold text-white"
         >
-          How VOR Works
+          {howVorSectionTitleCopy()}
         </h2>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
           <Zap className="mb-2 h-5 w-5 text-cyan-400" />
-          <h3 className="font-medium text-white">Category Z-Scores</h3>
+          <h3 className="font-medium text-white">{howVorZScoreTitleCopy()}</h3>
           <p className="mt-1 text-sm text-slate-400">{howVorZScoreCopy()}</p>
         </div>
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
           <Target className="mb-2 h-5 w-5 text-cyan-400" />
-          <h3 className="font-medium text-white">Replacement Level</h3>
+          <h3 className="font-medium text-white">{howVorReplacementTitleCopy()}</h3>
           <p className="mt-1 text-sm text-slate-400">
             {howVorReplacementCopy(teams, league.roster)}
           </p>
         </div>
         <div className="rounded-xl border border-white/5 bg-white/5 p-4">
           <Trophy className="mb-2 h-5 w-5 text-cyan-400" />
-          <h3 className="font-medium text-white">Yahoo Positions</h3>
+          <h3 className="font-medium text-white">{howVorYahooPositionsTitleCopy()}</h3>
           <p className="mt-1 text-sm text-slate-400">
             {howVorYahooPositionsCopy()}
           </p>

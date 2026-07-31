@@ -1,6 +1,26 @@
 import { replacementRank } from "@/lib/league";
 import type { LeagueSettings } from "@/lib/types";
 
+/** Section heading for the How VOR Works panel. */
+export function howVorSectionTitleCopy(): string {
+  return "How VOR Works";
+}
+
+/** Card title for the category z-score explainer. */
+export function howVorZScoreTitleCopy(): string {
+  return "Category Z-Scores";
+}
+
+/** Card title for the replacement-level explainer. */
+export function howVorReplacementTitleCopy(): string {
+  return "Replacement Level";
+}
+
+/** Card title for the Yahoo eligibility explainer. */
+export function howVorYahooPositionsTitleCopy(): string {
+  return "Yahoo Positions";
+}
+
 /** Category z-score explainer body. */
 export function howVorZScoreCopy(): string {
   return (
