@@ -65,6 +65,17 @@ export function useRankingsKeyboard({
           ?.focus();
         return;
       }
+      if (
+        !inField &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        (e.key === "f" || e.key === "F")
+      ) {
+        e.preventDefault();
+        setFiltersOpen(!filtersOpen);
+        return;
+      }
       if (inField || helpOpen || expandedId == null) return;
       if (
         e.key !== "j" &&
