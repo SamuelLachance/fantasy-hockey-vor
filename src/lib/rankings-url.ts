@@ -236,3 +236,13 @@ export function nextRankingsUrlSyncAction(
   }
   return { type: "push", search: stateSearch };
 }
+
+/**
+ * Whether #rankings hash jump should focus the search field.
+ * Skip when a player deep-link is present so expand-row focus wins.
+ */
+export function rankingsHashShouldFocusSearch(
+  params: URLSearchParams,
+): boolean {
+  return parseRankingsUrl(params).playerId == null;
+}

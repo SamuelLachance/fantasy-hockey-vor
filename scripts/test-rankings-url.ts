@@ -9,6 +9,7 @@ import {
   nextRankingsUrlSyncAction,
   parseRankingsUrl,
   playerBoardHref,
+  rankingsHashShouldFocusSearch,
   rankingsShareUrl,
   rankingsUrlSearch,
   sigmaBoardHref,
@@ -182,6 +183,19 @@ assert(
 assert(
   parseRankingsUrl(new URLSearchParams("pos=G&sort=wins")).sortKey === "wins",
   "G keeps wins sort",
+);
+
+assert(
+  rankingsHashShouldFocusSearch(new URLSearchParams("")),
+  "bare hash focuses search",
+);
+assert(
+  rankingsHashShouldFocusSearch(new URLSearchParams("pos=C&q=mcd")),
+  "filter-only focuses search",
+);
+assert(
+  !rankingsHashShouldFocusSearch(new URLSearchParams("player=8478402")),
+  "player deep-link skips search focus",
 );
 
 if (failed) process.exit(1);

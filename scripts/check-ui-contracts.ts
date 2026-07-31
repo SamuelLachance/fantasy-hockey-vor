@@ -59,6 +59,7 @@ const files: Record<string, string[]> = {
     "useRankingsHashJump",
     "hashchange",
     "scrollToRankings",
+    "rankingsHashShouldFocusSearch",
     "focusSearch",
   ],
   "src/hooks/useTimedFlash.ts": [
@@ -473,6 +474,7 @@ const files: Record<string, string[]> = {
     "HIGHLIGHT_QUERY_MAX",
     "RANGE_BOUND_MAX",
     "nextRankingsUrlSyncAction",
+    "rankingsHashShouldFocusSearch",
   ],
   "src/components/ScrollToTop.tsx": [
     "scrollToTopAriaLabel",
