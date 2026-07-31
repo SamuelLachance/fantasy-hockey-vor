@@ -111,8 +111,13 @@ const files: Record<string, string[]> = {
   "src/components/ExpandedPlayerPanel.tsx": [
     "ExpandedPlayerMeta",
     "ExpandedPlayerCategories",
+    "ExpandedPlayerNotes",
+  ],
+  "src/components/ExpandedPlayerNotes.tsx": [
     "Loading player notes",
     "sr-only",
+    "Retry",
+    "resetPlayerDetailsCache",
   ],
   "src/components/ExpandedPlayerCategories.tsx": [
     "categoryZBarWidth",
