@@ -6,7 +6,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   action: string;
 }> = [
   { keys: "/", action: "Focus search" },
-  { keys: "f", action: "Toggle stat filters" },
+  { keys: "f", action: "Open stat filters (Esc closes)" },
   { keys: "r", action: "Reset board view" },
   { keys: "l", action: "Copy board link" },
   { keys: "p", action: "Copy expanded player link" },

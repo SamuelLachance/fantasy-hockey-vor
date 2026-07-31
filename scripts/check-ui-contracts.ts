@@ -241,6 +241,7 @@ const files: Record<string, string[]> = {
     "renderCountRef",
     "focusStatsFilterButton",
     "focusFirstStatFilterInput",
+    "filtersOpenNow",
     "onCopyBoardLink",
     "onCopyPlayerLink",
     'e.key === "Home"',
@@ -296,6 +297,7 @@ const files: Record<string, string[]> = {
     "Copy expanded player link",
     "Previous / next position tab",
     "PgDn / PgUp",
+    "Open stat filters (Esc closes)",
   ],
   "src/lib/copy-flash.ts": [
     "copyTextWithFlash",

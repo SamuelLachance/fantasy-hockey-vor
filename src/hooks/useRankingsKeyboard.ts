@@ -176,12 +176,13 @@ export function useRankingsKeyboard({
         (e.key === "f" || e.key === "F")
       ) {
         e.preventDefault();
-        const next = !filtersOpenNow;
-        setFiltersOpenRef.current(next);
-        queueMicrotask(() => {
-          if (next) focusFirstStatFilterInput();
-          else focusStatsFilterButton();
-        });
+        if (filtersOpenNow) {
+          // Already open: jump back into the panel (Esc still closes).
+          queueMicrotask(focusFirstStatFilterInput);
+          return;
+        }
+        setFiltersOpenRef.current(true);
+        queueMicrotask(focusFirstStatFilterInput);
         return;
       }
 
