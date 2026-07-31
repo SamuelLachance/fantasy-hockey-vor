@@ -902,6 +902,14 @@ const files: Record<string, string[]> = {
     "SITE_BRAND",
     "tracking-[0.2em]",
   ],
+  "src/app/robots.ts": [
+    "SITE_ORIGIN",
+    "sitemap.xml",
+    "NEXT_PUBLIC_BASE_PATH",
+    'userAgent: "*"',
+    "force-static",
+    'basePath ? `${basePath}/` : "/"',
+  ],
   "src/app/error.tsx": [
     "errorTryAgainCopy",
     "errorBackToRankingsCopy",
