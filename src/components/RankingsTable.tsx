@@ -16,6 +16,7 @@ export function RankingsTable({ players }: RankingsTableProps) {
         <div
           className="rounded-2xl border border-white/10 bg-slate-950/40 px-6 py-16 text-center text-slate-400"
           role="status"
+          aria-busy="true"
         >
           {loadingRankingsCopy()}
         </div>
