@@ -107,6 +107,7 @@ const files: Record<string, string[]> = {
     "matching players",
     "Enter/Space",
     "boardShortcutsStatusCopy",
+    "tabular-nums",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',

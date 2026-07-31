@@ -18,10 +18,15 @@ export function RankingsStatusBar({
       aria-live="polite"
       aria-atomic="true"
     >
-      Showing {formatCount(Math.min(renderCount, filteredCount))} of{" "}
-      {formatCount(filteredCount)} matching players (
-      {formatCount(totalCount)} total). Click or Enter/Space a row for category
-      breakdown. Click column headers to sort. {boardShortcutsStatusCopy()}
+      Showing{" "}
+      <span className="tabular-nums">
+        {formatCount(Math.min(renderCount, filteredCount))}
+      </span>{" "}
+      of <span className="tabular-nums">{formatCount(filteredCount)}</span>{" "}
+      matching players (
+      <span className="tabular-nums">{formatCount(totalCount)}</span> total).
+      Click or Enter/Space a row for category breakdown. Click column headers to
+      sort. {boardShortcutsStatusCopy()}
     </p>
   );
 }
