@@ -40,6 +40,49 @@ export function slimUncertainty(
   };
 }
 
+function round3(n: number): number {
+  return Math.round(n * 1000) / 1000;
+}
+
+/** Shrink float noise in the board JSON without changing sort order meaningfully. */
+export function compactBoardNumbers(p: PlayerProjection): PlayerProjection {
+  const categoryZScores: PlayerProjection["categoryZScores"] = {};
+  for (const [k, v] of Object.entries(p.categoryZScores ?? {})) {
+    if (typeof v === "number" && Number.isFinite(v)) {
+      categoryZScores[k as keyof typeof categoryZScores] = round3(v);
+    }
+  }
+  const uncertainty = p.uncertainty
+    ? {
+        ...p.uncertainty,
+        gamesPlayedSigma: round3(p.uncertainty.gamesPlayedSigma),
+        aleatoricShare: round3(p.uncertainty.aleatoricShare),
+        total: {
+          sigma: round3(p.uncertainty.total.sigma),
+          modelSpread: round3(p.uncertainty.total.modelSpread),
+          aleatoric: round3(p.uncertainty.total.aleatoric),
+        },
+      }
+    : undefined;
+  return {
+    ...p,
+    categoryZScores,
+    fantasyValue: round3(p.fantasyValue),
+    vor: round3(p.vor),
+    ...(p.vorByPosition
+      ? {
+          vorByPosition: Object.fromEntries(
+            Object.entries(p.vorByPosition).map(([k, v]) => [
+              k,
+              typeof v === "number" ? round3(v) : v,
+            ]),
+          ) as PlayerProjection["vorByPosition"],
+        }
+      : {}),
+    ...(uncertainty ? { uncertainty } : {}),
+  };
+}
+
 /**
  * Split a ranked player into table row + lazy detail payload.
  * Drops unused-on-board marketEdge and per-stat uncertainty from the main JSON.
@@ -54,7 +97,7 @@ export function splitPublishedPlayer(p: PlayerProjection): {
     marketEdge,
     uncertainty,
     ...rest
-  } = p;
+  } = compactBoardNumbers(p);
   const board: PlayerProjection = {
     ...rest,
     ...(uncertainty ? { uncertainty: slimUncertainty(uncertainty) } : {}),

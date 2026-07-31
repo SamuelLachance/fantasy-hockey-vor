@@ -120,9 +120,9 @@ if (boardBloat > 0) {
 }
 
 const playersBytes = readFileSync(PLAYERS_PATH).length;
-if (playersBytes > 1.8e6) {
+if (playersBytes > 1.3e6) {
   warnings.push(
-    `players.json is ${(playersBytes / 1e6).toFixed(2)}MB (target ≤1.3MB slim board)`,
+    `players.json is ${(playersBytes / 1e6).toFixed(2)}MB (target ≤1.0MB slim board)`,
   );
 }
 
