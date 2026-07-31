@@ -319,6 +319,13 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }
 
+  function resetSortToVor() {
+    startTransition(() => {
+      setSortKey("vor");
+      setSortDir("desc");
+    });
+  }
+
   function updateRange(key: RangeKey, field: "min" | "max", value: string) {
     setStatRanges((prev) => ({
       ...prev,
@@ -380,6 +387,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <th className="px-4 py-3">
                   <button
                     onClick={() => toggleSort("rank")}
+                    onDoubleClick={resetSortToVor}
+                    title="Double-click any header to reset sort to VOR"
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
                     # <SortIcon column="rank" sortKey={sortKey} sortDir={sortDir} />
@@ -388,6 +397,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <th className="px-4 py-3">
                   <button
                     onClick={() => toggleSort("name")}
+                    onDoubleClick={resetSortToVor}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
                     Player <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
@@ -397,6 +407,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <th className="px-4 py-3">
                   <button
                     onClick={() => toggleSort("team")}
+                    onDoubleClick={resetSortToVor}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
                     Team <SortIcon column="team" sortKey={sortKey} sortDir={sortDir} />
@@ -405,6 +416,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <th className="px-4 py-3">
                   <button
                     onClick={() => toggleSort("vor")}
+                    onDoubleClick={resetSortToVor}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
                     VOR <SortIcon column="vor" sortKey={sortKey} sortDir={sortDir} />
@@ -416,6 +428,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 >
                   <button
                     onClick={() => toggleSort("draftValue")}
+                    onDoubleClick={resetSortToVor}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
                     Edge <SortIcon column="draftValue" sortKey={sortKey} sortDir={sortDir} />
@@ -424,6 +437,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                 <th className="px-4 py-3">
                   <button
                     onClick={() => toggleSort("gamesPlayed")}
+                    onDoubleClick={resetSortToVor}
                     className="inline-flex items-center gap-1 hover:text-white"
                   >
                     GP <SortIcon column="gamesPlayed" sortKey={sortKey} sortDir={sortDir} />
@@ -433,6 +447,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                   <th key={cat} className="px-3 py-3 text-center">
                     <button
                       onClick={() => toggleSort(cat)}
+                      onDoubleClick={resetSortToVor}
                       className="inline-flex w-full items-center justify-center gap-1 hover:text-white"
                     >
                       {CATEGORY_LABELS[cat]}
