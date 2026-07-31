@@ -2,16 +2,16 @@
 
 import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { startTransition, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection } from "@/lib/types";
 import { parseRankingsUrl } from "@/lib/rankings-url";
-import { scrollExpandedRowIntoView } from "@/lib/board-dom";
 import { useBoardCopyLinks } from "@/hooks/useBoardCopyLinks";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardDocumentTitle } from "@/hooks/useBoardDocumentTitle";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
+import { useExpandedRowScroll } from "@/hooks/useExpandedRowScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
 import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
 import { useRankingsHashJump } from "@/hooks/useRankingsHashJump";
@@ -74,10 +74,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
       board.filterKey,
     );
 
-  useEffect(() => {
-    if (board.expandedId == null) return;
-    scrollExpandedRowIntoView(board.expandedId);
-  }, [board.expandedId, renderCount]);
+  useExpandedRowScroll(board.expandedId, renderCount);
 
   useRankingsKeyboard({
     filtered: board.filtered,

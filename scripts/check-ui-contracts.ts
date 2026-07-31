@@ -26,7 +26,12 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "useHorizontalScrollShadow",
     "useBoardDocumentTitle",
+    "useExpandedRowScroll",
     "onCyclePosition",
+  ],
+  "src/hooks/useExpandedRowScroll.ts": [
+    "useExpandedRowScroll",
+    "scrollExpandedRowIntoView",
   ],
   "src/components/RankingsBoardTable.tsx": [
     'id="rankings-board-table"',
