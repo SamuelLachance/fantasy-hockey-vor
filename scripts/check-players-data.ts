@@ -79,6 +79,24 @@ if (data.positionSource !== "yahoo-fantasy") {
   );
 }
 
+const yahooFetched = Date.parse(
+  (data as { yahooPositionsFetchedAt?: string }).yahooPositionsFetchedAt ?? "",
+);
+if (!Number.isFinite(yahooFetched)) {
+  errors.push("yahooPositionsFetchedAt missing/invalid");
+} else {
+  const yahooAgeDays = (Date.now() - yahooFetched) / (24 * 60 * 60 * 1000);
+  if (yahooAgeDays > 180) {
+    errors.push(
+      `yahoo positions are ${yahooAgeDays.toFixed(0)} days old (fail after 180d)`,
+    );
+  } else if (yahooAgeDays > 90) {
+    warnings.push(
+      `yahoo positions are ${yahooAgeDays.toFixed(0)} days old — refresh before draft`,
+    );
+  }
+}
+
 const players = data.players ?? [];
 const badVor = players.filter((p) => !Number.isFinite(p.vor)).length;
 if (badVor > 0) errors.push(`${badVor} players with non-finite VOR`);
