@@ -39,13 +39,15 @@ async function main() {
     }
     return {
       ok: true,
-      json: async () => ({ "42": { notes: "ok" } }),
+      json: async () => ({
+        "42": { reasoning: "ok", profileSummary: "sum" },
+      }),
     } as Response;
   }) as typeof fetch;
 
   const data = await fetchPlayerDetails();
   assert(calls === 2, "retries once after HTTP error");
-  assert(data["42"]?.notes === "ok", "payload returned");
+  assert(data["42"]?.reasoning === "ok", "payload returned");
 
   await fetchPlayerDetails();
   assert(calls === 2, "session cache avoids refetch");
@@ -72,12 +74,14 @@ async function main() {
     calls++;
     return {
       ok: true,
-      json: async () => ({ "7": { notes: "recovered" } }),
+      json: async () => ({
+        "7": { reasoning: "recovered", profileSummary: "" },
+      }),
     } as Response;
   }) as typeof fetch;
   const recovered = await fetchPlayerDetails();
   assert(calls === 1, "fresh fetch after failed cache clear");
-  assert(recovered["7"]?.notes === "recovered", "recovery payload");
+  assert(recovered["7"]?.reasoning === "recovered", "recovery payload");
 
   globalThis.fetch = realFetch;
   globalThis.setTimeout = realTimeout;
