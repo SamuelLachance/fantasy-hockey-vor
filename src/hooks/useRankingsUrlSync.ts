@@ -13,7 +13,7 @@ import {
 
 interface RankingsUrlSyncInput {
   position: Position | "ALL";
-  deferredQuery: string;
+  query: string;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
   expandedId: number | null;
@@ -25,7 +25,7 @@ interface RankingsUrlSyncInput {
 /** Keep board filters and the address bar in sync (including Back/Forward). */
 export function useRankingsUrlSync({
   position,
-  deferredQuery,
+  query,
   sortKey,
   sortDir,
   expandedId,
@@ -46,7 +46,7 @@ export function useRankingsUrlSync({
   useEffect(() => {
     const stateSearch = rankingsUrlSearch({
       position,
-      query: deferredQuery,
+      query,
       sortKey,
       sortDir,
       playerId: expandedId,
@@ -82,7 +82,7 @@ export function useRankingsUrlSync({
     });
   }, [
     position,
-    deferredQuery,
+    query,
     sortKey,
     sortDir,
     expandedId,

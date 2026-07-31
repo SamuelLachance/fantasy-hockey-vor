@@ -422,6 +422,7 @@ const files: Record<string, string[]> = {
     "rankingsUrlSearch",
     "nextRankingsUrlSyncAction",
     "onHydrate",
+    "query,",
   ],
   "src/hooks/usePlayerDetails.ts": [
     "scheduleIdle",

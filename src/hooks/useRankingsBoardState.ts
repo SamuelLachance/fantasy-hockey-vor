@@ -142,7 +142,7 @@ export function useRankingsBoardState(
   function boardShareState(playerId: number | null): RankingsUrlState {
     return {
       position,
-      query: deferredQuery,
+      query,
       sortKey,
       sortDir,
       playerId,

@@ -48,7 +48,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
 
   useRankingsUrlSync({
     position: board.position,
-    deferredQuery: board.deferredQuery,
+    query: board.query,
     sortKey: board.sortKey,
     sortDir: board.sortDir,
     expandedId: board.expandedId,
