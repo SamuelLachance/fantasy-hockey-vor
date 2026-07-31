@@ -59,8 +59,13 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [position, setPosition] = useState<Position | "ALL">(seed.position);
   const [sortKey, setSortKey] = useState<SortKey>(seed.sortKey);
   const [sortDir, setSortDir] = useState<"asc" | "desc">(seed.sortDir);
-  const [statRanges, setStatRanges] = useState<StatRanges>({});
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [statRanges, setStatRanges] = useState<StatRanges>(seed.statRanges);
+  const [filtersOpen, setFiltersOpen] = useState(
+    () =>
+      Object.values(seed.statRanges).some(
+        (b) => b?.min?.trim() || b?.max?.trim(),
+      ),
+  );
   const [linkCopied, setLinkCopied] = useState(false);
   const [hideDepthGoalies, setHideDepthGoalies] = useState(
     seed.hideDepthGoalies,
@@ -79,6 +84,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     sortDir,
     expandedId,
     hideDepthGoalies,
+    statRanges,
   });
 
   useEffect(() => {
@@ -316,6 +322,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           setHideDepthGoalies={setHideDepthGoalies}
           showDepthToggle={position === "G" || position === "ALL"}
           onOpenHelp={() => setHelpOpen(true)}
+          statRanges={statRanges}
         />
 
         {filtersOpen && (
@@ -519,6 +526,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                                 sortDir,
                                 playerId: player.id,
                                 hideDepthGoalies,
+                                statRanges,
                               });
                               const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}#rankings`;
                               void copyText(url).then((ok) => {

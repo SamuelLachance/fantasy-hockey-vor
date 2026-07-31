@@ -73,7 +73,7 @@ Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmar
 
 ## Board UX
 
-- URL sync: `pos`, `q`, `sort`, `dir`, `player`, `g=all` (depth goalies)
+- URL sync: `pos`, `q`, `sort`, `dir`, `player`, `g=all` (depth goalies), `rf` (stat ranges e.g. `sigma:-50`)
 - Columns: VOR, Edge (consensus−model), Σσ (calibrated uncertainty), GP, cats
 - Shortcuts: `/` search · `?` help · `j`/`k` move expanded row · `Esc` close
 - Export filtered CSV or copy a shareable board / player link

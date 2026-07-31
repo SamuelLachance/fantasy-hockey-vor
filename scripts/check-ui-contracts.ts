@@ -30,7 +30,12 @@ const files: Record<string, string[]> = {
   "src/components/RankingsToolbar.tsx": ["CSV", "Link", "Starters"],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
   "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],
-  "src/lib/rankings-url.ts": ["hideDepthGoalies", "playerId"],
+  "src/lib/rankings-url.ts": [
+    "hideDepthGoalies",
+    "playerId",
+    "encodeStatRanges",
+    "rf",
+  ],
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
   "src/lib/rankings-board.ts": ["filterAndSortBoard", "hideDepthGoalies"],
   "src/app/error.tsx": ["Try again", "Back to rankings"],

@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Position } from "@/lib/types";
-import type { SortKey } from "@/lib/rankings-filters";
+import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 
 interface RankingsUrlSyncInput {
@@ -13,6 +13,7 @@ interface RankingsUrlSyncInput {
   sortDir: "asc" | "desc";
   expandedId: number | null;
   hideDepthGoalies: boolean;
+  statRanges: StatRanges;
 }
 
 /** Keep the address bar in sync with board filters without scrolling. */
@@ -23,6 +24,7 @@ export function useRankingsUrlSync({
   sortDir,
   expandedId,
   hideDepthGoalies,
+  statRanges,
 }: RankingsUrlSyncInput): void {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -36,6 +38,7 @@ export function useRankingsUrlSync({
       sortDir,
       playerId: expandedId,
       hideDepthGoalies,
+      statRanges,
     });
     const current = rankingsUrlSearch(parseRankingsUrl(searchParams));
     if (next === current) return;
@@ -53,6 +56,7 @@ export function useRankingsUrlSync({
     sortDir,
     expandedId,
     hideDepthGoalies,
+    statRanges,
     pathname,
     router,
     searchParams,

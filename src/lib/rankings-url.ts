@@ -1,5 +1,10 @@
 import type { Position } from "@/lib/types";
-import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
+import {
+  defaultSortDir,
+  type RangeKey,
+  type SortKey,
+  type StatRanges,
+} from "@/lib/rankings-filters";
 
 const POSITIONS = new Set<Position | "ALL">(["ALL", "C", "LW", "RW", "D", "G"]);
 const SORT_KEYS = new Set<string>([
@@ -24,6 +29,25 @@ const SORT_KEYS = new Set<string>([
   "savePct",
 ]);
 
+const RANGE_KEYS = new Set<string>([
+  "gamesPlayed",
+  "vor",
+  "draftValue",
+  "sigma",
+  "goals",
+  "assists",
+  "shots",
+  "blocks",
+  "hits",
+  "powerplayPoints",
+  "penaltyMinutes",
+  "faceoffWins",
+  "wins",
+  "shutouts",
+  "saves",
+  "savePct",
+]);
+
 export interface RankingsUrlState {
   position: Position | "ALL";
   query: string;
@@ -33,6 +57,37 @@ export interface RankingsUrlState {
   playerId: number | null;
   /** When false, org-depth goalies (≤8 GP) stay visible. Default hide. */
   hideDepthGoalies: boolean;
+  /** Active min/max stat filters. */
+  statRanges: StatRanges;
+}
+
+/** Encode `key:min-max` segments (empty side allowed). */
+export function encodeStatRanges(ranges: StatRanges): string {
+  const parts: string[] = [];
+  for (const [key, b] of Object.entries(ranges) as [
+    RangeKey,
+    { min: string; max: string } | undefined,
+  ][]) {
+    if (!b || !RANGE_KEYS.has(key)) continue;
+    const min = b.min?.trim() ?? "";
+    const max = b.max?.trim() ?? "";
+    if (!min && !max) continue;
+    parts.push(`${key}:${min}-${max}`);
+  }
+  return parts.join(",");
+}
+
+export function decodeStatRanges(raw: string | null | undefined): StatRanges {
+  if (!raw?.trim()) return {};
+  const out: StatRanges = {};
+  for (const part of raw.split(",")) {
+    const m = /^([A-Za-z]+):([^-]*)-(.*)$/.exec(part.trim());
+    if (!m) continue;
+    const key = m[1]!;
+    if (!RANGE_KEYS.has(key)) continue;
+    out[key as RangeKey] = { min: m[2] ?? "", max: m[3] ?? "" };
+  }
+  return out;
 }
 
 export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
@@ -55,7 +110,16 @@ export function parseRankingsUrl(params: URLSearchParams): RankingsUrlState {
       ? Math.trunc(playerParsed)
       : null;
   const hideDepthGoalies = params.get("g") !== "all";
-  return { position, query, sortKey, sortDir, playerId, hideDepthGoalies };
+  const statRanges = decodeStatRanges(params.get("rf"));
+  return {
+    position,
+    query,
+    sortKey,
+    sortDir,
+    playerId,
+    hideDepthGoalies,
+    statRanges,
+  };
 }
 
 /** Build query string omitting defaults so URLs stay short. */
@@ -68,5 +132,7 @@ export function rankingsUrlSearch(state: RankingsUrlState): string {
   if (state.sortDir !== defaultSortDir(state.sortKey)) p.set("dir", state.sortDir);
   if (state.playerId != null) p.set("player", String(state.playerId));
   if (!state.hideDepthGoalies) p.set("g", "all");
+  const rf = encodeStatRanges(state.statRanges ?? {});
+  if (rf) p.set("rf", rf);
   return p.toString();
 }

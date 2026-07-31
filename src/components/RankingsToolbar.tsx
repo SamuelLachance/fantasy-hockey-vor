@@ -4,7 +4,7 @@ import { startTransition, type KeyboardEvent } from "react";
 import { CircleHelp, Download, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { downloadTextFile, rankingsToCsv } from "@/lib/rankings-csv";
-import type { SortKey } from "@/lib/rankings-filters";
+import type { SortKey, StatRanges } from "@/lib/rankings-filters";
 import { copyText } from "@/lib/clipboard";
 import { rankingsUrlSearch } from "@/lib/rankings-url";
 
@@ -31,6 +31,7 @@ interface RankingsToolbarProps {
   setHideDepthGoalies: (v: boolean | ((prev: boolean) => boolean)) => void;
   showDepthToggle: boolean;
   onOpenHelp: () => void;
+  statRanges: StatRanges;
 }
 
 export function RankingsToolbar({
@@ -54,6 +55,7 @@ export function RankingsToolbar({
   setHideDepthGoalies,
   showDepthToggle,
   onOpenHelp,
+  statRanges,
 }: RankingsToolbarProps) {
   function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
     if (
@@ -171,6 +173,7 @@ export function RankingsToolbar({
               sortDir,
               playerId: expandedId,
               hideDepthGoalies,
+              statRanges,
             });
             const url = `${window.location.origin}${pathname}${qs ? `?${qs}` : ""}`;
             void copyText(url).then((ok) => {

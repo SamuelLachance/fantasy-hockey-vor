@@ -3,6 +3,8 @@
  * Run: npx tsx scripts/test-rankings-url.ts
  */
 import {
+  decodeStatRanges,
+  encodeStatRanges,
   parseRankingsUrl,
   rankingsUrlSearch,
 } from "../src/lib/rankings-url";
@@ -22,11 +24,12 @@ assert(defaults.sortKey === "vor", "default sort vor");
 assert(defaults.sortDir === "desc", "default dir desc");
 assert(defaults.playerId === null, "default no player");
 assert(defaults.hideDepthGoalies === true, "default hide depth G");
+assert(Object.keys(defaults.statRanges).length === 0, "default no ranges");
 assert(rankingsUrlSearch(defaults) === "", "defaults omit from URL");
 
 const round = parseRankingsUrl(
   new URLSearchParams(
-    "pos=D&q=mcdavid&sort=draftValue&dir=asc&player=8478402&g=all",
+    "pos=D&q=mcdavid&sort=draftValue&dir=asc&player=8478402&g=all&rf=sigma:-50,vor:1-",
   ),
 );
 assert(round.position === "D", "pos D");
@@ -35,10 +38,23 @@ assert(round.sortKey === "draftValue", "sort draftValue");
 assert(round.sortDir === "asc", "dir asc");
 assert(round.playerId === 8478402, "player id");
 assert(round.hideDepthGoalies === false, "g=all shows depth");
+assert(round.statRanges.sigma?.max === "50", "rf sigma max");
+assert(round.statRanges.vor?.min === "1", "rf vor min");
+const roundTrip = parseRankingsUrl(
+  new URLSearchParams(rankingsUrlSearch(round)),
+);
+assert(roundTrip.position === "D", "round-trip pos");
+assert(roundTrip.statRanges.sigma?.max === "50", "round-trip sigma");
+assert(roundTrip.statRanges.vor?.min === "1", "round-trip vor");
+assert(roundTrip.hideDepthGoalies === false, "round-trip g");
+
 assert(
-  rankingsUrlSearch(round) ===
-    "pos=D&q=mcdavid&sort=draftValue&dir=asc&player=8478402&g=all",
-  "serialize round-trip",
+  encodeStatRanges(round.statRanges) === "sigma:-50,vor:1-",
+  "encode ranges",
+);
+assert(
+  decodeStatRanges("sigma:-50,vor:1-").sigma?.max === "50",
+  "decode ranges",
 );
 
 assert(
