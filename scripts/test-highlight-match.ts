@@ -2,7 +2,12 @@
  * Unit check: highlightMatch returns plain string when no match.
  * Run: npx tsx scripts/test-highlight-match.ts
  */
-import { HIGHLIGHT_QUERY_MAX, highlightMatch } from "../src/lib/highlight-match";
+import {
+  HIGHLIGHT_QUERY_MAX,
+  highlightMatch,
+  searchQueryLengthLabel,
+  searchQueryNearCap,
+} from "../src/lib/highlight-match";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -24,6 +29,10 @@ assert(
   "long query capped without throw",
 );
 assert(HIGHLIGHT_QUERY_MAX === 48, "shared max length");
+assert(searchQueryNearCap(39) === false, "below near-cap");
+assert(searchQueryNearCap(40) === true, "at near-cap threshold");
+assert(searchQueryNearCap(48) === true, "at max");
+assert(searchQueryLengthLabel(12) === "12/48", "length label");
 
 if (failed) process.exit(1);
 console.log("OK: highlight-match");

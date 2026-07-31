@@ -274,6 +274,8 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="l"',
     'aria-live="polite"',
     "HIGHLIGHT_QUERY_MAX",
+    "searchQueryNearCap",
+    "searchQueryLengthLabel",
     "rankings-search-limit",
     "autoComplete",
     "PositionFilterTabs",
@@ -354,6 +356,13 @@ const files: Record<string, string[]> = {
     "motion-reduce:transition-none",
     "motion-reduce:backdrop-blur-none",
     'aria-keyshortcuts="Home"',
+  ],
+  "src/lib/highlight-match.tsx": [
+    "HIGHLIGHT_QUERY_MAX",
+    "SEARCH_NEAR_CAP_REMAINING",
+    "searchQueryNearCap",
+    "searchQueryLengthLabel",
+    "highlightMatch",
   ],
   "src/lib/scroll-to-top.ts": [
     "scrollToTopVisible",

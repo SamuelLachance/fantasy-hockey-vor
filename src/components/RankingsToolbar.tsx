@@ -3,7 +3,11 @@
 import { startTransition } from "react";
 import { CircleHelp, Filter, Link2, X } from "lucide-react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
-import { HIGHLIGHT_QUERY_MAX } from "@/lib/highlight-match";
+import {
+  HIGHLIGHT_QUERY_MAX,
+  searchQueryLengthLabel,
+  searchQueryNearCap,
+} from "@/lib/highlight-match";
 import { GOALIE_DEPTH_MAX_GP } from "@/lib/goalie-depth";
 import { PositionFilterTabs } from "./PositionFilterTabs";
 import { RankingsExportButtons } from "./RankingsExportButtons";
@@ -45,7 +49,7 @@ export function RankingsToolbar({
   showDepthToggle,
   onOpenHelp,
 }: RankingsToolbarProps) {
-  const nearQueryCap = query.length >= HIGHLIGHT_QUERY_MAX - 8;
+  const nearQueryCap = searchQueryNearCap(query.length);
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -80,7 +84,7 @@ export function RankingsToolbar({
               id="rankings-search-limit"
               className="pointer-events-none absolute -bottom-5 right-1 text-[10px] tabular-nums text-slate-500"
             >
-              {query.length}/{HIGHLIGHT_QUERY_MAX}
+              {searchQueryLengthLabel(query.length)}
             </span>
           )}
         </div>

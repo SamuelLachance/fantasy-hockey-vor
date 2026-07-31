@@ -4,6 +4,26 @@ import { Fragment } from "react";
 /** Keep search highlight + input maxLength in sync. */
 export const HIGHLIGHT_QUERY_MAX = 48;
 
+/** Show length counter this many chars before the hard max. */
+export const SEARCH_NEAR_CAP_REMAINING = 8;
+
+/** Whether the toolbar should show the search length counter. */
+export function searchQueryNearCap(
+  length: number,
+  max = HIGHLIGHT_QUERY_MAX,
+  warnWithin = SEARCH_NEAR_CAP_REMAINING,
+): boolean {
+  return length >= max - warnWithin;
+}
+
+/** Compact `current/max` counter for the search field. */
+export function searchQueryLengthLabel(
+  length: number,
+  max = HIGHLIGHT_QUERY_MAX,
+): string {
+  return `${length}/${max}`;
+}
+
 /** Case-insensitive highlight of every `query` occurrence inside `text`. */
 export function highlightMatch(text: string, query: string): ReactNode {
   const q = query.trim().slice(0, HIGHLIGHT_QUERY_MAX);
