@@ -120,6 +120,7 @@ const files: Record<string, string[]> = {
     "onCopyBoardLink",
     'aria-keyshortcuts="l"',
     "HIGHLIGHT_QUERY_MAX",
+    "PositionFilterTabs",
   ],
   "src/hooks/useBoardInfiniteScroll.ts": [
     "useBoardInfiniteScroll",
@@ -132,7 +133,16 @@ const files: Record<string, string[]> = {
     "scrollLeft",
   ],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
-  "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],
+  "src/hooks/usePlayerDetails.ts": [
+    "requestIdleCallback",
+    "fetchPlayerDetails",
+    "expandedId == null || details != null",
+  ],
+  "src/components/PositionFilterTabs.tsx": [
+    'role="tablist"',
+    "ArrowRight",
+    "Filter by position",
+  ],
   "src/lib/rankings-url.ts": [
     "hideDepthGoalies",
     "playerId",

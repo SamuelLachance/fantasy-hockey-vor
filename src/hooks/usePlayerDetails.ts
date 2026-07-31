@@ -45,7 +45,8 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
   }, []);
 
   useEffect(() => {
-    if (expandedId == null || details != null || detailsError) return;
+    // Retry on expand even after a prior failure (detailsError must not block).
+    if (expandedId == null || details != null) return;
     let cancelled = false;
     fetchPlayerDetails()
       .then((d) => {
@@ -60,7 +61,7 @@ export function usePlayerDetails(expandedId: number | null): PlayerDetailsState 
     return () => {
       cancelled = true;
     };
-  }, [expandedId, details, detailsError]);
+  }, [expandedId, details]);
 
   return { details, detailsError, setDetails, setDetailsError };
 }
