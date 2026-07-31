@@ -41,11 +41,17 @@ export function ScrollToTop() {
         scrollPageTop();
         queueMicrotask(focusBoardSearch);
       }}
-      className={`fixed bottom-6 right-6 z-40 rounded-full border border-white/15 bg-slate-900/90 p-3 text-cyan-300 shadow-lg backdrop-blur transition motion-reduce:backdrop-blur-none motion-reduce:transition-none hover:border-cyan-500/40 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
+      className={`fixed z-40 rounded-full border border-white/15 bg-slate-900/90 p-3 text-cyan-300 shadow-lg backdrop-blur transition motion-reduce:backdrop-blur-none motion-reduce:transition-none hover:border-cyan-500/40 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
         visible
           ? ""
           : "pointer-events-none invisible"
       }`}
+      style={{
+        bottom:
+          "max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 0.75rem))",
+        right:
+          "max(1.5rem, calc(env(safe-area-inset-right, 0px) + 0.75rem))",
+      }}
       data-show-after={SCROLL_TOP_SHOW_AFTER}
       data-hide-below={SCROLL_TOP_HIDE_BELOW}
     >

@@ -24,6 +24,7 @@ const defaultDescription = siteDefaultDescription();
 export const viewport: Viewport = {
   themeColor: "#020617",
   colorScheme: "dark",
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
