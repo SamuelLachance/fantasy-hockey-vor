@@ -11,6 +11,7 @@ import {
   isBoardRowNavTarget,
   isBoardRowToggleKey,
   isBoardTypingTarget,
+  nextBoardEscapeAction,
   nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
   nextExpandedPlayerIdByStep,
@@ -183,6 +184,40 @@ assert(
     value: "",
   } as unknown as EventTarget).type === "noop-typing",
   "Esc in textarea stays typing",
+);
+
+assert(
+  nextBoardEscapeAction({
+    helpOpen: false,
+    filtersOpen: false,
+    hasQuery: true,
+    typing: false,
+    target: null,
+    expandedId: 10,
+  }).type === "clear-search",
+  "Esc off-search clears query before collapse",
+);
+assert(
+  nextBoardEscapeAction({
+    helpOpen: false,
+    filtersOpen: false,
+    hasQuery: false,
+    typing: false,
+    target: null,
+    expandedId: 10,
+  }).type === "dismiss-row",
+  "Esc off-search collapses when no query",
+);
+assert(
+  nextBoardEscapeAction({
+    helpOpen: true,
+    filtersOpen: true,
+    hasQuery: true,
+    typing: false,
+    target: null,
+    expandedId: 10,
+  }).type === "close-help",
+  "Esc closes help first",
 );
 
 assert(!isBoardImeComposing({ key: "Escape" }), "normal Esc not composing");

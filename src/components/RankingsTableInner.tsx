@@ -101,6 +101,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     onLoadMore: () => {
       if (canLoadMore) loadMore();
     },
+    hasQuery: board.query.trim() !== "",
     onClearSearch: () => {
       board.setQuery("");
       queueMicrotask(focusBoardSearch);

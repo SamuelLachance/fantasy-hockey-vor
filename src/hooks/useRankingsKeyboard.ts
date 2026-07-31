@@ -9,7 +9,7 @@ import {
   isBoardImeComposing,
   isBoardRowNavTarget,
   isBoardTypingTarget,
-  nextBoardEscapeTypingAction,
+  nextBoardEscapeAction,
   nextExpandedPlayerId,
   nextExpandedPlayerIdByStep,
   shouldIgnoreBoardShortcut,
@@ -30,6 +30,8 @@ interface RankingsKeyboardInput {
   setHelpOpen: (open: boolean | ((o: boolean) => boolean)) => void;
   setSortKey: (key: SortKey) => void;
   setSortDir: (dir: "asc" | "desc") => void;
+  /** Non-empty board search — Esc clears it even when search is not focused. */
+  hasQuery?: boolean;
   onResetBoard?: () => void;
   onCopyBoardLink?: () => void;
   onCopyPlayerLink?: (playerId: number) => void;
@@ -51,6 +53,7 @@ export function useRankingsKeyboard({
   setHelpOpen,
   setSortKey,
   setSortDir,
+  hasQuery = false,
   onResetBoard,
   onCopyBoardLink,
   onCopyPlayerLink,
@@ -65,6 +68,7 @@ export function useRankingsKeyboard({
   const expandedIdRef = useRef(expandedId);
   const filtersOpenRef = useRef(filtersOpen);
   const helpOpenRef = useRef(helpOpen);
+  const hasQueryRef = useRef(hasQuery);
   const setExpandedIdRef = useRef(setExpandedId);
   const setFiltersOpenRef = useRef(setFiltersOpen);
   const setHelpOpenRef = useRef(setHelpOpen);
@@ -84,6 +88,7 @@ export function useRankingsKeyboard({
     expandedIdRef.current = expandedId;
     filtersOpenRef.current = filtersOpen;
     helpOpenRef.current = helpOpen;
+    hasQueryRef.current = hasQuery;
     setExpandedIdRef.current = setExpandedId;
     setFiltersOpenRef.current = setFiltersOpen;
     setHelpOpenRef.current = setHelpOpen;
@@ -108,35 +113,41 @@ export function useRankingsKeyboard({
       const ignoreBoard = shouldIgnoreBoardShortcut(helpOpenNow, e.target);
 
       if (e.key === "Escape") {
-        if (helpOpenNow) {
+        const escape = nextBoardEscapeAction({
+          helpOpen: helpOpenNow,
+          filtersOpen: filtersOpenNow,
+          hasQuery: hasQueryRef.current,
+          typing,
+          target: e.target,
+          expandedId: expandedIdNow,
+        });
+        if (escape.type === "close-help") {
           setHelpOpenRef.current(false);
           return;
         }
-        if (filtersOpenNow) {
+        if (escape.type === "close-filters") {
           setFiltersOpenRef.current(false);
           queueMicrotask(focusStatsFilterButton);
           return;
         }
-        if (typing) {
-          const action = nextBoardEscapeTypingAction(e.target);
-          if (action.type === "clear-search" && onClearSearchRef.current) {
-            e.preventDefault();
-            onClearSearchRef.current();
-            return;
-          }
-          if (action.type === "noop-typing") return;
-          if (
-            action.type === "dismiss-row" &&
-            action.blurSearch &&
-            e.target instanceof HTMLElement
-          ) {
-            e.preventDefault();
-            // Prefer the expanded row over body — blur() alone dumps focus off-board.
-            if (expandedIdNow != null) {
-              focusPlayerRow(expandedIdNow);
-            } else {
-              e.target.blur();
-            }
+        if (escape.type === "clear-search") {
+          if (!onClearSearchRef.current) return;
+          e.preventDefault();
+          onClearSearchRef.current();
+          return;
+        }
+        if (escape.type === "noop") return;
+        if (
+          escape.type === "dismiss-row" &&
+          escape.blurSearch &&
+          e.target instanceof HTMLElement
+        ) {
+          e.preventDefault();
+          // Prefer the expanded row over body — blur() alone dumps focus off-board.
+          if (expandedIdNow != null) {
+            focusPlayerRow(expandedIdNow);
+          } else {
+            e.target.blur();
           }
         }
         focusPlayerRowIfPanelFocused(expandedIdNow);

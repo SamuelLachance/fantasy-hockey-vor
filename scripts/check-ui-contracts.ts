@@ -186,6 +186,7 @@ const files: Record<string, string[]> = {
     "shouldIgnoreBoardShortcut",
     "boardKeyboardNavIds",
     "nextBoardEscapeTypingAction",
+    "nextBoardEscapeAction",
     "isBoardImeComposing",
   ],
   "src/components/BoardActiveFilters.tsx": [
@@ -270,7 +271,8 @@ const files: Record<string, string[]> = {
     "boardHomeEndPlayerId",
     "isBoardRowNavTarget",
     "boardKeyboardNavIds",
-    "nextBoardEscapeTypingAction",
+    "nextBoardEscapeAction",
+    "hasQuery",
     "shouldIgnoreBoardShortcut",
     "isBoardTypingTarget",
     "focusPlayerRowIfPanelFocused",

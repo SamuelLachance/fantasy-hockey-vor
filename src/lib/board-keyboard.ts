@@ -139,6 +139,13 @@ export type BoardEscapeAction =
   | { type: "dismiss-row"; blurSearch: boolean }
   | { type: "noop-typing" };
 
+export type BoardEscapeLayerAction =
+  | { type: "close-help" }
+  | { type: "close-filters" }
+  | { type: "clear-search" }
+  | { type: "dismiss-row"; blurSearch: boolean }
+  | { type: "noop" };
+
 /** True while an IME composition session is active (CJK etc.). */
 export function isBoardImeComposing(e: {
   isComposing?: boolean;
@@ -164,4 +171,34 @@ export function nextBoardEscapeTypingAction(
     }
   }
   return { type: "noop-typing" };
+}
+
+/**
+ * Board-wide Escape ladder: help → filters → clear query (even off search) →
+ * collapse expanded row. Matches empty-state "Esc clears search" advertising.
+ */
+export function nextBoardEscapeAction(opts: {
+  helpOpen: boolean;
+  filtersOpen: boolean;
+  hasQuery: boolean;
+  typing: boolean;
+  target: EventTarget | null;
+  expandedId: number | null;
+}): BoardEscapeLayerAction {
+  if (opts.helpOpen) return { type: "close-help" };
+  if (opts.filtersOpen) return { type: "close-filters" };
+  if (opts.typing) {
+    const typingAction = nextBoardEscapeTypingAction(opts.target);
+    if (typingAction.type === "clear-search") return { type: "clear-search" };
+    if (typingAction.type === "noop-typing") return { type: "noop" };
+    return {
+      type: "dismiss-row",
+      blurSearch: typingAction.blurSearch,
+    };
+  }
+  if (opts.hasQuery) return { type: "clear-search" };
+  if (opts.expandedId != null) {
+    return { type: "dismiss-row", blurSearch: false };
+  }
+  return { type: "noop" };
 }
