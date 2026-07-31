@@ -25,3 +25,16 @@ export function nextBoardPositionIndex(
   if (key === "Home") return 0;
   return length - 1;
 }
+
+/** Cycle position tabs by ±1 (used by [ / ] hotkeys). */
+export function cycleBoardPosition(
+  current: Position | "ALL",
+  direction: 1 | -1,
+): BoardPosition {
+  const idx = BOARD_POSITIONS.indexOf(current);
+  const next = nextBoardPositionIndex(
+    idx < 0 ? 0 : idx,
+    direction === 1 ? "ArrowRight" : "ArrowLeft",
+  );
+  return BOARD_POSITIONS[next]!;
+}

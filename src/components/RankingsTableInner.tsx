@@ -1,6 +1,6 @@
 "use client";
 
-import { BOARD_POSITIONS, nextBoardPositionIndex } from "@/lib/board-positions";
+import { cycleBoardPosition } from "@/lib/board-positions";
 import { startTransition, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -98,12 +98,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     },
     onClearSearch: () => board.setQuery(""),
     onCyclePosition: (direction) => {
-      const idx = BOARD_POSITIONS.indexOf(board.position);
-      const next = nextBoardPositionIndex(
-        idx < 0 ? 0 : idx,
-        direction === 1 ? "ArrowRight" : "ArrowLeft",
-      );
-      const pos = BOARD_POSITIONS[next]!;
+      const pos = cycleBoardPosition(board.position, direction);
       startTransition(() => board.setPosition(pos));
       queueMicrotask(() => {
         document.getElementById(`board-pos-tab-${pos}`)?.focus();
