@@ -279,6 +279,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   }
 
   const tableCategories = boardCategories(position);
+  const showingAllGoalies =
+    !hideDepthGoalies && (position === "G" || position === "ALL");
 
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
@@ -319,18 +321,14 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         {(activeFilterCount > 0 ||
           position !== "ALL" ||
           query.trim() !== "" ||
-          (!hideDepthGoalies &&
-            (position === "G" || position === "ALL"))) && (
+          showingAllGoalies) && (
           <BoardActiveFilters
             position={position}
             query={query}
             statRanges={statRanges}
             showStatChips={!filtersOpen && activeFilterCount > 0}
             hasStatFilters={activeFilterCount > 0}
-            showingAllGoalies={
-              !hideDepthGoalies &&
-              (position === "G" || position === "ALL")
-            }
+            showingAllGoalies={showingAllGoalies}
             onClearPosition={() =>
               startTransition(() => setPosition("ALL"))
             }
