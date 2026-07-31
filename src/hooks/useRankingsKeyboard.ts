@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
-import { focusStatsFilterButton } from "@/lib/board-dom";
+import { focusStatsFilterButton, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
@@ -139,10 +139,7 @@ export function useRankingsKeyboard({
         e.key === "Home"
       ) {
         e.preventDefault();
-        const reduce = window.matchMedia(
-          "(prefers-reduced-motion: reduce)",
-        ).matches;
-        window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+        scrollPageTop();
         return;
       }
       if (
@@ -154,13 +151,7 @@ export function useRankingsKeyboard({
         e.key === "End"
       ) {
         e.preventDefault();
-        const reduce = window.matchMedia(
-          "(prefers-reduced-motion: reduce)",
-        ).matches;
-        document.getElementById("rankings")?.scrollIntoView({
-          behavior: reduce ? "auto" : "smooth",
-          block: "start",
-        });
+        scrollToRankings();
         return;
       }
       if (

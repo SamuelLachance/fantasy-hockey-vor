@@ -11,3 +11,25 @@ export function focusStatsFilterButton(): void {
 /** Right-edge shadow for sticky Player column after horizontal scroll. */
 export const STICKY_NAME_SHADOW =
   "shadow-[4px_0_8px_-4px_rgba(0,0,0,0.5)]" as const;
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return true;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Smooth (or instant) scroll helpers for board shortcuts. */
+export function scrollPageTop(): void {
+  if (typeof window === "undefined") return;
+  window.scrollTo({
+    top: 0,
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+  });
+}
+
+export function scrollToRankings(): void {
+  if (typeof document === "undefined") return;
+  document.getElementById("rankings")?.scrollIntoView({
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+    block: "start",
+  });
+}
