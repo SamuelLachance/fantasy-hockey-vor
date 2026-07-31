@@ -5,6 +5,7 @@
 import {
   categoryProjectionPrefix,
   categorySigmaDigits,
+  categoryZBarFillClass,
   categoryZBarWidth,
   categoryZMeterAriaLabel,
   categoryZMeterValue,
@@ -23,6 +24,18 @@ assert(categoryZBarWidth(0) === 50, "z0 → 50");
 assert(categoryZBarWidth(5) === 100, "clamped high");
 assert(categoryZBarWidth(-10) === 8, "clamped low");
 assert(categoryZBarWidth(1) === 62, "z1 → 62");
+assert(
+  categoryZBarFillClass(1).includes("from-cyan"),
+  "positive fill cyan",
+);
+assert(
+  categoryZBarFillClass(-1).includes("from-rose"),
+  "negative fill rose",
+);
+assert(
+  categoryZBarFillClass(0).includes("from-cyan"),
+  "zero fill cyan",
+);
 assert(categorySigmaDigits("goals") === 1, "goals digits");
 assert(categorySigmaDigits("hits") === 0, "hits digits");
 assert(categoryZMeterValue(0) === 0, "meter 0");

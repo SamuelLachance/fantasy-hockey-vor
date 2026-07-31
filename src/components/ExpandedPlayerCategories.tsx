@@ -3,6 +3,7 @@ import { CATEGORY_LABELS, formatStat } from "@/lib/format";
 import {
   categoryProjectionPrefix,
   categorySigmaDigits,
+  categoryZBarFillClass,
   categoryZBarWidth,
   categoryZMeterAriaLabel,
   categoryZMeterValue,
@@ -53,7 +54,7 @@ export function ExpandedPlayerCategories({
               aria-valuetext={categoryZScoreLabel(z)}
             >
               <div
-                className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 transition-[width] duration-300 motion-reduce:transition-none"
+                className={`h-full rounded-full ${categoryZBarFillClass(z)} transition-[width] duration-300 motion-reduce:transition-none`}
                 style={{ width: `${width}%` }}
                 aria-hidden="true"
               />

@@ -508,6 +508,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/ExpandedPlayerCategories.tsx": [
     "categoryZBarWidth",
+    "categoryZBarFillClass",
     "categoryZScoreLabel",
     "categoryZMeterAriaLabel",
     "categoryProjectionPrefix",
@@ -518,6 +519,9 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/category-z-bar.ts": [
     "categoryZBarWidth",
+    "categoryZBarFillClass",
+    "from-cyan-500",
+    "from-rose-500",
     "categorySigmaDigits",
     "categoryZMeterValue",
     "categoryZScoreLabel",
