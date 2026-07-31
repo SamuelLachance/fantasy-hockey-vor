@@ -26,6 +26,7 @@ const files: Record<string, string[]> = {
     "useRankingsHashJump",
     "RankingsBoardTable",
     "BoardShortcutsHelp",
+    'from "./BoardShortcutsHelp"',
     "RankingsBoardChrome",
     "RankingsStatusBar",
     "useHorizontalScrollShadow",

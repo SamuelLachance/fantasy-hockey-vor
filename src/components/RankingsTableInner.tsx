@@ -5,7 +5,6 @@ import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { focusBoardSearch } from "@/lib/board-dom";
 import { visibleBoardPlayers } from "@/lib/board-visible";
 import { startTransition, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection } from "@/lib/types";
 import { parseRankingsUrl } from "@/lib/rankings-url";
@@ -21,15 +20,10 @@ import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
 import { useRankingsHashJump } from "@/hooks/useRankingsHashJump";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
+import { BoardShortcutsHelp } from "./BoardShortcutsHelp";
 import { RankingsBoardChrome } from "./RankingsBoardChrome";
 import { RankingsBoardTable } from "./RankingsBoardTable";
 import { RankingsStatusBar } from "./RankingsStatusBar";
-
-const BoardShortcutsHelp = dynamic(
-  () =>
-    import("./BoardShortcutsHelp").then((m) => m.BoardShortcutsHelp),
-  { ssr: false },
-);
 
 interface RankingsTableInnerProps {
   players: PlayerProjection[];
