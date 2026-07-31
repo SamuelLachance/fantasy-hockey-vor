@@ -366,11 +366,23 @@ const files: Record<string, string[]> = {
   "src/components/RankingsSearchField.tsx": [
     "searchQueryNearCap",
     "searchQueryLengthLabel",
+    "searchFieldAriaLabel",
+    "searchFieldPlaceholder",
+    "clearSearchAriaLabel",
     "HIGHLIGHT_QUERY_MAX",
     "rankings-search-limit",
     "autoComplete",
     'aria-keyshortcuts="Slash"',
-    "Clear search",
+  ],
+  "src/lib/highlight-match.tsx": [
+    "HIGHLIGHT_QUERY_MAX",
+    "SEARCH_NEAR_CAP_REMAINING",
+    "searchQueryNearCap",
+    "searchQueryLengthLabel",
+    "searchFieldAriaLabel",
+    "searchFieldPlaceholder",
+    "clearSearchAriaLabel",
+    "highlightMatch",
   ],
   "src/components/RankingsExportButtons.tsx": [
     "exportButtonLabel",
@@ -448,13 +460,6 @@ const files: Record<string, string[]> = {
     "motion-reduce:transition-none",
     "motion-reduce:backdrop-blur-none",
     'aria-keyshortcuts="Home"',
-  ],
-  "src/lib/highlight-match.tsx": [
-    "HIGHLIGHT_QUERY_MAX",
-    "SEARCH_NEAR_CAP_REMAINING",
-    "searchQueryNearCap",
-    "searchQueryLengthLabel",
-    "highlightMatch",
   ],
   "src/lib/scroll-to-top.ts": [
     "scrollToTopVisible",

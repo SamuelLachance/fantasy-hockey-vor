@@ -24,6 +24,21 @@ export function searchQueryLengthLabel(
   return `${length}/${max}`;
 }
 
+/** Accessible name for the board search input. */
+export function searchFieldAriaLabel(): string {
+  return "Search players or teams";
+}
+
+/** Placeholder for the board search input. */
+export function searchFieldPlaceholder(): string {
+  return "Search players or teams...";
+}
+
+/** Accessible name for the clear-search control. */
+export function clearSearchAriaLabel(): string {
+  return "Clear search";
+}
+
 /** Case-insensitive highlight of every `query` occurrence inside `text`. */
 export function highlightMatch(text: string, query: string): ReactNode {
   const q = query.trim().slice(0, HIGHLIGHT_QUERY_MAX);

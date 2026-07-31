@@ -4,7 +4,10 @@
  */
 import {
   HIGHLIGHT_QUERY_MAX,
+  clearSearchAriaLabel,
   highlightMatch,
+  searchFieldAriaLabel,
+  searchFieldPlaceholder,
   searchQueryLengthLabel,
   searchQueryNearCap,
 } from "../src/lib/highlight-match";
@@ -33,6 +36,9 @@ assert(searchQueryNearCap(39) === false, "below near-cap");
 assert(searchQueryNearCap(40) === true, "at near-cap threshold");
 assert(searchQueryNearCap(48) === true, "at max");
 assert(searchQueryLengthLabel(12) === "12/48", "length label");
+assert(searchFieldAriaLabel().includes("players"), "search aria");
+assert(searchFieldPlaceholder().endsWith("..."), "placeholder");
+assert(clearSearchAriaLabel() === "Clear search", "clear aria");
 
 if (failed) process.exit(1);
 console.log("OK: highlight-match");
