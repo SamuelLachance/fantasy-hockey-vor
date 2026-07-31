@@ -298,6 +298,8 @@ const files: Record<string, string[]> = {
     "aria-controls",
     "rankings-board-table",
     'aria-keyshortcuts="[ ]"',
+    "aria-live",
+    "Position filter",
   ],
   "src/lib/board-positions.ts": [
     "BOARD_POSITIONS",

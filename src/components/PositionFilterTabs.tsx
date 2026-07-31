@@ -46,6 +46,9 @@ export function PositionFilterTabs({
       aria-label="Filter by position"
       aria-keyshortcuts="[ ]"
     >
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        Position filter {position}
+      </span>
       {BOARD_POSITIONS.map((pos, index) => (
         <button
           key={pos}
