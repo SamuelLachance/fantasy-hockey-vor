@@ -3,7 +3,15 @@
 import { X } from "lucide-react";
 import type { Position } from "@/lib/types";
 import {
+  boardActiveAllGoaliesChipLabel,
+  boardActiveClearPositionAriaLabel,
+  boardActiveClearSearchAriaLabel,
+  boardActiveEditFiltersTitle,
+  boardActiveFiltersRegionLabel,
   boardActiveFiltersVisible,
+  boardActivePositionChipLabel,
+  boardActiveRemoveStatAriaLabel,
+  boardActiveShowStartersAriaLabel,
   boardActiveStatChips,
 } from "@/lib/board-active-filter-chips";
 import { clearBoardFiltersCopy } from "@/lib/board-empty-recovery";
@@ -60,14 +68,16 @@ export function BoardActiveFilters({
   return (
     <div
       className="flex flex-wrap items-center gap-2"
-      aria-label="Active board filters"
+      aria-label={boardActiveFiltersRegionLabel()}
     >
       {position !== "ALL" && (
         <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 pl-2.5 text-xs text-slate-200">
-          <span className="py-1 font-medium">Pos {position}</span>
+          <span className="py-1 font-medium">
+            {boardActivePositionChipLabel(position)}
+          </span>
           <button
             type="button"
-            aria-label="Clear position filter"
+            aria-label={boardActiveClearPositionAriaLabel()}
             onClick={() => {
               onClearPosition();
               focusAfterActiveFilterClear();
@@ -85,7 +95,7 @@ export function BoardActiveFilters({
           </span>
           <button
             type="button"
-            aria-label="Clear search"
+            aria-label={boardActiveClearSearchAriaLabel()}
             onClick={onClearQuery}
             className="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
           >
@@ -95,10 +105,12 @@ export function BoardActiveFilters({
       )}
       {showingAllGoalies && (
         <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 pl-2.5 text-xs text-slate-200">
-          <span className="py-1 font-medium">All goalies</span>
+          <span className="py-1 font-medium">
+            {boardActiveAllGoaliesChipLabel()}
+          </span>
           <button
             type="button"
-            aria-label="Show starter goalies only"
+            aria-label={boardActiveShowStartersAriaLabel()}
             onClick={() => {
               onShowStarterGoalies();
               focusAfterActiveFilterClear();
@@ -118,13 +130,13 @@ export function BoardActiveFilters({
             type="button"
             onClick={onOpenStats}
             className="py-1 pr-0.5 font-medium tabular-nums transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-            title="Edit filters"
+            title={boardActiveEditFiltersTitle()}
           >
             {chip.label} {chip.bounds}
           </button>
           <button
             type="button"
-            aria-label={`Remove ${chip.label} filter`}
+            aria-label={boardActiveRemoveStatAriaLabel(chip.label)}
             onClick={() => {
               onRemoveStat(chip.key);
               focusAfterActiveFilterClear();

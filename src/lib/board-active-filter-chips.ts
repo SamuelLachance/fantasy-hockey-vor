@@ -62,3 +62,43 @@ export function boardActiveFiltersVisible(input: {
     input.showingAllGoalies
   );
 }
+
+/** Region label for the active-filters chrome strip. */
+export function boardActiveFiltersRegionLabel(): string {
+  return "Active board filters";
+}
+
+/** Visible chip text for a non-ALL position filter. */
+export function boardActivePositionChipLabel(position: Position): string {
+  return `Pos ${position}`;
+}
+
+/** Clear control accessible name for the position chip. */
+export function boardActiveClearPositionAriaLabel(): string {
+  return "Clear position filter";
+}
+
+/** Clear control accessible name for the search chip. */
+export function boardActiveClearSearchAriaLabel(): string {
+  return "Clear search";
+}
+
+/** Visible chip text when All G (depth goalies) is active. */
+export function boardActiveAllGoaliesChipLabel(): string {
+  return "All goalies";
+}
+
+/** Clear control accessible name for the All goalies chip. */
+export function boardActiveShowStartersAriaLabel(): string {
+  return "Show starter goalies only";
+}
+
+/** Tooltip on a stat chip that opens the filters panel. */
+export function boardActiveEditFiltersTitle(): string {
+  return "Edit filters";
+}
+
+/** Remove control accessible name for a single stat chip. */
+export function boardActiveRemoveStatAriaLabel(label: string): string {
+  return `Remove ${label} filter`;
+}

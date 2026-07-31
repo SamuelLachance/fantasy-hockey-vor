@@ -3,7 +3,15 @@
  * Run: npx tsx scripts/test-board-active-filter-chips.ts
  */
 import {
+  boardActiveAllGoaliesChipLabel,
+  boardActiveClearPositionAriaLabel,
+  boardActiveClearSearchAriaLabel,
+  boardActiveEditFiltersTitle,
+  boardActiveFiltersRegionLabel,
   boardActiveFiltersVisible,
+  boardActivePositionChipLabel,
+  boardActiveRemoveStatAriaLabel,
+  boardActiveShowStartersAriaLabel,
   boardActiveStatChips,
   formatActiveRangeChip,
 } from "../src/lib/board-active-filter-chips";
@@ -67,6 +75,29 @@ assert(
     showingAllGoalies: false,
   }),
   "position shows chrome",
+);
+assert(
+  boardActiveFiltersRegionLabel() === "Active board filters",
+  "region label",
+);
+assert(boardActivePositionChipLabel("C") === "Pos C", "position chip");
+assert(
+  boardActiveClearPositionAriaLabel() === "Clear position filter",
+  "clear position aria",
+);
+assert(
+  boardActiveClearSearchAriaLabel() === "Clear search",
+  "clear search aria",
+);
+assert(boardActiveAllGoaliesChipLabel() === "All goalies", "all goalies chip");
+assert(
+  boardActiveShowStartersAriaLabel() === "Show starter goalies only",
+  "show starters aria",
+);
+assert(boardActiveEditFiltersTitle() === "Edit filters", "edit title");
+assert(
+  boardActiveRemoveStatAriaLabel("VOR") === "Remove VOR filter",
+  "remove stat aria",
 );
 
 if (failed) process.exit(1);
