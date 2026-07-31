@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
   GOALIE_CATEGORIES,
   type Category,
@@ -31,7 +31,6 @@ import {
 import {
   defaultSortDir,
   passesRanges,
-  rangeLabel,
   vorForFilter,
   type RangeKey,
   type SortKey,
@@ -43,6 +42,7 @@ import {
   type PlayerDetailRecord,
 } from "@/lib/publish-players";
 import { PositionBadges } from "./PositionBadge";
+import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
 
 interface RankingsTableProps {
@@ -356,57 +356,13 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       />
 
       {filtersOpen && (
-        <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-4 shadow-lg">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-semibold text-white">Filter by stats</h3>
-              <p className="text-xs text-slate-500">
-                Set min/max for any column. Save % accepts 91.5 or 0.915.
-              </p>
-            </div>
-            {activeFilterCount > 0 && (
-              <button
-                type="button"
-                onClick={clearStatFilters}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white"
-              >
-                <X className="h-3.5 w-3.5" />
-                Clear all
-              </button>
-            )}
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {filterRangeKeys.map((key) => (
-              <div
-                key={key}
-                className="rounded-xl border border-white/5 bg-white/5 p-3"
-              >
-                <div className="mb-2 text-xs font-medium text-slate-300">
-                  {rangeLabel(key)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="Min"
-                    value={statRanges[key]?.min ?? ""}
-                    onChange={(e) => updateRange(key, "min", e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
-                  />
-                  <span className="text-slate-600">–</span>
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="Max"
-                    value={statRanges[key]?.max ?? ""}
-                    onChange={(e) => updateRange(key, "max", e.target.value)}
-                    className="w-full rounded-lg border border-white/10 bg-slate-950/60 px-2 py-1.5 text-sm text-white placeholder:text-slate-600 focus:border-cyan-500/40 focus:outline-none"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <RankingsStatFilters
+          filterRangeKeys={filterRangeKeys}
+          statRanges={statRanges}
+          activeFilterCount={activeFilterCount}
+          onUpdateRange={updateRange}
+          onClear={clearStatFilters}
+        />
       )}
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
