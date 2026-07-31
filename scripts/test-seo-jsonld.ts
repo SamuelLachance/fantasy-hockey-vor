@@ -28,7 +28,11 @@ assert(graph[2]?.["@type"] === "FAQPage", "FAQPage node");
 assert(graph[3]?.["@type"] === "BreadcrumbList", "BreadcrumbList node");
 assert(graph[4]?.["@type"] === "HowTo", "HowTo node");
 const howToSteps = graph[4]?.step as Array<Record<string, unknown>>;
-assert(Array.isArray(howToSteps) && howToSteps.length >= 4, "HowTo steps");
+assert(Array.isArray(howToSteps) && howToSteps.length >= 5, "HowTo steps");
+assert(
+  JSON.stringify(howToSteps).includes("Load more"),
+  "HowTo covers load more",
+);
 const crumbs = graph[3]?.itemListElement as Array<Record<string, unknown>>;
 assert(Array.isArray(crumbs) && crumbs.length === 2, "breadcrumb items");
 assert(crumbs[1]?.name === "2026-27 Rankings", "season crumb");

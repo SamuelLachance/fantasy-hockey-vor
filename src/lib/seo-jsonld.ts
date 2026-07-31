@@ -139,6 +139,11 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           },
           {
             "@type": "HowToStep",
+            name: "Load more rows",
+            text: "Scroll the board or press m to reveal the next page of filtered rankings.",
+          },
+          {
+            "@type": "HowToStep",
             name: "Share the view",
             text: "Press l to copy a link that preserves filters, sort, and expanded player.",
           },
