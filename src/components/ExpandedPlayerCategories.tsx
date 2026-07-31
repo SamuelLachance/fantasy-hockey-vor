@@ -34,7 +34,9 @@ export function ExpandedPlayerCategories({
           >
             <div className="mb-1 flex justify-between text-xs text-slate-400">
               <span>{CATEGORY_LABELS[cat]}</span>
-              <span className={z >= 0 ? "text-emerald-400" : "text-rose-400"}>
+              <span
+                className={`tabular-nums ${z >= 0 ? "text-emerald-400" : "text-rose-400"}`}
+              >
                 {z >= 0 ? "+" : ""}
                 {z.toFixed(2)} z
               </span>
