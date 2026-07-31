@@ -665,7 +665,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           </div>
         )}
       </div>
-      <p className="text-center text-xs text-slate-500">
+      <p
+        className="text-center text-xs text-slate-500"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         Showing {formatCount(Math.min(renderCount, filtered.length))} of{" "}
         {formatCount(filtered.length)} matching players (
         {formatCount(players.length)} total). Click a row for category
