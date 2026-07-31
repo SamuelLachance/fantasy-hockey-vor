@@ -64,10 +64,16 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
   const [visibleCount, setVisibleCount] = useState(pageSize);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [prevToken, setPrevToken] = useState(resetToken);
+  const skipIoRef = useRef(false);
   const reset = resetToken !== prevToken;
   if (reset) {
     setPrevToken(resetToken);
   }
+
+  useEffect(() => {
+    // Arm after token change so a bottom-clamped sentinel cannot undo the reset.
+    skipIoRef.current = true;
+  }, [resetToken]);
 
   const expandFloor = expandVisibleFloor(filtered, expandedId, pageSize);
   // Persist expand-driven growth so collapsing a deep row does not yank rows away.
@@ -95,13 +101,16 @@ export function useBoardInfiniteScroll<T extends { id: number }>(
     if (!el || !canLoadMore) return;
     const obs = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) {
-          startTransition(() => {
-            setVisibleCount((c) =>
-              nextVisibleCount(c, pageSize, filteredLength),
-            );
-          });
+        if (!entries.some((e) => e.isIntersecting)) return;
+        if (skipIoRef.current) {
+          skipIoRef.current = false;
+          return;
         }
+        startTransition(() => {
+          setVisibleCount((c) =>
+            nextVisibleCount(c, pageSize, filteredLength),
+          );
+        });
       },
       { rootMargin: "240px 0px" },
     );
