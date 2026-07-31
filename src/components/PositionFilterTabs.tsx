@@ -8,6 +8,7 @@ import {
   boardPositionTabId,
   nextBoardPositionIndex,
   positionFilterAnnounce,
+  positionFilterTabLabel,
   positionFilterTablistLabel,
 } from "@/lib/board-positions";
 
@@ -58,6 +59,7 @@ export function PositionFilterTabs({
           key={pos}
           type="button"
           role="tab"
+          aria-label={positionFilterTabLabel(pos)}
           aria-selected={position === pos}
           aria-controls={boardPositionPanelId()}
           id={boardPositionTabId(pos)}

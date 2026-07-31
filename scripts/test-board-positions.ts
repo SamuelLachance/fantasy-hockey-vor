@@ -9,6 +9,7 @@ import {
   cycleBoardPosition,
   nextBoardPositionIndex,
   positionFilterAnnounce,
+  positionFilterTabLabel,
   positionFilterTablistLabel,
 } from "../src/lib/board-positions";
 
@@ -38,9 +39,15 @@ assert(
   boardPositionPanelId() === "rankings-board-panel",
   "tabpanel id",
 );
+assert(positionFilterTabLabel("ALL") === "All positions", "ALL tab label");
+assert(positionFilterTabLabel("G") === "G", "G tab label");
 assert(
   positionFilterAnnounce("G") === "Position filter G",
   "announce G",
+);
+assert(
+  positionFilterAnnounce("ALL") === "Position filter All positions",
+  "announce ALL",
 );
 assert(
   positionFilterTablistLabel() === "Filter by position",

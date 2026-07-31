@@ -22,9 +22,15 @@ export function boardPositionPanelId(): string {
   return "rankings-board-panel";
 }
 
+/** Accessible name for an individual position filter tab. */
+export function positionFilterTabLabel(position: Position | "ALL"): string {
+  if (position === "ALL") return "All positions";
+  return position;
+}
+
 /** Screen-reader announcement when the position filter changes. */
 export function positionFilterAnnounce(position: Position | "ALL"): string {
-  return `Position filter ${position}`;
+  return `Position filter ${positionFilterTabLabel(position)}`;
 }
 
 /** Tablist accessible name for position filters. */
