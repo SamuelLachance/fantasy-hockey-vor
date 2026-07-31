@@ -23,7 +23,7 @@ export function SiteFooter({
   projectionEngine,
 }: SiteFooterProps) {
   return (
-    <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
+    <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-400">
       Projections generated{" "}
       <time dateTime={generatedAt}>
         {new Date(generatedAt).toISOString().slice(0, 10)}
@@ -43,9 +43,9 @@ export function SiteFooter({
         source
       </a>
       <span className="mx-2 text-slate-700">·</span>
-      <span className="text-slate-600">{boardShortcutsFooterChip()}</span>
+      <span className="text-slate-400">{boardShortcutsFooterChip()}</span>
       <span className="mx-2 text-slate-700">·</span>
-      <span className="tabular-nums text-slate-600">
+      <span className="tabular-nums text-slate-400">
         {footerDraftableCopy(playerCount)}
       </span>
     </footer>

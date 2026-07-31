@@ -16,7 +16,7 @@ export function RankingsStatusBar({
   searchPending = false,
 }: RankingsStatusBarProps) {
   return (
-    <p className="text-center text-xs text-slate-500">
+    <p className="text-center text-xs text-slate-400">
       <span
         className="tabular-nums"
         aria-live="polite"
