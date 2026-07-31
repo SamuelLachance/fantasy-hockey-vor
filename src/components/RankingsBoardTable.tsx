@@ -82,6 +82,7 @@ export function RankingsBoardTable({
     setAnchorId(expandedId);
   }
   const tabStopId = boardRowTabStopId(visiblePlayers, expandedId, anchorId);
+  const searchPending = query !== deferredQuery;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
@@ -92,6 +93,7 @@ export function RankingsBoardTable({
         <table
           id="rankings-board-table"
           aria-label="Fantasy hockey VOR rankings"
+          aria-busy={searchPending || undefined}
           className="min-w-full text-left text-sm"
         >
           <RankingsTableHead

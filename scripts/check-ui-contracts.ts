@@ -49,6 +49,8 @@ const files: Record<string, string[]> = {
     "overscroll-x-contain",
     "boardRowTabStopId",
     "anchorId",
+    "searchPending",
+    "aria-busy",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
