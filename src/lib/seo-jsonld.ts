@@ -114,6 +114,34 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           },
         ],
       },
+      {
+        "@type": "HowTo",
+        name: "How to use Fantasy Hockey VOR rankings",
+        description:
+          "Filter, sort, and deep-link the board to draft with VOR, Edge, and Σσ.",
+        step: [
+          {
+            "@type": "HowToStep",
+            name: "Open the board",
+            text: "Jump to #rankings or press End to focus search.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Filter by position and stats",
+            text: "Use position tabs or [ / ], open Stats with f, and set min/max ranges.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Sort and compare risk",
+            text: "Press v/e/u/g for VOR / Edge / Σσ / GP. Expand a row for category z and notes.",
+          },
+          {
+            "@type": "HowToStep",
+            name: "Share the view",
+            text: "Press l to copy a link that preserves filters, sort, and expanded player.",
+          },
+        ],
+      },
     ],
   };
 }

@@ -21,11 +21,14 @@ const data = {
 
 const ld = rankingsJsonLd(data);
 const graph = ld["@graph"] as Array<Record<string, unknown>>;
-assert(Array.isArray(graph) && graph.length === 4, "graph has 4 nodes");
+assert(Array.isArray(graph) && graph.length === 5, "graph has 5 nodes");
 assert(graph[0]?.["@type"] === "WebApplication", "WebApplication node");
 assert(graph[1]?.["@type"] === "Dataset", "Dataset node");
 assert(graph[2]?.["@type"] === "FAQPage", "FAQPage node");
 assert(graph[3]?.["@type"] === "BreadcrumbList", "BreadcrumbList node");
+assert(graph[4]?.["@type"] === "HowTo", "HowTo node");
+const howToSteps = graph[4]?.step as Array<Record<string, unknown>>;
+assert(Array.isArray(howToSteps) && howToSteps.length >= 4, "HowTo steps");
 const crumbs = graph[3]?.itemListElement as Array<Record<string, unknown>>;
 assert(Array.isArray(crumbs) && crumbs.length === 2, "breadcrumb items");
 assert(crumbs[1]?.name === "2026-27 Rankings", "season crumb");
