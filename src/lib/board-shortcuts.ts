@@ -14,7 +14,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "l", action: "Copy board link" },
   { keys: "p", action: "Copy expanded player link" },
   { keys: "m", action: "Load more rows" },
-  { keys: "Home", action: "First player (or page top)" },
+  { keys: "Home", action: "First player (or page top + search)" },
   { keys: "End", action: "Last player (or board + search)" },
   { keys: "Shift+G", action: "Toggle Starters / All goalies" },
   { keys: "[ / ]", action: "Previous / next position tab" },

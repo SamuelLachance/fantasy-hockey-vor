@@ -463,7 +463,7 @@ const files: Record<string, string[]> = {
     "Previous / next position tab",
     "PgDn / PgUp",
     "Open stat filters (Esc closes)",
-    "First player (or page top)",
+    "First player (or page top + search)",
   ],
   "src/lib/copy-flash.ts": [
     "copyTextWithFlash",
