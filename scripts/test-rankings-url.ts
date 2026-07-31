@@ -13,7 +13,6 @@ import {
   rankingsHashShouldFocusSearch,
   rankingsShareUrl,
   rankingsUrlSearch,
-  rankingsBoardRouterHref,
   rankingsUrlSyncHref,
   sigmaBoardHref,
   steadiestBoardHref,
@@ -223,19 +222,6 @@ assert(
     "/fantasy-hockey-vor/?pos=D#rankings",
   "sync href basePath + query + hash",
 );
-assert(
-  rankingsBoardRouterHref("/", "pos=C") === "/?pos=C",
-  "router href query only (no basePath)",
-);
-assert(
-  rankingsBoardRouterHref("/", "") === "/",
-  "router href omits empty query",
-);
-assert(
-  rankingsBoardRouterHref("/board", "sort=name") === "/board?sort=name",
-  "router href keeps pathname",
-);
-
 assert(
   parseLiveRankingsUrl({ toString: () => "pos=C" }, null).position === "C",
   "live parse falls back to searchParams",

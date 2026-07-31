@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { Position } from "@/lib/types";
 import type { SortKey, StatRanges } from "@/lib/rankings-filters";
-import { withPinnedWindowScroll } from "@/lib/board-dom";
 import {
   nextRankingsUrlSyncAction,
   parseLiveRankingsUrl,
-  rankingsBoardRouterHref,
   rankingsUrlSearch,
+  rankingsUrlSyncHref,
   type RankingsUrlState,
 } from "@/lib/rankings-url";
 
@@ -24,6 +23,22 @@ interface RankingsUrlSyncInput {
   onHydrate: (state: RankingsUrlState) => void;
 }
 
+/**
+ * Write the board query into the address bar without App Router navigation.
+ * Uses the native History API (not Next's patched replaceState) so we do not
+ * dispatch ACTION_RESTORE / soft-navigate — those still scroll-to-top on
+ * static export even with scroll:false, and left renderedSearch stale when
+ * driven via the patched replaceState(null) path.
+ *
+ * Omits `#rankings` so query sync never re-triggers hash scrolling.
+ * Board hydration on Back/Forward uses popstate + location.search.
+ */
+function replaceBoardUrl(pathname: string, search: string): void {
+  const href = rankingsUrlSyncHref(pathname, search, "");
+  const state = window.history.state;
+  History.prototype.replaceState.call(window.history, state, "", href);
+}
+
 /** Keep board filters and the address bar in sync (including Back/Forward). */
 export function useRankingsUrlSync({
   position,
@@ -36,7 +51,6 @@ export function useRankingsUrlSync({
   onHydrate,
 }: RankingsUrlSyncInput): void {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const pathname = usePathname();
   const lastPushedRef = useRef<string | null>(null);
   const onHydrateRef = useRef(onHydrate);
@@ -45,7 +59,8 @@ export function useRankingsUrlSync({
     onHydrateRef.current = onHydrate;
   }, [onHydrate]);
 
-  // Back/Forward: hydrate from the live address bar even if searchParams lag.
+  // Back/Forward / in-page history: prefer live location over React searchParams
+  // (we intentionally bypass Next's history patch on board sync writes).
   useEffect(() => {
     function onPopState() {
       const urlState = parseLiveRankingsUrl(
@@ -71,7 +86,11 @@ export function useRankingsUrlSync({
       hideDepthGoalies,
       statRanges,
     });
-    const urlState = parseLiveRankingsUrl(searchParams);
+    // Prefer location.search — Next searchParams will not track native replaces.
+    const urlState = parseLiveRankingsUrl(
+      searchParams,
+      typeof window !== "undefined" ? window.location.search : null,
+    );
     const urlSearch = rankingsUrlSearch(urlState);
     const action = nextRankingsUrlSyncAction(
       lastPushedRef.current,
@@ -91,15 +110,7 @@ export function useRankingsUrlSync({
     }
 
     lastPushedRef.current = action.search;
-    // Query-only sync must not re-attach #rankings (hash scrolling) and must
-    // keep App Router searchParams/history coherent. `history.replaceState`
-    // left Next's renderedSearch stale and broke subsequent navigations;
-    // `router.replace(..., { scroll: false })` still jumps scroll on static
-    // export — pin scrollY across the replace.
-    const href = rankingsBoardRouterHref(pathname, action.search);
-    withPinnedWindowScroll(() => {
-      router.replace(href, { scroll: false });
-    });
+    replaceBoardUrl(pathname, action.search);
   }, [
     position,
     query,
@@ -109,7 +120,6 @@ export function useRankingsUrlSync({
     hideDepthGoalies,
     statRanges,
     pathname,
-    router,
     searchParams,
   ]);
 }
