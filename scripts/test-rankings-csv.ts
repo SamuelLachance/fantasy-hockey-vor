@@ -39,7 +39,10 @@ const sample = {
 } as unknown as PlayerProjection;
 
 const csv = rankingsToCsv([sample], "C", ["goals", "assists"]);
-assert(csv.startsWith("rank,name,team,positions,vor,edge,gp,G,A"), "header");
+assert(
+  csv.startsWith("rank,name,team,positions,vor,edge,sigma,gp,G,A"),
+  "header",
+);
 const dataLine = csv.split("\n")[1] ?? "";
 assert(dataLine.includes('"A, ""Test"""'), "escaped name");
 assert(dataLine.startsWith("1,"), "positionRank when pos=C");

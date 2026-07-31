@@ -92,7 +92,7 @@ export function TopPlayers({
             href="?sort=draftValue#rankings"
             className="text-xs text-slate-500 underline-offset-2 transition hover:text-emerald-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/80"
           >
-            Sort board
+            Sort by Edge
           </a>
         </div>
         <p className="mb-3 text-xs text-slate-500">

@@ -37,8 +37,7 @@ import {
 } from "@/lib/rankings-filters";
 import { copyText } from "@/lib/clipboard";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
-import { fetchPlayerDetails } from "@/lib/player-details-client";
-import type { PlayerDetailRecord } from "@/lib/publish-players";
+import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { ExpandedPlayerPanel } from "./ExpandedPlayerPanel";
 import { PositionBadges } from "./PositionBadge";
@@ -70,12 +69,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   );
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const [details, setDetails] = useState<Record<
-    string,
-    PlayerDetailRecord
-  > | null>(null);
-  const [detailsError, setDetailsError] = useState(false);
   const [copiedPlayerId, setCopiedPlayerId] = useState<number | null>(null);
+  const { details, detailsError, setDetails, setDetailsError } =
+    usePlayerDetails(expandedId);
 
   useRankingsUrlSync({
     position,
@@ -137,42 +133,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       setSortDir("desc");
     }
   }
-
-  useEffect(() => {
-    // Prefetch notes on idle so the first expand isn't network-bound.
-    const ric = window.requestIdleCallback ?? ((cb: IdleRequestCallback) =>
-      window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 200));
-    const cancel =
-      window.cancelIdleCallback ?? ((id: number) => window.clearTimeout(id));
-    const id = ric(() => {
-      void fetchPlayerDetails()
-        .then((d) => {
-          setDetailsError(false);
-          setDetails(d);
-        })
-        .catch(() => setDetailsError(true));
-    });
-    return () => cancel(id as number);
-  }, []);
-
-  useEffect(() => {
-    if (expandedId != null && details === null && !detailsError) {
-      let cancelled = false;
-      fetchPlayerDetails()
-        .then((d) => {
-          if (!cancelled) {
-            setDetailsError(false);
-            setDetails(d);
-          }
-        })
-        .catch(() => {
-          if (!cancelled) setDetailsError(true);
-        });
-      return () => {
-        cancelled = true;
-      };
-    }
-  }, [expandedId, details, detailsError]);
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 

@@ -10,7 +10,7 @@ const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
     'id="rankings"',
     "hideDepthGoalies",
-    "fetchPlayerDetails",
+    "usePlayerDetails",
     "resetSortToVor",
     "sticky left-10",
     "truncate",
@@ -27,6 +27,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsToolbar.tsx": ["CSV", "Link", "Starters"],
   "src/hooks/useRankingsUrlSync.ts": ["router.replace", "rankingsUrlSearch"],
+  "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],
   "src/lib/rankings-url.ts": ["hideDepthGoalies", "playerId"],
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],

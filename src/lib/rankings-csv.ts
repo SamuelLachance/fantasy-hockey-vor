@@ -21,6 +21,7 @@ export function rankingsToCsv(
     "positions",
     "vor",
     "edge",
+    "sigma",
     "gp",
     ...categories.map((c) => CATEGORY_LABELS[c]),
   ];
@@ -34,6 +35,9 @@ export function rankingsToCsv(
       p.positions.join("/"),
       vorForFilter(p, position).toFixed(3),
       p.draftValue ?? 0,
+      p.uncertainty?.total?.sigma != null
+        ? p.uncertainty.total.sigma.toFixed(2)
+        : "",
       p.gamesPlayed,
     ];
     for (const cat of categories) {
