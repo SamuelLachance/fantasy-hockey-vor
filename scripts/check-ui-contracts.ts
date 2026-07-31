@@ -327,6 +327,8 @@ const files: Record<string, string[]> = {
     "WebApplication",
     "Dataset",
     "FAQPage",
+    "BreadcrumbList",
+    "HowTo",
     "isAccessibleForFree",
     "keywords",
     "National Hockey League",
