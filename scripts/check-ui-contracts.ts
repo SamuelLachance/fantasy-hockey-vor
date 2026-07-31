@@ -30,6 +30,8 @@ const files: Record<string, string[]> = {
   "src/hooks/usePlayerDetails.ts": ["requestIdleCallback", "fetchPlayerDetails"],
   "src/lib/rankings-url.ts": ["hideDepthGoalies", "playerId"],
   "src/lib/seo-jsonld.ts": ["WebApplication", "Dataset"],
+  "src/app/error.tsx": ["Try again", "Back to rankings"],
+  "src/app/global-error.tsx": ["Try again"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
   "src/components/TopPlayers.tsx": [
