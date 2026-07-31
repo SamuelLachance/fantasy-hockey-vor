@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { headerRosterCopy } from "@/lib/header-roster-copy";
 
 /** Compact league roster / category reminder under the hero. */
 export function HeaderRosterNote() {
@@ -9,10 +10,7 @@ export function HeaderRosterNote() {
       aria-label="League roster and category settings"
     >
       <Search className="mt-0.5 h-4 w-4 shrink-0 text-cyan-400" aria-hidden="true" />
-      <p>
-        Roster: 2C · 2LW · 2RW · 4D · 2G daily. Skater cats: G, A, SOG, BLK,
-        HIT, PPP, PIM, FOW. Goalie cats: W, SO, SV, SV%.
-      </p>
+      <p>{headerRosterCopy()}</p>
     </div>
   );
 }

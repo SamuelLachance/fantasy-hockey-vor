@@ -386,9 +386,15 @@ const files: Record<string, string[]> = {
     'aria-keyshortcuts="End"',
   ],
   "src/components/HeaderRosterNote.tsx": [
-    "2C · 2LW · 2RW · 4D · 2G",
-    "SV%",
+    "headerRosterCopy",
     'role="note"',
+    "League roster and category settings",
+  ],
+  "src/lib/header-roster-copy.ts": [
+    "headerRosterCopy",
+    "DEFAULT_LEAGUE",
+    "Skater cats",
+    "Goalie cats",
   ],
   "src/components/HeaderStaleBanner.tsx": [
     "npm run generate",
