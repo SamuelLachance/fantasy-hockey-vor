@@ -95,6 +95,16 @@ export function rangeLabel(key: RangeKey): string {
   return CATEGORY_FULL_LABELS[key];
 }
 
+/** Compact min/max label for filter chips (e.g. ≥2, ≤50, 1–10). */
+export function formatRangeChip(min: string, max: string): string {
+  const a = min.trim();
+  const b = max.trim();
+  if (a && b) return `${a}–${b}`;
+  if (a) return `≥${a}`;
+  if (b) return `≤${b}`;
+  return "";
+}
+
 export function defaultSortDir(key: SortKey): "asc" | "desc" {
   // Lower uncertainty is better → ascending default for sigma.
   return key === "name" || key === "team" || key === "rank" || key === "sigma"

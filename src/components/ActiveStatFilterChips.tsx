@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import {
+  formatRangeChip,
   rangeLabel,
   type RangeKey,
   type StatRanges,
@@ -12,15 +13,6 @@ interface ActiveStatFilterChipsProps {
   onOpen: () => void;
   onClear: () => void;
   onRemove: (key: RangeKey) => void;
-}
-
-function chipText(min: string, max: string): string {
-  const a = min.trim();
-  const b = max.trim();
-  if (a && b) return `${a}–${b}`;
-  if (a) return `≥${a}`;
-  if (b) return `≤${b}`;
-  return "";
 }
 
 export function ActiveStatFilterChips({
@@ -43,7 +35,7 @@ export function ActiveStatFilterChips({
       aria-label="Active stat filters"
     >
       {chips.map(([key, bound]) => {
-        const text = chipText(bound!.min, bound!.max);
+        const text = formatRangeChip(bound!.min, bound!.max);
         return (
           <span
             key={key}

@@ -14,17 +14,22 @@ const files: Record<string, string[]> = {
     "resetSortToVor",
     "sticky left-10",
     "truncate",
-    "Reset board view",
     "useRankingsUrlSync",
     "useRankingsKeyboard",
     "ExpandedPlayerPanel",
     'column="sigma"',
     "BoardShortcutsHelp",
     "ActiveStatFilterChips",
+    "RankingsEmptyState",
   ],
   "src/components/ActiveStatFilterChips.tsx": [
     "Active stat filters",
     "Clear filters",
+    "formatRangeChip",
+  ],
+  "src/components/RankingsEmptyState.tsx": [
+    "No players match your filters",
+    "Reset board view",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',

@@ -42,6 +42,7 @@ import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
 import { useRankingsUrlSync } from "@/hooks/useRankingsUrlSync";
 import { ActiveStatFilterChips } from "./ActiveStatFilterChips";
 import { PositionBadges } from "./PositionBadge";
+import { RankingsEmptyState } from "./RankingsEmptyState";
 import { RankingsStatFilters } from "./RankingsStatFilters";
 import { RankingsToolbar } from "./RankingsToolbar";
 import { SortHeader } from "./SortHeader";
@@ -558,45 +559,17 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           </table>
         </div>
         {filtered.length === 0 && (
-          <div className="px-6 py-16 text-center text-slate-400">
-            <p>No players match your filters.</p>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-              {query.trim() !== "" && (
-                <button
-                  type="button"
-                  onClick={() => setQuery("")}
-                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-                >
-                  Clear search
-                </button>
-              )}
-              {activeFilterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearStatFilters}
-                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-                >
-                  Clear stat filters
-                </button>
-              )}
-              {position !== "ALL" && (
-                <button
-                  type="button"
-                  onClick={() => startTransition(() => setPosition("ALL"))}
-                  className="rounded-full bg-white/5 px-4 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-                >
-                  Show all positions
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={resetBoardView}
-                className="rounded-full bg-cyan-500/15 px-4 py-1.5 text-sm font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-              >
-                Reset board view
-              </button>
-            </div>
-          </div>
+          <RankingsEmptyState
+            query={query}
+            activeFilterCount={activeFilterCount}
+            position={position}
+            onClearSearch={() => setQuery("")}
+            onClearStatFilters={clearStatFilters}
+            onShowAllPositions={() =>
+              startTransition(() => setPosition("ALL"))
+            }
+            onResetBoard={resetBoardView}
+          />
         )}
         {filtered.length > renderCount && (
           <div

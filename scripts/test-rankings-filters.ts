@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   defaultSortDir,
+  formatRangeChip,
   parseRangeValue,
   passesRanges,
   rangeLabel,
@@ -18,6 +19,10 @@ assert.equal(defaultSortDir("vor"), "desc");
 assert.equal(defaultSortDir("sigma"), "asc");
 assert.equal(rangeLabel("draftValue"), "Edge vs consensus");
 assert.equal(rangeLabel("sigma"), "Uncertainty Σσ");
+assert.equal(formatRangeChip("2", ""), "≥2");
+assert.equal(formatRangeChip("", "50"), "≤50");
+assert.equal(formatRangeChip("1", "10"), "1–10");
+assert.equal(formatRangeChip("", ""), "");
 
 const player = {
   vor: 5,
