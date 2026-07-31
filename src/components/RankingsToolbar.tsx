@@ -27,6 +27,9 @@ interface RankingsToolbarProps {
   linkCopied: boolean;
   onLinkCopied: () => void;
   expandedId: number | null;
+  hideDepthGoalies: boolean;
+  setHideDepthGoalies: (v: boolean | ((prev: boolean) => boolean)) => void;
+  showDepthToggle: boolean;
 }
 
 export function RankingsToolbar({
@@ -46,6 +49,9 @@ export function RankingsToolbar({
   linkCopied,
   onLinkCopied,
   expandedId,
+  hideDepthGoalies,
+  setHideDepthGoalies,
+  showDepthToggle,
 }: RankingsToolbarProps) {
   function onPositionTabKeyDown(e: KeyboardEvent, index: number) {
     if (
@@ -174,6 +180,21 @@ export function RankingsToolbar({
           <Link2 className="h-4 w-4" />
           {linkCopied ? "Copied" : "Link"}
         </button>
+        {showDepthToggle && (
+          <button
+            type="button"
+            aria-pressed={hideDepthGoalies}
+            onClick={() => setHideDepthGoalies((v) => !v)}
+            className={`inline-flex shrink-0 items-center justify-center rounded-xl border px-4 py-2.5 text-sm font-medium transition ${
+              hideDepthGoalies
+                ? "border-cyan-500/40 bg-cyan-500/10 text-cyan-200"
+                : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
+            }`}
+            title="Hide org-depth goalies at 4–8 GP"
+          >
+            {hideDepthGoalies ? "Starters" : "All G"}
+          </button>
+        )}
       </div>
     </div>
   );

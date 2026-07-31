@@ -76,6 +76,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const [statRanges, setStatRanges] = useState<StatRanges>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [hideDepthGoalies, setHideDepthGoalies] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [details, setDetails] = useState<Record<
@@ -193,6 +194,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       list = list.filter((p) => p.positions.includes(position));
     }
 
+    if (hideDepthGoalies && (position === "G" || position === "ALL")) {
+      list = list.filter((p) => !p.isGoalie || p.gamesPlayed > 8);
+    }
+
     if (q) {
       list = list.filter(
         (p) =>
@@ -235,7 +240,16 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         ? Number(av) - Number(bv)
         : Number(bv) - Number(av);
     });
-  }, [players, deferredQuery, position, sortKey, sortDir, statRanges, filterRangeKeys]);
+  }, [
+    players,
+    deferredQuery,
+    position,
+    sortKey,
+    sortDir,
+    statRanges,
+    filterRangeKeys,
+    hideDepthGoalies,
+  ]);
 
   const renderCount = useMemo(() => {
     if (expandedId == null) return visibleCount;
@@ -347,6 +361,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           window.setTimeout(() => setLinkCopied(false), 1600);
         }}
         expandedId={expandedId}
+        hideDepthGoalies={hideDepthGoalies}
+        setHideDepthGoalies={setHideDepthGoalies}
+        showDepthToggle={position === "G" || position === "ALL"}
       />
 
       {filtersOpen && (
