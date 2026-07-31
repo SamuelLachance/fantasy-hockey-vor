@@ -226,6 +226,7 @@ const files: Record<string, string[]> = {
     "isProjectionStale",
     "HeaderStaleBanner",
     "HeaderRosterNote",
+    'aria-keyshortcuts="End"',
   ],
   "src/components/HeaderRosterNote.tsx": [
     "2C · 2LW · 2RW · 4D · 2G",
@@ -248,6 +249,7 @@ const files: Record<string, string[]> = {
     "homeRankingsHref",
   ],
   "src/app/loading.tsx": ["Loading rankings", "role=\"status\""],
+  "src/app/manifest.ts": ["Fantasy Hockey VOR", "categories", "standalone"],
   "src/lib/publish-players.ts": ["perStatSigma", "compactBoardNumbers"],
   "src/lib/vor.ts": ["softCapCategoryZ", "PERIPHERAL"],
   "src/lib/format.ts": ["sigmaColor", "edgeColor"],
