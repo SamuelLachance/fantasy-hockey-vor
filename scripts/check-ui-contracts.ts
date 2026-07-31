@@ -70,6 +70,7 @@ const files: Record<string, string[]> = {
     "boardPositionPanelId",
     "boardPositionTabId",
     "aria-labelledby",
+    "boardTableAriaLabel",
     "RankingsPlayerRow",
     "RankingsTableHead",
     "RankingsBoardFooter",
@@ -221,6 +222,9 @@ const files: Record<string, string[]> = {
   "src/lib/board-row-a11y.ts": [
     "boardRowAriaLabel",
     "boardRowDetailsAriaLabel",
+    "boardTableAriaLabel",
+    "Fantasy hockey VOR rankings",
+    "positionFilterTabLabel",
     "boardTableAriaRowCount",
     "boardTableAriaRowIndex",
     "edgeCellTitle",

@@ -5,6 +5,7 @@
 import {
   boardRowAriaLabel,
   boardRowDetailsAriaLabel,
+  boardTableAriaLabel,
   boardTableAriaRowCount,
   boardTableAriaRowIndex,
   edgeCellTitle,
@@ -58,6 +59,18 @@ assert(boardTableAriaRowCount(0) === undefined, "rowcount empty");
 assert(boardTableAriaRowCount(10) === 11, "rowcount includes header");
 assert(boardTableAriaRowIndex(0) === 2, "first data row after header");
 assert(boardTableAriaRowIndex(49) === 51, "fiftieth data row");
+assert(
+  boardTableAriaLabel("ALL") === "Fantasy hockey VOR rankings",
+  "table label all",
+);
+assert(
+  boardTableAriaLabel("C") === "Fantasy hockey VOR rankings · C",
+  "table label position",
+);
+assert(
+  boardTableAriaLabel("G") === "Fantasy hockey VOR rankings · G",
+  "table label G",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-row-a11y");

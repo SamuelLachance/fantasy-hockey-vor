@@ -1,4 +1,11 @@
+import { positionFilterTabLabel } from "@/lib/board-positions";
 import type { PlayerProjection, Position } from "@/lib/types";
+
+/** Accessible name for the rankings data table (includes position filter). */
+export function boardTableAriaLabel(position: Position | "ALL"): string {
+  if (position === "ALL") return "Fantasy hockey VOR rankings";
+  return `Fantasy hockey VOR rankings · ${positionFilterTabLabel(position)}`;
+}
 
 /**
  * Header + filtered data rows for virtualized/partial DOM tables.

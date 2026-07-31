@@ -5,7 +5,10 @@ import {
   boardPositionTabId,
 } from "@/lib/board-positions";
 import { boardRowTabStopId } from "@/lib/board-visible";
-import { boardTableAriaRowCount } from "@/lib/board-row-a11y";
+import {
+  boardTableAriaLabel,
+  boardTableAriaRowCount,
+} from "@/lib/board-row-a11y";
 import { useState, type RefObject } from "react";
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import type { SortKey } from "@/lib/rankings-filters";
@@ -108,7 +111,7 @@ export function RankingsBoardTable({
       >
         <table
           id="rankings-board-table"
-          aria-label="Fantasy hockey VOR rankings"
+          aria-label={boardTableAriaLabel(position)}
           aria-busy={searchPending || undefined}
           aria-rowcount={boardTableAriaRowCount(filteredCount)}
           className="min-w-full text-left text-sm"
