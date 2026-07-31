@@ -289,14 +289,20 @@ const files: Record<string, string[]> = {
   "src/components/RankingsToolbar.tsx": [
     "RankingsExportButtons",
     "RankingsSearchField",
+    "RankingsGoalieDepthToggle",
     "boardLinkButtonLabel",
-    "Starters",
     'aria-controls="rankings-stat-filters"',
     "onCopyBoardLink",
     'aria-keyshortcuts="l"',
     'aria-live="polite"',
     "PositionFilterTabs",
+  ],
+  "src/components/RankingsGoalieDepthToggle.tsx": [
+    "Starters",
+    "All G",
     'aria-keyshortcuts="Shift+G"',
+    "GOALIE_DEPTH_MAX_GP",
+    "aria-pressed",
   ],
   "src/components/RankingsSearchField.tsx": [
     "searchQueryNearCap",
