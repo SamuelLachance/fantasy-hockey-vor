@@ -263,6 +263,28 @@ const files: Record<string, string[]> = {
 };
 
 let failed = 0;
+
+// Catch duplicate object keys in this file (TS may also fail, but CI order varies).
+{
+  const self = readFileSync(
+    join(root, "scripts/check-ui-contracts.ts"),
+    "utf8",
+  );
+  const keyRe = /^\s+"([^"]+\.[^"]+)": \[/gm;
+  const seen = new Map<string, number>();
+  let m: RegExpExecArray | null;
+  while ((m = keyRe.exec(self))) {
+    const k = m[1]!;
+    seen.set(k, (seen.get(k) ?? 0) + 1);
+  }
+  for (const [k, n] of seen) {
+    if (n > 1) {
+      console.error(`FAIL: duplicate ui-contract key ${JSON.stringify(k)} (×${n})`);
+      failed++;
+    }
+  }
+}
+
 for (const [rel, needles] of Object.entries(files)) {
   const text = readFileSync(join(root, rel), "utf8");
   for (const n of needles) {
