@@ -102,7 +102,11 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         idx < 0 ? 0 : idx,
         direction === 1 ? "ArrowRight" : "ArrowLeft",
       );
-      startTransition(() => board.setPosition(BOARD_POSITIONS[next]!));
+      const pos = BOARD_POSITIONS[next]!;
+      startTransition(() => board.setPosition(pos));
+      queueMicrotask(() => {
+        document.getElementById(`board-pos-tab-${pos}`)?.focus();
+      });
     },
   });
 
