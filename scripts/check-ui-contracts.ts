@@ -119,11 +119,12 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",
-    "matching players",
+    "boardShowingSummary",
     "Enter/Space",
     "boardShortcutsStatusCopy",
     "tabular-nums",
   ],
+  "src/lib/board-status.ts": ["boardShowingSummary", "formatCount"],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',
     "ArrowDown",
