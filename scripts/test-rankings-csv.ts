@@ -23,6 +23,7 @@ const sample = {
   isGoalie: false,
   gamesPlayed: 80,
   vor: 5.5,
+  vorByPosition: { C: 2.25, LW: 1.1 },
   draftValue: 12,
   projection: {
     goals: 40,
@@ -46,6 +47,11 @@ assert(
 const dataLine = csv.split("\n")[1] ?? "";
 assert(dataLine.includes('"A, ""Test"""'), "escaped name");
 assert(dataLine.startsWith("1,"), "positionRank when pos=C");
+assert(dataLine.includes(",2.250,"), "CSV uses position VOR");
+assert(
+  rankingsToCsv([sample], "ALL", ["goals"]).split("\n")[1]!.includes(",5.500,"),
+  "ALL CSV uses overall VOR",
+);
 assert(csv.split("\n").length === 2, "one data row");
 
 if (failed) process.exit(1);

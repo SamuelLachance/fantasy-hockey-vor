@@ -319,14 +319,18 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         {(activeFilterCount > 0 ||
           position !== "ALL" ||
           query.trim() !== "" ||
-          !hideDepthGoalies) && (
+          (!hideDepthGoalies &&
+            (position === "G" || position === "ALL"))) && (
           <BoardActiveFilters
             position={position}
             query={query}
             statRanges={statRanges}
             showStatChips={!filtersOpen && activeFilterCount > 0}
             hasStatFilters={activeFilterCount > 0}
-            showingAllGoalies={!hideDepthGoalies}
+            showingAllGoalies={
+              !hideDepthGoalies &&
+              (position === "G" || position === "ALL")
+            }
             onClearPosition={() =>
               startTransition(() => setPosition("ALL"))
             }
@@ -375,8 +379,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                     playerLinkStatus.status === "err"
                   }
                   onToggle={() =>
-                    setExpandedId(
-                      expandedId === player.id ? null : player.id,
+                    setExpandedId((cur) =>
+                      cur === player.id ? null : player.id,
                     )
                   }
                   onCopyLink={() => copyPlayerLink(player.id)}

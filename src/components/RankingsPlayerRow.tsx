@@ -78,6 +78,7 @@ export function RankingsPlayerRow({
         tabIndex={0}
         role="button"
         aria-expanded={isExpanded}
+        aria-controls={`player-panel-${player.id}`}
         aria-label={`${player.name}, ${position === "ALL" ? `rank ${player.rank}` : `position rank ${player.positionRank ?? idx + 1}`}`}
         onClick={onToggle}
         onKeyDown={onRowKeyDown}
@@ -154,7 +155,13 @@ export function RankingsPlayerRow({
       </tr>
       {isExpanded && (
         <tr className="bg-slate-950/40">
-          <td colSpan={8 + tableCategories.length} className="px-6 py-4">
+          <td
+            colSpan={8 + tableCategories.length}
+            className="px-6 py-4"
+            id={`player-panel-${player.id}`}
+            role="region"
+            aria-label={`${player.name} details`}
+          >
             <ExpandedPlayerPanel
               player={player}
               cats={cats}
