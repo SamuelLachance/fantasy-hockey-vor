@@ -33,6 +33,10 @@ assert(
   JSON.stringify(howToSteps).includes("Load more"),
   "HowTo covers load more",
 );
+assert(
+  JSON.stringify(howToSteps).includes("press p"),
+  "HowTo covers player link hotkey",
+);
 const crumbs = graph[3]?.itemListElement as Array<Record<string, unknown>>;
 assert(Array.isArray(crumbs) && crumbs.length === 2, "breadcrumb items");
 assert(crumbs[1]?.name === "2026-27 Rankings", "season crumb");

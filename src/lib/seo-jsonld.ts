@@ -146,7 +146,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
           {
             "@type": "HowToStep",
             name: "Share the view",
-            text: "Press l to copy a link that preserves filters, sort, and expanded player.",
+            text: "Press l to copy the board link (filters + sort). With a row open, press p to copy that player's deep link.",
           },
         ],
       },
