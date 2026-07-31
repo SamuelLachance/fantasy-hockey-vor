@@ -750,6 +750,7 @@ const files: Record<string, string[]> = {
     "useTimedFlash",
     "downloadRankingsCsv",
     "downloadRankingsJson",
+    "min-h-11",
   ],
   "src/hooks/useBoardInfiniteScroll.ts": [
     "useBoardInfiniteScroll",
