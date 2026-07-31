@@ -800,6 +800,8 @@ const files: Record<string, string[]> = {
     "SITE_BRAND",
     "siteDefaultDescription",
     "siteDefaultDescription(data.season)",
+    "siteDatasetDescription",
+    "siteDatasetDescription(data.season)",
     "serializeJsonLd",
     "replace(/</g",
     "\\u003c",
@@ -852,6 +854,7 @@ const files: Record<string, string[]> = {
     "siteDefaultTitle",
     "siteDefaultDescription",
     "siteManifestDescription",
+    "siteDatasetDescription",
     "PROJECTION_SEASON",
   ],
   "src/app/manifest.ts": [

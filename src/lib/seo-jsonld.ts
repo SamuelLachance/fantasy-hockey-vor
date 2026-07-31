@@ -2,7 +2,10 @@ import type { ProjectionsDataset } from "@/lib/types";
 import { boardShortcutsFaqAnswer } from "@/lib/board-shortcuts";
 import { DEFAULT_PROJECTION_ENGINE } from "@/lib/projection-engine-label";
 import { SITE_BRAND, SITE_URL } from "@/lib/site";
-import { siteDefaultDescription } from "@/lib/site-meta";
+import {
+  siteDatasetDescription,
+  siteDefaultDescription,
+} from "@/lib/site-meta";
 
 const FAQ_ENTRIES: ReadonlyArray<{ q: string; a: string }> = [
   {
@@ -48,8 +51,7 @@ export function rankingsJsonLd(data: ProjectionsDataset): Record<string, unknown
       {
         "@type": "Dataset",
         name: `${data.season} ${SITE_BRAND} Rankings`,
-        description:
-          "Player VOR rankings with draft Edge and calibrated uncertainty for H2H category leagues.",
+        description: siteDatasetDescription(data.season),
         url: SITE_URL,
         dateModified: data.generatedAt,
         creator: {

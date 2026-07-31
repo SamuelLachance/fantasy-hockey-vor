@@ -5,6 +5,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import {
+  siteDatasetDescription,
   siteDefaultDescription,
   siteDefaultTitle,
   siteManifestDescription,
@@ -24,6 +25,14 @@ assert(siteDefaultDescription().includes("Value Over Replacement"), "desc");
 assert(siteDefaultDescription().includes("2026-27"), "desc season");
 assert(siteDefaultDescription("2027-28").includes("2027-28"), "desc override");
 assert(siteManifestDescription().includes("VOR rankings"), "manifest");
+assert(
+  siteDatasetDescription().includes("2026-27"),
+  "dataset desc season",
+);
+assert(
+  siteDatasetDescription("2027-28").includes("2027-28"),
+  "dataset desc override",
+);
 assert(
   siteDefaultTitle() === "Fantasy Hockey VOR | 2026-27 ML Rankings",
   "exact default title",

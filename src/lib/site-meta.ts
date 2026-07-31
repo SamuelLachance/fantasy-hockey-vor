@@ -15,3 +15,8 @@ export function siteDefaultDescription(season = PROJECTION_SEASON): string {
 export function siteManifestDescription(season = PROJECTION_SEASON): string {
   return `${season} NHL fantasy hockey VOR rankings from a stacked ML ensemble.`;
 }
+
+/** Dataset JSON-LD description (distinct from the long page meta). */
+export function siteDatasetDescription(season = PROJECTION_SEASON): string {
+  return `${season} player VOR rankings with draft Edge and calibrated uncertainty for H2H category leagues.`;
+}
