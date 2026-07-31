@@ -8,7 +8,12 @@ import {
   isProjectionStale,
   isProjectionVeryStale,
 } from "@/lib/projection-age";
-import { SITE_BRAND } from "@/lib/site";
+import {
+  headerEyebrowCopy,
+  headerHeroTitle,
+  headerJumpCtaCopy,
+  headerLeadCopy,
+} from "@/lib/header-copy";
 import { HeaderRosterNote } from "./HeaderRosterNote";
 import { HeaderStaleBanner } from "./HeaderStaleBanner";
 
@@ -56,20 +61,16 @@ export function Header({
         <div className="flex items-center gap-3 text-cyan-400">
           <Snowflake className="h-5 w-5" />
           <span className="text-sm font-medium uppercase tracking-[0.2em]">
-            Value Over Replacement
+            {headerEyebrowCopy()}
           </span>
         </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              {SITE_BRAND}
+              {headerHeroTitle()}
             </h1>
             <p className="mt-3 max-w-2xl text-lg text-slate-400">
-              {season} projections from a stacked ML ensemble — gradient
-              boosting, ridge and Marcel models blended per stat, with game-log
-              durability, xG and team context — ranked by VOR. Edge is consensus
-              rank minus model rank (undervalued when positive); expand a row
-              for per-stat ±1σ uncertainty.
+              {headerLeadCopy(season)}
             </p>
             {(projectionEngine || generatedLabel) && (
               <p className="mt-2 text-sm text-cyan-400/80">
@@ -99,7 +100,7 @@ export function Header({
               }}
               className="inline-flex items-center justify-center rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-2 text-sm font-semibold text-cyan-200 transition motion-reduce:transition-none hover:border-cyan-400/60 hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
             >
-              Jump to board
+              {headerJumpCtaCopy()}
             </a>
             <div className="flex gap-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-center">

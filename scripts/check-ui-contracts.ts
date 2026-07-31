@@ -501,8 +501,10 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/top-lists.ts": ["steadiestSkaters", "topEdgeSkaters"],
   "src/components/Header.tsx": [
-    "SITE_BRAND",
-    "Jump to board",
+    "headerHeroTitle",
+    "headerLeadCopy",
+    "headerJumpCtaCopy",
+    "headerEyebrowCopy",
     "dateTime",
     "scrollToRankings",
     "focusSearch: true",
@@ -510,6 +512,13 @@ const files: Record<string, string[]> = {
     "HeaderStaleBanner",
     "HeaderRosterNote",
     'aria-keyshortcuts="End"',
+  ],
+  "src/lib/header-copy.ts": [
+    "headerEyebrowCopy",
+    "headerHeroTitle",
+    "headerLeadCopy",
+    "headerJumpCtaCopy",
+    "SITE_BRAND",
   ],
   "src/components/HeaderRosterNote.tsx": [
     "headerRosterCopy",
