@@ -35,12 +35,16 @@ export function RankingsSearchField({
     <div className="relative w-full">
       <input
         type="search"
+        inputMode="search"
+        enterKeyHint="search"
         aria-label={searchFieldAriaLabel()}
         title={searchFieldTitle()}
         aria-keyshortcuts="Slash"
         aria-describedby={nearQueryCap ? "rankings-search-limit" : undefined}
         autoComplete="off"
         spellCheck={false}
+        autoCorrect="off"
+        autoCapitalize="off"
         maxLength={HIGHLIGHT_QUERY_MAX}
         placeholder={searchFieldPlaceholder()}
         value={query}
