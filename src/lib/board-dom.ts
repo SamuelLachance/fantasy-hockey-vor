@@ -44,6 +44,14 @@ export function scrollToRankings(options?: { focusSearch?: boolean }): void {
   }
 }
 
+/** Focus a board row (keyboard expand / j-k nav) without forcing a scroll jump. */
+export function focusPlayerRow(playerId: number): void {
+  if (typeof document === "undefined") return;
+  const row = document.getElementById(`player-row-${playerId}`);
+  if (!(row instanceof HTMLElement)) return;
+  row.focus({ preventScroll: true });
+}
+
 /** Keep an expanded player row in view without jumping the page harshly. */
 export function scrollExpandedRowIntoView(playerId: number): void {
   if (typeof document === "undefined") return;
@@ -53,4 +61,7 @@ export function scrollExpandedRowIntoView(playerId: number): void {
     block: "nearest",
     behavior: prefersReducedMotion() ? "auto" : "smooth",
   });
+  if (row instanceof HTMLElement) {
+    row.focus({ preventScroll: true });
+  }
 }

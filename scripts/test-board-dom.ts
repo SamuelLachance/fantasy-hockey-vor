@@ -4,6 +4,7 @@
  */
 import {
   STICKY_NAME_SHADOW,
+  focusPlayerRow,
   focusStatsFilterButton,
   scrollExpandedRowIntoView,
   scrollPageTop,
@@ -30,12 +31,15 @@ assert(
 // Node has no document/window — helpers must no-op without throwing.
 try {
   focusStatsFilterButton();
+  focusPlayerRow(1);
   scrollPageTop();
   scrollToRankings();
   scrollExpandedRowIntoView(1);
 } catch (e) {
   assert(false, `board-dom helpers threw in Node: ${e}`);
 }
+
+assert(typeof focusPlayerRow === "function", "focusPlayerRow exported");
 
 if (failed) process.exit(1);
 console.log("OK: board-dom");

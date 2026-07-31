@@ -81,6 +81,12 @@ const files: Record<string, string[]> = {
     "scrollPageTop",
     "scrollToRankings",
     "scrollExpandedRowIntoView",
+    "focusPlayerRow",
+  ],
+  "src/lib/player-details-client.ts": [
+    "fetchPlayerDetails",
+    "resetPlayerDetailsCache",
+    "attempt < 2",
   ],
   "src/lib/rankings-export.ts": [
     "rankingsToJsonRows",
