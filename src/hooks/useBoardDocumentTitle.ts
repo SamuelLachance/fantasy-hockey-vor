@@ -13,8 +13,18 @@ export function useBoardDocumentTitle(opts: {
   playerName?: string | null;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
+  activeFilterCount?: number;
+  showingAllGoalies?: boolean;
 }): void {
-  const { position, query, playerName, sortKey, sortDir } = opts;
+  const {
+    position,
+    query,
+    playerName,
+    sortKey,
+    sortDir,
+    activeFilterCount = 0,
+    showingAllGoalies = false,
+  } = opts;
   useEffect(() => {
     document.title = boardDocumentTitle({
       position,
@@ -22,8 +32,18 @@ export function useBoardDocumentTitle(opts: {
       playerName,
       sortKey,
       sortDir,
+      activeFilterCount,
+      showingAllGoalies,
     });
-  }, [position, query, playerName, sortKey, sortDir]);
+  }, [
+    position,
+    query,
+    playerName,
+    sortKey,
+    sortDir,
+    activeFilterCount,
+    showingAllGoalies,
+  ]);
 
   useEffect(() => {
     return () => {

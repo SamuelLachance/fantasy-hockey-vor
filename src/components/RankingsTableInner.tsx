@@ -64,6 +64,8 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     playerName: expandedPlayer?.name ?? null,
     sortKey: board.sortKey,
     sortDir: board.sortDir,
+    activeFilterCount: board.activeFilterCount,
+    showingAllGoalies: board.showingAllGoalies,
   });
 
   const tableScrollRef = useRef<HTMLDivElement | null>(null);

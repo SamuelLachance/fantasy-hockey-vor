@@ -4,6 +4,7 @@
  */
 import {
   boardDocumentTitle,
+  boardFiltersTitleToken,
   boardSortTitleToken,
 } from "../src/lib/board-document-title";
 
@@ -70,6 +71,35 @@ assert(
     sortDir: "desc",
   }).includes("2026-27"),
   "default sort keeps base title",
+);
+assert(boardFiltersTitleToken(0) === null, "no filters token");
+assert(boardFiltersTitleToken(2) === "2f", "filters token");
+assert(
+  boardDocumentTitle({
+    position: "ALL",
+    query: "",
+    activeFilterCount: 2,
+  }) === "Fantasy Hockey VOR · 2f",
+  "title includes filter count",
+);
+assert(
+  boardDocumentTitle({
+    position: "ALL",
+    query: "",
+    showingAllGoalies: true,
+  }) === "Fantasy Hockey VOR · All G",
+  "title includes All G",
+);
+assert(
+  boardDocumentTitle({
+    position: "C",
+    query: "",
+    sortKey: "draftValue",
+    sortDir: "desc",
+    activeFilterCount: 1,
+    showingAllGoalies: true,
+  }) === "Fantasy Hockey VOR · C · Edge · 1f · All G",
+  "title combines filters and All G",
 );
 
 if (failed) process.exit(1);
