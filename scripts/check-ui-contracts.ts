@@ -419,6 +419,7 @@ const files: Record<string, string[]> = {
   "src/lib/format.ts": ["sigmaColor", "edgeColor", "formatSigned"],
   "src/components/TopPlayers.tsx": [
     "TopLeadersCard",
+    "HowVorWorks",
     "topByPositionLeaders",
     "playerBoardHref",
     "gamesPlayed}gp",
@@ -429,6 +430,12 @@ const files: Record<string, string[]> = {
     "TopPlayerLink",
     "dense",
     "tabular-nums",
+  ],
+  "src/components/HowVorWorks.tsx": [
+    "How VOR Works",
+    "replacementRank",
+    "CATEGORY_FULL_LABELS",
+    "Category scarcity weights",
   ],
   "src/components/TopLeadersCard.tsx": [
     "TopLeadersCard",
