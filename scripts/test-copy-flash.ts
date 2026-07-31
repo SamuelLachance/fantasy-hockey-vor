@@ -45,17 +45,33 @@ async function main() {
     boardLinkAriaLabel(false) === "Copy link to this board view",
     "board aria idle",
   );
-  assert(boardLinkAriaLabel(true) === "Board link copied", "board aria ok");
   assert(
-    boardLinkAriaLabel(false, true) === "Failed to copy board link",
-    "board aria err",
+    boardLinkAriaLabel(true) === "Copy link to this board view (copied)",
+    "board aria ok keeps identity",
+  );
+  assert(
+    boardLinkAriaLabel(false, true) === "Copy link to this board view (failed)",
+    "board aria err keeps identity",
   );
   assert(playerLinkButtonLabel(false) === "Copy player link", "player idle");
   assert(playerLinkButtonLabel(true) === "Link copied", "player ok");
   assert(playerLinkButtonLabel(false, true) === "Copy failed", "player err");
   assert(
-    playerLinkAriaLabel("McDavid", true) === "Link copied for McDavid",
-    "player aria ok",
+    playerLinkAriaLabel("McDavid", true) === "Copy link for McDavid (copied)",
+    "player aria ok keeps identity",
+  );
+  assert(
+    playerLinkAriaLabel("McDavid", false, true) ===
+      "Copy link for McDavid (failed)",
+    "player aria err keeps identity",
+  );
+  assert(
+    boardLinkAriaLabel(true).startsWith(boardLinkAriaLabel(false)),
+    "board flash prefixes idle aria",
+  );
+  assert(
+    playerLinkAriaLabel("X", true).startsWith(playerLinkAriaLabel("X", false)),
+    "player flash prefixes idle aria",
   );
   assert(playerLinkTitle() === "Copy player link (p)", "player title");
 

@@ -429,8 +429,12 @@ const files: Record<string, string[]> = {
     "boardLinkButtonLabel",
     "boardLinkTitle",
     "boardLinkAriaLabel",
+    "Copy link to this board view (copied)",
+    "Copy link to this board view (failed)",
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
+    "(copied)",
+    "(failed)",
     "playerLinkTitle",
   ],
   "src/lib/board-dom.ts": [
