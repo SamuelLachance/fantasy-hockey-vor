@@ -93,8 +93,7 @@ export function Header({
           <div className="flex flex-col items-stretch gap-3 sm:items-end">
             <a
               href="#rankings"
-              title="Jump to board + focus search (End)"
-              aria-keyshortcuts="End"
+              title="Jump to board + focus search"
               onClick={(e) => {
                 e.preventDefault();
                 scrollToRankings({ focusSearch: true });

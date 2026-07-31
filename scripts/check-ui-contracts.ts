@@ -702,7 +702,7 @@ const files: Record<string, string[]> = {
     "isProjectionStale",
     "HeaderStaleBanner",
     "HeaderRosterNote",
-    'aria-keyshortcuts="End"',
+    "Jump to board + focus search",
   ],
   "src/lib/header-copy.ts": [
     "headerEyebrowCopy",
