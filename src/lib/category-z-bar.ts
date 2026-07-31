@@ -9,3 +9,9 @@ export function categorySigmaDigits(cat: string): number {
     ? 1
     : 0;
 }
+
+/** Clamp z for aria meter bounds while valuetext keeps the true score. */
+export function categoryZMeterValue(z: number, bound = 4): number {
+  if (!Number.isFinite(z)) return 0;
+  return Math.max(-bound, Math.min(bound, Number(z.toFixed(2))));
+}

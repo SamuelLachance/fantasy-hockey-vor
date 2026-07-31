@@ -3,6 +3,7 @@ import { CATEGORY_LABELS, formatStat } from "@/lib/format";
 import {
   categorySigmaDigits,
   categoryZBarWidth,
+  categoryZMeterValue,
 } from "@/lib/category-z-bar";
 import {
   detailStatSigma,
@@ -44,7 +45,7 @@ export function ExpandedPlayerCategories({
               aria-label={`${CATEGORY_LABELS[cat]} category z-score`}
               aria-valuemin={-4}
               aria-valuemax={4}
-              aria-valuenow={Number(z.toFixed(2))}
+              aria-valuenow={categoryZMeterValue(z)}
               aria-valuetext={`${z >= 0 ? "+" : ""}${z.toFixed(2)} z`}
             >
               <div

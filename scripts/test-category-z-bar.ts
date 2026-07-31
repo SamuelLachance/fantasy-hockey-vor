@@ -5,6 +5,7 @@
 import {
   categorySigmaDigits,
   categoryZBarWidth,
+  categoryZMeterValue,
 } from "../src/lib/category-z-bar";
 
 let failed = 0;
@@ -21,6 +22,10 @@ assert(categoryZBarWidth(-10) === 8, "clamped low");
 assert(categoryZBarWidth(1) === 62, "z1 → 62");
 assert(categorySigmaDigits("goals") === 1, "goals digits");
 assert(categorySigmaDigits("hits") === 0, "hits digits");
+assert(categoryZMeterValue(0) === 0, "meter 0");
+assert(categoryZMeterValue(9) === 4, "meter clamp high");
+assert(categoryZMeterValue(-9) === -4, "meter clamp low");
+assert(categoryZMeterValue(Number.NaN) === 0, "meter nan");
 
 if (failed) process.exit(1);
 console.log("OK: category-z-bar");

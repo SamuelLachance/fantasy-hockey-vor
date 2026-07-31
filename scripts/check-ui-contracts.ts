@@ -81,6 +81,7 @@ const files: Record<string, string[]> = {
     "sticky left-10",
     "STICKY_NAME_SHADOW",
     "onResetSort",
+    'scope="col"',
   ],
   "src/components/RankingsEmptyState.tsx": [
     "No players match your filters",
@@ -168,8 +169,14 @@ const files: Record<string, string[]> = {
     "categoryZBarWidth",
     "detailStatSigma",
     "Proj:",
+    'role="meter"',
+    "aria-valuetext",
   ],
-  "src/lib/category-z-bar.ts": ["categoryZBarWidth", "categorySigmaDigits"],
+  "src/lib/category-z-bar.ts": [
+    "categoryZBarWidth",
+    "categorySigmaDigits",
+    "categoryZMeterValue",
+  ],
   "src/components/ExpandedPlayerMeta.tsx": [
     "Copy player link",
     "Consensus #",
