@@ -85,6 +85,13 @@ if (ranks.size !== players.length) {
   errors.push("duplicate or missing ranks detected");
 }
 
+const overallOne = players.find((p) => p.rank === 1);
+if (overallOne?.isGoalie) {
+  errors.push(
+    `rank #1 is goalie ${overallOne.name} — skater scarcity should lead overall VOR`,
+  );
+}
+
 const dWithFow = players.filter((p) => {
   if (p.position !== "D" || p.isGoalie) return false;
   const fow = (p.projection as { faceoffWins?: number }).faceoffWins ?? 0;

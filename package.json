@@ -44,6 +44,7 @@
     "ml:enrich-goalies": "tsx scripts/enrich-goalie-nhl-summaries.ts",
     "yahoo:auth": "tsx scripts/fetch-yahoo-positions.ts auth",
     "yahoo:fetch": "tsx scripts/fetch-yahoo-positions.ts fetch",
+    "yahoo:gaps": "tsx scripts/report-yahoo-gaps.ts",
     "generate": "tsx scripts/generate-projections.ts"
   },
   "dependencies": {
