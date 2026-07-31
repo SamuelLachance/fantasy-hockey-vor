@@ -33,6 +33,7 @@ interface RankingsBoardChromeProps {
   onClearStatFilters: () => void;
   onRemoveStat: (key: RangeKey) => void;
   showingAllGoalies: boolean;
+  helpOpen: boolean;
   onOpenHelp: () => void;
 }
 
@@ -60,6 +61,7 @@ export function RankingsBoardChrome({
   onClearStatFilters,
   onRemoveStat,
   showingAllGoalies,
+  helpOpen,
   onOpenHelp,
 }: RankingsBoardChromeProps) {
   return (
@@ -89,6 +91,7 @@ export function RankingsBoardChrome({
         hideDepthGoalies={hideDepthGoalies}
         setHideDepthGoalies={setHideDepthGoalies}
         showDepthToggle={canToggleDepthGoalies(position)}
+        helpOpen={helpOpen}
         onOpenHelp={onOpenHelp}
       />
 

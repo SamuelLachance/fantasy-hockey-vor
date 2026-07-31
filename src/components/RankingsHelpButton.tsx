@@ -2,13 +2,18 @@
 
 import { CircleHelp } from "lucide-react";
 import { boardHelpAriaLabel, boardHelpTitle } from "@/lib/board-help-copy";
+import { BOARD_SHORTCUTS_DIALOG_ID } from "@/lib/board-shortcuts";
 
 interface RankingsHelpButtonProps {
+  helpOpen: boolean;
   onOpenHelp: () => void;
 }
 
 /** Toolbar control that opens the board shortcuts dialog (?). */
-export function RankingsHelpButton({ onOpenHelp }: RankingsHelpButtonProps) {
+export function RankingsHelpButton({
+  helpOpen,
+  onOpenHelp,
+}: RankingsHelpButtonProps) {
   return (
     <button
       type="button"
@@ -18,6 +23,8 @@ export function RankingsHelpButton({ onOpenHelp }: RankingsHelpButtonProps) {
       aria-label={boardHelpAriaLabel()}
       aria-keyshortcuts="Shift+Slash"
       aria-haspopup="dialog"
+      aria-expanded={helpOpen}
+      aria-controls={helpOpen ? BOARD_SHORTCUTS_DIALOG_ID : undefined}
     >
       <CircleHelp className="h-4 w-4" />
     </button>

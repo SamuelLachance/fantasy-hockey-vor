@@ -1,5 +1,8 @@
 import type { SortKey } from "@/lib/rankings-filters";
 
+/** Root id for the board shortcuts dialog (portal + aria-controls). */
+export const BOARD_SHORTCUTS_DIALOG_ID = "board-shortcuts-dialog";
+
 /** Canonical board shortcut catalogue (help dialog + docs). */
 export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   keys: string;

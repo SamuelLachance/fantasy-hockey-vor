@@ -31,6 +31,7 @@ interface RankingsToolbarProps {
   hideDepthGoalies: boolean;
   setHideDepthGoalies: (v: boolean | ((prev: boolean) => boolean)) => void;
   showDepthToggle: boolean;
+  helpOpen: boolean;
   onOpenHelp: () => void;
 }
 
@@ -54,6 +55,7 @@ export function RankingsToolbar({
   hideDepthGoalies,
   setHideDepthGoalies,
   showDepthToggle,
+  helpOpen,
   onOpenHelp,
 }: RankingsToolbarProps) {
   const searchPending = query !== deferredQuery;
@@ -89,7 +91,7 @@ export function RankingsToolbar({
             setHideDepthGoalies={setHideDepthGoalies}
           />
         )}
-        <RankingsHelpButton onOpenHelp={onOpenHelp} />
+        <RankingsHelpButton helpOpen={helpOpen} onOpenHelp={onOpenHelp} />
       </div>
     </div>
   );

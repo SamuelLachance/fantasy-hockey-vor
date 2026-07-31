@@ -138,6 +138,7 @@ const files: Record<string, string[]> = {
     "data-board-sticky-chrome",
     "BoardActiveFilters",
     "RankingsToolbar",
+    "helpOpen",
   ],
   "src/components/RankingsBoardFooter.tsx": [
     "loadMoreLabel",
@@ -320,7 +321,7 @@ const files: Record<string, string[]> = {
   "src/components/BoardShortcutsHelp.tsx": [
     "Board shortcuts",
     "BOARD_SHORTCUT_ROWS",
-    "board-shortcuts-dialog",
+    "BOARD_SHORTCUTS_DIALOG_ID",
     "createPortal",
     "data-dialog-portal",
     "useDialogFocusTrap",
@@ -343,6 +344,8 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",
+    "BOARD_SHORTCUTS_DIALOG_ID",
+    "board-shortcuts-dialog",
     "BOARD_SORT_HOTKEYS",
     "boardShortcutsStatusCopy",
     "boardShortcutsFooterChip",
@@ -490,6 +493,7 @@ const files: Record<string, string[]> = {
     "RankingsHelpButton",
     "RankingsStatsFilterButton",
     "PositionFilterTabs",
+    "helpOpen",
   ],
   "src/components/RankingsStatsFilterButton.tsx": [
     'aria-controls={filtersOpen ? "rankings-stat-filters" : undefined}',
@@ -511,6 +515,10 @@ const files: Record<string, string[]> = {
     "boardHelpAriaLabel",
     'aria-keyshortcuts="Shift+Slash"',
     'aria-haspopup="dialog"',
+    "aria-expanded",
+    "aria-controls",
+    "BOARD_SHORTCUTS_DIALOG_ID",
+    "helpOpen",
     "onOpenHelp",
   ],
   "src/lib/board-help-copy.ts": [

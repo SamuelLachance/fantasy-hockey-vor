@@ -152,6 +152,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         onClearStatFilters={board.clearStatFilters}
         onRemoveStat={board.removeStatFilter}
         showingAllGoalies={board.showingAllGoalies}
+        helpOpen={board.helpOpen}
         onOpenHelp={() => board.setHelpOpen(true)}
       />
 

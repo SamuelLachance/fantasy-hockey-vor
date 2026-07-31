@@ -4,6 +4,7 @@
  */
 import {
   BOARD_SHORTCUT_ROWS,
+  BOARD_SHORTCUTS_DIALOG_ID,
   BOARD_SORT_HOTKEYS,
   boardShortcutsFaqAnswer,
   boardShortcutsFooterChip,
@@ -66,6 +67,10 @@ assert(boardShortcutsFooterChip().includes("· p ·"), "footer chip has p");
 
 const keys = BOARD_SHORTCUT_ROWS.map((r) => r.keys);
 assert(new Set(keys).size === keys.length, "unique shortcut keys");
+assert(
+  BOARD_SHORTCUTS_DIALOG_ID === "board-shortcuts-dialog",
+  "dialog id stable",
+);
 
 if (failed) process.exit(1);
 console.log("OK: board-shortcuts");
