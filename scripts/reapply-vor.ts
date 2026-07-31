@@ -5,9 +5,9 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
+import { attachDraftEdge } from "../src/lib/draft-edge";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
-import { clampSkaterProjection } from "../src/lib/projection-sanity";
 import { applyVor } from "../src/lib/vor";
 import type { Category, ProjectionsDataset } from "../src/lib/types";
 
@@ -55,53 +55,11 @@ const {
   draftableIds,
 } = applyVor(raw, league);
 
-const draftableIdSet = new Set(draftableIds);
-const modelDraftable = raw.filter((p) => draftableIdSet.has(p.id));
-const marketRaw = raw.map((p) => {
-  if (p.isGoalie || !p.marketEdge) return p;
-  const edge = p.marketEdge;
-  const gp = Math.max(1, p.gamesPlayed);
-  const proj = p.projection as unknown as Record<string, number>;
-  const uncapped = {
-    goals: Math.max(0, (proj.goals / gp - (edge.goals ?? 0)) * gp),
-    assists: Math.max(0, (proj.assists / gp - (edge.assists ?? 0)) * gp),
-    shots: Math.max(0, (proj.shots / gp - (edge.shots ?? 0)) * gp),
-    blocks: Math.max(0, (proj.blocks / gp - (edge.blocks ?? 0)) * gp),
-    hits: Math.max(0, (proj.hits / gp - (edge.hits ?? 0)) * gp),
-    powerplayPoints: Math.max(
-      0,
-      (proj.powerplayPoints / gp - (edge.powerplayPoints ?? 0)) * gp,
-    ),
-    penaltyMinutes: Math.max(
-      0,
-      (proj.penaltyMinutes / gp - (edge.penaltyMinutes ?? 0)) * gp,
-    ),
-    faceoffWins: Math.max(
-      0,
-      (proj.faceoffWins / gp - (edge.faceoffWins ?? 0)) * gp,
-    ),
-  };
-  return {
-    ...p,
-    projection: clampSkaterProjection(uncapped as never, gp, p.position),
-  };
-});
-const { players: marketRanked } = applyVor(marketRaw, league, {
+attachDraftEdge(ranked, raw, league, {
   categoryWeights,
   replacementLevels,
-  zReference: modelDraftable,
+  draftableIds,
 });
-const marketRankById = new Map<number, number>();
-for (const p of marketRanked) marketRankById.set(p.id, p.rank);
-for (const p of ranked) {
-  if (p.isGoalie || !p.marketEdge) {
-    p.syntheticMarketRank = p.rank;
-    p.draftValue = 0;
-  } else {
-    p.syntheticMarketRank = marketRankById.get(p.id) ?? p.rank;
-    p.draftValue = p.syntheticMarketRank - p.rank;
-  }
-}
 
 const playerDetails: Record<
   string,
@@ -137,7 +95,7 @@ writeFileAtomic(
 );
 writeFileAtomic(DETAILS, JSON.stringify(playerDetails));
 
-console.log("Top 8 after peripheral soft-cap:");
+console.log("Top 8 after vor:reapply:");
 for (const p of ranked.slice(0, 8)) {
   console.log(`  ${p.rank}. ${p.name} (${p.position}) VOR ${p.vor.toFixed(2)}`);
 }

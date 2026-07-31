@@ -24,6 +24,7 @@ import { PROJECTION_SEASON } from "../src/lib/nhl-api";
 import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
+import { attachDraftEdge } from "../src/lib/draft-edge";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import {
   findProjectionIssues,
@@ -330,59 +331,12 @@ async function main() {
     draftableIds,
   } = applyVor(tandemAdjusted, DEFAULT_LEAGUE);
 
-  // Synthetic-market ranks: rebuild market season totals from per-game rates
-  // (model rate − edge), then clamp with the same pipeline before VOR.
-  // Players without edges (and goalies) keep model projections so the pool
-  // stays complete; their draftValue is forced to 0 below.
-  // Reuse model draftable baselines so Edge is apples-to-apples and we skip
-  // a second full pass-1 pool selection.
-  const draftableIdSet = new Set(draftableIds);
-  const modelDraftable = tandemAdjusted.filter((p) => draftableIdSet.has(p.id));
-  const marketRaw = tandemAdjusted.map((p) => {
-    if (p.isGoalie || !p.marketEdge) return p;
-    const edge = p.marketEdge;
-    const gp = Math.max(1, p.gamesPlayed);
-    const proj = p.projection as unknown as Record<string, number>;
-    const uncapped = {
-      goals: Math.max(0, (proj.goals / gp - (edge.goals ?? 0)) * gp),
-      assists: Math.max(0, (proj.assists / gp - (edge.assists ?? 0)) * gp),
-      shots: Math.max(0, (proj.shots / gp - (edge.shots ?? 0)) * gp),
-      blocks: Math.max(0, (proj.blocks / gp - (edge.blocks ?? 0)) * gp),
-      hits: Math.max(0, (proj.hits / gp - (edge.hits ?? 0)) * gp),
-      powerplayPoints: Math.max(
-        0,
-        (proj.powerplayPoints / gp - (edge.powerplayPoints ?? 0)) * gp,
-      ),
-      penaltyMinutes: Math.max(
-        0,
-        (proj.penaltyMinutes / gp - (edge.penaltyMinutes ?? 0)) * gp,
-      ),
-      faceoffWins: Math.max(
-        0,
-        (proj.faceoffWins / gp - (edge.faceoffWins ?? 0)) * gp,
-      ),
-    };
-    return {
-      ...p,
-      projection: clampSkaterProjection(uncapped as never, gp, p.position),
-    };
-  });
-  const { players: marketRanked } = applyVor(marketRaw, DEFAULT_LEAGUE, {
+  // Synthetic-market Edge: shared helper keeps generate and vor:reapply aligned.
+  attachDraftEdge(ranked, tandemAdjusted, DEFAULT_LEAGUE, {
     categoryWeights,
     replacementLevels,
-    zReference: modelDraftable,
+    draftableIds,
   });
-  const marketRankById = new Map<number, number>();
-  for (const p of marketRanked) marketRankById.set(p.id, p.rank);
-  for (const p of ranked) {
-    if (p.isGoalie || !p.marketEdge) {
-      p.syntheticMarketRank = p.rank;
-      p.draftValue = 0;
-    } else {
-      p.syntheticMarketRank = marketRankById.get(p.id) ?? p.rank;
-      p.draftValue = p.syntheticMarketRank - p.rank;
-    }
-  }
 
   const issues = findProjectionIssues(ranked);
   if (issues.length > 0) {
