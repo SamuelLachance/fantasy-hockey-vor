@@ -335,40 +335,42 @@ function RankingsTableInner({ players }: RankingsTableProps) {
 
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
-      <RankingsToolbar
-        position={position}
-        setPosition={setPosition}
-        query={query}
-        setQuery={setQuery}
-        deferredQuery={deferredQuery}
-        sortKey={sortKey}
-        sortDir={sortDir}
-        pathname={pathname}
-        filtersOpen={filtersOpen}
-        setFiltersOpen={setFiltersOpen}
-        activeFilterCount={activeFilterCount}
-        filtered={filtered}
-        tableCategories={tableCategories}
-        linkCopied={linkCopied}
-        onLinkCopied={() => {
-          setLinkCopied(true);
-          window.setTimeout(() => setLinkCopied(false), 1600);
-        }}
-        expandedId={expandedId}
-        hideDepthGoalies={hideDepthGoalies}
-        setHideDepthGoalies={setHideDepthGoalies}
-        showDepthToggle={position === "G" || position === "ALL"}
-      />
-
-      {filtersOpen && (
-        <RankingsStatFilters
-          filterRangeKeys={filterRangeKeys}
-          statRanges={statRanges}
+      <div className="sticky top-0 z-20 -mx-1 space-y-3 bg-slate-950/85 px-1 py-2 backdrop-blur-md">
+        <RankingsToolbar
+          position={position}
+          setPosition={setPosition}
+          query={query}
+          setQuery={setQuery}
+          deferredQuery={deferredQuery}
+          sortKey={sortKey}
+          sortDir={sortDir}
+          pathname={pathname}
+          filtersOpen={filtersOpen}
+          setFiltersOpen={setFiltersOpen}
           activeFilterCount={activeFilterCount}
-          onUpdateRange={updateRange}
-          onClear={clearStatFilters}
+          filtered={filtered}
+          tableCategories={tableCategories}
+          linkCopied={linkCopied}
+          onLinkCopied={() => {
+            setLinkCopied(true);
+            window.setTimeout(() => setLinkCopied(false), 1600);
+          }}
+          expandedId={expandedId}
+          hideDepthGoalies={hideDepthGoalies}
+          setHideDepthGoalies={setHideDepthGoalies}
+          showDepthToggle={position === "G" || position === "ALL"}
         />
-      )}
+
+        {filtersOpen && (
+          <RankingsStatFilters
+            filterRangeKeys={filterRangeKeys}
+            statRanges={statRanges}
+            activeFilterCount={activeFilterCount}
+            onUpdateRange={updateRange}
+            onClear={clearStatFilters}
+          />
+        )}
+      </div>
 
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50 shadow-2xl shadow-cyan-950/20">
         <div className="overflow-x-auto">
