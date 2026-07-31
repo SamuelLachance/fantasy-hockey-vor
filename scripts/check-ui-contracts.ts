@@ -131,6 +131,8 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsBoardChrome.tsx": [
     "boardFiltersRegionLabel",
+    "max-md:backdrop-blur-none",
+    "max-md:bg-slate-950",
     "motion-reduce:backdrop-blur-none",
     "motion-reduce:bg-slate-950",
     "data-board-sticky-chrome",
@@ -226,6 +228,8 @@ const files: Record<string, string[]> = {
     "STICKY_NAME_SHADOW",
     "onResetSort",
     'scope="col"',
+    "max-md:backdrop-blur-none",
+    "max-md:bg-slate-950",
     "motion-reduce:bg-slate-950",
     "BOARD_STICKY_TOP_CLASS",
     "aria-rowindex={1}",

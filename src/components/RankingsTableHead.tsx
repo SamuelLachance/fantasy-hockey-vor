@@ -22,7 +22,7 @@ export function RankingsTableHead({
   onResetSort,
 }: RankingsTableHeadProps) {
   return (
-    <thead className={`sticky ${BOARD_STICKY_TOP_CLASS} z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none`}>
+    <thead className={`sticky ${BOARD_STICKY_TOP_CLASS} z-10 border-b border-white/10 bg-slate-950/95 text-xs uppercase tracking-wider text-slate-400 backdrop-blur-sm max-md:bg-slate-950 max-md:backdrop-blur-none motion-reduce:bg-slate-950 motion-reduce:backdrop-blur-none`}>
       <tr aria-rowindex={1}>
         <SortHeader
           column="rank"
