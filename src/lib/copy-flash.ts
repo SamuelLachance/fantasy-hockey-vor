@@ -33,6 +33,11 @@ export function playerLinkAriaLabel(
   return `Copy link for ${playerName}`;
 }
 
+/** Tooltip for the per-player copy-link control. */
+export function playerLinkTitle(): string {
+  return "Copy player link (p)";
+}
+
 /** Copy text and briefly report ok/err, then return to idle. */
 export function copyTextWithFlash(
   text: string,

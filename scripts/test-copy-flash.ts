@@ -7,6 +7,7 @@ import {
   copyTextWithFlash,
   playerLinkAriaLabel,
   playerLinkButtonLabel,
+  playerLinkTitle,
 } from "../src/lib/copy-flash";
 
 let failed = 0;
@@ -44,6 +45,7 @@ async function main() {
     playerLinkAriaLabel("McDavid", true) === "Link copied for McDavid",
     "player aria ok",
   );
+  assert(playerLinkTitle() === "Copy player link (p)", "player title");
 
   Object.defineProperty(globalThis, "document", {
     value: undefined,

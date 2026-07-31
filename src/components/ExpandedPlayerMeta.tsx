@@ -2,6 +2,7 @@ import type { PlayerProjection } from "@/lib/types";
 import {
   playerLinkAriaLabel,
   playerLinkButtonLabel,
+  playerLinkTitle,
 } from "@/lib/copy-flash";
 import {
   confidenceChipCopy,
@@ -64,7 +65,7 @@ export function ExpandedPlayerMeta({
       <button
         type="button"
         className="ml-auto rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-        title="Copy player link (p)"
+        title={playerLinkTitle()}
         aria-live="polite"
         aria-keyshortcuts="p"
         aria-label={playerLinkAriaLabel(

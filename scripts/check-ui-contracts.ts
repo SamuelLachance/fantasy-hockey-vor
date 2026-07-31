@@ -233,6 +233,7 @@ const files: Record<string, string[]> = {
     "boardLinkButtonLabel",
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
+    "playerLinkTitle",
   ],
   "src/lib/board-dom.ts": [
     "focusStatsFilterButton",
@@ -301,11 +302,8 @@ const files: Record<string, string[]> = {
   "src/components/ExpandedPlayerMeta.tsx": [
     "playerLinkButtonLabel",
     "playerLinkAriaLabel",
-    "confidenceChipCopy",
-    "marketEdgeChipCopy",
-    "uncertaintyChipCopy",
+    "playerLinkTitle",
     'aria-keyshortcuts="p"',
-    "Copy player link (p)",
     'aria-live="polite"',
     "projectionMethodLabel",
   ],
