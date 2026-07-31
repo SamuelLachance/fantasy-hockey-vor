@@ -1,9 +1,14 @@
 import type { LeagueSettings, ProjectionsDataset } from "@/lib/types";
 import type { CategoryDifficultyWeights } from "@/lib/stat-difficulty";
-import { CATEGORY_FULL_LABELS, edgeColor, vorColor } from "@/lib/format";
+import {
+  CATEGORY_FULL_LABELS,
+  edgeColor,
+  sigmaColor,
+  vorColor,
+} from "@/lib/format";
 import { GOALIE_CATEGORIES, SKATER_CATEGORIES } from "@/lib/types";
 import { DEFAULT_LEAGUE, replacementRank } from "@/lib/league";
-import { Trophy, Target, Shield, Zap } from "lucide-react";
+import { Trophy, Target, Shield, Zap, Gauge } from "lucide-react";
 import { PositionBadge, PositionBadges } from "./PositionBadge";
 
 function playerHref(id: number): string {
@@ -34,6 +39,20 @@ export function TopPlayers({
     .filter((p) => !p.isGoalie && (p.draftValue ?? 0) > 0)
     .sort((a, b) => (b.draftValue ?? 0) - (a.draftValue ?? 0))
     .slice(0, 5);
+  const steadiest = [...players]
+    .filter(
+      (p) =>
+        !p.isGoalie &&
+        p.vor >= 1.5 &&
+        p.uncertainty?.total?.sigma != null &&
+        p.uncertainty.total.sigma < 80,
+    )
+    .sort(
+      (a, b) =>
+        (a.uncertainty!.total.sigma - b.uncertainty!.total.sigma) ||
+        b.vor - a.vor,
+    )
+    .slice(0, 5);
   const topByPosition = (["C", "LW", "RW", "D", "G"] as const).map((pos) => ({
     position: pos,
     players: players
@@ -44,7 +63,7 @@ export function TopPlayers({
   }));
 
   return (
-    <section className="grid gap-6 lg:grid-cols-2">
+    <section className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
       <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6">
         <div className="mb-4 flex items-center gap-2 text-amber-400">
           <Trophy className="h-5 w-5" />
@@ -139,7 +158,56 @@ export function TopPlayers({
         </ul>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6 lg:col-span-2">
+      {steadiest.length > 0 && (
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-1">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-cyan-400">
+              <Gauge className="h-5 w-5" />
+              <h2 className="text-lg font-semibold text-white">
+                Steadiest (low Σσ)
+              </h2>
+            </div>
+            <a
+              href="?sort=sigma&rf=vor:1.5-,sigma:-80#rankings"
+              className="text-xs text-slate-500 underline-offset-2 transition hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            >
+              Board view
+            </a>
+          </div>
+          <p className="mb-3 text-xs text-slate-500">
+            High-VOR skaters with the tightest calibrated uncertainty bands.
+          </p>
+          <ul className="space-y-3">
+            {steadiest.map((player) => (
+              <li key={player.id}>
+                <a
+                  href={playerHref(player.id)}
+                  className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 px-4 py-3 transition hover:border-cyan-500/30 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm text-slate-500">
+                      #{player.rank}
+                    </span>
+                    <div>
+                      <div className="font-medium text-white">{player.name}</div>
+                      <div className="text-xs text-slate-400">
+                        {player.team} · VOR {player.vor.toFixed(1)}
+                      </div>
+                    </div>
+                  </div>
+                  <span
+                    className={`font-mono font-bold ${sigmaColor(player.uncertainty!.total.sigma)}`}
+                  >
+                    Σσ {player.uncertainty!.total.sigma.toFixed(0)}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3">
         <div className="mb-4 flex items-center gap-2 text-cyan-400">
           <Target className="h-5 w-5" />
           <h2 className="text-lg font-semibold text-white">By Position</h2>
@@ -180,7 +248,7 @@ export function TopPlayers({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2">
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3">
         <div className="mb-4 flex items-center gap-2 text-emerald-400">
           <Shield className="h-5 w-5" />
           <h2 className="text-lg font-semibold text-white">How VOR Works</h2>

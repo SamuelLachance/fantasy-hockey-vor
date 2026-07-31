@@ -50,6 +50,7 @@ const files: Record<string, string[]> = {
     "gamesPlayed > 8",
     "playerHref",
     "gamesPlayed}gp",
+    "Steadiest",
   ],
 };
 
