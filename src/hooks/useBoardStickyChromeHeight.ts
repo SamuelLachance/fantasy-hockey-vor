@@ -48,6 +48,18 @@ export function useBoardStickyChromeHeight(): void {
       cleanups.push(() => ro.disconnect());
     }
 
+    // Webfont swap can change toolbar height after first paint.
+    const fonts = document.fonts;
+    if (fonts?.ready) {
+      let cancelled = false;
+      fonts.ready.then(() => {
+        if (!cancelled) update();
+      });
+      cleanups.push(() => {
+        cancelled = true;
+      });
+    }
+
     return () => {
       for (const fn of cleanups) fn();
       document

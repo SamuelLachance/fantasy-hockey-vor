@@ -124,6 +124,8 @@ const files: Record<string, string[]> = {
     'addEventListener("resize"',
     'addEventListener("orientationchange"',
     "setTimeout(update, 250)",
+    "document.fonts",
+    "fonts.ready",
   ],
   "src/hooks/useBoardDocumentTitle.ts": [
     "useBoardDocumentTitle",
