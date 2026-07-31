@@ -7,7 +7,12 @@ import {
   type RangeKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
-import { statFiltersHintCopy } from "@/lib/stat-filters-copy";
+import {
+  clearAllStatFiltersCopy,
+  doneStatFiltersCopy,
+  statFiltersHintCopy,
+  statFiltersPanelTitle,
+} from "@/lib/stat-filters-copy";
 
 interface RankingsStatFiltersProps {
   filterRangeKeys: RangeKey[];
@@ -40,7 +45,7 @@ export function RankingsStatFilters({
             id="rankings-stat-filters-title"
             className="text-sm font-semibold text-white"
           >
-            Filter by stats
+            {statFiltersPanelTitle()}
           </h3>
           <p
             id="rankings-stat-filters-hint"
@@ -57,7 +62,7 @@ export function RankingsStatFilters({
               className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-400 transition hover:bg-white/5 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
               <X className="h-3.5 w-3.5" />
-              Clear all
+              {clearAllStatFiltersCopy()}
             </button>
           )}
           {onDone && (
@@ -67,7 +72,7 @@ export function RankingsStatFilters({
               aria-keyshortcuts="Enter"
               className="rounded-lg bg-cyan-500/15 px-2.5 py-1 text-xs font-medium text-cyan-200 transition hover:bg-cyan-500/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             >
-              Done
+              {doneStatFiltersCopy()}
             </button>
           )}
         </div>

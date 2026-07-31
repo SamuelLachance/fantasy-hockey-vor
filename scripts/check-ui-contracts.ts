@@ -331,7 +331,7 @@ const files: Record<string, string[]> = {
     'aria-controls="rankings-stat-filters"',
     'aria-keyshortcuts="f"',
     "activeFilterCount",
-    "Stats",
+    "statsFilterButtonLabel",
   ],
   "src/components/RankingsBoardLinkButton.tsx": [
     "boardLinkButtonLabel",
@@ -724,7 +724,9 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",
-    "Done",
+    "doneStatFiltersCopy",
+    "clearAllStatFiltersCopy",
+    "statFiltersPanelTitle",
     'aria-keyshortcuts="Enter"',
     "normalizeRangeInput",
     "statFiltersHintCopy",
@@ -736,6 +738,10 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/stat-filters-copy.ts": [
     "statFiltersHintCopy",
+    "statFiltersPanelTitle",
+    "clearAllStatFiltersCopy",
+    "doneStatFiltersCopy",
+    "statsFilterButtonLabel",
     "91.5%",
     "0.915",
   ],

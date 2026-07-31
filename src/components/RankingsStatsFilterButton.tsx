@@ -1,6 +1,7 @@
 "use client";
 
 import { Filter } from "lucide-react";
+import { statsFilterButtonLabel } from "@/lib/stat-filters-copy";
 
 interface RankingsStatsFilterButtonProps {
   filtersOpen: boolean;
@@ -28,7 +29,7 @@ export function RankingsStatsFilterButton({
       }`}
     >
       <Filter className="h-4 w-4" />
-      Stats
+      {statsFilterButtonLabel()}
       {activeFilterCount > 0 && (
         <span className="rounded-full bg-cyan-500 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-950">
           {activeFilterCount}

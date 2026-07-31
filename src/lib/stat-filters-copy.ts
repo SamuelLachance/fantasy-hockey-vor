@@ -5,3 +5,19 @@ export function statFiltersHintCopy(): string {
     "Save % accepts 91.5, 91.5%, 91,5, or 0.915."
   );
 }
+
+export function statFiltersPanelTitle(): string {
+  return "Filter by stats";
+}
+
+export function clearAllStatFiltersCopy(): string {
+  return "Clear all";
+}
+
+export function doneStatFiltersCopy(): string {
+  return "Done";
+}
+
+export function statsFilterButtonLabel(): string {
+  return "Stats";
+}
