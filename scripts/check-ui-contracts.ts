@@ -19,7 +19,6 @@ const files: Record<string, string[]> = {
     "RankingsTableHead",
     "BoardShortcutsHelp",
     "BoardActiveFilters",
-    "RankingsEmptyState",
     "RankingsStatusBar",
     "RankingsBoardFooter",
     "useHorizontalScrollShadow",
