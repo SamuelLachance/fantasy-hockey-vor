@@ -11,30 +11,27 @@ import {
   useState,
 } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import {
-  GOALIE_CATEGORIES,
-  type Category,
-  type PlayerProjection,
-  type Position,
-} from "@/lib/types";
+import type { PlayerProjection, Position } from "@/lib/types";
 import {
   CATEGORY_LABELS,
   edgeColor,
   formatCount,
   formatStat,
   playerCategories,
-  projectionStatValue,
-  skaterCategoriesForFilter,
   vorColor,
 } from "@/lib/format";
 import {
   defaultSortDir,
-  passesRanges,
   vorForFilter,
   type RangeKey,
   type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
+import {
+  boardCategories,
+  boardFilterKeys,
+  filterAndSortBoard,
+} from "@/lib/rankings-board";
 import { copyText } from "@/lib/clipboard";
 import { parseRankingsUrl, rankingsUrlSearch } from "@/lib/rankings-url";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
@@ -94,11 +91,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     });
   }, []);
 
-  const filterRangeKeys = useMemo((): RangeKey[] => {
-    const cats =
-      position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
-    return ["gamesPlayed", "vor", "draftValue", "sigma", ...cats];
-  }, [position]);
+  const filterRangeKeys = useMemo(
+    () => boardFilterKeys(position),
+    [position],
+  );
 
   const activeFilterCount = useMemo(() => {
     let n = 0;
@@ -119,8 +115,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   if (position !== prevPosition) {
     setPrevPosition(position);
     // Drop sorts on categories that disappear under the new filter (e.g. FOW on D).
-    const cats =
-      position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
+    const cats = boardCategories(position);
     if (
       sortKey !== "rank" &&
       sortKey !== "vor" &&
@@ -138,73 +133,26 @@ function RankingsTableInner({ players }: RankingsTableProps) {
 
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = deferredQuery.trim().toLowerCase();
-    let list = players;
-
-    if (position !== "ALL") {
-      list = list.filter((p) => p.positions.includes(position));
-    }
-
-    if (hideDepthGoalies && (position === "G" || position === "ALL")) {
-      list = list.filter((p) => !p.isGoalie || p.gamesPlayed > 8);
-    }
-
-    if (q) {
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(q) ||
-          p.team.toLowerCase().includes(q),
-      );
-    }
-
-    list = list.filter((p) => passesRanges(p, statRanges, position, filterRangeKeys));
-
-    return [...list].sort((a, b) => {
-      let av: number | string;
-      let bv: number | string;
-
-      if (sortKey === "vor") {
-        av = vorForFilter(a, position);
-        bv = vorForFilter(b, position);
-      } else if (sortKey === "rank") {
-        av = position === "ALL" ? a.rank : (a.positionRank ?? a.rank);
-        bv = position === "ALL" ? b.rank : (b.positionRank ?? b.rank);
-      } else if (sortKey === "sigma") {
-        av = a.uncertainty?.total?.sigma ?? Number.POSITIVE_INFINITY;
-        bv = b.uncertainty?.total?.sigma ?? Number.POSITIVE_INFINITY;
-      } else if (
-        sortKey === "name" ||
-        sortKey === "team" ||
-        sortKey === "gamesPlayed" ||
-        sortKey === "draftValue"
-      ) {
-        av = sortKey === "draftValue" ? (a.draftValue ?? 0) : a[sortKey];
-        bv = sortKey === "draftValue" ? (b.draftValue ?? 0) : b[sortKey];
-      } else {
-        av = projectionStatValue(a, sortKey) ?? -Infinity;
-        bv = projectionStatValue(b, sortKey) ?? -Infinity;
-      }
-
-      if (typeof av === "string" && typeof bv === "string") {
-        return sortDir === "asc"
-          ? av.localeCompare(bv)
-          : bv.localeCompare(av);
-      }
-      return sortDir === "asc"
-        ? Number(av) - Number(bv)
-        : Number(bv) - Number(av);
-    });
-  }, [
-    players,
-    deferredQuery,
-    position,
-    sortKey,
-    sortDir,
-    statRanges,
-    filterRangeKeys,
-    hideDepthGoalies,
-  ]);
+  const filtered = useMemo(
+    () =>
+      filterAndSortBoard(players, {
+        position,
+        query: deferredQuery,
+        sortKey,
+        sortDir,
+        statRanges,
+        hideDepthGoalies,
+      }),
+    [
+      players,
+      deferredQuery,
+      position,
+      sortKey,
+      sortDir,
+      statRanges,
+      hideDepthGoalies,
+    ],
+  );
 
   const renderCount = useMemo(() => {
     if (expandedId == null) return visibleCount;
@@ -338,8 +286,7 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     setStatRanges({});
   }
 
-  const tableCategories: readonly Category[] =
-    position === "G" ? GOALIE_CATEGORIES : skaterCategoriesForFilter(position);
+  const tableCategories = boardCategories(position);
 
   return (
     <div id="rankings" className="space-y-4 scroll-mt-6">
