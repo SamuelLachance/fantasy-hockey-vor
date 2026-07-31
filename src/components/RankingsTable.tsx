@@ -4,12 +4,12 @@ import { Suspense, startTransition, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PlayerProjection } from "@/lib/types";
-import { copyTextWithFlash } from "@/lib/copy-flash";
-import { parseRankingsUrl, rankingsShareUrl } from "@/lib/rankings-url";
+import { parseRankingsUrl } from "@/lib/rankings-url";
 import {
   scrollExpandedRowIntoView,
   scrollToRankings,
 } from "@/lib/board-dom";
+import { useBoardCopyLinks } from "@/hooks/useBoardCopyLinks";
 import { usePlayerDetails } from "@/hooks/usePlayerDetails";
 import { useBoardDocumentTitle } from "@/hooks/useBoardDocumentTitle";
 import { useBoardInfiniteScroll } from "@/hooks/useBoardInfiniteScroll";
@@ -38,13 +38,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
   const pathname = usePathname();
   const [seed] = useState(() => parseRankingsUrl(searchParams));
   const board = useRankingsBoardState(players, seed);
-  const [boardLinkStatus, setBoardLinkStatus] = useState<
-    "idle" | "ok" | "err"
-  >("idle");
-  const [playerLinkStatus, setPlayerLinkStatus] = useState<{
-    id: number | null;
-    status: "idle" | "ok" | "err";
-  }>({ id: null, status: "idle" });
+  const { boardLinkStatus, playerLinkStatus, copyBoardLink, copyPlayerLink } =
+    useBoardCopyLinks(pathname, board.boardShareState, board.expandedId);
   const { details, detailsError, setDetails, setDetailsError } =
     usePlayerDetails(board.expandedId);
 
@@ -92,31 +87,6 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     if (board.expandedId == null) return;
     scrollExpandedRowIntoView(board.expandedId);
   }, [board.expandedId, renderCount]);
-
-  function copyBoardLink() {
-    copyTextWithFlash(
-      rankingsShareUrl(
-        window.location.origin,
-        pathname,
-        board.boardShareState(board.expandedId),
-      ),
-      setBoardLinkStatus,
-    );
-  }
-
-  function copyPlayerLink(playerId: number) {
-    setPlayerLinkStatus({ id: playerId, status: "idle" });
-    copyTextWithFlash(
-      rankingsShareUrl(
-        window.location.origin,
-        pathname,
-        board.boardShareState(playerId),
-      ),
-      (status) => {
-        setPlayerLinkStatus({ id: playerId, status });
-      },
-    );
-  }
 
   useRankingsKeyboard({
     filtered: board.filtered,
