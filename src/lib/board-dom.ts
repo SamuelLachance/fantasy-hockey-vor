@@ -79,15 +79,68 @@ export function focusPlayerRowIfPanelFocused(expandedId: number | null): void {
   focusPlayerRow(expandedId);
 }
 
-/** Keep an expanded player row in view without jumping the page harshly. */
+/** Selector for the sticky board toolbar/filters chrome. */
+export const BOARD_STICKY_CHROME_SELECTOR =
+  "#rankings [data-board-sticky-chrome]" as const;
+
+/** Height of sticky board chrome covering the top of the viewport (0 if absent). */
+export function boardStickyTopInset(
+  doc: Pick<Document, "querySelector"> | null =
+    typeof document !== "undefined" ? document : null,
+): number {
+  if (!doc) return 0;
+  const el = doc.querySelector(BOARD_STICKY_CHROME_SELECTOR);
+  if (!el || typeof el.getBoundingClientRect !== "function") return 0;
+  return Math.max(0, el.getBoundingClientRect().height);
+}
+
+/**
+ * Vertical scrollBy delta so a row clears sticky top chrome and stays in the
+ * viewport. Pure — used by expand / j-k scroll.
+ */
+export function stickyAwareScrollDelta(
+  rowTop: number,
+  rowBottom: number,
+  stickyTop: number,
+  viewportHeight: number,
+  margin = 8,
+): number {
+  if (!(viewportHeight > 0)) return 0;
+  const visibleTop = Math.max(0, stickyTop) + margin;
+  const visibleBottom = viewportHeight - margin;
+  if (!(visibleBottom > visibleTop)) return 0;
+
+  if (rowTop < visibleTop) {
+    return rowTop - visibleTop;
+  }
+  if (rowBottom > visibleBottom) {
+    const rowHeight = rowBottom - rowTop;
+    if (rowHeight > visibleBottom - visibleTop) {
+      return rowTop - visibleTop;
+    }
+    return rowBottom - visibleBottom;
+  }
+  return 0;
+}
+
+/** Keep an expanded player row in view without hiding it under sticky chrome. */
 export function scrollExpandedRowIntoView(playerId: number): void {
-  if (typeof document === "undefined") return;
+  if (typeof document === "undefined" || typeof window === "undefined") return;
   const row = document.getElementById(`player-row-${playerId}`);
   if (!row) return;
-  row.scrollIntoView({
-    block: "nearest",
-    behavior: prefersReducedMotion() ? "auto" : "smooth",
-  });
+  const rect = row.getBoundingClientRect();
+  const delta = stickyAwareScrollDelta(
+    rect.top,
+    rect.bottom,
+    boardStickyTopInset(),
+    window.innerHeight,
+  );
+  if (delta !== 0) {
+    window.scrollBy({
+      top: delta,
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+  }
   if (row instanceof HTMLElement) {
     row.focus({ preventScroll: true });
   }
