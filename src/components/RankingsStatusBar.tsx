@@ -16,13 +16,13 @@ export function RankingsStatusBar({
   searchPending = false,
 }: RankingsStatusBarProps) {
   return (
-    <p
-      className="text-center text-xs text-slate-500"
-      aria-live="polite"
-      aria-atomic="true"
-      aria-busy={searchPending || undefined}
-    >
-      <span className="tabular-nums">
+    <p className="text-center text-xs text-slate-500">
+      <span
+        className="tabular-nums"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-busy={searchPending || undefined}
+      >
         {boardShowingSummary(renderCount, filteredCount, totalCount)}
       </span>{" "}
       Click or Enter/Space a row for category breakdown. Click column headers to
