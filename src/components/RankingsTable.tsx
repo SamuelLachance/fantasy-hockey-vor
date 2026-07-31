@@ -101,12 +101,10 @@ function RankingsTableInner({ players }: RankingsTableProps) {
     scrollToRankings({ focusSearch: true });
   }, []);
 
-  useEffect(() => {
-    if (expandedId == null) return;
-    if (!players.some((p) => p.id === expandedId)) {
-      setExpandedId(null);
-    }
-  }, [players, expandedId]);
+  // Drop deep-linked expand ids that are no longer on the board dataset.
+  if (expandedId != null && !players.some((p) => p.id === expandedId)) {
+    setExpandedId(null);
+  }
 
   const filterRangeKeys = useMemo(
     () => boardFilterKeys(position),

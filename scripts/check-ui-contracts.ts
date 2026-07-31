@@ -23,7 +23,7 @@ const files: Record<string, string[]> = {
     "RankingsStatusBar",
     "useHorizontalScrollShadow",
     "Load more players",
-    "!players.some((p) => p.id === expandedId)",
+    "Drop deep-linked expand ids",
   ],
   "src/components/RankingsPlayerRow.tsx": [
     "aria-expanded",
