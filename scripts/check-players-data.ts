@@ -164,6 +164,15 @@ if (playersBytes > 1.3e6) {
   );
 }
 
+const detailsBytes = existsSync(DETAILS_PATH)
+  ? readFileSync(DETAILS_PATH).length
+  : 0;
+if (detailsBytes > 2.0e6) {
+  warnings.push(
+    `player-details.json is ${(detailsBytes / 1e6).toFixed(2)}MB (target ≤1.5MB)`,
+  );
+}
+
 if (!existsSync(DETAILS_PATH)) {
   errors.push("public/player-details.json is missing (run npm run generate)");
 } else {
