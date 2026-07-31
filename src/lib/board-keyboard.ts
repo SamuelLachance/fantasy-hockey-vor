@@ -22,6 +22,21 @@ export function isBoardRowToggleKey(key: string): boolean {
   return key === "Enter" || key === " ";
 }
 
+/**
+ * Player ids for j/k navigation.
+ * Cold-start (nothing expanded) stays within the mounted window so `k` does not
+ * expandVisibleFloor the entire filtered board.
+ */
+export function boardKeyboardNavIds(
+  filteredIds: readonly number[],
+  visibleCount: number,
+  expandedId: number | null,
+): number[] {
+  if (expandedId != null) return [...filteredIds];
+  const n = Math.max(0, Math.min(visibleCount, filteredIds.length));
+  return filteredIds.slice(0, n);
+}
+
 type BoardFocusEl = {
   tagName?: string;
   isContentEditable?: boolean;

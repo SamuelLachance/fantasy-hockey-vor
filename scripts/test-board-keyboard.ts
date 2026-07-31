@@ -3,6 +3,7 @@
  * Run: npx tsx scripts/test-board-keyboard.ts
  */
 import {
+  boardKeyboardNavIds,
   isBoardChromeTarget,
   isBoardRowToggleKey,
   isBoardTypingTarget,
@@ -32,6 +33,20 @@ assert(nextExpandedPlayerId(ids, 999, -1) === 30, "missing id → last");
 assert(isBoardRowToggleKey("Enter"), "Enter toggles");
 assert(isBoardRowToggleKey(" "), "Space toggles");
 assert(!isBoardRowToggleKey("a"), "letter no toggle");
+
+const allIds = [1, 2, 3, 4, 5];
+assert(
+  boardKeyboardNavIds(allIds, 2, null).join() === "1,2",
+  "cold-start nav stays visible",
+);
+assert(
+  boardKeyboardNavIds(allIds, 2, 2).join() === "1,2,3,4,5",
+  "expanded nav uses full list",
+);
+assert(
+  nextExpandedPlayerId(boardKeyboardNavIds(allIds, 2, null), null, -1) === 2,
+  "cold-start k opens last visible not last filtered",
+);
 
 assert(!isBoardTypingTarget(null), "null not typing");
 assert(!isBoardChromeTarget(null), "null not chrome");

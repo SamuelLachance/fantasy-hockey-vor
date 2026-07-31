@@ -138,6 +138,7 @@ const files: Record<string, string[]> = {
     "isBoardTypingTarget",
     "isBoardChromeTarget",
     "shouldIgnoreBoardShortcut",
+    "boardKeyboardNavIds",
   ],
   "src/components/BoardActiveFilters.tsx": [
     "Active board filters",

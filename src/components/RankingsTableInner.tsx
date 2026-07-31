@@ -83,6 +83,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
 
   useRankingsKeyboard({
     filtered: board.filtered,
+    renderCount,
     expandedId: board.expandedId,
     setExpandedId: board.setExpandedId,
     filtersOpen: board.filtersOpen,

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { PlayerProjection } from "@/lib/types";
 import {
+  boardKeyboardNavIds,
   isBoardTypingTarget,
   nextExpandedPlayerId,
   shouldIgnoreBoardShortcut,
@@ -13,6 +14,7 @@ import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
 
 interface RankingsKeyboardInput {
   filtered: PlayerProjection[];
+  renderCount: number;
   expandedId: number | null;
   setExpandedId: (id: number | null) => void;
   filtersOpen: boolean;
@@ -33,6 +35,7 @@ interface RankingsKeyboardInput {
 /** Global board shortcuts: Esc, /, ?, j/k, r, l, p, m, [/]. */
 export function useRankingsKeyboard({
   filtered,
+  renderCount,
   expandedId,
   setExpandedId,
   filtersOpen,
@@ -51,6 +54,7 @@ export function useRankingsKeyboard({
 }: RankingsKeyboardInput): void {
   // Keep latest handlers/state without rebinding the window listener every render.
   const filteredRef = useRef(filtered);
+  const renderCountRef = useRef(renderCount);
   const expandedIdRef = useRef(expandedId);
   const filtersOpenRef = useRef(filtersOpen);
   const helpOpenRef = useRef(helpOpen);
@@ -69,6 +73,7 @@ export function useRankingsKeyboard({
 
   useEffect(() => {
     filteredRef.current = filtered;
+    renderCountRef.current = renderCount;
     expandedIdRef.current = expandedId;
     filtersOpenRef.current = filtersOpen;
     helpOpenRef.current = helpOpen;
@@ -227,7 +232,11 @@ export function useRankingsKeyboard({
         return;
       }
       e.preventDefault();
-      const ids = filteredRef.current.map((p) => p.id);
+      const ids = boardKeyboardNavIds(
+        filteredRef.current.map((p) => p.id),
+        renderCountRef.current,
+        expandedIdNow,
+      );
       const direction =
         e.key === "j" || e.key === "ArrowDown" ? (1 as const) : (-1 as const);
       const nextId = nextExpandedPlayerId(ids, expandedIdNow, direction);
