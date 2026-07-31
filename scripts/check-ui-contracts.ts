@@ -1004,6 +1004,8 @@ const files: Record<string, string[]> = {
     "useLiveProjectionAge",
     "projectionAgeDays",
     "visibilitychange",
+    "pageshow",
+    "e.persisted",
     "new Date().toISOString()",
   ],
   "src/lib/header-copy.ts": [

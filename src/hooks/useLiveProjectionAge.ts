@@ -22,8 +22,16 @@ export function useLiveProjectionAge(
     const onVis = () => {
       if (document.visibilityState === "visible") refresh();
     };
+    // bfcache restore often skips a visibility flip — pageshow covers it.
+    const onPageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) refresh();
+    };
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, [generatedAt]);
 
   return ageDays;
