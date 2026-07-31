@@ -5,6 +5,7 @@
 import {
   disambiguateByPosition,
   matchYahooToNhlIds,
+  normalizePlayerName,
   type YahooPlayerRecord,
 } from "../src/lib/yahoo-fantasy";
 
@@ -63,6 +64,15 @@ const dataset = matchYahooToNhlIds(yahoo, nhl);
 assert(dataset.matched === 2, "both Elias matched");
 assert(dataset.byNhlId[8480012]?.primaryPosition === "C", "center mapped");
 assert(dataset.byNhlId[8483678]?.primaryPosition === "D", "defense mapped");
+
+assert(
+  normalizePlayerName("Max Shabanov") === normalizePlayerName("Maxim Shabanov"),
+  "Max/Maxim alias",
+);
+assert(
+  normalizePlayerName("Josh Mahura") === normalizePlayerName("Joshua Mahura"),
+  "Josh/Joshua alias",
+);
 
 if (failed) process.exit(1);
 console.log("OK: yahoo-match");

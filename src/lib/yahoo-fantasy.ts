@@ -332,14 +332,31 @@ export async function fetchAllYahooNhlPlayers(
   return all;
 }
 
+const FIRST_NAME_ALIASES: Record<string, string> = {
+  max: "maxim",
+  josh: "joshua",
+  alex: "alexander",
+  chris: "christopher",
+  matt: "matthew",
+  mike: "michael",
+  nick: "nicholas",
+  georgi: "georgii",
+  evgeni: "evgeny",
+};
+
 export function normalizePlayerName(name: string): string {
-  return name
+  const base = name
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  const parts = base.split(" ");
+  if (parts.length === 0) return base;
+  const alias = FIRST_NAME_ALIASES[parts[0]!];
+  if (!alias) return base;
+  return [alias, ...parts.slice(1)].join(" ");
 }
 
 import { normalizeTeamAbbrev } from "./team-abbreviations";
