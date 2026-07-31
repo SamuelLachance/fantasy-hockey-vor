@@ -826,6 +826,7 @@ const files: Record<string, string[]> = {
     "aria-live",
     "positionFilterAnnounce",
     "boardPositionTabId",
+    "min-h-11",
   ],
   "src/lib/board-positions.ts": [
     "BOARD_POSITIONS",

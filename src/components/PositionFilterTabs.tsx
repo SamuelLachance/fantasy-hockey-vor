@@ -66,7 +66,7 @@ export function PositionFilterTabs({
           tabIndex={position === pos ? 0 : -1}
           onClick={() => startTransition(() => setPosition(pos))}
           onKeyDown={(e) => onPositionTabKeyDown(e, index)}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
+          className={`inline-flex min-h-11 items-center rounded-full px-4 py-1.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
             position === pos
               ? "bg-cyan-500 text-slate-950"
               : "bg-white/5 text-slate-300 hover:bg-white/10"
