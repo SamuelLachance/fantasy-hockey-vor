@@ -148,6 +148,11 @@ if (ranks.size !== players.length) {
   errors.push("duplicate or missing ranks detected");
 }
 
+const ids = new Set(players.map((p) => p.id));
+if (ids.size !== players.length) {
+  errors.push("duplicate player ids detected");
+}
+
 const overallOne = players.find((p) => p.rank === 1);
 if (overallOne?.isGoalie) {
   errors.push(
