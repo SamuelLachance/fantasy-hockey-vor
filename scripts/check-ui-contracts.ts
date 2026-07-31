@@ -12,7 +12,6 @@ const files: Record<string, string[]> = {
     "hideDepthGoalies",
     "usePlayerDetails",
     "resetSortToVor",
-    "sticky left-10",
     "boardFilterResetToken",
     "useRankingsUrlSync",
     "useRankingsKeyboard",
@@ -44,6 +43,7 @@ const files: Record<string, string[]> = {
   ],
   "src/components/RankingsTableHead.tsx": [
     'column="sigma"',
+    "sticky left-10",
     "STICKY_NAME_SHADOW",
     "onResetSort",
   ],
