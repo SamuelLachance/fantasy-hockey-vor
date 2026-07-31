@@ -640,10 +640,20 @@ const files: Record<string, string[]> = {
   "src/app/page.tsx": [
     "RankingsTable",
     "TopPlayers",
-    "draftable",
+    "SiteFooter",
+    "ScrollToTop",
+    "rankingsJsonLd",
+  ],
+  "src/components/SiteFooter.tsx": [
     "boardShortcutsFooterChip",
-    "formatCount",
+    "footerDraftableCopy",
+    "FOOTER_SOURCE_HREF",
     "formatProjectionEngine",
+    "Projections generated",
+  ],
+  "src/lib/site-footer.ts": [
+    "footerDraftableCopy",
+    "FOOTER_SOURCE_HREF",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",

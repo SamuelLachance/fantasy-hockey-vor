@@ -1,14 +1,9 @@
 import { Header } from "@/components/Header";
 import { RankingsTable } from "@/components/RankingsTable";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { SiteFooter } from "@/components/SiteFooter";
 import { TopPlayers } from "@/components/TopPlayers";
 import { getProjections } from "@/lib/data";
-import { boardShortcutsFooterChip } from "@/lib/board-shortcuts";
-import { formatCount } from "@/lib/format";
-import {
-  DEFAULT_PROJECTION_ENGINE,
-  formatProjectionEngine,
-} from "@/lib/projection-engine-label";
 import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
 import { rankingsJsonLd } from "@/lib/seo-jsonld";
 import { playerDetailsHref } from "@/lib/site";
@@ -54,35 +49,12 @@ export default function HomePage() {
         <RankingsTable players={data.players} />
       </div>
 
-      <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
-        Projections generated{" "}
-        <time dateTime={data.generatedAt}>
-          {new Date(data.generatedAt).toISOString().slice(0, 10)}
-        </time>{" "}
-        · {data.season}{" "}
-        · {formatProjectionEngine(
-          data.projectionEngine ?? DEFAULT_PROJECTION_ENGINE,
-        )}{" "}
-        · NHL
-        API
-        {" · "}
-        <a
-          href="https://github.com/SamuelLachance/fantasy-hockey-vor"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-cyan-500/80 underline-offset-2 hover:text-cyan-400 hover:underline"
-        >
-          source
-        </a>
-        <span className="mx-2 text-slate-700">·</span>
-        <span className="text-slate-600">
-          {boardShortcutsFooterChip()}
-        </span>
-        <span className="mx-2 text-slate-700">·</span>
-        <span className="tabular-nums text-slate-600">
-          {formatCount(data.players.length)} draftable
-        </span>
-      </footer>
+      <SiteFooter
+        season={data.season}
+        generatedAt={data.generatedAt}
+        playerCount={data.players.length}
+        projectionEngine={data.projectionEngine}
+      />
       <ScrollToTop />
     </main>
   );

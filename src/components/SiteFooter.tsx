@@ -1,0 +1,53 @@
+import { boardShortcutsFooterChip } from "@/lib/board-shortcuts";
+import {
+  DEFAULT_PROJECTION_ENGINE,
+  formatProjectionEngine,
+} from "@/lib/projection-engine-label";
+import {
+  FOOTER_SOURCE_HREF,
+  footerDraftableCopy,
+} from "@/lib/site-footer";
+
+interface SiteFooterProps {
+  season: string;
+  generatedAt: string;
+  playerCount: number;
+  projectionEngine?: string;
+}
+
+/** Site-wide rankings footer: provenance, source, shortcuts, pool size. */
+export function SiteFooter({
+  season,
+  generatedAt,
+  playerCount,
+  projectionEngine,
+}: SiteFooterProps) {
+  return (
+    <footer className="border-t border-white/10 py-6 text-center text-xs text-slate-500">
+      Projections generated{" "}
+      <time dateTime={generatedAt}>
+        {new Date(generatedAt).toISOString().slice(0, 10)}
+      </time>{" "}
+      · {season} ·{" "}
+      {formatProjectionEngine(
+        projectionEngine ?? DEFAULT_PROJECTION_ENGINE,
+      )}{" "}
+      · NHL API
+      {" · "}
+      <a
+        href={FOOTER_SOURCE_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-cyan-500/80 underline-offset-2 hover:text-cyan-400 hover:underline"
+      >
+        source
+      </a>
+      <span className="mx-2 text-slate-700">·</span>
+      <span className="text-slate-600">{boardShortcutsFooterChip()}</span>
+      <span className="mx-2 text-slate-700">·</span>
+      <span className="tabular-nums text-slate-600">
+        {footerDraftableCopy(playerCount)}
+      </span>
+    </footer>
+  );
+}
