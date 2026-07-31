@@ -22,6 +22,7 @@ interface RankingsToolbarProps {
   filtered: PlayerProjection[];
   tableCategories: readonly Category[];
   linkCopied: boolean;
+  linkCopyFailed?: boolean;
   onCopyBoardLink: () => void;
   hideDepthGoalies: boolean;
   setHideDepthGoalies: (v: boolean | ((prev: boolean) => boolean)) => void;
@@ -40,6 +41,7 @@ export function RankingsToolbar({
   filtered,
   tableCategories,
   linkCopied,
+  linkCopyFailed = false,
   onCopyBoardLink,
   hideDepthGoalies,
   setHideDepthGoalies,
@@ -185,7 +187,7 @@ export function RankingsToolbar({
           aria-keyshortcuts="l"
         >
           <Link2 className="h-4 w-4" />
-          {linkCopied ? "Copied" : "Link"}
+          {linkCopied ? "Copied" : linkCopyFailed ? "Failed" : "Link"}
         </button>
         {showDepthToggle && (
           <button

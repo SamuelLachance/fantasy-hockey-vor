@@ -82,7 +82,9 @@ function RankingsTableInner({ players }: RankingsTableProps) {
         (b) => b?.min?.trim() || b?.max?.trim(),
       ),
   );
-  const [linkCopied, setLinkCopied] = useState(false);
+  const [boardLinkStatus, setBoardLinkStatus] = useState<
+    "idle" | "ok" | "err"
+  >("idle");
   const [hideDepthGoalies, setHideDepthGoalies] = useState(
     seed.hideDepthGoalies,
   );
@@ -252,9 +254,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
       statRanges,
     });
     void copyText(url).then((ok) => {
-      if (!ok) return;
-      setLinkCopied(true);
-      window.setTimeout(() => setLinkCopied(false), 1600);
+      setBoardLinkStatus(ok ? "ok" : "err");
+      window.setTimeout(() => setBoardLinkStatus("idle"), 1600);
     });
   }
 
@@ -315,7 +316,8 @@ function RankingsTableInner({ players }: RankingsTableProps) {
           activeFilterCount={activeFilterCount}
           filtered={filtered}
           tableCategories={tableCategories}
-          linkCopied={linkCopied}
+          linkCopied={boardLinkStatus === "ok"}
+          linkCopyFailed={boardLinkStatus === "err"}
           onCopyBoardLink={copyBoardLink}
           hideDepthGoalies={hideDepthGoalies}
           setHideDepthGoalies={setHideDepthGoalies}
@@ -556,7 +558,15 @@ function RankingsTableInner({ players }: RankingsTableProps) {
                                 },
                               );
                               void copyText(url).then((ok) => {
-                                if (!ok) return;
+                                if (!ok) {
+                                  setCopiedPlayerId(null);
+                                  setBoardLinkStatus("err");
+                                  window.setTimeout(
+                                    () => setBoardLinkStatus("idle"),
+                                    1600,
+                                  );
+                                  return;
+                                }
                                 setCopiedPlayerId(player.id);
                                 window.setTimeout(
                                   () => setCopiedPlayerId(null),
