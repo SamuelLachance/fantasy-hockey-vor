@@ -528,7 +528,9 @@ function predictTreeRaw(tree: GbdtTree, X: Float64Array[], row: number): number 
     if (!Number.isFinite(v)) {
       n = node.defaultLeft ? node.left : node.right;
     } else {
-      n = v <= node.threshold ? node.left : node.right;
+      // +Infinity thresholds (missing-vs-present splits) serialize to null
+      // in JSON — treat them as +Infinity again, never as 0.
+      n = v <= (node.threshold ?? Number.POSITIVE_INFINITY) ? node.left : node.right;
     }
   }
 }
@@ -547,7 +549,8 @@ export function predictGbdt(model: GbdtModel, features: number[]): number {
       if (!Number.isFinite(v)) {
         n = node.defaultLeft ? node.left : node.right;
       } else {
-        n = v <= node.threshold ? node.left : node.right;
+        // See predictTreeRaw: JSON round-trips +Infinity thresholds as null.
+        n = v <= (node.threshold ?? Number.POSITIVE_INFINITY) ? node.left : node.right;
       }
     }
   }

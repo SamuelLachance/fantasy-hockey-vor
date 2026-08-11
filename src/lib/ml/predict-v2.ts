@@ -340,10 +340,12 @@ export function projectGoalieV2(profile: PlayerProfile): V2GoalieResult | null {
     rt.goalieLeague,
     rt.registry,
   );
-  const leagueSv =
-    rt.goalieLeague.svPct.get(PROJECTION_SEASON_ID - 10001) ?? 0.9;
-  const volumeSv = Math.max(0.88, Math.min(0.92, leagueSv));
-  const shotsPg = result.rates.saves / Math.max(volumeSv, 1e-6);
+  // inferGoalieForPlayer already re-encoded saves/gp at the goalie's *own*
+  // projected SV% (saves = shotsAgainst × rates.savePct). Undo that exact
+  // encoding to recover shots against per game — dividing by the league SV%
+  // instead double-counted the skill gap (a .920 goalie in a .900 era gained
+  // ~2% phantom saves, and the same ~2% on his saves-above-average SV% z).
+  const shotsPg = result.rates.saves / Math.max(result.rates.savePct, 1e-6);
   const projection: GoalieProjection = {
     wins: Math.max(0, Math.round(result.rates.wins * gamesPlayed)),
     saves: Math.max(0, Math.round(shotsPg * savePct * gamesPlayed)),

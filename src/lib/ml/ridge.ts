@@ -299,6 +299,10 @@ export function evaluateRegression(
   let mae = 0;
   let mse = 0;
   let mape = 0;
+  // MAPE skips near-zero denominators; it must also divide by the number of
+  // rows it actually summed. Dividing by all n made sparse per-game targets
+  // (goals/gp ≈ 0.3, mostly excluded) look an order of magnitude better.
+  let mapeCount = 0;
   let yBar = 0;
   let ssTot = 0;
   let ssRes = 0;
@@ -312,6 +316,7 @@ export function evaluateRegression(
     mse += err * err;
     if (Math.abs(yTrue[i]) > 0.5) {
       mape += Math.abs(err / yTrue[i]);
+      mapeCount++;
     }
     ssRes += err * err;
     ssTot += (yTrue[i] - yBar) ** 2;
@@ -321,7 +326,7 @@ export function evaluateRegression(
     samples: n,
     mae: mae / Math.max(1, n),
     rmse: Math.sqrt(mse / Math.max(1, n)),
-    mape: mape / Math.max(1, n),
+    mape: mapeCount > 0 ? mape / mapeCount : 0,
     r2: ssTot > 0 ? 1 - ssRes / ssTot : 0,
   };
 }

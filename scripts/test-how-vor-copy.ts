@@ -46,7 +46,7 @@ assert(
   "G rank",
 );
 assert(howVorYahooPositionsCopy().includes("Yahoo"), "Yahoo copy");
-assert(howVorScarcityHintCopy().includes("Higher weight"), "scarcity hint");
+assert(howVorScarcityHintCopy().includes("matchup point"), "scarcity hint");
 assert(
   howVorScarcityTitleCopy() === "Category scarcity weights",
   "scarcity title",

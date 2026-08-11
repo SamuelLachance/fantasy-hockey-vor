@@ -92,6 +92,12 @@ export interface PlayerProjection {
   team: string;
   /** Best Yahoo roster slot for VOR (max across eligible positions). */
   position: Position;
+  /**
+   * Roster position the projection was *built* at, before VOR slot selection
+   * overwrote `position`. Rate limits (faceoffs, blocks) are position-specific,
+   * so anything re-clamping a projection must use this, not the VOR slot.
+   */
+  primaryPosition?: Position;
   /** Yahoo Fantasy eligible roster positions (C/LW/RW/D/G). */
   positions: Position[];
   /** Position used for VOR calculation (same as position after applyVor). */
@@ -102,12 +108,21 @@ export interface PlayerProjection {
   positionSource?: "yahoo" | "nhl";
   isGoalie: boolean;
   gamesPlayed: number;
+  /** Raw model GP before post-hoc calibration (idempotence anchor). */
+  modelGamesPlayed?: number;
   projection: SkaterProjection | GoalieProjection;
   categoryZScores: Partial<Record<Category, number>>;
   fantasyValue: number;
   vor: number;
   rank: number;
+  /** Rank within the best-VOR position slot (`position`). */
   positionRank: number;
+  /**
+   * Rank at each eligible position, ordered by that position's own VOR. The
+   * position-filtered board must index this by the active filter — using
+   * `positionRank` there mixes sequences from different positions.
+   */
+  positionRanks?: Partial<Record<Position, number>>;
   projectionMethod?: "ml" | "ai" | "contextual";
   confidence?: number;
   reasoning?: string;
@@ -154,6 +169,8 @@ export interface ProjectionsDataset {
   league: LeagueSettings;
   /** Provenance of upstream data artifacts. */
   dataManifest?: DataManifest;
+  /** Post-hoc GP calibration provenance (see src/lib/gp-calibration.ts). */
+  gpCalibration?: import("./gp-calibration").GpCalibrationMeta;
   replacementLevels: Partial<Record<Position, number>>;
   /** Per-category scarcity weights used in weighted fantasy value / VOR. */
   categoryWeights?: import("./stat-difficulty").CategoryDifficultyWeights;

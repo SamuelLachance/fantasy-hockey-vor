@@ -36,6 +36,11 @@ import {
   clampSkaterProjection,
 } from "../src/lib/projection-sanity";
 import {
+  calibratedSkaterGp,
+  fitSkaterGpCurve,
+  scaleSkaterProjection,
+} from "../src/lib/gp-calibration";
+import {
   buildGoalieRoleMap,
   projectedGoalieGames,
 } from "../src/lib/projection-gp";
@@ -297,14 +302,33 @@ async function main() {
     buildFromProfile(p, aiCache, mlModels, goalieRoleMap, teamGoalies),
   );
 
+  // Stamp the position each projection was clamped at BEFORE Yahoo (and later
+  // VOR) can remap `position`; rate limits are position-specific, so any
+  // re-clamp downstream must use this one.
   const withYahooPositions = raw.map((player) =>
-    applyYahooPositionsToPlayer(player, yahooPositions),
+    applyYahooPositionsToPlayer(
+      { ...player, primaryPosition: player.position },
+      yahooPositions,
+    ),
   );
+
+  // Inactive players leave the pool BEFORE tandem renormalization so a
+  // retired/inactive goalie never absorbs part of a team's starts budget.
+  const inactiveIds = loadInactivePlayerIds();
+  const droppedInactive = withYahooPositions.filter((p) => inactiveIds.has(p.id));
+  const activeBeforeTandem = filterActivePlayers(withYahooPositions);
+  if (droppedInactive.length > 0) {
+    console.log(
+      `Dropped ${droppedInactive.length} curated inactive player(s): ${droppedInactive
+        .map((p) => p.name)
+        .join(", ")}`,
+    );
+  }
 
   // Team tandem: goalie GP on a club should sum near a full season.
   const { renormalizeGoalieGamesByTeam } = await import("../src/lib/ml/goalie-v2");
-  const prevGp = new Map(withYahooPositions.map((p) => [p.id, p.gamesPlayed]));
-  const tandemAdjusted = renormalizeGoalieGamesByTeam(withYahooPositions).map((p) => {
+  const prevGp = new Map(activeBeforeTandem.map((p) => [p.id, p.gamesPlayed]));
+  const tandemAdjusted = renormalizeGoalieGamesByTeam(activeBeforeTandem).map((p) => {
     if (!p.isGoalie) return p;
     const gp = p.gamesPlayed;
     const prev = prevGp.get(p.id) ?? gp;
@@ -328,16 +352,32 @@ async function main() {
     };
   });
 
-  const inactiveIds = loadInactivePlayerIds();
-  const droppedInactive = tandemAdjusted.filter((p) => inactiveIds.has(p.id));
-  const activePool = filterActivePlayers(tandemAdjusted);
-  if (droppedInactive.length > 0) {
-    console.log(
-      `Dropped ${droppedInactive.length} curated inactive player(s): ${droppedInactive
-        .map((p) => p.name)
-        .join(", ")}`,
-    );
-  }
+  // Post-hoc GP calibration: the GP heads regress toward the population mean
+  // (top-150 skaters projected ~61 GP vs ~74 realized) — map projections onto
+  // the realized prior-season distribution, preserving per-game rates.
+  const profilesById = new Map(profilesWithPositions.map((p) => [p.id, p]));
+  const gpCurve = fitSkaterGpCurve(
+    tandemAdjusted,
+    profilesById,
+    DEFAULT_LEAGUE.season,
+  );
+  console.log(
+    `GP calibration: ${gpCurve.curve.length} isotonic blocks from ${gpCurve.pairCount} pairs`,
+  );
+  const activePool = tandemAdjusted.map((p) => {
+    if (p.isGoalie) return { ...p, modelGamesPlayed: p.gamesPlayed };
+    const newGp = calibratedSkaterGp(p, profilesById.get(p.id), gpCurve.curve);
+    if (p.gamesPlayed <= 0 || newGp === p.gamesPlayed) {
+      return { ...p, modelGamesPlayed: p.gamesPlayed };
+    }
+    const ratio = newGp / p.gamesPlayed;
+    return {
+      ...p,
+      modelGamesPlayed: p.gamesPlayed,
+      gamesPlayed: newGp,
+      projection: scaleSkaterProjection(p.projection as never, ratio),
+    };
+  });
 
   const {
     players: ranked,
@@ -416,6 +456,15 @@ async function main() {
     season: PROJECTION_SEASON,
     league: DEFAULT_LEAGUE,
     dataManifest,
+    gpCalibration: {
+      version: 1 as const,
+      appliedAt: new Date().toISOString(),
+      skaterCurve: gpCurve.curve.map((c) => ({
+        x: Math.round(c.x * 100) / 100,
+        y: Math.round(c.y * 100) / 100,
+      })),
+      pairCount: gpCurve.pairCount,
+    },
     projectionEngine: engine,
     aiModel: aiCache?.model,
     positionSource: yahooPositions ? "yahoo-fantasy" : "nhl-fallback",

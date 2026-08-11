@@ -29,6 +29,7 @@ function bestStump(
   residuals: number[],
   weights: number[] | undefined,
   usedFeatures: Set<number>,
+  minSamplesLeaf = 1,
 ): Stump | null {
   const n = X.length;
   const p = X[0]?.length ?? 0;
@@ -69,6 +70,11 @@ function bestStump(
           rightW += w;
         }
       }
+      // Enforce the configured leaf size (weights default to 1 per row, so
+      // this is a sample count). Without it a stump can isolate a single
+      // outlier row and memorize its full residual over 45-80 rounds.
+      if (leftW < minSamplesLeaf || rightW < minSamplesLeaf) continue;
+
       const leftValue = leftW > 0 ? leftSum / leftW : 0;
       const rightValue = rightW > 0 ? rightSum / rightW : 0;
 
@@ -99,6 +105,7 @@ export function fitGbm(
 ): GbmModel {
   const nEstimators = options.nEstimators ?? 80;
   const learningRate = options.learningRate ?? 0.08;
+  const minSamplesLeaf = Math.max(1, options.minSamplesLeaf ?? 1);
   const n = X.length;
   if (n === 0) throw new Error(`No samples for GBM ${target}`);
 
@@ -110,7 +117,13 @@ export function fitGbm(
   const residuals = y.map((v) => v - initBias);
 
   for (let t = 0; t < nEstimators; t++) {
-    const stump = bestStump(X, residuals, sampleWeights, new Set());
+    const stump = bestStump(
+      X,
+      residuals,
+      sampleWeights,
+      new Set(),
+      minSamplesLeaf,
+    );
     if (!stump) break;
     trees.push(stump);
     for (let i = 0; i < n; i++) {

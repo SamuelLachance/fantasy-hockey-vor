@@ -52,10 +52,59 @@ function getStat(
 }
 
 /**
+ * Per-position means and the pooled within-position standard deviation for
+ * one category over a reference pool.
+ *
+ * Why within-position: every fantasy team fields the same position quotas
+ * (2C/2LW/2RW/4D), so the position-mix of category production is common to
+ * all teams and cancels in weekly matchups — what decides categories is
+ * *which* C/LW/RW/D you started. A mixed-pool sd is inflated by the
+ * between-position gap for position-skewed stats (goals: F≈30 vs D≈9;
+ * blocks: D≈93 vs F≈36), which crushed forward-vs-forward scoring
+ * separation ~2.4× while denting D-vs-D peripheral separation only ~1.5×,
+ * systematically inflating defensemen. Group means with a pooled residual
+ * sd keep z units comparable across positions on the team-relevant scale.
+ */
+function withinPositionStats(
+  refPool: RawPlayer[],
+  getValue: (p: RawPlayer) => number,
+): { means: Map<Position, number>; sd: number; overallMean: number } {
+  const groups = new Map<Position, number[]>();
+  for (const p of refPool) {
+    const v = getValue(p);
+    if (!Number.isFinite(v)) continue;
+    const list = groups.get(p.position) ?? [];
+    list.push(v);
+    groups.set(p.position, list);
+  }
+  const means = new Map<Position, number>();
+  let ssq = 0;
+  let n = 0;
+  let sum = 0;
+  for (const [pos, vals] of groups) {
+    const m = mean(vals);
+    means.set(pos, m);
+    for (const v of vals) {
+      ssq += (v - m) ** 2;
+      n += 1;
+      sum += v;
+    }
+  }
+  const sd = n > 1 ? Math.sqrt(ssq / (n - 1)) || 1 : 1;
+  return { means, sd, overallMean: n > 0 ? sum / n : 0 };
+}
+
+/**
  * Z-scores for every player in `players`, measured against the distribution
  * of `reference` (defaults to the full pool). Passing the draftable pool as
  * the reference keeps hundreds of near-zero fringe players from distorting
  * category means and spreads.
+ *
+ * Skater categories are scored against the player's own position group
+ * (mean per position, spread pooled within positions — see
+ * `withinPositionStats`), so a winger taking no faceoffs is not punished
+ * for a positional zero and defensemen aren't subsidized by a mixed-pool
+ * spread. Goalies are already their own group.
  *
  * savePct is scored as saves above the reference pool's shots-weighted
  * average SV%, so its z reflects volume-weighted team impact rather than a
@@ -82,14 +131,13 @@ export function computeCategoryZScores(
       category === "faceoffWins"
         ? refSkaters.filter((p) => p.position !== "D")
         : refSkaters;
-    const values = refPool.map((p) =>
+    const { means, sd, overallMean } = withinPositionStats(refPool, (p) =>
       getStat(p.projection as SkaterProjection, category),
     );
-    const avg = mean(values);
-    const sd = stdDev(values);
 
     for (const player of pool) {
       const value = getStat(player.projection as SkaterProjection, category);
+      const avg = means.get(player.position) ?? overallMean;
       const scores = result.get(player.id) ?? {};
       scores[category] = zScore(value, avg, sd);
       result.set(player.id, scores);
@@ -345,7 +393,17 @@ export function applyVor(
       eligible,
       replacementLevels,
     );
-    return { ...player, vor, position, vorPosition: position, vorByPosition };
+    // `position` becomes the VOR slot; remember the position the projection
+    // was built at so re-clamping never applies another slot's rate limits.
+    const primaryPosition = player.primaryPosition ?? player.position;
+    return {
+      ...player,
+      vor,
+      position,
+      primaryPosition,
+      vorPosition: position,
+      vorByPosition,
+    };
   });
 
   const sorted = [...withVor].sort((a, b) => b.vor - a.vor);
@@ -353,6 +411,28 @@ export function applyVor(
   const positionCounters: Partial<Record<Position, number>> = {};
 
   const draftableIds = draftable.map((p) => p.id);
+
+  // Rank at *every* eligible position, ordered by that position's own VOR.
+  // The position-filtered board needs the rank for the filter it is showing:
+  // a C+LW player whose best slot is LW would otherwise carry his LW rank
+  // onto the C tab, duplicating rank numbers there.
+  const positionRanks = new Map<number, Partial<Record<Position, number>>>();
+  for (const position of ["C", "LW", "RW", "D", "G"] as Position[]) {
+    const eligible = withVor
+      .filter((p) =>
+        (p.positions.length > 0 ? p.positions : [p.position]).includes(position),
+      )
+      .sort(
+        (a, b) =>
+          (b.vorByPosition?.[position] ?? b.vor) -
+          (a.vorByPosition?.[position] ?? a.vor),
+      );
+    eligible.forEach((p, i) => {
+      const entry = positionRanks.get(p.id) ?? {};
+      entry[position] = i + 1;
+      positionRanks.set(p.id, entry);
+    });
+  }
 
   return {
     players: sorted.map((player, index) => {
@@ -362,6 +442,7 @@ export function applyVor(
         ...player,
         rank: index + 1,
         positionRank: posCount,
+        positionRanks: positionRanks.get(player.id) ?? {},
       };
     }),
     categoryWeights,

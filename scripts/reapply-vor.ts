@@ -10,10 +10,12 @@ import { filterActivePlayers } from "../src/lib/inactive-players";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { splitPublishedPlayer } from "../src/lib/publish-players";
 import { applyVor } from "../src/lib/vor";
-import type { Category, ProjectionsDataset } from "../src/lib/types";
+import type { Category, Position, ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS = join(process.cwd(), "src", "data", "players.json");
 const DETAILS = join(process.cwd(), "public", "player-details.json");
+
+const PROFILES = join(process.cwd(), "src", "data", "player-profiles.json");
 
 const data = JSON.parse(readFileSync(PLAYERS, "utf8")) as ProjectionsDataset;
 const details = JSON.parse(readFileSync(DETAILS, "utf8")) as Record<
@@ -25,6 +27,16 @@ const details = JSON.parse(readFileSync(DETAILS, "utf8")) as Record<
     marketEdge?: Partial<Record<Category, number>>;
   }
 >;
+
+// Board `position` is the VOR slot, not the position the projection was
+// clamped at. Recover the build position so Edge reconstruction re-clamps
+// with the same rate limits generate used.
+const profileFile = JSON.parse(readFileSync(PROFILES, "utf8")) as {
+  profiles: Record<string, { id: number; position: Position }>;
+};
+const primaryByaId = new Map<number, Position>(
+  Object.values(profileFile.profiles).map((p) => [p.id, p.position]),
+);
 
 const raw = filterActivePlayers(
   data.players.map((p) => {
@@ -43,6 +55,8 @@ const raw = filterActivePlayers(
     const d = details[String(p.id)];
     return {
       ...rest,
+      primaryPosition:
+        p.primaryPosition ?? primaryByaId.get(p.id) ?? p.position,
       reasoning: d?.reasoning,
       profileSummary: d?.profileSummary,
       ...(d?.marketEdge ? { marketEdge: d.marketEdge } : {}),

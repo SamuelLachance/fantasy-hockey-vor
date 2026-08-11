@@ -25,9 +25,31 @@ export function spearmanCorrelation(yTrue: number[], yPred: number[]): number {
 
   const rTrue = ranks(yTrue);
   const rPred = ranks(yPred);
-  let d2 = 0;
-  for (let i = 0; i < n; i++) d2 += (rTrue[i] - rPred[i]) ** 2;
-  return 1 - (6 * d2) / (n * (n * n - 1));
+  // Pearson correlation *of the ranks* — the general definition. The 1-6Σd²
+  // shortcut is only valid without ties; with average ranks (constant or
+  // heavily tied predictions are routine here) it silently reports a
+  // non-zero correlation for a model that ranks nothing.
+  let mTrue = 0;
+  let mPred = 0;
+  for (let i = 0; i < n; i++) {
+    mTrue += rTrue[i];
+    mPred += rPred[i];
+  }
+  mTrue /= n;
+  mPred /= n;
+  let cov = 0;
+  let varTrue = 0;
+  let varPred = 0;
+  for (let i = 0; i < n; i++) {
+    const a = rTrue[i] - mTrue;
+    const b = rPred[i] - mPred;
+    cov += a * b;
+    varTrue += a * a;
+    varPred += b * b;
+  }
+  const denom = Math.sqrt(varTrue * varPred);
+  // Zero variance = no ordering information at all (all values tied).
+  return denom > 0 ? cov / denom : 0;
 }
 
 /** Composite champion score: ranking-first (Spearman), then R². */

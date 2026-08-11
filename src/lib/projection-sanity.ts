@@ -282,6 +282,8 @@ export function findProjectionIssues(
   players: Array<{
     name: string;
     position: Position;
+    /** Position the projection was clamped at, when it differs from the VOR slot. */
+    primaryPosition?: Position;
     isGoalie: boolean;
     gamesPlayed: number;
     projection: SkaterProjection | GoalieProjection;
@@ -289,7 +291,9 @@ export function findProjectionIssues(
 ): ProjectionIssue[] {
   const issues: ProjectionIssue[] = [];
 
-  for (const player of players) {
+  for (const raw of players) {
+    // Check rates against the limits the projection was actually built with.
+    const player = { ...raw, position: raw.primaryPosition ?? raw.position };
     const gp = Math.max(1, player.gamesPlayed);
     const pr = player.projection;
 

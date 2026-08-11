@@ -8,9 +8,12 @@ export const DEFAULT_LEAGUE: LeagueSettings = {
   // Yahoo H2H categories: goalie value is discounted because weekly goalie
   // starts are volatile, goalie categories are streamable off waivers, and
   // goalie skill stats (SV%/SO) are near-unpredictable season-to-season.
-  // Prefer volume (wins/saves/GP) over skill in rankings. At 0.2 the top goalie
-  // drafts mid-round 3-ish. Tune to taste (1 = none).
-  goalieVorFactor: 0.2,
+  // Prefer volume (wins/saves/GP) over skill in rankings. Anchored so the top
+  // goalie drafts mid-round 3-ish: with within-position skater z-scores and
+  // calibrated GP (which raised skater fantasy-value spreads), that anchor
+  // needs 0.4 where the old mixed-pool z-scale needed 0.2. Tune to taste
+  // (1 = none).
+  goalieVorFactor: 0.4,
 };
 
 /**

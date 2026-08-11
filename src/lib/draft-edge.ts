@@ -44,7 +44,14 @@ export function marketProjectionFromEdge<T extends Rankable>(player: T): T {
   };
   return {
     ...player,
-    projection: clampSkaterProjection(uncapped as never, gp, player.position),
+    // Clamp at the position the projection was built at — `position` is the
+    // VOR slot after applyVor, and a C-built player published at LW would get
+    // his market faceoffs crushed by the winger limit on every republish.
+    projection: clampSkaterProjection(
+      uncapped as never,
+      gp,
+      player.primaryPosition ?? player.position,
+    ),
   };
 }
 

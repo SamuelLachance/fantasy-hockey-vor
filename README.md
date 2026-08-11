@@ -20,7 +20,9 @@ Every player with NHL history is projected by a walk-forward-validated stacked e
 
 5. **Games played** — dedicated GBDT + ridge + game-log durability (injury spells vs healthy scratches, ironman, B2B goalie workload).
 
-6. **VOR rank** — per-category z-scores against the draftable pool, scarcity-tilted weights, replacement level in a 12-team league. Goalie SV% is volume-weighted saves above average; total goalie value is discounted (`goalieVorFactor`). Position eligibility comes from Yahoo Fantasy when configured.
+6. **GP calibration** — the GP heads regress toward the population mean, so projected games are mapped onto realized prior-season games by a weighted isotonic (PAVA) fit over the same players. Monotone by construction: the model's durability *ordering* is preserved, only the level is corrected. Counting stats scale with GP so per-game rates are untouched. Raw model GP is kept in `modelGamesPlayed`, making the step idempotent.
+
+7. **VOR rank** — per-category z-scores against the draftable pool, **centered on the player's own position group** with a pooled within-position spread (every team fields the same roster quotas, so the position mix cancels in weekly matchups; a mixed-pool spread otherwise inflates position-skewed stats like blocks). Weights are near-equal — in H2H each category is one matchup point, and a scarcity-proportional weight would double-count the z-gap it is derived from — with a small tilt for per-category model predictability. Replacement level in a 12-team league. Goalie SV% is volume-weighted saves above average; total goalie value is discounted (`goalieVorFactor`). Position eligibility comes from Yahoo Fantasy when configured.
 
 Players without NHL history fall back to a contextual dossier model. Optional OpenAI dossiers (`npm run ai-project`) are not used for published rankings.
 
@@ -65,7 +67,9 @@ Full local gate (mirrors Pages CI): `npm run ci:local`.
 
 Yahoo eligibility gaps (mostly farm/retired): `npm run yahoo:gaps`.
 
-Curated inactive denylist (`src/data/inactive-player-ids.json`): applied at generate; purge committed board with `npm run players:drop-inactive`.
+Curated inactive denylist (`src/data/inactive-player-ids.json`): applied at generate *before* tandem GP renormalization, so an inactive goalie never absorbs part of a team's starts budget; purge committed board with `npm run players:drop-inactive`.
+
+Re-apply GP calibration + VOR + Edge on the committed board without a regenerate: `npm run gp:recalibrate` (idempotent — recalibrates from `modelGamesPlayed`).
 
 Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmark-*.ts` for segment holdouts.
 
@@ -99,6 +103,8 @@ Not affiliated with the NHL.
 
 - `teamPkGaPer60` / PK style feature is a shorthanded-goals-scored proxy (not on-ice PK GA/60). Training and inference match today; correcting it requires a paired dataset rebuild + `ml:train-v2`.
 - Inactive/retired names are excluded via `src/data/inactive-player-ids.json` (extend as needed).
+- `ewma()` in `src/lib/ml/features.ts` infers its season count with a value filter + `indexOf`, which mis-weights zero/duplicate lags, and the `age >= 36` branch of `age_curve_mult` is unreachable. Both are *training-time* features: the committed bundle was fit with them, so training and inference match today and correcting them requires a paired dataset rebuild + `ml:train-v2` (same reasoning as `teamPkGaPer60`). `normalizeTandemGp`'s `sum >= 150` skip is in the same category.
+- The goalie saves decode fix in `predict-v2.ts` (shots recovered at the goalie's own SV% rather than the league's) lands on the next `npm run generate`; the committed board still carries the ~2% skew for high-SV% goalies, which cannot be inverted post-hoc.
 
 ## License
 

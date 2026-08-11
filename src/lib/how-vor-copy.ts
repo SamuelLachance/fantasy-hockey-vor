@@ -24,8 +24,9 @@ export function howVorYahooPositionsTitleCopy(): string {
 /** Category z-score explainer body. */
 export function howVorZScoreCopy(): string {
   return (
-    "Each stat is converted to a z-score against the draftable pool, " +
-    "multiplied by a bounded scarcity weight and summed for total fantasy value. " +
+    "Each stat is converted to a z-score against the draftable pool — centered " +
+    "on the player's position group, since every team fields the same roster " +
+    "quotas — then summed for total fantasy value. " +
     "Goalie SV% is volume-weighted, and goalie value is discounted for weekly H2H " +
     "volatility and streamability."
   );
@@ -69,5 +70,5 @@ export function howVorScarcityGoaliesLabel(): string {
 
 /** Scarcity weights panel blurb. */
 export function howVorScarcityHintCopy(): string {
-  return "Higher weight = harder to generate vs replacement; counts more toward VOR.";
+  return "Near-equal weights (each category is one matchup point); the only tilt is model predictability per category.";
 }

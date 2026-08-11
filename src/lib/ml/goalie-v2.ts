@@ -1901,17 +1901,24 @@ export function renormalizeGoalieGamesByTeam<
 
     const lead = out[active[0]!]!.gamesPlayed;
     const second = out[active[1]!]?.gamesPlayed ?? 0;
-    // Clear #1 (≈1.35× backup): use starter-heavy shares instead of flat scale,
-    // so Hellebuyck-style workhorses don't get diluted by a new backup's prior GP.
+    // Clear #1 (≈1.35× backup): keep the starter's own modeled workload and
+    // compress only the backups into the remaining budget, so workhorses
+    // don't get diluted by a new backup's prior GP. (The previous flat 62%
+    // share pinned every clear starter to the same 50 starts and erased the
+    // workhorse-vs-tandem signal.)
     const clearStarter = second > 0 && lead / second >= 1.35;
     if (clearStarter && active.length >= 2) {
-      const shares =
-        active.length >= 3 ? [0.62, 0.28, 0.1] : [0.68, 0.32];
-      for (let k = 0; k < active.length; k++) {
-        const share = shares[k] ?? 0.05;
-        out[active[k]!]!.gamesPlayed = Math.max(
+      const starterGp = Math.max(4, Math.min(65, Math.round(lead)));
+      out[active[0]!]!.gamesPlayed = starterGp;
+      const restModeled = active
+        .slice(1)
+        .reduce((s, i) => s + out[i]!.gamesPlayed, 0);
+      const remaining = Math.max(0, teamBudget - starterGp);
+      for (const i of active.slice(1)) {
+        const share = restModeled > 0 ? out[i]!.gamesPlayed / restModeled : 0.5;
+        out[i]!.gamesPlayed = Math.max(
           4,
-          Math.min(72, Math.round(teamBudget * share)),
+          Math.min(starterGp, Math.round(remaining * share)),
         );
       }
     } else if (Math.abs(sum - teamBudget) > 5) {

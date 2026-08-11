@@ -35,16 +35,13 @@ export interface CategoryDifficultyMeta {
 
 /**
  * In H2H categories every category is worth exactly one matchup point, so
- * equal weights are the neutral baseline. The difficulty heuristic is applied
- * as a partial tilt on top of that baseline: weights are shrunk halfway
- * toward 1, then clamped, so no category is ever effectively deleted or
- * double-counted by population artifacts.
- *
- * Skater difficulty = how hard the stat is to produce, measured by the Gini
- * concentration of production: few players producing a lot (goals) is scarce
- * and weighted up; production everyone racks up (hits, PIM) is weighted down.
- * Goalie categories keep the elite-vs-replacement scarcity measure because
- * savePct is scored as signed saves-above-average, where a Gini is undefined.
+ * equal weights are the principled baseline — and since v2 of the VOR layer
+ * they are also (almost) the actual weights. Scarcity-proportional tilts
+ * double-count: the elite-vs-replacement gap in sd units is exactly the
+ * z-score gap the fantasy value already sums. The one tilt kept is
+ * predictability (holdout R² per category), shrunk halfway toward 1 and
+ * clamped, then renormalized so the mean weight stays 1. Scarcity, CV and
+ * Gini are still computed and exported as informational metadata.
  */
 const SCARCITY_TILT = 0.5;
 const WEIGHT_MIN = 0.7;
@@ -205,6 +202,37 @@ function replacementAndElite(
   };
 }
 
+/**
+ * Production concentration (Gini) measured inside each position pool, then
+ * slot-weighted. Measured on a mixed pool, position mix masquerades as
+ * scarcity: blocks looked concentrated (gini 0.30 > assists 0.17) only
+ * because defensemen produce them and forwards don't, which tilted weights
+ * toward peripherals and against assists. Faceoffs stay center-scoped.
+ */
+function positionConcentration(
+  players: PlayerLike[],
+  category: Category,
+  league: LeagueSettings,
+  leagueSavePct: number,
+): number {
+  const positions: Position[] =
+    category === "faceoffWins" ? ["C"] : ["C", "LW", "RW", "D"];
+  let sum = 0;
+  let wSum = 0;
+  for (const position of positions) {
+    const slotWeight = positionRosterWeight(position, league);
+    if (slotWeight <= 0) continue;
+    const pool = players.filter((p) => p.positions.includes(position));
+    if (pool.length < 2) continue;
+    const g = gini(
+      pool.map((p) => statValue(p.projection, category, leagueSavePct)),
+    );
+    sum += g * slotWeight;
+    wSum += slotWeight;
+  }
+  return wSum > 0 ? sum / wSum : 0;
+}
+
 function computeGroupWeights<C extends string>(
   players: PlayerLike[],
   categories: readonly C[],
@@ -240,23 +268,26 @@ function computeGroupWeights<C extends string>(
     const gap = Math.max(0, elite - replacement);
     const scarcity = gap / Math.max(sd, 1e-6);
 
-    // Production concentration: how few players generate the stat. Faceoffs are
-    // only taken by centers, so measure their concentration among centers —
-    // including wingers with ~0 would fake scarcity from a positional zero.
-    const producePool =
-      category === "faceoffWins"
-        ? players.filter((p) => p.positions.includes("C"))
-        : group;
-    const g = gini(
-      producePool.map((p) => statValue(p.projection, category as Category, leagueSavePct)),
-    );
+    // Production concentration: how few players generate the stat, measured
+    // within position pools so positional zeros never fake scarcity.
+    const g = useConcentration
+      ? positionConcentration(players, category as Category, league, leagueSavePct)
+      : gini(
+          group.map((p) =>
+            statValue(p.projection, category as Category, leagueSavePct),
+          ),
+        );
 
-    // Skater difficulty = production concentration (Gini): few big producers →
-    // hard to produce → scarce. Goalies keep the elite/replacement scarcity
-    // measure (savePct is signed saves-above-average, where Gini is undefined).
-    const rawDifficulty = useConcentration
-      ? Math.max(g, 1e-3)
-      : scarcity * Math.sqrt(Math.max(cv, 0.05));
+    // Scarcity/concentration stay exported as informational meta, but the
+    // weight itself no longer tilts on them: the elite-vs-replacement gap in
+    // sd units *is* the z-score gap, so a scarcity-proportional weight counts
+    // the same signal twice (value ∝ z × w(z-gap)). Measured cleanly within
+    // position pools, the concentration signal also inverted the design
+    // intent (hits read as scarcer than goals). In H2H every category is one
+    // matchup point — equal weights are the principled baseline; the only
+    // tilt kept is predictability (holdout R²), which is independent of the
+    // z spread.
+    const rawDifficulty = 1;
 
     const r2 = r2Map[category as Category] ?? null;
     // Slight boost for predictable skill stats; dampen noisy categories (e.g. PIM).
@@ -285,16 +316,30 @@ function computeGroupWeights<C extends string>(
       Math.max(WEIGHT_MIN, 1 + SCARCITY_TILT * (normalized - 1)),
     );
   }
-  // Re-normalize after clamp so mean weight stays 1 (total FV scale stable).
-  const tiltMean =
-    categories.reduce((s, c) => s + tilted[c], 0) / Math.max(1, categories.length);
+  // Clamp and "mean weight = 1" are two invariants applied in sequence, so a
+  // single renormalization pass can push a clamped weight back outside
+  // [WEIGHT_MIN, WEIGHT_MAX]. Alternate them until both hold (converges in a
+  // few passes; the clamp is the authoritative bound if they ever can't).
+  for (let pass = 0; pass < 8; pass++) {
+    const m =
+      categories.reduce((s, c) => s + tilted[c], 0) / Math.max(1, categories.length);
+    if (!(m > 0)) break;
+    let outOfBand = false;
+    for (const category of categories) {
+      const scaled = tilted[category] / m;
+      const clamped = Math.min(WEIGHT_MAX, Math.max(WEIGHT_MIN, scaled));
+      if (Math.abs(clamped - scaled) > 1e-12) outOfBand = true;
+      tilted[category] = clamped;
+    }
+    if (!outOfBand && Math.abs(m - 1) < 1e-9) break;
+  }
 
   const result = {} as Record<C, CategoryDifficultyMeta>;
   for (const category of categories) {
     const meta = raw[category];
     result[category] = {
       ...meta,
-      weight: tiltMean > 0 ? tilted[category] / tiltMean : 1,
+      weight: tilted[category],
     };
   }
   return result;
