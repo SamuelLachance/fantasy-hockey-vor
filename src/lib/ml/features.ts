@@ -286,8 +286,10 @@ function ageCurveMultiplier(position: string, age: number): number {
   }
   if (age <= 22) return 1.09;
   if (age <= 26) return 1.04;
-  if (age >= 33) return 0.91;
+  // Steepest decline first: `age >= 33` would otherwise swallow 36+ and the
+  // 0.84 branch could never be reached.
   if (age >= 36) return 0.84;
+  if (age >= 33) return 0.91;
   return 1;
 }
 
@@ -394,10 +396,31 @@ function lagValues(
   return values;
 }
 
-function ewma(values: number[]): number {
-  const weights = EWMA_WEIGHTS.slice(-values.filter((v) => v > 0 || values.indexOf(v) === values.length - 1).length);
-  if (weights.length === 0) return 0;
+/**
+ * How many real seasons back the lag vectors: `lagValues` / `contextLagValues`
+ * pad missing seasons with leading zeros, so the count cannot be recovered
+ * from the values themselves.
+ */
+export function lagSeasonCount(history: PlayerSeasonRow[]): number {
+  const eligible = history.filter((h) => h.gamesPlayed >= ML_MIN_SEASON_GP);
+  return Math.min(ML_FEATURE_LAGS, eligible.length);
+}
+
+/**
+ * Exponentially-weighted mean over the `count` most recent real seasons,
+ * matching predict.ts's `EWMA_WEIGHTS.slice(-eligible.length)`.
+ *
+ * The count must be passed in: inferring it from the values (previously a
+ * `v > 0 || indexOf(v) === length - 1` filter) dropped legitimate zero
+ * seasons and every negative value (plusMinus), and mis-handled duplicates —
+ * each of which silently shifted the weights onto the wrong seasons.
+ */
+function ewma(values: number[], count: number): number {
+  const n = Math.max(0, Math.min(values.length, count));
+  const weights = EWMA_WEIGHTS.slice(-n);
+  if (n === 0 || weights.length === 0) return 0;
   const totalW = weights.reduce((a, b) => a + b, 0);
+  if (totalW <= 0) return 0;
   const slice = values.slice(-weights.length);
   return slice.reduce((sum, v, i) => sum + v * (weights[i] / totalW), 0);
 }
@@ -493,9 +516,10 @@ function buildContextLagFeatures(
   const features: number[] = [];
   const names: string[] = [];
 
+  const seasons = lagSeasonCount(history);
   for (const field of CONTEXT_LAG_FIELDS) {
     const lags = contextLagValues(history, field);
-    features.push(...lags, ewma(lags), trend(lags));
+    features.push(...lags, ewma(lags, seasons), trend(lags));
     names.push(
       `lag1_${field}`,
       `lag2_${field}`,
@@ -520,7 +544,7 @@ function appendCrossEwmaFeatures(
     if (primaryTargets.includes(stat)) continue;
     const perGame = RATE_STATS.has(stat) ? false : usePerGame;
     const lags = lagValues(history, stat, perGame);
-    features.push(ewma(lags));
+    features.push(ewma(lags, lagSeasonCount(history)));
     names.push(`ewma_${stat}_cross`);
   }
 }
@@ -535,7 +559,7 @@ function appendStatLagFeatures(
   for (const target of targets) {
     const perGame = RATE_STATS.has(target) ? false : usePerGame;
     const lags = lagValues(history, target, perGame);
-    features.push(...lags, ewma(lags), trend(lags));
+    features.push(...lags, ewma(lags, lagSeasonCount(history)), trend(lags));
     names.push(
       `lag1_${target}_pg`,
       `lag2_${target}_pg`,
@@ -556,7 +580,11 @@ function buildLagFeatures(
   gpOnly = false,
 ): { features: number[]; names: string[] } {
   const gpLags = lagValues(history, "gamesPlayed", false);
-  const features: number[] = [...gpLags, ewma(gpLags), trend(gpLags)];
+  const features: number[] = [
+    ...gpLags,
+    ewma(gpLags, lagSeasonCount(history)),
+    trend(gpLags),
+  ];
   const names: string[] = [
     "lag1_gp",
     "lag2_gp",

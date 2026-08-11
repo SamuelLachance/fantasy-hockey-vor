@@ -103,8 +103,9 @@ Not affiliated with the NHL.
 
 - `teamPkGaPer60` / PK style feature is a shorthanded-goals-scored proxy (not on-ice PK GA/60). Training and inference match today; correcting it requires a paired dataset rebuild + `ml:train-v2`.
 - Inactive/retired names are excluded via `src/data/inactive-player-ids.json` (extend as needed).
-- `ewma()` in `src/lib/ml/features.ts` infers its season count with a value filter + `indexOf`, which mis-weights zero/duplicate lags, and the `age >= 36` branch of `age_curve_mult` is unreachable. Both are *training-time* features: the committed bundle was fit with them, so training and inference match today and correcting them requires a paired dataset rebuild + `ml:train-v2` (same reasoning as `teamPkGaPer60`). `normalizeTandemGp`'s `sum >= 150` skip is in the same category.
 - The goalie saves decode fix in `predict-v2.ts` (shots recovered at the goalie's own SV% rather than the league's) lands on the next `npm run generate`; the committed board still carries the ~2% skew for high-SV% goalies, which cannot be inverted post-hoc.
+- `features.ts` (`ewma` season counting, `age_curve_mult` ordering) feeds the **legacy v1** path only — `age_curve_mult` does not appear in `v2-bundle.json`, and the v2 stack has its own EWMA in `dataset-view.ts` / `marcel.ts`. Those bugs are fixed; the mismatch is now with the legacy `models.json`, which is fallback-only and refused by `generate` unless `ALLOW_NON_V2=1`. Regenerate it with `ml:train` if you ever intend to use that path.
+- `normalizeTandemGp` is training-only (inference goes through `inferGoalieForPlayer`), so its fix takes effect at the next `ml:train-v2` and does not move the committed board.
 
 ## License
 

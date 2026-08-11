@@ -1802,7 +1802,11 @@ function normalizeTandemGp(
       if (idxs.length < 2) continue;
       let sum = 0;
       for (const i of idxs) sum += gp[key][i];
-      if (!(sum > 35 && sum < 150)) continue;
+      // Only the degenerate low end is skipped (too little signal to rescale
+      // meaningfully). An overloaded org chart — the sum >= 150 case — is
+      // exactly what needs normalizing, not what should be left alone; the
+      // sibling post-hoc renormalizer already treats that skip as a bug.
+      if (!(sum > 35)) continue;
       const scale = target / sum;
       for (const i of idxs) {
         gp[key][i] = Math.max(4, Math.min(72, gp[key][i] * scale));
