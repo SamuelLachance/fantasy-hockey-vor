@@ -25,9 +25,24 @@ export const STICKY_NAME_SHADOW =
 export const STICKY_NAME_BASE =
   "transition-shadow duration-150 motion-reduce:transition-none" as const;
 
-/** Tailwind top offset: safe-area + `--board-sticky-chrome-height` on `#rankings`. */
-export const BOARD_STICKY_TOP_CLASS =
-  "top-[calc(var(--board-safe-area-inset-top,0px)+var(--board-sticky-chrome-height,0px))]" as const;
+/**
+ * Sticky top offset for the table head.
+ *
+ * MUST stay `top-0`. The head sits inside the horizontal scroll wrapper
+ * (`overflow-x-auto` in RankingsBoardTable), and per CSS Overflow a non-visible
+ * `overflow-x` forces `overflow-y` to `auto` — so that wrapper, not the
+ * viewport, is the head's sticky scrollport. It never scrolls vertically, so a
+ * non-zero `top` cannot pin the head to anything: it just displaces it
+ * downwards by that offset, painting the header over the first rows and
+ * leaving its reserved row empty above them.
+ *
+ * Pinning the head under the toolbar would require removing that scrollport
+ * from between the head and the viewport (or making the table its own vertical
+ * scroller, which would break page-scroll infinite loading). The chrome-height
+ * variable is still used for row `scroll-mt` and scroll-into-view math, where
+ * the toolbar genuinely is viewport-pinned.
+ */
+export const BOARD_STICKY_TOP_CLASS = "top-0" as const;
 
 function cssPxVar(
   prop: string,

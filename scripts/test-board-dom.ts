@@ -119,13 +119,22 @@ assert(
   BOARD_STICKY_THEAD_SELECTOR.includes("thead"),
   "thead selector",
 );
+// The table head is sticky inside the horizontal scroll wrapper, and
+// `overflow-x: auto` forces `overflow-y: auto` — so that wrapper, not the
+// viewport, is its scrollport, and it never scrolls vertically. A non-zero
+// sticky `top` therefore cannot pin the head to anything: it just displaces
+// it downward by that offset, painting the header over the first rows
+// (measured: the chrome var resolved to 116px, ≈2.5 rows).
+assert(BOARD_STICKY_TOP_CLASS === "top-0", "sticky top class is top-0");
 assert(
-  BOARD_STICKY_TOP_CLASS.includes("--board-sticky-chrome-height"),
-  "sticky top class uses css var",
+  !BOARD_STICKY_TOP_CLASS.includes("--board-sticky-chrome-height"),
+  "sticky top class must not offset by the chrome height",
 );
+// The variable itself stays — row scroll-mt and scroll-into-view math still
+// need it, because the toolbar chrome genuinely is viewport-pinned.
 assert(
-  BOARD_STICKY_TOP_CLASS.includes("--board-safe-area-inset-top"),
-  "sticky top class includes safe-area",
+  boardStickyTopInset(fakeDoc) === 140,
+  "chrome height still feeds scroll-into-view insets",
 );
 assert(typeof boardSafeAreaInsetTop === "function", "safe-area helper");
 assert(boardSafeAreaInsetTop(null) === 0, "safe-area null → 0");

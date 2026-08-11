@@ -6,6 +6,21 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 const root = process.cwd();
+
+/**
+ * The table head is sticky inside the horizontal scroll wrapper, and
+ * `overflow-x: auto` forces `overflow-y: auto` — so that wrapper, not the
+ * viewport, is its scrollport. It never scrolls vertically, so any non-zero
+ * sticky `top` cannot pin the head: it displaces it downward by that offset,
+ * painting the header over the first rows. Pin `top-0`.
+ */
+const forbidden: Array<{ file: string; needle: string }> = [
+  {
+    file: ["src", "lib", "board-dom.ts"].join("/"),
+    needle: "--board-sticky-chrome-height,0px))\" as const",
+  },
+];
+
 const files: Record<string, string[]> = {
   "src/components/RankingsTable.tsx": [
     "RankingsTableInner",
@@ -489,6 +504,7 @@ const files: Record<string, string[]> = {
     "playerLinkTitle",
   ],
   "src/lib/board-dom.ts": [
+    'BOARD_STICKY_TOP_CLASS = "top-0"',
     "preventScroll: true",
     "focusBoardSearchWhenReady",
     "requestAnimationFrame(tick)",
@@ -1391,6 +1407,14 @@ for (const [rel, needles] of Object.entries(files)) {
       console.error(`FAIL: ${rel} missing ${JSON.stringify(n)}`);
       failed++;
     }
+  }
+}
+
+for (const { file: rel, needle } of forbidden) {
+  const text = readFileSync(join(root, rel), "utf8");
+  if (text.includes(needle)) {
+    console.error(`FAIL: ${rel} must not contain ${JSON.stringify(needle)}`);
+    failed++;
   }
 }
 
