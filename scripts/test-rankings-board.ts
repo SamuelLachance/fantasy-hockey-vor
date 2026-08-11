@@ -7,6 +7,7 @@ import {
   filterAndSortBoard,
   pruneStatRangesForPosition,
 } from "../src/lib/rankings-board";
+import { rankForFilter } from "../src/lib/rankings-filters";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -148,6 +149,62 @@ const byTeamRev = filterAndSortBoard([...twins].reverse(), {
 assert(
   byTeamRev.map((p) => p.id).join() === "10,20",
   "tie-break stable vs input order",
+);
+
+// Two players both missing the sorted value: the Infinity sentinels subtract
+// to NaN, which used to short-circuit the tie-break and leave ordering at the
+// mercy of input order.
+const noSigma = [
+  { id: 30, name: "Delta", team: "BOS", positions: ["C"], isGoalie: false, gamesPlayed: 70, vor: 2, rank: 4 },
+  { id: 40, name: "Epsilon", team: "BOS", positions: ["C"], isGoalie: false, gamesPlayed: 70, vor: 2, rank: 5 },
+] as unknown as PlayerProjection[];
+const sigmaSorted = filterAndSortBoard(noSigma, { ...base, sortKey: "sigma", sortDir: "asc" });
+const sigmaSortedRev = filterAndSortBoard([...noSigma].reverse(), {
+  ...base,
+  sortKey: "sigma",
+  sortDir: "asc",
+});
+assert(
+  sigmaSorted.map((p) => p.id).join() === "30,40",
+  "missing sigma falls back to rank order",
+);
+assert(
+  sigmaSortedRev.map((p) => p.id).join() === "30,40",
+  "missing-sigma order is input-order independent",
+);
+
+// Position-filtered rank must come from the filtered position, not the
+// player's best slot — otherwise dual-eligible players duplicate rank numbers.
+const dual = [
+  {
+    id: 50, name: "Zeta", team: "EDM", position: "LW", positions: ["C", "LW"],
+    isGoalie: false, gamesPlayed: 80, vor: 9, rank: 1, positionRank: 1,
+    positionRanks: { C: 2, LW: 1 },
+    vorByPosition: { C: 9, LW: 9 },
+  },
+  {
+    id: 60, name: "Eta", team: "TOR", position: "C", positions: ["C"],
+    isGoalie: false, gamesPlayed: 80, vor: 8, rank: 2, positionRank: 1,
+    positionRanks: { C: 1 },
+    vorByPosition: { C: 10 },
+  },
+] as unknown as PlayerProjection[];
+const cBoard = filterAndSortBoard(dual, { ...base, position: "C", sortKey: "rank", sortDir: "asc" });
+assert(
+  cBoard.map((p) => p.id).join() === "60,50",
+  "rank sort on the C tab uses C ranks",
+);
+assert(
+  rankForFilter(dual[0]!, "C") === 2 && rankForFilter(dual[1]!, "C") === 1,
+  "rankForFilter reads the filtered position",
+);
+assert(rankForFilter(dual[0]!, "ALL") === 1, "rankForFilter falls back to overall rank");
+assert(
+  rankForFilter(
+    { rank: 7, positionRank: 3, position: "D" } as unknown as PlayerProjection,
+    "D",
+  ) === 3,
+  "legacy rows without positionRanks still resolve",
 );
 
 if (failed) process.exit(1);

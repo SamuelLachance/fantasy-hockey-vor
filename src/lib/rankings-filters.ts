@@ -29,6 +29,28 @@ export function vorForFilter(
   return player.vor;
 }
 
+/**
+ * Rank to show/sort by for the active position filter: overall rank on ALL,
+ * otherwise the rank within that position. `positionRank` alone is the rank
+ * at the player's *best* slot, so a C+LW player whose best slot is LW would
+ * carry his LW rank onto the C tab and duplicate rank numbers there.
+ */
+export function rankForFilter(
+  player: Pick<
+    PlayerProjection,
+    "rank" | "positionRank" | "positionRanks" | "position"
+  >,
+  filter: Position | "ALL",
+): number {
+  if (filter === "ALL") return player.rank;
+  return (
+    player.positionRanks?.[filter] ??
+    (filter === player.position ? player.positionRank : undefined) ??
+    player.positionRank ??
+    player.rank
+  );
+}
+
 /** Normalize typed range bounds (%, European commas). */
 export function normalizeRangeInput(raw: string): string {
   const s = raw

@@ -8,6 +8,7 @@ import { projectionStatValue, skaterCategoriesForFilter } from "@/lib/format";
 import { isStarterEligibleGoalie } from "@/lib/goalie-depth";
 import {
   passesRanges,
+  rankForFilter,
   vorForFilter,
   type RangeKey,
   type SortKey,
@@ -112,8 +113,8 @@ export function filterAndSortBoard(
       av = vorForFilter(a, q.position);
       bv = vorForFilter(b, q.position);
     } else if (q.sortKey === "rank") {
-      av = q.position === "ALL" ? a.rank : (a.positionRank ?? a.rank);
-      bv = q.position === "ALL" ? b.rank : (b.positionRank ?? b.rank);
+      av = rankForFilter(a, q.position);
+      bv = rankForFilter(b, q.position);
     } else if (q.sortKey === "sigma") {
       av = a.uncertainty?.total?.sigma ?? Number.POSITIVE_INFINITY;
       bv = b.uncertainty?.total?.sigma ?? Number.POSITIVE_INFINITY;
@@ -140,6 +141,10 @@ export function filterAndSortBoard(
           ? Number(av) - Number(bv)
           : Number(bv) - Number(av);
     }
+    // Two missing values both map to the same Infinity sentinel, and
+    // Infinity − Infinity is NaN — which is truthy for `!== 0` and would
+    // return NaN, skipping the tie-break and leaving order input-dependent.
+    if (Number.isNaN(cmp)) cmp = 0;
     if (cmp !== 0) return cmp;
     // Deterministic tie-break so team/GP/stat ties are not input-order dependent.
     if (a.rank !== b.rank) return a.rank - b.rank;

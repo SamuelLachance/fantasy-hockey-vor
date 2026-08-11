@@ -4,6 +4,7 @@
  */
 import {
   decodeStatRanges,
+  defaultRankingsUrlState,
   parsePlayerIdParam,
   splitStatRangeBounds,
   encodeStatRanges,
@@ -161,11 +162,56 @@ assert(
   decodeStatRanges(`vor:${"9".repeat(40)}-`).vor?.min?.length === 24,
   "rf bound clamped",
 );
+// Bounds are emitted as canonical numbers (not raw text), still length-capped.
+const longBound = encodeStatRanges({ vor: { min: "9".repeat(40), max: "" } });
+const longEncoded = /^vor:(.*)-$/.exec(longBound)?.[1] ?? "";
+assert(longEncoded.length <= 24, `encode clamps bound length (got ${longEncoded})`);
 assert(
-  encodeStatRanges({
-    vor: { min: "9".repeat(40), max: "" },
-  }) === `vor:${"9".repeat(24)}-`,
-  "encode clamps bound length",
+  Number.isFinite(Number(longEncoded)) && Number(longEncoded) > 0,
+  "clamped bound still parses as a number",
+);
+
+// Canonical emission: locale commas, leading +, and % never reach the URL raw
+// (`,` is the rf separator; `+` decodes back as a space).
+assert(
+  encodeStatRanges({ vor: { min: "1,5", max: "" } }) === "vor:1.5-",
+  "decimal comma is canonicalized before encoding",
+);
+assert(
+  decodeStatRanges(encodeStatRanges({ vor: { min: "1,5", max: "" } })).vor?.min === "1.5",
+  "comma bound round-trips",
+);
+assert(
+  parseRankingsUrl(
+    new URLSearchParams(
+      rankingsUrlSearch({
+        ...defaultRankingsUrlState(),
+        statRanges: { vor: { min: "1,5", max: "" } },
+      }),
+    ),
+  ).statRanges.vor?.min === "1.5",
+  "comma bound survives a full URL round-trip",
+);
+assert(
+  encodeStatRanges({ draftValue: { min: "+5", max: "" } }) === "draftValue:5-",
+  "leading + is stripped by canonical encoding",
+);
+
+// Empty min + negative max must keep its sign through the round-trip.
+const negMax = encodeStatRanges({ draftValue: { min: "", max: "-1" } });
+assert(negMax === "draftValue:--1", `negative max-only encodes as --1 (got ${negMax})`);
+assert(
+  decodeStatRanges(negMax).draftValue?.max === "-1",
+  "negative max-only round-trips with its sign",
+);
+assert(
+  decodeStatRanges(negMax).draftValue?.min === "",
+  "negative max-only leaves min empty",
+);
+assert(
+  decodeStatRanges("vor:-2--5").vor?.min === "-2" &&
+    decodeStatRanges("vor:-2--5").vor?.max === "-5",
+  "both-negative bounds still split correctly",
 );
 
 assert(

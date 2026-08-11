@@ -100,17 +100,24 @@ export function RankingsBoardChrome({
       />
 
       {filtersOpen && (
-        <RankingsStatFilters
-          filterRangeKeys={filterRangeKeys}
-          statRanges={statRanges}
-          activeFilterCount={activeFilterCount}
-          onUpdateRange={onUpdateRange}
-          onClear={onClearStatFilters}
-          onDone={() => {
-            setFiltersOpen(false);
-            queueMicrotask(focusStatsFilterButton);
-          }}
-        />
+        // The panel lives inside the sticky chrome, so on a phone its 12
+        // stacked range cards (~1100px) would make the pinned block taller
+        // than the viewport — and a sticky element taller than the viewport
+        // cannot be scrolled, hiding most filters and the board behind it.
+        // Cap it to the space left under the toolbar and scroll internally.
+        <div className="max-h-[calc(100dvh-var(--board-safe-area-inset-top,0px)-8rem)] overflow-y-auto overscroll-contain">
+          <RankingsStatFilters
+            filterRangeKeys={filterRangeKeys}
+            statRanges={statRanges}
+            activeFilterCount={activeFilterCount}
+            onUpdateRange={onUpdateRange}
+            onClear={onClearStatFilters}
+            onDone={() => {
+              setFiltersOpen(false);
+              queueMicrotask(focusStatsFilterButton);
+            }}
+          />
+        </div>
       )}
       {(activeFilterCount > 0 ||
         position !== "ALL" ||

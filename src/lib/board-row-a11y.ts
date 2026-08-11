@@ -26,7 +26,9 @@ export function boardTableAriaRowIndex(visibleIndex: number): number {
 /** Accessible name for a board table row. */
 export function boardRowAriaLabel(
   player: Pick<PlayerProjection, "name" | "rank"> & {
+    position?: Position;
     positionRank?: number | null;
+    positionRanks?: Partial<Record<Position, number>>;
   },
   position: Position | "ALL",
   fallbackIndex: number,
@@ -34,7 +36,13 @@ export function boardRowAriaLabel(
   if (position === "ALL") {
     return `${player.name}, rank ${player.rank}`;
   }
-  return `${player.name}, position rank ${player.positionRank ?? fallbackIndex + 1}`;
+  // Announce the rank *at the filtered position*, matching the visible cell.
+  const rank =
+    player.positionRanks?.[position] ??
+    (position === player.position ? player.positionRank : undefined) ??
+    player.positionRank ??
+    fallbackIndex + 1;
+  return `${player.name}, position rank ${rank}`;
 }
 
 /** Accessible name for the expanded details region. */

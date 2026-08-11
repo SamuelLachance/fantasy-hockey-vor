@@ -11,7 +11,7 @@ import {
   sigmaColor,
   vorColor,
 } from "@/lib/format";
-import { vorForFilter } from "@/lib/rankings-filters";
+import { rankForFilter, vorForFilter } from "@/lib/rankings-filters";
 import { highlightMatch } from "@/lib/highlight-match";
 import { STICKY_NAME_BASE, STICKY_NAME_SHADOW } from "@/lib/board-dom";
 import { isBoardRowToggleKey } from "@/lib/board-keyboard";
@@ -124,9 +124,7 @@ export function RankingsPlayerRow({
         <td
           className={`sticky left-0 z-[1] w-10 min-w-10 max-w-10 px-1 py-3 text-center font-mono tabular-nums text-slate-400 sm:w-12 sm:min-w-12 sm:max-w-12 ${stickyBg}`}
         >
-          {position === "ALL"
-            ? player.rank
-            : (player.positionRank ?? idx + 1)}
+          {rankForFilter(player, position)}
         </td>
         <td
           className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW} ${stickyBg}`}

@@ -121,6 +121,13 @@ export function useRankingsKeyboard({
           target: e.target,
           expandedId: expandedIdNow,
         });
+        // Blink/WebKit natively clear an <input type="search"> on Escape (and
+        // fire `input`, which React turns into setQuery("")). The Esc ladder
+        // means these rungs to close a layer *without* touching the query, so
+        // suppress the native clear whenever focus is in the search field.
+        if (escape.type === "close-help" || escape.type === "close-filters") {
+          if (typing) e.preventDefault();
+        }
         if (escape.type === "close-help") {
           setHelpOpenRef.current(false);
           return;

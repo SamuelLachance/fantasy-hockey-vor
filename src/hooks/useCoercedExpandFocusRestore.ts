@@ -24,6 +24,19 @@ export function useCoercedExpandFocusRestore(
     // Still mounted → intentional collapse / Esc; leave focus alone.
     if (document.getElementById(`player-row-${prev}`)) return;
 
+    // Only recover focus if it was actually orphaned by the unmount. Without
+    // this the hook steals the caret out of the search input mid-typing every
+    // time the query narrows past the expanded player.
+    const active = document.activeElement;
+    if (
+      active &&
+      active !== document.body &&
+      active !== document.documentElement &&
+      active.isConnected
+    ) {
+      return;
+    }
+
     const firstRow = document.querySelector<HTMLElement>(
       '#rankings-board-table tbody tr[id^="player-row-"]',
     );

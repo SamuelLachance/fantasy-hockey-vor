@@ -52,7 +52,9 @@ export function ScrollToTop() {
     ) {
       return;
     }
-    focusBoardSearch();
+    // The search input lives in the board toolbar ~1000px down the page, so
+    // a focus scroll here would drag the viewport straight back down.
+    focusBoardSearch({ preventScroll: true });
   }, [visible]);
 
   return (
@@ -65,7 +67,8 @@ export function ScrollToTop() {
       tabIndex={visible ? 0 : -1}
       onClick={() => {
         scrollPageTop();
-        queueMicrotask(focusBoardSearch);
+        // preventScroll or the focus would fight (and beat) the scroll to top.
+        queueMicrotask(() => focusBoardSearch({ preventScroll: true }));
       }}
       className={`fixed z-40 inline-flex min-h-11 min-w-11 items-center justify-center rounded-full border border-white/15 bg-slate-900/90 p-3 text-cyan-300 shadow-lg backdrop-blur transition motion-reduce:backdrop-blur-none motion-reduce:transition-none hover:border-cyan-500/40 hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
         visible

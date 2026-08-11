@@ -70,7 +70,28 @@ export interface RankingsUrlState {
   statRanges: StatRanges;
 }
 
-/** Encode `key:min-max` segments (only parseable bounds). */
+/**
+ * Format a parsed bound for the URL: shortest plain-decimal form that still
+ * parses back to the same filter, capped at RANGE_BOUND_MAX so absurd input
+ * can't bloat the link.
+ */
+function encodeBound(value: number | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "";
+  let s = String(value);
+  if (s.length > RANGE_BOUND_MAX || s.includes("e")) {
+    const fixed = value.toFixed(Math.abs(value) < 1 ? 6 : 2);
+    s = fixed.length <= RANGE_BOUND_MAX ? fixed : value.toPrecision(6);
+  }
+  return s.length > RANGE_BOUND_MAX ? String(Math.round(value)) : s;
+}
+
+/**
+ * Encode `key:min-max` segments from the *parsed* bounds, never the raw text.
+ * Raw text can carry a decimal comma (also the segment separator, so `1,5`
+ * would shatter the rf param and silently drop the filter) or a leading `+`
+ * (decodes back as a space). Emitting canonical numbers makes the round-trip
+ * total — matching what board-reset-token.ts already does.
+ */
 export function encodeStatRanges(ranges: StatRanges): string {
   const parts: string[] = [];
   for (const [key, b] of Object.entries(ranges) as [
@@ -81,10 +102,8 @@ export function encodeStatRanges(ranges: StatRanges): string {
     if (isInvertedRangeBound(key, b.min, b.max)) continue;
     const minRaw = (b.min?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
     const maxRaw = (b.max?.trim() ?? "").slice(0, RANGE_BOUND_MAX);
-    const min =
-      minRaw && parseRangeValue(key, minRaw) != null ? minRaw : "";
-    const max =
-      maxRaw && parseRangeValue(key, maxRaw) != null ? maxRaw : "";
+    const min = encodeBound(minRaw ? parseRangeValue(key, minRaw) : undefined);
+    const max = encodeBound(maxRaw ? parseRangeValue(key, maxRaw) : undefined);
     if (!min && !max) continue;
     parts.push(`${key}:${min}-${max}`);
   }
@@ -95,6 +114,11 @@ export function encodeStatRanges(ranges: StatRanges): string {
 export function splitStatRangeBounds(
   rest: string,
 ): { min: string; max: string } | null {
+  // Empty min + *negative* max: encode emits `key:--5` → rest `--5`. Without
+  // this the generic split below reads min "-" / max "5", inverting the
+  // filter's meaning from "≤ -5" to "≤ 5". A real min is never a bare "-",
+  // since encode only emits parseable bounds.
+  if (rest.startsWith("--")) return { min: "", max: rest.slice(1) };
   // Empty min + max only: encode emits `key:-50` → rest `-50`.
   const emptyMin = /^-([^-]+)$/.exec(rest);
   if (emptyMin) return { min: "", max: emptyMin[1]! };

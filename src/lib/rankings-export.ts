@@ -2,6 +2,7 @@ import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { projectionStatValue } from "@/lib/format";
 import {
   isInvertedRangeBound,
+  rankForFilter,
   vorForFilter,
   type RangeKey,
   type SortKey,
@@ -85,7 +86,7 @@ export function rankingsToJsonRows(
       stats[cat] = exportCategoryStat(p, cat);
     }
     return {
-      rank: position === "ALL" ? p.rank : (p.positionRank ?? p.rank),
+      rank: rankForFilter(p, position),
       id: p.id,
       name: p.name,
       team: p.team,

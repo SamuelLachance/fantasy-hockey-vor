@@ -1,6 +1,7 @@
 import type { Category, PlayerProjection, Position } from "@/lib/types";
 import { CATEGORY_LABELS, projectionStatValue } from "@/lib/format";
 import {
+  rankForFilter,
   vorForFilter,
   type SortKey,
   type StatRanges,
@@ -68,7 +69,7 @@ export function rankingsToCsv(
     ].join(","),
   ];
   for (const p of players) {
-    const rank = position === "ALL" ? p.rank : (p.positionRank ?? p.rank);
+    const rank = rankForFilter(p, position);
     const cells: Array<string | number> = [
       rank,
       p.id,
