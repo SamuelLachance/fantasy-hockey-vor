@@ -19,6 +19,10 @@ const forbidden: Array<{ file: string; needle: string }> = [
     file: ["src", "lib", "board-dom.ts"].join("/"),
     needle: "--board-sticky-chrome-height,0px))\" as const",
   },
+  {
+    file: ["src", "components", "RankingsSearchField.tsx"].join("/"),
+    needle: "-bottom-5",
+  },
 ];
 
 const files: Record<string, string[]> = {
@@ -75,6 +79,7 @@ const files: Record<string, string[]> = {
     "revealPendingPlayer",
     "pendingPlayerId: board.pendingPlayerId",
     "usePlayerDetails(linked.urlPlayerId)",
+    "clearBoardSearch",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -808,6 +813,8 @@ const files: Record<string, string[]> = {
     'aria-hidden="true"',
     "min-h-11",
     "min-w-11",
+    "pb-5",
+    "bottom-0",
   ],
   "src/lib/search-fold.ts": [
     "foldSearchText",

@@ -32,7 +32,7 @@ export function RankingsSearchField({
   }
 
   return (
-    <div className="relative w-full">
+    <div className={nearQueryCap ? "relative w-full pb-5" : "relative w-full"}>
       <input
         type="search"
         inputMode="search"
@@ -65,7 +65,7 @@ export function RankingsSearchField({
       {nearQueryCap && (
         <span
           id="rankings-search-limit"
-          className="pointer-events-none absolute -bottom-5 right-1 text-[10px] tabular-nums text-slate-500"
+          className="pointer-events-none absolute bottom-0 right-1 text-[10px] tabular-nums text-slate-500"
         >
           {searchQueryLengthLabel(query.length)}
         </span>

@@ -87,6 +87,11 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   useCoercedExpandFocusRestore(board.expandedId);
   useOrphanedBoardRowFocusRestore(board.filterKey);
 
+  function clearBoardSearch() {
+    board.setQuery("");
+    queueMicrotask(focusBoardSearch);
+  }
+
   useRankingsKeyboard({
     filtered: board.filtered,
     renderCount,
@@ -107,10 +112,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
       if (canLoadMore) loadMore();
     },
     hasQuery: searchQueryIsClearable(board.query),
-    onClearSearch: () => {
-      board.setQuery("");
-      queueMicrotask(focusBoardSearch);
-    },
+    onClearSearch: clearBoardSearch,
     onCyclePosition: (direction) => {
       const pos = cycleBoardPosition(board.position, direction);
       // Keep focus on the board (not the tab) so chrome hotkey gating does not
@@ -185,10 +187,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         canLoadMore={canLoadMore}
         loadMoreRef={loadMoreRef}
         onLoadMore={loadMore}
-        onClearSearch={() => {
-          board.setQuery("");
-          queueMicrotask(focusBoardSearch);
-        }}
+        onClearSearch={clearBoardSearch}
         onClearStatFilters={board.clearStatFilters}
         onShowAllPositions={() =>
           startTransition(() => board.setPosition("ALL"))
