@@ -833,6 +833,7 @@ const files: Record<string, string[]> = {
     "min-w-11",
     "pb-5",
     "bottom-0",
+    'className="relative"',
   ],
   "src/lib/search-fold.ts": [
     "foldSearchText",
