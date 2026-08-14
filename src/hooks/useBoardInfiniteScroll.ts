@@ -69,7 +69,7 @@ interface BoardInfiniteScrollResult {
 export function useBoardInfiniteScroll<T extends { id: number }>(
   filtered: T[],
   expandedId: number | null,
-  /** Changing this token resets the visible window (filters/query/ranges). */
+  /** Changing this token resets the visible window (filters/query/ranges, not sort). */
   resetToken: string,
   pageSize = BOARD_PAGE_SIZE,
 ): BoardInfiniteScrollResult {

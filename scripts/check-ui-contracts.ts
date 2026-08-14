@@ -277,6 +277,7 @@ const files: Record<string, string[]> = {
     "encodeActiveStatRangesToken",
     "isInvertedRangeBound",
     "g1",
+    "Sort is omitted",
   ],
   "src/lib/board-keyboard.ts": [
     "nextExpandedPlayerId",
@@ -807,6 +808,7 @@ const files: Record<string, string[]> = {
     "resetGenRef",
     "tokenMountedRef",
     "requestAnimationFrame",
+    "not sort",
     "visibilityState",
     "visibilitychange",
     "collapsing a deep row does not yank",

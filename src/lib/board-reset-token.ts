@@ -3,7 +3,6 @@ import {
   isInvertedRangeBound,
   parseRangeValue,
   type RangeKey,
-  type SortKey,
   type StatRanges,
 } from "@/lib/rankings-filters";
 
@@ -24,21 +23,19 @@ export function encodeActiveStatRangesToken(statRanges: StatRanges): string {
   return parts.join(",");
 }
 
-/** Token that resets the infinite-scroll window when board view inputs change. */
+/** Token that resets the infinite-scroll window when filters change.
+ * Sort is omitted so resorting keeps the already-loaded row window.
+ */
 export function boardFilterResetToken(
   position: Position | "ALL",
   query: string,
   statRanges: StatRanges,
   hideDepthGoalies: boolean,
-  sortKey: SortKey,
-  sortDir: "asc" | "desc",
 ): string {
   return [
     position,
     query.trim().toLowerCase(),
     encodeActiveStatRangesToken(statRanges),
     hideDepthGoalies ? "g1" : "g0",
-    sortKey,
-    sortDir,
   ].join("|");
 }

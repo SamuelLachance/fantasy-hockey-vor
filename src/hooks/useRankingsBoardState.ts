@@ -80,8 +80,6 @@ export function useRankingsBoardState(
     deferredQuery,
     statRanges,
     hideDepthGoalies,
-    sortKey,
-    sortDir,
   );
 
   const [prevPosition, setPrevPosition] = useState(position);
