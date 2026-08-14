@@ -213,20 +213,20 @@ export function exportButtonTitle(
     : "Download filtered rankings as JSON";
 }
 
-/** Accessible name — keeps CSV/JSON identity during the Saved flash. */
+/** Accessible name — identity stays CSV/JSON even during the Saved flash. */
 export function exportButtonAriaLabel(
   kind: "csv" | "json",
   opts?: {
     searchPending?: boolean;
     empty?: boolean;
-    flash?: ExportFlashKind;
   },
 ): string {
-  if (opts?.searchPending || opts?.empty) {
-    return exportButtonTitle(kind, opts);
-  }
-  if (opts?.flash === kind) {
-    return kind === "csv" ? "CSV rankings saved" : "JSON rankings saved";
-  }
   return exportButtonTitle(kind, opts);
+}
+
+/** Polite live copy for a completed export (empty while idle). */
+export function exportSavedLiveCopy(flash: ExportFlashKind): string {
+  if (flash === "csv") return "CSV rankings saved";
+  if (flash === "json") return "JSON rankings saved";
+  return "";
 }

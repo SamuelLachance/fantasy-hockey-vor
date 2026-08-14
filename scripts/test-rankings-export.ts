@@ -10,6 +10,7 @@ import {
   exportButtonTitle,
   exportCategoryStat,
   exportGroupAriaLabel,
+  exportSavedLiveCopy,
   exportStatRanges,
   rankingsExportFilename,
   rankingsJsonExport,
@@ -169,27 +170,31 @@ assert(
   "pending beats empty",
 );
 assert(
-  exportButtonAriaLabel("csv", { flash: "idle" }).includes("CSV"),
+  exportButtonAriaLabel("csv").includes("CSV"),
   "idle csv aria",
 );
 assert(
-  exportButtonAriaLabel("csv", { flash: "csv" }) === "CSV rankings saved",
-  "saved csv aria",
+  exportButtonAriaLabel("csv") === exportButtonTitle("csv"),
+  "aria matches title when idle",
+);
+assert(exportSavedLiveCopy("idle") === "", "idle live is silent");
+assert(
+  exportSavedLiveCopy("csv") === "CSV rankings saved",
+  "saved csv live",
 );
 assert(
-  exportButtonAriaLabel("json", { flash: "json" }) === "JSON rankings saved",
-  "saved json aria",
+  exportSavedLiveCopy("json") === "JSON rankings saved",
+  "saved json live",
 );
 assert(
-  exportButtonAriaLabel("csv", { flash: "csv" }) !==
-    exportButtonAriaLabel("json", { flash: "json" }),
-  "saved aria keeps format identity",
+  exportSavedLiveCopy("csv") !== exportSavedLiveCopy("json"),
+  "saved live keeps format identity",
 );
 assert(
-  exportButtonAriaLabel("csv", { searchPending: true, flash: "csv" }).includes(
+  exportButtonAriaLabel("csv", { searchPending: true }).includes(
     "search",
   ),
-  "pending beats saved flash for aria",
+  "pending beats download aria",
 );
 
 if (failed) process.exit(1);
