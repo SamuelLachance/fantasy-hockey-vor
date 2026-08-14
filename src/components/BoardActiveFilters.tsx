@@ -80,10 +80,7 @@ export function BoardActiveFilters({
       {pendingPlayerName && onRevealPendingPlayer && (
         <button
           type="button"
-          onClick={() => {
-            onRevealPendingPlayer();
-            focusAfterActiveFilterClear();
-          }}
+          onClick={onRevealPendingPlayer}
           aria-label={showLinkedPlayerAriaLabel(pendingPlayerName)}
           className="inline-flex min-h-11 items-center rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >

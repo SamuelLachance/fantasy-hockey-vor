@@ -338,6 +338,7 @@ const files: Record<string, string[]> = {
     "min-w-11",
     "showLinkedPlayerChipLabel",
     "pendingPlayerName",
+    "onClick={onRevealPendingPlayer}",
   ],
   "src/lib/board-active-filter-chips.ts": [
     "boardActiveStatChips",
