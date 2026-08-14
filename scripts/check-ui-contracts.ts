@@ -333,6 +333,7 @@ const files: Record<string, string[]> = {
     "boardHomeEndPlayerId",
     "isBoardRowToggleKey",
     "isBoardTypingTarget",
+    '[role="textbox"], [role="searchbox"]',
     "isBoardChromeTarget",
     "shouldIgnoreBoardShortcut",
     "boardKeyboardNavIds",

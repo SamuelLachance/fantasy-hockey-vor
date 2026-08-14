@@ -177,6 +177,22 @@ assert(
   "btn ignored",
 );
 
+const searchbox = {
+  tagName: "DIV",
+  isContentEditable: false,
+  closest(sel: string) {
+    return sel.includes("searchbox") ? (this as unknown as Element) : null;
+  },
+};
+assert(
+  isBoardTypingTarget(searchbox as unknown as EventTarget),
+  "role=searchbox is typing",
+);
+assert(
+  isBoardChromeTarget(searchbox as unknown as EventTarget),
+  "role=searchbox is chrome",
+);
+
 const row = {
   tagName: "TR",
   isContentEditable: false,

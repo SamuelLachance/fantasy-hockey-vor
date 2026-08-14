@@ -135,7 +135,9 @@ export function isBoardTypingTarget(target: EventTarget | null): boolean {
   if (!el?.tagName) return false;
   const tag = el.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  return Boolean(el.isContentEditable);
+  if (el.isContentEditable) return true;
+  if (typeof el.closest !== "function") return false;
+  return Boolean(el.closest('[role="textbox"], [role="searchbox"]'));
 }
 
 /**
