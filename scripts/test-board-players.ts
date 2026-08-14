@@ -6,6 +6,7 @@ import {
   boardHasPlayerId,
   coerceExpandedPlayerId,
   hiddenLinkedPlayer,
+  boardCopyPlayerLinkId,
   nextDeferredExpandState,
 } from "../src/lib/board-players";
 
@@ -87,6 +88,9 @@ assert(
   "expanded pending is not hidden",
 );
 assert(hiddenLinkedPlayer(all, null, null) === null, "no pending");
+assert(boardCopyPlayerLinkId(1, 3) === 1, "copy prefers expanded");
+assert(boardCopyPlayerLinkId(null, 3) === 3, "copy falls back to pending");
+assert(boardCopyPlayerLinkId(null, null) === null, "copy none");
 
 if (failed) process.exit(1);
 console.log("OK: board-players");

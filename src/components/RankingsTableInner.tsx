@@ -94,6 +94,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     filtered: board.filtered,
     renderCount,
     expandedId: board.expandedId,
+    pendingPlayerId: board.pendingPlayerId,
     setExpandedId: board.setExpandedId,
     filtersOpen: board.filtersOpen,
     setFiltersOpen: board.setFiltersOpen,

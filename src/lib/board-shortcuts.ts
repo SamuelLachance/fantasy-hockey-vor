@@ -12,7 +12,7 @@ export const BOARD_SHORTCUT_ROWS: ReadonlyArray<{
   { keys: "f", action: "Open stat filters (Esc closes)" },
   { keys: "r", action: "Reset board view" },
   { keys: "l", action: "Copy board link" },
-  { keys: "p", action: "Copy expanded player link" },
+  { keys: "p", action: "Copy player link (expanded or linked)" },
   { keys: "m", action: "Load more rows" },
   { keys: "Home", action: "First player (or page top + search)" },
   { keys: "End", action: "Last player (or board + search)" },
@@ -40,7 +40,7 @@ export const BOARD_SORT_HOTKEYS: Readonly<Record<string, SortKey>> = {
 export function boardShortcutsFaqAnswer(): string {
   return (
     "Press ? for the full list. Highlights: / search, f opens filters (Esc closes), r reset, l copy board link, " +
-    "p copy expanded player link, m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
+    "p copy player link (expanded or linked), m load more, [ and ] cycle positions, Esc clears search or closes help/filters/row, " +
     "j/k move rows, PageUp/PageDown jump 10, Home/End jump to first/last while on a row, Enter/Space expand, " +
     "v/e/u/g sort, Shift+G toggle starter goalies."
   );

@@ -68,3 +68,11 @@ export function hiddenLinkedPlayer<T extends { id: number }>(
   if (expandedId === pendingPlayerId) return null;
   return allPlayers.find((p) => p.id === pendingPlayerId) ?? null;
 }
+
+/** Player id for `p` copy-link: visible expand, else parked deep-link. */
+export function boardCopyPlayerLinkId(
+  expandedId: number | null,
+  pendingPlayerId: number | null,
+): number | null {
+  return expandedId ?? pendingPlayerId;
+}

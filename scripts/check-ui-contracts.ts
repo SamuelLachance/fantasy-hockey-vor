@@ -70,6 +70,7 @@ const files: Record<string, string[]> = {
     "pendingPlayerName",
     "revealPendingPlayer",
     "pendingPlayer?.name",
+    "pendingPlayerId: board.pendingPlayerId",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -239,6 +240,7 @@ const files: Record<string, string[]> = {
     "coerceExpandedPlayerId",
     "nextDeferredExpandState",
     "hiddenLinkedPlayer",
+    "boardCopyPlayerLinkId",
   ],
   "src/lib/board-active-filters.ts": [
     "countActiveStatFilters",
@@ -439,6 +441,8 @@ const files: Record<string, string[]> = {
     "filtersOpenNow",
     "onCopyBoardLink",
     "onCopyPlayerLink",
+    "boardCopyPlayerLinkId",
+    "pendingPlayerIdRef",
     'e.key === "Home"',
     'e.key === "End"',
     "focusBoardSearch({ preventScroll: true })",
@@ -520,7 +524,7 @@ const files: Record<string, string[]> = {
     "boardShortcutsFaqAnswer",
     "Shift+G",
     "Load more rows",
-    "Copy expanded player link",
+    "Copy player link (expanded or linked)",
     "Previous / next position tab",
     "PgDn / PgUp",
     "Open stat filters (Esc closes)",

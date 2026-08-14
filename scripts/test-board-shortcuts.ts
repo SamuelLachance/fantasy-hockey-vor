@@ -46,7 +46,7 @@ assert(
   "FAQ mentions Esc",
 );
 assert(
-  boardShortcutsFaqAnswer().includes("p copy expanded player link"),
+  boardShortcutsFaqAnswer().includes("p copy player link (expanded or linked)"),
   "FAQ mentions p player link",
 );
 assert(

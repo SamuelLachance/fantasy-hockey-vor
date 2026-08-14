@@ -15,6 +15,7 @@ import {
   shouldIgnoreBoardShortcut,
   shouldPrefetchBoardPage,
 } from "@/lib/board-keyboard";
+import { boardCopyPlayerLinkId } from "@/lib/board-players";
 import { BOARD_SORT_HOTKEYS } from "@/lib/board-shortcuts";
 import { focusBoardSearch, focusFirstStatFilterInput, focusStatsFilterButton, focusPlayerRow, focusPlayerRowIfPanelFocused, scrollPageTop, scrollToRankings } from "@/lib/board-dom";
 import { defaultSortDir, type SortKey } from "@/lib/rankings-filters";
@@ -23,6 +24,7 @@ interface RankingsKeyboardInput {
   filtered: PlayerProjection[];
   renderCount: number;
   expandedId: number | null;
+  pendingPlayerId?: number | null;
   setExpandedId: (id: number | null) => void;
   filtersOpen: boolean;
   setFiltersOpen: (open: boolean | ((prev: boolean) => boolean)) => void;
@@ -46,6 +48,7 @@ export function useRankingsKeyboard({
   filtered,
   renderCount,
   expandedId,
+  pendingPlayerId = null,
   setExpandedId,
   filtersOpen,
   setFiltersOpen,
@@ -66,6 +69,7 @@ export function useRankingsKeyboard({
   const filteredRef = useRef(filtered);
   const renderCountRef = useRef(renderCount);
   const expandedIdRef = useRef(expandedId);
+  const pendingPlayerIdRef = useRef(pendingPlayerId);
   const filtersOpenRef = useRef(filtersOpen);
   const helpOpenRef = useRef(helpOpen);
   const hasQueryRef = useRef(hasQuery);
@@ -86,6 +90,7 @@ export function useRankingsKeyboard({
     filteredRef.current = filtered;
     renderCountRef.current = renderCount;
     expandedIdRef.current = expandedId;
+    pendingPlayerIdRef.current = pendingPlayerId;
     filtersOpenRef.current = filtersOpen;
     helpOpenRef.current = helpOpen;
     hasQueryRef.current = hasQuery;
@@ -281,11 +286,16 @@ export function useRankingsKeyboard({
       }
       if (
         (e.key === "p" || e.key === "P") &&
-        expandedIdNow != null &&
         onCopyPlayerLinkRef.current
       ) {
-        e.preventDefault();
-        onCopyPlayerLinkRef.current(expandedIdNow);
+        const copyId = boardCopyPlayerLinkId(
+          expandedIdNow,
+          pendingPlayerIdRef.current,
+        );
+        if (copyId != null) {
+          e.preventDefault();
+          onCopyPlayerLinkRef.current(copyId);
+        }
         return;
       }
       if ((e.key === "m" || e.key === "M") && onLoadMoreRef.current) {

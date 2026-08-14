@@ -76,7 +76,7 @@ assert(
   "FAQ keyboard mentions Esc",
 );
 assert(
-  JSON.stringify(faq).includes("p copy expanded player link"),
+  JSON.stringify(faq).includes("p copy player link (expanded or linked)"),
   "FAQ keyboard mentions player link",
 );
 assert(graph[1]?.dateModified === data.generatedAt, "dateModified wired");
