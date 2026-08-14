@@ -1461,6 +1461,7 @@ const files: Record<string, string[]> = {
     'aria-hidden="true"',
     "tabular-nums",
     "min-h-11",
+    "min-h-11 w-full",
     "min-w-[2.75rem]",
     "inline-flex",
     "items-center",
