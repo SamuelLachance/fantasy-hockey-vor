@@ -85,8 +85,14 @@ mark {
   white-space: normal;
 }
 
-input[type="search"]::-webkit-search-cancel-button {
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
   -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="search"]::-moz-search-clear-button {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

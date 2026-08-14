@@ -1430,6 +1430,8 @@ const files: Record<string, string[]> = {
     "100dvh",
     "touch-action: manipulation",
     "text-size-adjust: 100%",
+    "::-webkit-search-cancel-button",
+    "::-moz-search-clear-button",
   ],
   "src/components/RankingsStatFilters.tsx": [
     "onDone",
