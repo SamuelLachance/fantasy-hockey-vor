@@ -138,6 +138,8 @@ const files: Record<string, string[]> = {
     "boardShareState(null)",
     "cancelBoardFlashRef",
     "cancelPlayerFlashRef",
+    "cancelBoardFlashRef.current?.()",
+    "cancelPlayerFlashRef.current?.()",
   ],
   "src/hooks/useRankingsHashJump.ts": [
     "useRankingsHashJump",

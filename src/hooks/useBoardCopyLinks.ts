@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CopyFlash } from "@/lib/copy-flash";
 import { copyTextWithFlash } from "@/lib/copy-flash";
 import type { RankingsUrlState } from "@/lib/rankings-url";
@@ -20,6 +20,13 @@ export function useBoardCopyLinks(
   }>({ id: null, status: "idle" });
   const cancelBoardFlashRef = useRef<(() => void) | null>(null);
   const cancelPlayerFlashRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    return () => {
+      cancelBoardFlashRef.current?.();
+      cancelPlayerFlashRef.current?.();
+    };
+  }, []);
 
   function copyBoardLink() {
     cancelBoardFlashRef.current?.();
