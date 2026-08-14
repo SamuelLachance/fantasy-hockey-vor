@@ -64,6 +64,7 @@ const files: Record<string, string[]> = {
     "onCyclePosition",
     "cycleBoardPosition",
     "onCopyPlayerLink",
+    "pendingPlayerId",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -173,12 +174,12 @@ const files: Record<string, string[]> = {
   "src/hooks/useRankingsBoardState.ts": [
     "useRankingsBoardState",
     "boardFilterResetToken",
-    "coerceExpandedPlayerId",
+    "nextDeferredExpandState",
     "countActiveStatFilters",
     "resetSortToVor",
     "toggleDepthGoalies",
     "hydrateFromUrl",
-    "Drop expand when the player leaves",
+    "Park filter-hidden expands",
     "pruneStatRangesForPosition",
     "canToggleDepthGoalies",
   ],
@@ -211,7 +212,11 @@ const files: Record<string, string[]> = {
     "inline-flex",
     "items-center",
   ],
-  "src/lib/board-players.ts": ["boardHasPlayerId", "coerceExpandedPlayerId"],
+  "src/lib/board-players.ts": [
+    "boardHasPlayerId",
+    "coerceExpandedPlayerId",
+    "nextDeferredExpandState",
+  ],
   "src/lib/board-active-filters.ts": [
     "countActiveStatFilters",
     "isInvertedRangeBound",

@@ -21,7 +21,7 @@ import {
   pruneStatRangesForPosition,
 } from "@/lib/rankings-board";
 import { countActiveStatFilters } from "@/lib/board-active-filters";
-import { coerceExpandedPlayerId } from "@/lib/board-players";
+import { nextDeferredExpandState } from "@/lib/board-players";
 import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
 import type { RankingsUrlState } from "@/lib/rankings-url";
@@ -57,6 +57,9 @@ export function useRankingsBoardState(
     seed.hideDepthGoalies,
   );
   const [expandedId, setExpandedId] = useState<number | null>(seed.playerId);
+  const [pendingPlayerId, setPendingPlayerId] = useState<number | null>(
+    seed.playerId,
+  );
   const [helpOpen, setHelpOpen] = useState(false);
 
   const filterRangeKeys = useMemo(
@@ -113,10 +116,26 @@ export function useRankingsBoardState(
     ],
   );
 
-  // Drop expand when the player leaves the filtered board (dataset or filters).
-  const nextExpandedId = coerceExpandedPlayerId(filtered, expandedId);
-  if (nextExpandedId !== expandedId) {
-    setExpandedId(nextExpandedId);
+  // Park filter-hidden expands as pending; restore when the player reappears.
+  const deferredExpand = nextDeferredExpandState({
+    allPlayers: players,
+    filtered,
+    expandedId,
+    pendingPlayerId,
+  });
+  if (deferredExpand.expandedId !== expandedId) {
+    setExpandedId(deferredExpand.expandedId);
+  }
+  if (deferredExpand.pendingPlayerId !== pendingPlayerId) {
+    setPendingPlayerId(deferredExpand.pendingPlayerId);
+  }
+
+  function setExpandedIdFromUser(
+    next: number | null | ((cur: number | null) => number | null),
+  ) {
+    const value = typeof next === "function" ? next(expandedId) : next;
+    setExpandedId(value);
+    setPendingPlayerId(value);
   }
 
   function clearStatFilters() {
@@ -138,6 +157,7 @@ export function useRankingsBoardState(
     clearStatFilters();
     setFiltersOpen(false);
     setExpandedId(null);
+    setPendingPlayerId(null);
     startTransition(() => {
       setPosition("ALL");
       setHideDepthGoalies(true);
@@ -205,6 +225,7 @@ export function useRankingsBoardState(
     setStatRanges(next.statRanges);
     setHideDepthGoalies(next.hideDepthGoalies);
     setExpandedId(next.playerId);
+    setPendingPlayerId(next.playerId);
     setFiltersOpen(
       Object.values(next.statRanges).some(
         (b) => b?.min?.trim() || b?.max?.trim(),
@@ -232,7 +253,8 @@ export function useRankingsBoardState(
     hideDepthGoalies,
     setHideDepthGoalies,
     expandedId,
-    setExpandedId,
+    pendingPlayerId,
+    setExpandedId: setExpandedIdFromUser,
     helpOpen,
     setHelpOpen,
     filterRangeKeys,

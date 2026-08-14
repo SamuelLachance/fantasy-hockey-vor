@@ -18,3 +18,42 @@ export function coerceExpandedPlayerId(
   if (expandedId == null) return null;
   return boardHasPlayerId(players, expandedId) ? expandedId : null;
 }
+
+export interface DeferredExpandState {
+  expandedId: number | null;
+  pendingPlayerId: number | null;
+}
+
+/**
+ * Park a filter-hidden expand as pending and restore it when the player
+ * reappears (depth goalies, position tab, search). Invalid ids are dropped.
+ */
+export function nextDeferredExpandState(opts: {
+  allPlayers: readonly { id: number }[];
+  filtered: readonly { id: number }[];
+  expandedId: number | null;
+  pendingPlayerId: number | null;
+}): DeferredExpandState {
+  const pending =
+    opts.pendingPlayerId != null &&
+    boardHasPlayerId(opts.allPlayers, opts.pendingPlayerId)
+      ? opts.pendingPlayerId
+      : null;
+
+  if (opts.expandedId != null && boardHasPlayerId(opts.filtered, opts.expandedId)) {
+    return { expandedId: opts.expandedId, pendingPlayerId: pending };
+  }
+
+  if (pending != null && boardHasPlayerId(opts.filtered, pending)) {
+    return { expandedId: pending, pendingPlayerId: pending };
+  }
+
+  if (
+    opts.expandedId != null &&
+    boardHasPlayerId(opts.allPlayers, opts.expandedId)
+  ) {
+    return { expandedId: null, pendingPlayerId: opts.expandedId };
+  }
+
+  return { expandedId: null, pendingPlayerId: pending };
+}

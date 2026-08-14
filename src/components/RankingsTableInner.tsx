@@ -46,7 +46,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
     query: board.query,
     sortKey: board.sortKey,
     sortDir: board.sortDir,
-    expandedId: board.expandedId,
+    expandedId: board.expandedId ?? board.pendingPlayerId,
     hideDepthGoalies: board.hideDepthGoalies,
     statRanges: board.statRanges,
     onHydrate: board.hydrateFromUrl,

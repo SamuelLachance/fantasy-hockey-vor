@@ -5,6 +5,7 @@
 import {
   boardHasPlayerId,
   coerceExpandedPlayerId,
+  nextDeferredExpandState,
 } from "../src/lib/board-players";
 
 let failed = 0;
@@ -28,6 +29,53 @@ assert(coerceExpandedPlayerId(players, null) === null, "null stays null");
 assert(
   coerceExpandedPlayerId([{ id: 2 }], 1) === null,
   "clear when filtered out",
+);
+
+const all = [{ id: 1 }, { id: 2 }, { id: 3 }];
+const starters = [{ id: 1 }, { id: 2 }];
+assert(
+  JSON.stringify(
+    nextDeferredExpandState({
+      allPlayers: all,
+      filtered: starters,
+      expandedId: 3,
+      pendingPlayerId: 3,
+    }),
+  ) === JSON.stringify({ expandedId: null, pendingPlayerId: 3 }),
+  "park depth-hidden expand",
+);
+assert(
+  JSON.stringify(
+    nextDeferredExpandState({
+      allPlayers: all,
+      filtered: all,
+      expandedId: null,
+      pendingPlayerId: 3,
+    }),
+  ) === JSON.stringify({ expandedId: 3, pendingPlayerId: 3 }),
+  "restore when filters reveal player",
+);
+assert(
+  JSON.stringify(
+    nextDeferredExpandState({
+      allPlayers: all,
+      filtered: starters,
+      expandedId: 1,
+      pendingPlayerId: 1,
+    }),
+  ) === JSON.stringify({ expandedId: 1, pendingPlayerId: 1 }),
+  "keep visible expand",
+);
+assert(
+  JSON.stringify(
+    nextDeferredExpandState({
+      allPlayers: all,
+      filtered: starters,
+      expandedId: 99,
+      pendingPlayerId: 99,
+    }),
+  ) === JSON.stringify({ expandedId: null, pendingPlayerId: null }),
+  "drop id missing from dataset",
 );
 
 if (failed) process.exit(1);
