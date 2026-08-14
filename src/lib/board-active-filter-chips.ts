@@ -53,13 +53,15 @@ export function boardActiveFiltersVisible(input: {
   hasStatFilters: boolean;
   chipCount: number;
   showingAllGoalies: boolean;
+  hasLinkedPlayer?: boolean;
 }): boolean {
   return (
     input.position !== "ALL" ||
     input.query.trim() !== "" ||
     input.hasStatFilters ||
     input.chipCount > 0 ||
-    input.showingAllGoalies
+    input.showingAllGoalies ||
+    Boolean(input.hasLinkedPlayer)
   );
 }
 
@@ -101,4 +103,14 @@ export function boardActiveEditFiltersTitle(): string {
 /** Remove control accessible name for a single stat chip. */
 export function boardActiveRemoveStatAriaLabel(label: string): string {
   return `Remove ${label} filter`;
+}
+
+/** Visible chip that reveals a filter-hidden deep-linked player. */
+export function showLinkedPlayerChipLabel(name: string): string {
+  return `Show ${name}`;
+}
+
+/** Accessible name for the show-linked-player chip. */
+export function showLinkedPlayerAriaLabel(name: string): string {
+  return `Show linked player ${name}`;
 }

@@ -27,6 +27,7 @@ export const EMPTY_BOARD_ACTION_LABELS = {
   showAllPositions: "Show all positions",
   showAllGoalies: "Include depth goalies",
   resetBoard: "Reset board view",
+  showLinkedPlayer: "Show linked player",
 } as const;
 
 /** Clear-all chip on the active-filters strip. */
@@ -35,7 +36,8 @@ export function clearBoardFiltersCopy(): string {
 }
 
 /** Primary empty-board status line. */
-export function emptyBoardStatusCopy(): string {
+export function emptyBoardStatusCopy(linkedName?: string | null): string {
+  if (linkedName) return `${linkedName} is hidden by the current filters.`;
   return "No players match your filters.";
 }
 

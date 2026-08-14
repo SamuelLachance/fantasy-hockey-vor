@@ -14,6 +14,8 @@ import {
   boardActiveShowStartersAriaLabel,
   boardActiveStatChips,
   formatActiveRangeChip,
+  showLinkedPlayerAriaLabel,
+  showLinkedPlayerChipLabel,
 } from "../src/lib/board-active-filter-chips";
 
 let failed = 0;
@@ -65,6 +67,22 @@ assert(
     showingAllGoalies: false,
   }),
   "empty chrome hidden",
+);
+assert(
+  boardActiveFiltersVisible({
+    position: "ALL",
+    query: "",
+    hasStatFilters: false,
+    chipCount: 0,
+    showingAllGoalies: false,
+    hasLinkedPlayer: true,
+  }),
+  "linked player shows chrome",
+);
+assert(showLinkedPlayerChipLabel("Beta") === "Show Beta", "linked chip");
+assert(
+  showLinkedPlayerAriaLabel("Beta") === "Show linked player Beta",
+  "linked aria",
 );
 assert(
   boardActiveFiltersVisible({

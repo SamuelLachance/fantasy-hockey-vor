@@ -4,6 +4,7 @@ import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { focusBoardSearch } from "@/lib/board-dom";
 import { visibleBoardPlayers } from "@/lib/board-visible";
+import { hiddenLinkedPlayer } from "@/lib/board-players";
 import { searchQueryIsClearable } from "@/lib/highlight-match";
 import { startTransition, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -58,6 +59,11 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   const expandedPlayer = board.expandedId
     ? board.filtered.find((p) => p.id === board.expandedId)
     : undefined;
+  const pendingPlayer = hiddenLinkedPlayer(
+    players,
+    board.pendingPlayerId,
+    board.expandedId,
+  );
 
   useBoardDocumentTitle({
     position: board.position,
@@ -146,6 +152,8 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         showingAllGoalies={board.showingAllGoalies}
         helpOpen={board.helpOpen}
         onOpenHelp={() => board.setHelpOpen(true)}
+        pendingPlayerName={pendingPlayer?.name ?? null}
+        onRevealPendingPlayer={board.revealPendingPlayer}
       />
 
       <RankingsBoardTable
@@ -195,6 +203,8 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
           startTransition(() => board.setHideDepthGoalies(false))
         }
         onResetBoard={board.resetBoardView}
+        pendingPlayerName={pendingPlayer?.name ?? null}
+        onRevealPendingPlayer={board.revealPendingPlayer}
       />
       <RankingsStatusBar
         renderCount={renderCount}

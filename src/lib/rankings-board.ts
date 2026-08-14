@@ -166,3 +166,38 @@ export function filterAndSortBoard(
     return a.id - b.id;
   });
 }
+
+/**
+ * Peel the fewest filters so `player` reappears on the board (search →
+ * position → depth goalies → stat ranges).
+ */
+export function revealHiddenPlayerQuery(
+  player: PlayerProjection,
+  q: BoardQuery,
+): BoardQuery {
+  if (filterAndSortBoard([player], q).length > 0) return q;
+
+  const steps: Array<(cur: BoardQuery) => BoardQuery> = [
+    (cur) => (cur.query.trim() ? { ...cur, query: "" } : cur),
+    (cur) =>
+      cur.position !== "ALL" &&
+      !player.positions.includes(cur.position as Position)
+        ? { ...cur, position: "ALL" }
+        : cur,
+    (cur) =>
+      cur.hideDepthGoalies ? { ...cur, hideDepthGoalies: false } : cur,
+    (cur) =>
+      Object.keys(cur.statRanges).length > 0
+        ? { ...cur, statRanges: {} }
+        : cur,
+  ];
+
+  let next = q;
+  for (const step of steps) {
+    const candidate = step(next);
+    if (candidate === next) continue;
+    next = candidate;
+    if (filterAndSortBoard([player], next).length > 0) return next;
+  }
+  return next;
+}

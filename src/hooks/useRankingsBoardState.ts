@@ -19,6 +19,7 @@ import {
   coerceSortKeyForPosition,
   filterAndSortBoard,
   pruneStatRangesForPosition,
+  revealHiddenPlayerQuery,
 } from "@/lib/rankings-board";
 import { countActiveStatFilters } from "@/lib/board-active-filters";
 import { nextDeferredExpandState } from "@/lib/board-players";
@@ -219,6 +220,26 @@ export function useRankingsBoardState(
     startTransition(() => setHideDepthGoalies((v) => !v));
   }
 
+  function revealPendingPlayer() {
+    if (pendingPlayerId == null) return;
+    const player = players.find((p) => p.id === pendingPlayerId);
+    if (!player) return;
+    const next = revealHiddenPlayerQuery(player, {
+      position,
+      query,
+      sortKey,
+      sortDir,
+      statRanges,
+      hideDepthGoalies,
+    });
+    startTransition(() => {
+      setQuery(next.query);
+      setPosition(next.position);
+      setHideDepthGoalies(next.hideDepthGoalies);
+      setStatRanges(next.statRanges);
+    });
+  }
+
   function hydrateFromUrl(next: RankingsUrlState) {
     setHelpOpen(false);
     setQuery(next.query);
@@ -275,5 +296,6 @@ export function useRankingsBoardState(
     updateRange,
     toggleDepthGoalies,
     hydrateFromUrl,
+    revealPendingPlayer,
   };
 }

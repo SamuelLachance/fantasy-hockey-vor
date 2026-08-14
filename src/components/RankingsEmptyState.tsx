@@ -20,6 +20,8 @@ interface RankingsEmptyStateProps {
   onShowAllPositions: () => void;
   onShowAllGoalies: () => void;
   onResetBoard: () => void;
+  pendingPlayerName?: string | null;
+  onRevealPendingPlayer?: () => void;
 }
 
 export function RankingsEmptyState({
@@ -32,6 +34,8 @@ export function RankingsEmptyState({
   onShowAllPositions,
   onShowAllGoalies,
   onResetBoard,
+  pendingPlayerName = null,
+  onRevealPendingPlayer,
 }: RankingsEmptyStateProps) {
   const actions = emptyBoardRecoveryFlags({
     query,
@@ -42,9 +46,16 @@ export function RankingsEmptyState({
 
   return (
     <div className="px-6 py-16 text-center text-slate-400" role="status">
-      <p>{emptyBoardStatusCopy()}</p>
+      <p>{emptyBoardStatusCopy(pendingPlayerName)}</p>
       <p className="mt-1 text-xs text-slate-400">{emptyBoardHintCopy()}</p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+        {pendingPlayerName && onRevealPendingPlayer && (
+          <EmptyAction
+            label={EMPTY_BOARD_ACTION_LABELS.showLinkedPlayer}
+            onClick={onRevealPendingPlayer}
+            primary
+          />
+        )}
         {actions.clearSearch && (
           <EmptyAction
             label={EMPTY_BOARD_ACTION_LABELS.clearSearch}
@@ -74,7 +85,7 @@ export function RankingsEmptyState({
         <EmptyAction
           label={EMPTY_BOARD_ACTION_LABELS.resetBoard}
           onClick={onResetBoard}
-          primary
+          primary={!pendingPlayerName}
           keyshortcuts="r"
         />
       </div>

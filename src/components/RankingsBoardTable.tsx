@@ -49,6 +49,8 @@ interface RankingsBoardTableProps {
   canShowAllGoalies: boolean;
   onShowAllGoalies: () => void;
   onResetBoard: () => void;
+  pendingPlayerName?: string | null;
+  onRevealPendingPlayer?: () => void;
 }
 
 /** Scrollable rankings table body + footer (empty / load-more). */
@@ -84,6 +86,8 @@ export function RankingsBoardTable({
   canShowAllGoalies,
   onShowAllGoalies,
   onResetBoard,
+  pendingPlayerName = null,
+  onRevealPendingPlayer,
 }: RankingsBoardTableProps) {
   const [anchorId, setAnchorId] = useState<number | null>(expandedId);
   if (expandedId != null && expandedId !== anchorId) {
@@ -173,6 +177,8 @@ export function RankingsBoardTable({
         canShowAllGoalies={canShowAllGoalies}
         onShowAllGoalies={onShowAllGoalies}
         onResetBoard={onResetBoard}
+        pendingPlayerName={pendingPlayerName}
+        onRevealPendingPlayer={onRevealPendingPlayer}
       />
     </div>
   );

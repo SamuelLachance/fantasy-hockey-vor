@@ -6,6 +6,7 @@ import {
   coerceSortKeyForPosition,
   filterAndSortBoard,
   pruneStatRangesForPosition,
+  revealHiddenPlayerQuery,
 } from "../src/lib/rankings-board";
 import { rankForFilter } from "../src/lib/rankings-filters";
 import type { PlayerProjection } from "../src/lib/types";
@@ -205,6 +206,28 @@ assert(
     "D",
   ) === 3,
   "legacy rows without positionRanks still resolve",
+);
+
+const depthG = players[1]!;
+const revealedDepth = revealHiddenPlayerQuery(depthG, base);
+assert(
+  revealedDepth.hideDepthGoalies === false &&
+    filterAndSortBoard([depthG], revealedDepth).length === 1,
+  "reveal peels starters filter for depth G",
+);
+const posHidden = revealHiddenPlayerQuery(players[0]!, {
+  ...base,
+  position: "G",
+});
+assert(posHidden.position === "ALL", "reveal peels wrong position tab");
+const searchHidden = revealHiddenPlayerQuery(players[0]!, {
+  ...base,
+  query: "zzz",
+});
+assert(searchHidden.query === "", "reveal peels non-matching search");
+assert(
+  revealHiddenPlayerQuery(players[0]!, base).hideDepthGoalies === true,
+  "already-visible player keeps filters",
 );
 
 if (failed) process.exit(1);

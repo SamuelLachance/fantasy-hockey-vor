@@ -39,6 +39,8 @@ interface RankingsBoardChromeProps {
   showingAllGoalies: boolean;
   helpOpen: boolean;
   onOpenHelp: () => void;
+  pendingPlayerName?: string | null;
+  onRevealPendingPlayer?: () => void;
 }
 
 /** Sticky toolbar + stat filters + active filter chips above the board. */
@@ -67,6 +69,8 @@ export function RankingsBoardChrome({
   showingAllGoalies,
   helpOpen,
   onOpenHelp,
+  pendingPlayerName = null,
+  onRevealPendingPlayer,
 }: RankingsBoardChromeProps) {
   return (
     <div
@@ -122,7 +126,8 @@ export function RankingsBoardChrome({
       {(activeFilterCount > 0 ||
         position !== "ALL" ||
         query.trim() !== "" ||
-        showingAllGoalies) && (
+        showingAllGoalies ||
+        Boolean(pendingPlayerName)) && (
         <BoardActiveFilters
           position={position}
           query={query}
@@ -130,6 +135,8 @@ export function RankingsBoardChrome({
           showStatChips={!filtersOpen && activeFilterCount > 0}
           hasStatFilters={activeFilterCount > 0}
           showingAllGoalies={showingAllGoalies}
+          pendingPlayerName={pendingPlayerName}
+          onRevealPendingPlayer={onRevealPendingPlayer}
           onClearPosition={() => startTransition(() => setPosition("ALL"))}
           onClearQuery={() => {
             setQuery("");

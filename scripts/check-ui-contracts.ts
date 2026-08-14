@@ -67,6 +67,8 @@ const files: Record<string, string[]> = {
     "onCopyPlayerLink",
     "pendingPlayerId",
     "query: board.deferredQuery, // settled filter",
+    "pendingPlayerName",
+    "revealPendingPlayer",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -102,6 +104,7 @@ const files: Record<string, string[]> = {
     "aria-busy",
     "aria-rowcount",
     "boardTableAriaRowCount",
+    "pendingPlayerName",
   ],
   "src/hooks/useBoardCopyLinks.ts": [
     "useBoardCopyLinks",
@@ -196,6 +199,7 @@ const files: Record<string, string[]> = {
     "canToggleDepthGoalies",
     "boardShareState",
     "rankingsShareViewState",
+    "revealPendingPlayer",
   ],
   "src/components/RankingsBoardChrome.tsx": [
     "boardFiltersRegionLabel",
@@ -210,6 +214,8 @@ const files: Record<string, string[]> = {
     "helpOpen",
     "focusFirstStatFilterInput",
     "onOpenStats",
+    "pendingPlayerName",
+    "onRevealPendingPlayer",
   ],
   "src/components/RankingsBoardFooter.tsx": [
     "loadMoreLabel",
@@ -225,11 +231,13 @@ const files: Record<string, string[]> = {
     "min-w-[2.75rem]",
     "inline-flex",
     "items-center",
+    "pendingPlayerName",
   ],
   "src/lib/board-players.ts": [
     "boardHasPlayerId",
     "coerceExpandedPlayerId",
     "nextDeferredExpandState",
+    "hiddenLinkedPlayer",
   ],
   "src/lib/board-active-filters.ts": [
     "countActiveStatFilters",
@@ -324,6 +332,8 @@ const files: Record<string, string[]> = {
     'aria-hidden="true"',
     "min-h-11",
     "min-w-11",
+    "showLinkedPlayerChipLabel",
+    "pendingPlayerName",
   ],
   "src/lib/board-active-filter-chips.ts": [
     "boardActiveStatChips",
@@ -337,6 +347,8 @@ const files: Record<string, string[]> = {
     "formatActiveRangeChip",
     "formatRangeChip",
     "isInvertedRangeBound",
+    "hasLinkedPlayer",
+    "showLinkedPlayerChipLabel",
   ],
   "src/components/RankingsTableHead.tsx": [
     'column="sigma"',
@@ -368,6 +380,8 @@ const files: Record<string, string[]> = {
     'keyshortcuts="Escape"',
     "emptyBoardRecoveryFlags",
     "text-slate-400",
+    "showLinkedPlayer",
+    "pendingPlayerName",
   ],
   "src/components/EmptyAction.tsx": [
     "EmptyAction",
@@ -388,6 +402,7 @@ const files: Record<string, string[]> = {
     "EMPTY_BOARD_ACTION_LABELS",
     "clearBoardFiltersCopy",
     "canShowAllGoalies",
+    "showLinkedPlayer",
   ],
   "src/components/RankingsStatusBar.tsx": [
     "aria-live",
@@ -1060,6 +1075,7 @@ const files: Record<string, string[]> = {
     "coerceSortKeyForPosition",
     "pruneStatRangesForPosition",
     "isStarterEligibleGoalie",
+    "revealHiddenPlayerQuery",
   ],
   "src/lib/goalie-depth.ts": [
     "GOALIE_DEPTH_MAX_GP",

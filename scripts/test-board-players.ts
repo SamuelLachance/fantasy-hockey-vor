@@ -5,6 +5,7 @@
 import {
   boardHasPlayerId,
   coerceExpandedPlayerId,
+  hiddenLinkedPlayer,
   nextDeferredExpandState,
 } from "../src/lib/board-players";
 
@@ -77,6 +78,15 @@ assert(
   ) === JSON.stringify({ expandedId: null, pendingPlayerId: null }),
   "drop id missing from dataset",
 );
+assert(
+  hiddenLinkedPlayer(all, 3, null)?.id === 3,
+  "parked pending is a hidden linked player",
+);
+assert(
+  hiddenLinkedPlayer(all, 3, 3) === null,
+  "expanded pending is not hidden",
+);
+assert(hiddenLinkedPlayer(all, null, null) === null, "no pending");
 
 if (failed) process.exit(1);
 console.log("OK: board-players");

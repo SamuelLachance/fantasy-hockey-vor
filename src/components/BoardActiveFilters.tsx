@@ -13,6 +13,8 @@ import {
   boardActiveRemoveStatAriaLabel,
   boardActiveShowStartersAriaLabel,
   boardActiveStatChips,
+  showLinkedPlayerAriaLabel,
+  showLinkedPlayerChipLabel,
 } from "@/lib/board-active-filter-chips";
 import { clearBoardFiltersCopy } from "@/lib/board-empty-recovery";
 import {
@@ -35,6 +37,8 @@ interface BoardActiveFiltersProps {
   onClearStats: () => void;
   onRemoveStat: (key: RangeKey) => void;
   onShowStarterGoalies: () => void;
+  pendingPlayerName?: string | null;
+  onRevealPendingPlayer?: () => void;
 }
 
 export function BoardActiveFilters({
@@ -50,6 +54,8 @@ export function BoardActiveFilters({
   onClearStats,
   onRemoveStat,
   onShowStarterGoalies,
+  pendingPlayerName = null,
+  onRevealPendingPlayer,
 }: BoardActiveFiltersProps) {
   const q = query.trim();
   const chips = boardActiveStatChips(statRanges, showStatChips);
@@ -60,6 +66,7 @@ export function BoardActiveFilters({
       hasStatFilters,
       chipCount: chips.length,
       showingAllGoalies,
+      hasLinkedPlayer: Boolean(pendingPlayerName),
     })
   ) {
     return null;
@@ -70,6 +77,19 @@ export function BoardActiveFilters({
       className="flex flex-wrap items-center gap-2"
       aria-label={boardActiveFiltersRegionLabel()}
     >
+      {pendingPlayerName && onRevealPendingPlayer && (
+        <button
+          type="button"
+          onClick={() => {
+            onRevealPendingPlayer();
+            focusAfterActiveFilterClear();
+          }}
+          aria-label={showLinkedPlayerAriaLabel(pendingPlayerName)}
+          className="inline-flex min-h-11 items-center rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-100 transition hover:bg-cyan-500/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+        >
+          {showLinkedPlayerChipLabel(pendingPlayerName)}
+        </button>
+      )}
       {position !== "ALL" && (
         <span className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 pl-2.5 text-xs text-slate-200">
           <span className="py-1 font-medium">

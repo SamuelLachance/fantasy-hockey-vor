@@ -43,6 +43,14 @@ assert(
   emptyBoardStatusCopy().includes("No players match"),
   "status copy",
 );
+assert(
+  emptyBoardStatusCopy("Beta").includes("Beta is hidden"),
+  "linked-player empty status",
+);
+assert(
+  EMPTY_BOARD_ACTION_LABELS.showLinkedPlayer === "Show linked player",
+  "show linked label",
+);
 assert(emptyBoardHintCopy().includes("buttons below"), "hint mentions buttons");
 assert(emptyBoardHintCopy().includes("Keyboard:"), "hint mentions keyboard");
 assert(emptyBoardHintCopy().includes("r resets"), "hint mentions r");

@@ -57,3 +57,14 @@ export function nextDeferredExpandState(opts: {
 
   return { expandedId: null, pendingPlayerId: pending };
 }
+
+/** Linked player parked off the filtered board (depth / pos / search). */
+export function hiddenLinkedPlayer<T extends { id: number }>(
+  allPlayers: readonly T[],
+  pendingPlayerId: number | null,
+  expandedId: number | null,
+): T | null {
+  if (pendingPlayerId == null) return null;
+  if (expandedId === pendingPlayerId) return null;
+  return allPlayers.find((p) => p.id === pendingPlayerId) ?? null;
+}

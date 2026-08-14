@@ -28,6 +28,8 @@ interface RankingsBoardFooterProps {
   canShowAllGoalies: boolean;
   onShowAllGoalies: () => void;
   onResetBoard: () => void;
+  pendingPlayerName?: string | null;
+  onRevealPendingPlayer?: () => void;
 }
 
 /** Empty state and progressive load control inside the board card. */
@@ -47,6 +49,8 @@ export function RankingsBoardFooter({
   canShowAllGoalies,
   onShowAllGoalies,
   onResetBoard,
+  pendingPlayerName = null,
+  onRevealPendingPlayer,
 }: RankingsBoardFooterProps) {
   const remaining = remainingBoardRows(filteredCount, renderCount);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -79,6 +83,8 @@ export function RankingsBoardFooter({
           onShowAllPositions={onShowAllPositions}
           onShowAllGoalies={onShowAllGoalies}
           onResetBoard={onResetBoard}
+          pendingPlayerName={pendingPlayerName}
+          onRevealPendingPlayer={onRevealPendingPlayer}
         />
       )}
       {canLoadMore && (
