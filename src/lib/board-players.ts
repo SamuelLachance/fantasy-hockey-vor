@@ -85,3 +85,40 @@ export function linkedPlayerChipName(
   if (!name || filteredCount <= 0) return null;
   return name;
 }
+
+export interface BoardLinkedPlayerView<T extends { id: number; name: string }> {
+  expandedPlayer: T | undefined;
+  pendingPlayer: T | null;
+  /** Address bar / details fetch: visible expand, else parked deep-link. */
+  urlPlayerId: number | null;
+  titlePlayerName: string | null;
+  chipPlayerName: string | null;
+  emptyPlayerName: string | null;
+}
+
+/** Single derivation for URL, title, chrome chip, empty state, and details. */
+export function boardLinkedPlayerView<T extends { id: number; name: string }>(opts: {
+  allPlayers: readonly T[];
+  filtered: readonly T[];
+  expandedId: number | null;
+  pendingPlayerId: number | null;
+}): BoardLinkedPlayerView<T> {
+  const expandedPlayer =
+    opts.expandedId != null
+      ? opts.filtered.find((p) => p.id === opts.expandedId)
+      : undefined;
+  const pendingPlayer = hiddenLinkedPlayer(
+    opts.allPlayers,
+    opts.pendingPlayerId,
+    opts.expandedId,
+  );
+  const pendingName = pendingPlayer?.name ?? null;
+  return {
+    expandedPlayer,
+    pendingPlayer,
+    urlPlayerId: boardCopyPlayerLinkId(opts.expandedId, opts.pendingPlayerId),
+    titlePlayerName: expandedPlayer?.name ?? pendingName,
+    chipPlayerName: linkedPlayerChipName(pendingName, opts.filtered.length),
+    emptyPlayerName: pendingName,
+  };
+}

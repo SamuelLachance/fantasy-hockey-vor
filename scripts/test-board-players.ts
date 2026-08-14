@@ -8,6 +8,7 @@ import {
   hiddenLinkedPlayer,
   boardCopyPlayerLinkId,
   linkedPlayerChipName,
+  boardLinkedPlayerView,
   nextDeferredExpandState,
 } from "../src/lib/board-players";
 
@@ -98,6 +99,43 @@ assert(
 );
 assert(linkedPlayerChipName("Beta", 0) === null, "no chip on empty board");
 assert(linkedPlayerChipName(null, 10) === null, "no chip without name");
+
+const named = [
+  { id: 1, name: "Alpha" },
+  { id: 2, name: "Beta" },
+  { id: 3, name: "Gamma" },
+];
+const parked = boardLinkedPlayerView({
+  allPlayers: named,
+  filtered: named.slice(0, 2),
+  expandedId: null,
+  pendingPlayerId: 3,
+});
+assert(parked.urlPlayerId === 3, "url keeps parked id");
+assert(parked.titlePlayerName === "Gamma", "title uses parked name");
+assert(parked.chipPlayerName === "Gamma", "chip when rows remain");
+assert(parked.emptyPlayerName === "Gamma", "empty-state name");
+assert(parked.expandedPlayer === undefined, "no expanded row");
+
+const emptyBoard = boardLinkedPlayerView({
+  allPlayers: named,
+  filtered: [],
+  expandedId: null,
+  pendingPlayerId: 3,
+});
+assert(emptyBoard.chipPlayerName === null, "no chrome chip on empty board");
+assert(emptyBoard.emptyPlayerName === "Gamma", "empty state still has name");
+
+const open = boardLinkedPlayerView({
+  allPlayers: named,
+  filtered: named,
+  expandedId: 1,
+  pendingPlayerId: 1,
+});
+assert(open.urlPlayerId === 1, "url uses expanded");
+assert(open.titlePlayerName === "Alpha", "title uses expanded name");
+assert(open.chipPlayerName === null, "no chip while expanded");
+assert(open.expandedPlayer?.id === 1, "expanded player found");
 
 if (failed) process.exit(1);
 console.log("OK: board-players");

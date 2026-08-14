@@ -4,7 +4,7 @@ import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { focusBoardSearch } from "@/lib/board-dom";
 import { visibleBoardPlayers } from "@/lib/board-visible";
-import { hiddenLinkedPlayer, linkedPlayerChipName } from "@/lib/board-players";
+import { boardLinkedPlayerView } from "@/lib/board-players";
 import { searchQueryIsClearable } from "@/lib/highlight-match";
 import { startTransition, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -40,15 +40,21 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   const board = useRankingsBoardState(players, seed);
   const { boardLinkStatus, playerLinkStatus, copyBoardLink, copyPlayerLink } =
     useBoardCopyLinks(pathname, board.boardShareState);
+  const linked = boardLinkedPlayerView({
+    allPlayers: players,
+    filtered: board.filtered,
+    expandedId: board.expandedId,
+    pendingPlayerId: board.pendingPlayerId,
+  });
   const { details, detailsError, setDetails, setDetailsError } =
-    usePlayerDetails(board.expandedId);
+    usePlayerDetails(linked.urlPlayerId);
 
   useRankingsUrlSync({
     position: board.position,
     query: board.deferredQuery, // settled filter
     sortKey: board.sortKey,
     sortDir: board.sortDir,
-    expandedId: board.expandedId ?? board.pendingPlayerId,
+    expandedId: linked.urlPlayerId,
     hideDepthGoalies: board.hideDepthGoalies,
     statRanges: board.statRanges,
     onHydrate: board.hydrateFromUrl,
@@ -56,19 +62,10 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
 
   useRankingsHashJump(board.filtered, players);
 
-  const expandedPlayer = board.expandedId
-    ? board.filtered.find((p) => p.id === board.expandedId)
-    : undefined;
-  const pendingPlayer = hiddenLinkedPlayer(
-    players,
-    board.pendingPlayerId,
-    board.expandedId,
-  );
-
   useBoardDocumentTitle({
     position: board.position,
     query: board.deferredQuery,
-    playerName: expandedPlayer?.name ?? pendingPlayer?.name ?? null,
+    playerName: linked.titlePlayerName,
     sortKey: board.sortKey,
     sortDir: board.sortDir,
     activeFilterCount: board.activeFilterCount,
@@ -153,10 +150,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         showingAllGoalies={board.showingAllGoalies}
         helpOpen={board.helpOpen}
         onOpenHelp={() => board.setHelpOpen(true)}
-        pendingPlayerName={linkedPlayerChipName(
-          pendingPlayer?.name,
-          board.filtered.length,
-        )}
+        pendingPlayerName={linked.chipPlayerName}
         onRevealPendingPlayer={board.revealPendingPlayer}
       />
 
@@ -207,7 +201,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
           startTransition(() => board.setHideDepthGoalies(false))
         }
         onResetBoard={board.resetBoardView}
-        pendingPlayerName={pendingPlayer?.name ?? null}
+        pendingPlayerName={linked.emptyPlayerName}
         onRevealPendingPlayer={board.revealPendingPlayer}
       />
       <RankingsStatusBar
@@ -215,10 +209,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         filteredCount={board.filtered.length}
         totalCount={players.length}
         searchPending={board.query !== board.deferredQuery}
-        linkedPlayerName={linkedPlayerChipName(
-          pendingPlayer?.name,
-          board.filtered.length,
-        )}
+        linkedPlayerName={linked.chipPlayerName}
       />
     </div>
   );
