@@ -4,7 +4,10 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { trapDialogTabKey } from "../src/lib/dialog-focus";
+import {
+  computedStyleHidesFromTab,
+  trapDialogTabKey,
+} from "../src/lib/dialog-focus";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -79,6 +82,23 @@ const src = readFileSync(
 assert(
   src.includes("[inert], [hidden], [aria-hidden='true']"),
   "skips inert/hidden focusables",
+);
+assert(src.includes("getComputedStyle"), "skips CSS-hidden focusables");
+assert(
+  computedStyleHidesFromTab({ display: "none", visibility: "visible" }),
+  "display none is off-tab",
+);
+assert(
+  computedStyleHidesFromTab({ display: "block", visibility: "hidden" }),
+  "visibility hidden is off-tab",
+);
+assert(
+  computedStyleHidesFromTab({ display: "table-row", visibility: "collapse" }),
+  "visibility collapse is off-tab",
+);
+assert(
+  !computedStyleHidesFromTab({ display: "flex", visibility: "visible" }),
+  "visible flex stays on-tab",
 );
 
 if (failed) process.exit(1);

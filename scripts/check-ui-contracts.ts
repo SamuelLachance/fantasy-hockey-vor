@@ -528,6 +528,9 @@ const files: Record<string, string[]> = {
     "trapDialogTabKey",
     "pull it back",
     "[inert], [hidden], [aria-hidden='true']",
+    "computedStyleHidesFromTab",
+    "getComputedStyle",
+    'visibility === "collapse"',
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",

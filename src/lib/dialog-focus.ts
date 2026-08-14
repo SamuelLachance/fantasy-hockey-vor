@@ -1,3 +1,20 @@
+/** True when computed CSS takes the node out of visual/tab order. */
+export function computedStyleHidesFromTab(style: {
+  display: string;
+  visibility: string;
+}): boolean {
+  return (
+    style.display === "none" ||
+    style.visibility === "hidden" ||
+    style.visibility === "collapse"
+  );
+}
+
+function elementIsCssHidden(el: HTMLElement): boolean {
+  if (typeof globalThis.getComputedStyle !== "function") return false;
+  return computedStyleHidesFromTab(globalThis.getComputedStyle(el));
+}
+
 /** Focusable elements inside a dialog root (Tab cycle). */
 export function dialogFocusableElements(root: ParentNode): HTMLElement[] {
   return [
@@ -12,6 +29,7 @@ export function dialogFocusableElements(root: ParentNode): HTMLElement[] {
     if (ti != null && Number(ti) < 0) return false;
     // Skip controls that AT / Tab should not reach (hidden or inert subtree).
     if (el.closest("[inert], [hidden], [aria-hidden='true']")) return false;
+    if (elementIsCssHidden(el)) return false;
     return true;
   });
 }
