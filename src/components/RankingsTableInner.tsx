@@ -153,7 +153,9 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         showingAllGoalies={board.showingAllGoalies}
         helpOpen={board.helpOpen}
         onOpenHelp={() => board.setHelpOpen(true)}
-        pendingPlayerName={pendingPlayer?.name ?? null}
+        pendingPlayerName={
+          board.filtered.length > 0 ? (pendingPlayer?.name ?? null) : null
+        }
         onRevealPendingPlayer={board.revealPendingPlayer}
       />
 
