@@ -27,6 +27,10 @@ const forbidden: Array<{ file: string; needle: string }> = [
     file: ["src", "components", "RankingsExportButtons.tsx"].join("/"),
     needle: "overflow-hidden",
   },
+  {
+    file: ["src", "components", "Header.tsx"].join("/"),
+    needle: "relative overflow-hidden border-b",
+  },
 ];
 
 const files: Record<string, string[]> = {
@@ -1152,6 +1156,7 @@ const files: Record<string, string[]> = {
     "safe-area-inset-top",
     "min-h-11",
     "focus:min-h-11",
+    "pointer-events-none absolute inset-0 overflow-hidden",
   ],
   "src/hooks/useLiveProjectionAge.ts": [
     "useLiveProjectionAge",

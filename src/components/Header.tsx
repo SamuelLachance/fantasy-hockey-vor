@@ -49,7 +49,14 @@ export function Header({
   const stale = isProjectionStale(ageDays);
   const veryStale = isProjectionVeryStale(ageDays);
   return (
-    <header className="relative overflow-hidden border-b border-white/10 bg-slate-950/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl motion-reduce:backdrop-blur-none">
+    <header className="relative border-b border-white/10 bg-slate-950/80 pt-[env(safe-area-inset-top,0px)] backdrop-blur-xl motion-reduce:backdrop-blur-none">
+      <div
+        className="pointer-events-none absolute inset-0 overflow-hidden"
+        aria-hidden="true"
+      >
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.15),_transparent_55%)]" />
+        <div className="absolute -right-20 top-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
+      </div>
       <a
         href="#rankings"
         onClick={(e) => {
@@ -60,8 +67,6 @@ export function Header({
       >
         {skipToRankingsCopy()}
       </a>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(56,189,248,0.15),_transparent_55%)]" />
-      <div className="pointer-events-none absolute -right-20 top-0 h-64 w-64 rounded-full bg-cyan-500/10 blur-3xl" />
       <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 text-cyan-400">
           <Snowflake className="h-5 w-5" aria-hidden="true" />
