@@ -1,5 +1,6 @@
 import {
   boardInteractionTipCopy,
+  boardShowingLiveCopy,
   boardShowingSummary,
 } from "@/lib/board-status";
 import { boardShortcutsStatusCopy } from "@/lib/board-shortcuts";
@@ -21,18 +22,20 @@ export function RankingsStatusBar({
   searchPending = false,
   linkedPlayerName = null,
 }: RankingsStatusBarProps) {
+  const opts = { searchPending, linkedPlayerName };
+  const live = boardShowingLiveCopy(filteredCount, totalCount, opts);
   return (
     <p className="text-center text-xs text-slate-400">
+      <span className="tabular-nums">
+        {boardShowingSummary(renderCount, filteredCount, totalCount, opts)}
+      </span>
       <span
-        className="tabular-nums"
+        className="sr-only"
         aria-live="polite"
         aria-atomic="true"
         aria-busy={searchPending || undefined}
       >
-        {boardShowingSummary(renderCount, filteredCount, totalCount, {
-          searchPending,
-          linkedPlayerName,
-        })}
+        {live}
       </span>{" "}
       {boardInteractionTipCopy()} {boardShortcutsStatusCopy()}
     </p>

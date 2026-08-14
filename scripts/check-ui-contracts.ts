@@ -442,12 +442,15 @@ const files: Record<string, string[]> = {
     "searchPending",
     "linkedPlayerName",
     "boardShowingSummary",
+    "boardShowingLiveCopy",
+    "sr-only",
     "boardInteractionTipCopy",
     "boardShortcutsStatusCopy",
     "tabular-nums",
   ],
   "src/lib/board-status.ts": [
     "boardShowingSummary",
+    "boardShowingLiveCopy",
     "boardInteractionTipCopy",
     "rankingsSectionHeadingCopy",
     "VOR rankings",
@@ -458,6 +461,7 @@ const files: Record<string, string[]> = {
     "Updating…",
     "linkedPlayerName",
     "emptyBoardStatusCopy",
+    "filtered === 0",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',
