@@ -42,7 +42,10 @@ export function RankingsSearchField({
           title={searchFieldTitle()}
           aria-keyshortcuts="Slash"
           aria-describedby={nearQueryCap ? "rankings-search-limit" : undefined}
+          name="board-player-search"
           autoComplete="off"
+          data-lpignore="true"
+          data-1p-ignore="true"
           spellCheck={false}
           autoCorrect="off"
           autoCapitalize="off"
