@@ -219,7 +219,12 @@ const posHidden = revealHiddenPlayerQuery(players[0]!, {
   ...base,
   position: "G",
 });
-assert(posHidden.position === "ALL", "reveal peels wrong position tab");
+assert(posHidden.position === "C", "reveal lands on the player's position tab");
+const gFromC = revealHiddenPlayerQuery(depthG, { ...base, position: "C" });
+assert(
+  gFromC.position === "G" && gFromC.hideDepthGoalies === false,
+  "depth G from C tab opens G and shows all goalies",
+);
 const searchHidden = revealHiddenPlayerQuery(players[0]!, {
   ...base,
   query: "zzz",

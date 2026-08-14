@@ -169,8 +169,17 @@ export function filterAndSortBoard(
 
 /**
  * Peel the fewest filters so `player` reappears on the board (search →
- * position → depth goalies → stat ranges).
+ * position → depth goalies → stat ranges). Wrong position tabs land on the
+ * player's own spot, not ALL.
  */
+export function revealPositionForPlayer(
+  player: PlayerProjection,
+): Position | "ALL" {
+  const primary = player.position;
+  if (primary && player.positions.includes(primary)) return primary;
+  return player.positions[0] ?? "ALL";
+}
+
 export function revealHiddenPlayerQuery(
   player: PlayerProjection,
   q: BoardQuery,
@@ -182,7 +191,7 @@ export function revealHiddenPlayerQuery(
     (cur) =>
       cur.position !== "ALL" &&
       !player.positions.includes(cur.position as Position)
-        ? { ...cur, position: "ALL" }
+        ? { ...cur, position: revealPositionForPlayer(player) }
         : cur,
     (cur) =>
       cur.hideDepthGoalies ? { ...cur, hideDepthGoalies: false } : cur,

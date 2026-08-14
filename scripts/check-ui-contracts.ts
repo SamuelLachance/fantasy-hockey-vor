@@ -1092,6 +1092,7 @@ const files: Record<string, string[]> = {
     "pruneStatRangesForPosition",
     "isStarterEligibleGoalie",
     "revealHiddenPlayerQuery",
+    "revealPositionForPlayer",
   ],
   "src/lib/goalie-depth.ts": [
     "GOALIE_DEPTH_MAX_GP",
