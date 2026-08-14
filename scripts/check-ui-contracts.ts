@@ -73,6 +73,7 @@ const files: Record<string, string[]> = {
     "pendingPlayerId: board.pendingPlayerId",
     "linkedPlayerName",
     "linkedPlayerChipName",
+    "linkedPlayerName={linkedPlayerChipName",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
