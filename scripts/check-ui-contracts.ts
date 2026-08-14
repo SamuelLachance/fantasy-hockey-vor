@@ -39,6 +39,14 @@ const forbidden: Array<{ file: string; needle: string }> = [
     file: ["src", "components", "HowVorWorks.tsx"].join("/"),
     needle: "content-visibility:auto",
   },
+  {
+    file: ["src", "components", "HeaderStaleBanner.tsx"].join("/"),
+    needle: "aria-live",
+  },
+  {
+    file: ["src", "components", "HeaderStaleBanner.tsx"].join("/"),
+    needle: "aria-label",
+  },
 ];
 
 const files: Record<string, string[]> = {
@@ -1221,11 +1229,9 @@ const files: Record<string, string[]> = {
   ],
   "src/components/HeaderStaleBanner.tsx": [
     "staleBannerParts",
-    "aria-live",
-    "aria-label",
-    "staleBannerMessage",
     "staleBannerRole",
     "veryStale",
+    "tabular-nums",
   ],
   "src/lib/stale-banner.ts": [
     "staleBannerMessage",
