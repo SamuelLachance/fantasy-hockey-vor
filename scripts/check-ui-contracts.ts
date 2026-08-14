@@ -551,6 +551,7 @@ const files: Record<string, string[]> = {
     "isConnected",
     "dataset.dialogPortal",
     'setAttribute("inert"',
+    "before paint",
     "Escape",
     'hasAttribute("tabindex")',
     "root.focus()",

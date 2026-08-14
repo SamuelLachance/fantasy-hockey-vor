@@ -40,7 +40,7 @@ export function useDialogFocusTrap(
     dialogFocusableElements(root)[0]?.focus();
   }, [open, rootId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const body = document.body;
     const scrollY = window.scrollY;
@@ -54,8 +54,7 @@ export function useDialogFocusTrap(
     body.style.top = `-${scrollY}px`;
     body.style.width = "100%";
 
-    // Mark other body children inert so browse-mode AT cannot reach behind
-    // the modal (Tab trap alone is not enough).
+    // Apply inert before paint so Tab / browse mode cannot reach the page.
     const inerted: HTMLElement[] = [];
     for (const child of Array.from(body.children)) {
       if (!(child instanceof HTMLElement)) continue;
