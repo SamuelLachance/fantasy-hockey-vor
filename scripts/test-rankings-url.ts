@@ -14,6 +14,7 @@ import {
   parseRankingsUrl,
   playerBoardHref,
   rankingsHashShouldFocusSearch,
+  rankingsHashShouldSkipJump,
   rankingsShareUrl,
   rankingsUrlSearch,
   rankingsUrlSyncHref,
@@ -321,6 +322,34 @@ assert(
 assert(
   rankingsHashShouldFocusSearch(new URLSearchParams("player=1"), []),
   "empty board falls back to search focus",
+);
+assert(
+  !rankingsHashShouldFocusSearch(
+    new URLSearchParams("player=3"),
+    [{ id: 1 }],
+    [{ id: 1 }, { id: 3 }],
+  ),
+  "filter-hidden but valid player skips search focus",
+);
+assert(
+  rankingsHashShouldFocusSearch(
+    new URLSearchParams("player=99"),
+    [{ id: 1 }],
+    [{ id: 1 }, { id: 3 }],
+  ),
+  "unknown player still focuses search",
+);
+assert(
+  !rankingsHashShouldSkipJump(new URLSearchParams("")),
+  "bare hash does not skip jump",
+);
+assert(
+  rankingsHashShouldSkipJump(new URLSearchParams("player=3"), [{ id: 3 }]),
+  "on-board player skips hash jump for expand scroll",
+);
+assert(
+  !rankingsHashShouldSkipJump(new URLSearchParams("player=3"), [{ id: 1 }]),
+  "filter-hidden player still jumps to the board",
 );
 
 const viewWithPlayer = {

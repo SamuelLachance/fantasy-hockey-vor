@@ -331,17 +331,30 @@ export function nextRankingsUrlSyncAction(
 
 /**
  * Whether a #rankings hash jump should scroll to the board and focus search.
- * Skip when a player deep-link is still on the (filtered) board so expand
- * scroll wins; fall back when the id was coerced away (missing/filtered/depth).
+ * Skip focus when the player id is still on the filtered board, or exists in
+ * the full roster (pending restore after depth/position/search filters).
+ * Fall back to search only when the id is unknown / missing from the dataset.
  */
 export function rankingsHashShouldFocusSearch(
   params: URLSearchParams,
   boardPlayers?: readonly { id: number }[],
+  allPlayers?: readonly { id: number }[],
 ): boolean {
   const playerId = parseRankingsUrl(params).playerId;
   if (playerId == null) return true;
+  if (allPlayers && boardHasPlayerId(allPlayers, playerId)) return false;
   if (boardPlayers) return !boardHasPlayerId(boardPlayers, playerId);
   return false;
+}
+
+/** Skip the hash jump entirely when expand-row scroll already owns the viewport. */
+export function rankingsHashShouldSkipJump(
+  params: URLSearchParams,
+  boardPlayers?: readonly { id: number }[],
+): boolean {
+  const playerId = parseRankingsUrl(params).playerId;
+  if (playerId == null || !boardPlayers) return false;
+  return boardHasPlayerId(boardPlayers, playerId);
 }
 
 /**
