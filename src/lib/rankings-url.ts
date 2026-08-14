@@ -273,6 +273,27 @@ export function rankingsShareUrl(
   return `${origin}${rankingsUrlSyncHref(pathname, qs, "#rankings", basePath)}`;
 }
 
+/**
+ * Share/URL view from the settled board filter. `deferredQuery` is the search
+ * that produced the visible rows — not the in-flight input.
+ */
+export function rankingsShareViewState(
+  view: Omit<RankingsUrlState, "query" | "playerId"> & {
+    deferredQuery: string;
+  },
+  playerId: number | null,
+): RankingsUrlState {
+  return {
+    position: view.position,
+    query: view.deferredQuery,
+    sortKey: view.sortKey,
+    sortDir: view.sortDir,
+    playerId,
+    hideDepthGoalies: view.hideDepthGoalies,
+    statRanges: view.statRanges,
+  };
+}
+
 export type RankingsUrlSyncAction =
   | { type: "noop"; search: string }
   | { type: "push"; search: string }

@@ -16,6 +16,7 @@ import {
   rankingsHashShouldFocusSearch,
   rankingsHashShouldSkipJump,
   rankingsShareUrl,
+  rankingsShareViewState,
   rankingsUrlSearch,
   rankingsUrlSyncHref,
   sigmaBoardHref,
@@ -370,6 +371,34 @@ const playerShare = rankingsShareUrl("https://example.com", "/", viewWithPlayer)
 assert(boardShare.includes("pos=C"), "board share keeps filters");
 assert(!boardShare.includes("player="), "board share omits player");
 assert(playerShare.includes("player=8478402"), "player share keeps player");
+
+const settledShare = rankingsShareViewState(
+  {
+    position: "C",
+    deferredQuery: "mcd",
+    sortKey: "vor",
+    sortDir: "desc",
+    hideDepthGoalies: true,
+    statRanges: {},
+  },
+  null,
+);
+assert(settledShare.query === "mcd", "share/URL query uses deferred search");
+assert(settledShare.playerId === null, "share player override");
+assert(
+  rankingsShareViewState(
+    {
+      position: "ALL",
+      deferredQuery: "",
+      sortKey: "vor",
+      sortDir: "desc",
+      hideDepthGoalies: true,
+      statRanges: {},
+    },
+    7,
+  ).playerId === 7,
+  "share can attach a player id",
+);
 
 assert(
   parseRankingsUrl(new URLSearchParams("pos=C&rf=wins:20-,vor:1-")).statRanges

@@ -65,6 +65,7 @@ const files: Record<string, string[]> = {
     "cycleBoardPosition",
     "onCopyPlayerLink",
     "pendingPlayerId",
+    "query: board.deferredQuery, // settled filter",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -184,6 +185,8 @@ const files: Record<string, string[]> = {
     "Park filter-hidden expands",
     "pruneStatRangesForPosition",
     "canToggleDepthGoalies",
+    "boardShareState",
+    "rankingsShareViewState",
   ],
   "src/components/RankingsBoardChrome.tsx": [
     "boardFiltersRegionLabel",
@@ -903,6 +906,7 @@ const files: Record<string, string[]> = {
     "parseLiveRankingsUrl",
     "rankingsHashShouldFocusSearch",
     "rankingsHashShouldSkipJump",
+    "rankingsShareViewState",
     "boardHasPlayerId",
     "rankingsUrlSyncHref",
     "pruneStatRangesForPosition",

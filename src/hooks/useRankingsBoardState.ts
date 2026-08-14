@@ -24,7 +24,10 @@ import { countActiveStatFilters } from "@/lib/board-active-filters";
 import { nextDeferredExpandState } from "@/lib/board-players";
 import { boardFilterResetToken } from "@/lib/board-reset-token";
 import { canToggleDepthGoalies } from "@/lib/goalie-depth-toggle";
-import type { RankingsUrlState } from "@/lib/rankings-url";
+import {
+  rankingsShareViewState,
+  type RankingsUrlState,
+} from "@/lib/rankings-url";
 
 export interface RankingsBoardSeed {
   query: string;
@@ -167,15 +170,17 @@ export function useRankingsBoardState(
   }
 
   function boardShareState(playerId: number | null): RankingsUrlState {
-    return {
-      position,
-      query,
-      sortKey,
-      sortDir,
+    return rankingsShareViewState(
+      {
+        position,
+        deferredQuery,
+        sortKey,
+        sortDir,
+        hideDepthGoalies,
+        statRanges,
+      },
       playerId,
-      hideDepthGoalies,
-      statRanges,
-    };
+    );
   }
 
   function toggleSort(key: SortKey) {
