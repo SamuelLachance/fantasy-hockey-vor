@@ -23,6 +23,10 @@ const forbidden: Array<{ file: string; needle: string }> = [
     file: ["src", "components", "RankingsSearchField.tsx"].join("/"),
     needle: "-bottom-5",
   },
+  {
+    file: ["src", "components", "RankingsExportButtons.tsx"].join("/"),
+    needle: "overflow-hidden",
+  },
 ];
 
 const files: Record<string, string[]> = {
@@ -863,6 +867,9 @@ const files: Record<string, string[]> = {
     "downloadRankingsCsv",
     "downloadRankingsJson",
     "min-h-11",
+    "rounded-l-[0.6875rem]",
+    "rounded-r-[0.6875rem]",
+    "focus-visible:z-10",
   ],
   "src/hooks/useBoardInfiniteScroll.ts": [
     "useBoardInfiniteScroll",

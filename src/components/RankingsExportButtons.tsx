@@ -71,7 +71,7 @@ export function RankingsExportButtons({
 
   return (
     <div
-      className="inline-flex shrink-0 overflow-hidden rounded-xl border border-white/10"
+      className="inline-flex shrink-0 rounded-xl border border-white/10"
       role="group"
       aria-label={exportGroupAriaLabel()}
     >
@@ -85,7 +85,7 @@ export function RankingsExportButtons({
           downloadRankingsCsv(filtered, ctx);
           flashExport("csv");
         }}
-        className="inline-flex min-h-11 items-center justify-center gap-2 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-l-[0.6875rem] bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
         title={csvTitle}
         aria-label={csvAria}
       >
@@ -99,7 +99,7 @@ export function RankingsExportButtons({
           downloadRankingsJson(filtered, ctx);
           flashExport("json");
         }}
-        className="inline-flex min-h-11 items-center justify-center border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
+        className="inline-flex min-h-11 items-center justify-center rounded-r-[0.6875rem] border-l border-white/10 bg-white/5 px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/10 focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80 disabled:cursor-not-allowed disabled:opacity-40"
         title={jsonTitle}
         aria-label={jsonAria}
       >
