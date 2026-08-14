@@ -17,14 +17,16 @@ export function boardLinkTitle(): string {
   return "Copy link to this board view (l)";
 }
 
-/** Accessible name — keeps board-link identity during Copied/Failed flash. */
-export function boardLinkAriaLabel(
-  copied: boolean,
-  failed = false,
-): string {
+/** Accessible name — stable identity; flash is announced via live copy. */
+export function boardLinkAriaLabel(): string {
+  return "Copy link to this board view";
+}
+
+/** Polite live copy after a board-link copy attempt (empty while idle). */
+export function boardLinkLiveCopy(copied: boolean, failed = false): string {
   if (copied) return "Copy link to this board view (copied)";
   if (failed) return "Copy link to this board view (failed)";
-  return "Copy link to this board view";
+  return "";
 }
 
 /** Expanded-row player link button label. */
@@ -37,15 +39,20 @@ export function playerLinkButtonLabel(
   return "Copy player link";
 }
 
-/** Accessible name — keeps player-link identity during Copied/Failed flash. */
-export function playerLinkAriaLabel(
+/** Accessible name — stable identity; flash is announced via live copy. */
+export function playerLinkAriaLabel(playerName: string): string {
+  return `Copy link for ${playerName}`;
+}
+
+/** Polite live copy after a player-link copy attempt (empty while idle). */
+export function playerLinkLiveCopy(
   playerName: string,
   copied: boolean,
   failed = false,
 ): string {
   if (copied) return `Copy link for ${playerName} (copied)`;
   if (failed) return `Copy link for ${playerName} (failed)`;
-  return `Copy link for ${playerName}`;
+  return "";
 }
 
 /** Tooltip for the per-player copy-link control. */

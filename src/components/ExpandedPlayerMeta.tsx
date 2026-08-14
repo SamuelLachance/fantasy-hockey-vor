@@ -2,6 +2,7 @@ import type { PlayerProjection } from "@/lib/types";
 import {
   playerLinkAriaLabel,
   playerLinkButtonLabel,
+  playerLinkLiveCopy,
   playerLinkTitle,
 } from "@/lib/copy-flash";
 import {
@@ -66,17 +67,15 @@ export function ExpandedPlayerMeta({
           })}
         </span>
       )}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">
+        {playerLinkLiveCopy(player.name, linkCopied, linkCopyFailed)}
+      </span>
       <button
         type="button"
         className="ml-auto inline-flex min-h-11 items-center rounded-lg border border-white/10 bg-white/5 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         title={playerLinkTitle()}
-        aria-live="polite"
         aria-keyshortcuts="p"
-        aria-label={playerLinkAriaLabel(
-          player.name,
-          linkCopied,
-          linkCopyFailed,
-        )}
+        aria-label={playerLinkAriaLabel(player.name)}
         onClick={(e) => {
           e.stopPropagation();
           onCopyLink();

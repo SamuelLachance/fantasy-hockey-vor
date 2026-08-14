@@ -5,10 +5,12 @@
 import {
   boardLinkAriaLabel,
   boardLinkButtonLabel,
+  boardLinkLiveCopy,
   boardLinkTitle,
   copyTextWithFlash,
   playerLinkAriaLabel,
   playerLinkButtonLabel,
+  playerLinkLiveCopy,
   playerLinkTitle,
 } from "../src/lib/copy-flash";
 
@@ -42,36 +44,41 @@ async function main() {
   assert(boardLinkButtonLabel(false, true) === "Failed", "board err");
   assert(boardLinkTitle() === "Copy link to this board view (l)", "board title");
   assert(
-    boardLinkAriaLabel(false) === "Copy link to this board view",
+    boardLinkAriaLabel() === "Copy link to this board view",
     "board aria idle",
   );
+  assert(boardLinkLiveCopy(false) === "", "board live idle silent");
   assert(
-    boardLinkAriaLabel(true) === "Copy link to this board view (copied)",
-    "board aria ok keeps identity",
+    boardLinkLiveCopy(true) === "Copy link to this board view (copied)",
+    "board live ok",
   );
   assert(
-    boardLinkAriaLabel(false, true) === "Copy link to this board view (failed)",
-    "board aria err keeps identity",
+    boardLinkLiveCopy(false, true) === "Copy link to this board view (failed)",
+    "board live err",
   );
   assert(playerLinkButtonLabel(false) === "Copy player link", "player idle");
   assert(playerLinkButtonLabel(true) === "Link copied", "player ok");
   assert(playerLinkButtonLabel(false, true) === "Copy failed", "player err");
   assert(
-    playerLinkAriaLabel("McDavid", true) === "Copy link for McDavid (copied)",
-    "player aria ok keeps identity",
+    playerLinkAriaLabel("McDavid") === "Copy link for McDavid",
+    "player aria stable",
   );
   assert(
-    playerLinkAriaLabel("McDavid", false, true) ===
+    playerLinkLiveCopy("McDavid", true) === "Copy link for McDavid (copied)",
+    "player live ok",
+  );
+  assert(
+    playerLinkLiveCopy("McDavid", false, true) ===
       "Copy link for McDavid (failed)",
-    "player aria err keeps identity",
+    "player live err",
   );
   assert(
-    boardLinkAriaLabel(true).startsWith(boardLinkAriaLabel(false)),
-    "board flash prefixes idle aria",
+    boardLinkLiveCopy(true).startsWith(boardLinkAriaLabel()),
+    "board live prefixes idle aria",
   );
   assert(
-    playerLinkAriaLabel("X", true).startsWith(playerLinkAriaLabel("X", false)),
-    "player flash prefixes idle aria",
+    playerLinkLiveCopy("X", true).startsWith(playerLinkAriaLabel("X")),
+    "player live prefixes idle aria",
   );
   assert(playerLinkTitle() === "Copy player link (p)", "player title");
 
