@@ -68,7 +68,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
   useBoardDocumentTitle({
     position: board.position,
     query: board.deferredQuery,
-    playerName: expandedPlayer?.name ?? null,
+    playerName: expandedPlayer?.name ?? pendingPlayer?.name ?? null,
     sortKey: board.sortKey,
     sortDir: board.sortDir,
     activeFilterCount: board.activeFilterCount,

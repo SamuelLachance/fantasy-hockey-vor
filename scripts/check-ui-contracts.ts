@@ -69,6 +69,7 @@ const files: Record<string, string[]> = {
     "query: board.deferredQuery, // settled filter",
     "pendingPlayerName",
     "revealPendingPlayer",
+    "pendingPlayer?.name",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
