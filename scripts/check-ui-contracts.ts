@@ -1036,6 +1036,7 @@ const files: Record<string, string[]> = {
   ],
   "src/lib/rankings-board.ts": [
     "filterAndSortBoard",
+    "foldedBoardSearchFields",
     "hideDepthGoalies",
     "coerceSortKeyForPosition",
     "pruneStatRangesForPosition",

@@ -16,6 +16,22 @@ import {
 } from "@/lib/rankings-filters";
 import { foldSearchText } from "@/lib/search-fold";
 
+const foldedSearchFields = new WeakMap<
+  PlayerProjection,
+  readonly [name: string, team: string]
+>();
+
+/** Folded name+team for board search; cached per player object. */
+export function foldedBoardSearchFields(
+  p: PlayerProjection,
+): readonly [name: string, team: string] {
+  const hit = foldedSearchFields.get(p);
+  if (hit) return hit;
+  const next = [foldSearchText(p.name), foldSearchText(p.team)] as const;
+  foldedSearchFields.set(p, next);
+  return next;
+}
+
 export function boardCategories(position: Position | "ALL"): readonly Category[] {
   return position === "G"
     ? GOALIE_CATEGORIES
@@ -96,11 +112,10 @@ export function filterAndSortBoard(
   }
 
   if (needle) {
-    list = list.filter(
-      (p) =>
-        foldSearchText(p.name).includes(needle) ||
-        foldSearchText(p.team).includes(needle),
-    );
+    list = list.filter((p) => {
+      const [name, team] = foldedBoardSearchFields(p);
+      return name.includes(needle) || team.includes(needle);
+    });
   }
 
   list = list.filter((p) => passesRanges(p, q.statRanges, q.position, keys));

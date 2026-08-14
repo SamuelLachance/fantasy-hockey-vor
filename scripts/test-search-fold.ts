@@ -3,7 +3,10 @@
  * Run: npx tsx scripts/test-search-fold.ts
  */
 import { foldSearchText, foldSearchTextWithMap } from "../src/lib/search-fold";
-import { filterAndSortBoard } from "../src/lib/rankings-board";
+import {
+  filterAndSortBoard,
+  foldedBoardSearchFields,
+} from "../src/lib/rankings-board";
 import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
@@ -64,6 +67,11 @@ const accentHits = filterAndSortBoard(players, {
   statRanges: {},
 });
 assert(accentHits.length === 1, "accented query still hits");
+
+const once = foldedBoardSearchFields(players[0]!);
+const twice = foldedBoardSearchFields(players[0]!);
+assert(once === twice, "folded name/team cache hits the same object");
+assert(once[0] === "tim stutzle" && once[1] === "ott", "cached fold matches");
 
 if (failed) process.exit(1);
 console.log("OK: search-fold");
