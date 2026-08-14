@@ -31,6 +31,10 @@ const forbidden: Array<{ file: string; needle: string }> = [
     file: ["src", "components", "Header.tsx"].join("/"),
     needle: "relative overflow-hidden border-b",
   },
+  {
+    file: ["src", "components", "Header.tsx"].join("/"),
+    needle: "focus:top-4",
+  },
 ];
 
 const files: Record<string, string[]> = {
@@ -1158,6 +1162,8 @@ const files: Record<string, string[]> = {
     "min-h-11",
     "focus:min-h-11",
     "pointer-events-none absolute inset-0 overflow-hidden",
+    "focus:top-[calc(var(--board-safe-area-inset-top,0px)+1rem)]",
+    "focus:left-[calc(env(safe-area-inset-left,0px)+1rem)]",
   ],
   "src/hooks/useLiveProjectionAge.ts": [
     "useLiveProjectionAge",
