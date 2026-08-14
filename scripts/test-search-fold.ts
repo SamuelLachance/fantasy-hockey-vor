@@ -24,6 +24,10 @@ assert(foldSearchText("STUTZLE") === "stutzle", "fold case");
 const mapped = foldSearchTextWithMap("Stützle");
 assert(mapped.folded === "stutzle", "map folded");
 assert(mapped.map.length === mapped.folded.length, "map length");
+assert(
+  foldSearchTextWithMap("Stützle") === mapped,
+  "fold map cache returns the same object",
+);
 
 const players = [
   {

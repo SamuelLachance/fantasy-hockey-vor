@@ -794,6 +794,12 @@ const files: Record<string, string[]> = {
     "min-h-11",
     "min-w-11",
   ],
+  "src/lib/search-fold.ts": [
+    "foldSearchText",
+    "foldSearchTextWithMap",
+    "FOLD_MAP_CACHE_MAX",
+    "foldMapCache",
+  ],
   "src/lib/highlight-match.tsx": [
     "HIGHLIGHT_QUERY_MAX",
     "SEARCH_NEAR_CAP_REMAINING",
