@@ -6,6 +6,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import {
   computedStyleHidesFromTab,
+  shouldCloseDialogOnBackdropClick,
   trapDialogTabKey,
 } from "../src/lib/dialog-focus";
 
@@ -99,6 +100,21 @@ assert(
 assert(
   !computedStyleHidesFromTab({ display: "flex", visibility: "visible" }),
   "visible flex stays on-tab",
+);
+
+const overlay = { id: "overlay" } as unknown as EventTarget;
+const panel = { id: "panel" } as unknown as EventTarget;
+assert(
+  shouldCloseDialogOnBackdropClick(true, overlay, overlay),
+  "backdrop press+click closes",
+);
+assert(
+  !shouldCloseDialogOnBackdropClick(false, overlay, overlay),
+  "click without backdrop down stays open",
+);
+assert(
+  !shouldCloseDialogOnBackdropClick(true, panel, overlay),
+  "drag from panel onto backdrop stays open",
 );
 
 if (failed) process.exit(1);

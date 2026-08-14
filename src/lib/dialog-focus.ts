@@ -65,3 +65,17 @@ export function trapDialogTabKey(
   }
   return false;
 }
+
+/** True when a backdrop click started and ended on the overlay (not a drag-out). */
+export function shouldCloseDialogOnBackdropClick(
+  pointerDownOnBackdrop: boolean,
+  clickTarget: EventTarget | null,
+  backdrop: EventTarget | null,
+): boolean {
+  return (
+    pointerDownOnBackdrop &&
+    clickTarget != null &&
+    backdrop != null &&
+    clickTarget === backdrop
+  );
+}

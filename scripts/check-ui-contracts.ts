@@ -519,6 +519,8 @@ const files: Record<string, string[]> = {
     "safe-area-inset-top",
     "safe-area-inset-bottom",
     "85dvh",
+    "shouldCloseDialogOnBackdropClick",
+    "onPointerDown",
     "overscroll-contain",
     "min-h-11",
     "min-w-11",
@@ -547,6 +549,7 @@ const files: Record<string, string[]> = {
     "computedStyleHidesFromTab",
     "getComputedStyle",
     'visibility === "collapse"',
+    "shouldCloseDialogOnBackdropClick",
   ],
   "src/lib/board-shortcuts.ts": [
     "BOARD_SHORTCUT_ROWS",
