@@ -103,6 +103,14 @@ assert(
   nextExpandedPlayerId(boardKeyboardNavIds(allIds, 2, null), null, -1) === 2,
   "cold-start k opens last visible not last filtered",
 );
+assert(
+  boardHomeEndPlayerId(allIds, "End") === 5,
+  "Home/End helper on full list reaches last filtered",
+);
+assert(
+  boardHomeEndPlayerId(boardKeyboardNavIds(allIds, 2, null), "End") === 2,
+  "Home/End on mounted window would stop early",
+);
 
 assert(!isBoardTypingTarget(null), "null not typing");
 assert(!isBoardChromeTarget(null), "null not chrome");

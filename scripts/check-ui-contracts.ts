@@ -420,6 +420,7 @@ const files: Record<string, string[]> = {
     "BOARD_PAGE_JUMP",
     "shouldPrefetchBoardPage",
     "boardHomeEndPlayerId",
+    "last-mounted window",
     "isBoardRowNavTarget",
     "boardKeyboardNavIds",
     "nextBoardEscapeAction",

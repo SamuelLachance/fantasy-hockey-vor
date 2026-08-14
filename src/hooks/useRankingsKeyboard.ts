@@ -243,11 +243,9 @@ export function useRankingsKeyboard({
         const rowNav =
           expandedIdNow != null || isBoardRowNavTarget(e.target);
         if (rowNav) {
-          const ids = boardKeyboardNavIds(
-            filteredRef.current.map((p) => p.id),
-            renderCountRef.current,
-            expandedIdNow,
-          );
+          // Home/End use the full filtered list, not the last-mounted window.
+          // expandVisibleFloor grows the window for the target.
+          const ids = filteredRef.current.map((p) => p.id);
           const nextId = boardHomeEndPlayerId(
             ids,
             e.key === "Home" ? "Home" : "End",
