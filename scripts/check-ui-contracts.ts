@@ -72,7 +72,7 @@ const files: Record<string, string[]> = {
     "pendingPlayer?.name",
     "pendingPlayerId: board.pendingPlayerId",
     "linkedPlayerName",
-    "board.filtered.length > 0",
+    "linkedPlayerChipName",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -243,6 +243,7 @@ const files: Record<string, string[]> = {
     "nextDeferredExpandState",
     "hiddenLinkedPlayer",
     "boardCopyPlayerLinkId",
+    "linkedPlayerChipName",
   ],
   "src/lib/board-active-filters.ts": [
     "countActiveStatFilters",

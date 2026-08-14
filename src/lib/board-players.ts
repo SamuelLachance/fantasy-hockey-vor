@@ -76,3 +76,12 @@ export function boardCopyPlayerLinkId(
 ): number | null {
   return expandedId ?? pendingPlayerId;
 }
+
+/** Chrome Show chip: only when the board still has rows (empty state owns the rest). */
+export function linkedPlayerChipName(
+  name: string | null | undefined,
+  filteredCount: number,
+): string | null {
+  if (!name || filteredCount <= 0) return null;
+  return name;
+}

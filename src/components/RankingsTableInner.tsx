@@ -4,7 +4,7 @@ import { cycleBoardPosition } from "@/lib/board-positions";
 import { canOfferAllGoalies } from "@/lib/goalie-depth-toggle";
 import { focusBoardSearch } from "@/lib/board-dom";
 import { visibleBoardPlayers } from "@/lib/board-visible";
-import { hiddenLinkedPlayer } from "@/lib/board-players";
+import { hiddenLinkedPlayer, linkedPlayerChipName } from "@/lib/board-players";
 import { searchQueryIsClearable } from "@/lib/highlight-match";
 import { startTransition, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -153,9 +153,10 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         showingAllGoalies={board.showingAllGoalies}
         helpOpen={board.helpOpen}
         onOpenHelp={() => board.setHelpOpen(true)}
-        pendingPlayerName={
-          board.filtered.length > 0 ? (pendingPlayer?.name ?? null) : null
-        }
+        pendingPlayerName={linkedPlayerChipName(
+          pendingPlayer?.name,
+          board.filtered.length,
+        )}
         onRevealPendingPlayer={board.revealPendingPlayer}
       />
 

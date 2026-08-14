@@ -7,6 +7,7 @@ import {
   coerceExpandedPlayerId,
   hiddenLinkedPlayer,
   boardCopyPlayerLinkId,
+  linkedPlayerChipName,
   nextDeferredExpandState,
 } from "../src/lib/board-players";
 
@@ -91,6 +92,12 @@ assert(hiddenLinkedPlayer(all, null, null) === null, "no pending");
 assert(boardCopyPlayerLinkId(1, 3) === 1, "copy prefers expanded");
 assert(boardCopyPlayerLinkId(null, 3) === 3, "copy falls back to pending");
 assert(boardCopyPlayerLinkId(null, null) === null, "copy none");
+assert(
+  linkedPlayerChipName("Beta", 10) === "Beta",
+  "chip when board has rows",
+);
+assert(linkedPlayerChipName("Beta", 0) === null, "no chip on empty board");
+assert(linkedPlayerChipName(null, 10) === null, "no chip without name");
 
 if (failed) process.exit(1);
 console.log("OK: board-players");
