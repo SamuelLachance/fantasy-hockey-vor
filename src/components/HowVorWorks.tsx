@@ -32,7 +32,7 @@ export function HowVorWorks({
   return (
     <section
       aria-labelledby="how-vor-works-title"
-      className="[content-visibility:auto] [contain-intrinsic-size:auto_22rem] rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3"
+      className="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-950/30 to-slate-950/80 p-6 lg:col-span-2 xl:col-span-3"
     >
       <div className="mb-4 flex items-center gap-2 text-emerald-400">
         <Shield className="h-5 w-5" aria-hidden="true" />

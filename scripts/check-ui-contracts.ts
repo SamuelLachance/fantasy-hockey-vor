@@ -35,6 +35,10 @@ const forbidden: Array<{ file: string; needle: string }> = [
     file: ["src", "components", "Header.tsx"].join("/"),
     needle: "focus:top-4",
   },
+  {
+    file: ["src", "components", "HowVorWorks.tsx"].join("/"),
+    needle: "content-visibility:auto",
+  },
 ];
 
 const files: Record<string, string[]> = {
@@ -1371,8 +1375,6 @@ const files: Record<string, string[]> = {
     'aria-hidden="true"',
     "how-vor-works-title",
     "aria-labelledby",
-    "content-visibility:auto",
-    "contain-intrinsic-size",
     "howVorZScoreCopy",
     "howVorReplacementCopy",
     "howVorYahooPositionsCopy",
