@@ -84,6 +84,37 @@ export function isBoardRowNavTarget(target: EventTarget | null): boolean {
   );
 }
 
+/**
+ * Track whether the user last focused a board row. Ignore body/html so a
+ * filter-driven unmount (focus dumps to body) does not clear the flag.
+ */
+export function nextHadBoardRowFocus(
+  hadRowFocus: boolean,
+  active: EventTarget | null,
+): boolean {
+  const el = asFocusEl(active);
+  if (!el?.tagName) return hadRowFocus;
+  const tag = el.tagName;
+  if (tag === "BODY" || tag === "HTML") return hadRowFocus;
+  const connected = (active as { isConnected?: boolean }).isConnected;
+  if (connected === false) return hadRowFocus;
+  return isBoardRowNavTarget(active);
+}
+
+/** Restore board focus after a filter unmounts the focused row onto body. */
+export function shouldRestoreOrphanedBoardFocus(
+  hadRowFocus: boolean,
+  active: EventTarget | null,
+): boolean {
+  if (!hadRowFocus) return false;
+  const el = asFocusEl(active);
+  if (!el?.tagName) return true;
+  const connected = (active as { isConnected?: boolean }).isConnected;
+  if (connected === false) return true;
+  const tag = el.tagName;
+  return tag === "BODY" || tag === "HTML";
+}
+
 /** First / last id for Home / End while navigating board rows. */
 export function boardHomeEndPlayerId(
   playerIds: readonly number[],

@@ -19,6 +19,7 @@ import {
   focusBoardSearchWhenReady,
   focusPlayerRow,
   focusPlayerRowIfPanelFocused,
+  restoreOrphanedBoardRowFocus,
   focusFirstStatFilterInput,
   focusStatsFilterButton,
   prefersReducedMotion,
@@ -73,6 +74,10 @@ assert(typeof focusPlayerRow === "function", "focusPlayerRow exported");
 assert(
   typeof focusPlayerRowIfPanelFocused === "function",
   "focusPlayerRowIfPanelFocused exported",
+);
+assert(
+  typeof restoreOrphanedBoardRowFocus === "function",
+  "restoreOrphanedBoardRowFocus exported",
 );
 assert(
   typeof focusFirstStatFilterInput === "function",

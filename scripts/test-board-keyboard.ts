@@ -15,8 +15,10 @@ import {
   nextBoardEscapeTypingAction,
   nextExpandedPlayerId,
   nextExpandedPlayerIdByStep,
+  nextHadBoardRowFocus,
   shouldIgnoreBoardShortcut,
   shouldPrefetchBoardPage,
+  shouldRestoreOrphanedBoardFocus,
 } from "../src/lib/board-keyboard";
 
 let failed = 0;
@@ -76,6 +78,42 @@ assert(
     },
   } as unknown as EventTarget),
   "row is row-nav target",
+);
+
+const rowEl = {
+  tagName: "TR",
+  isConnected: true,
+  closest(sel: string) {
+    return sel.includes("player-row") ? ({} as Element) : null;
+  },
+} as unknown as EventTarget;
+const bodyEl = { tagName: "BODY", isConnected: true } as unknown as EventTarget;
+const searchEl = {
+  tagName: "INPUT",
+  isConnected: true,
+  closest: () => null,
+} as unknown as EventTarget;
+
+assert(nextHadBoardRowFocus(false, rowEl), "focusin row sets had-row");
+assert(
+  nextHadBoardRowFocus(true, bodyEl),
+  "body focusin keeps had-row after unmount",
+);
+assert(
+  !nextHadBoardRowFocus(true, searchEl),
+  "search focusin clears had-row",
+);
+assert(
+  shouldRestoreOrphanedBoardFocus(true, bodyEl),
+  "restore when row unmount dumps to body",
+);
+assert(
+  !shouldRestoreOrphanedBoardFocus(false, bodyEl),
+  "no restore if focus was never on a row",
+);
+assert(
+  !shouldRestoreOrphanedBoardFocus(true, searchEl),
+  "no restore while search is focused",
 );
 assert(
   !isBoardRowNavTarget({

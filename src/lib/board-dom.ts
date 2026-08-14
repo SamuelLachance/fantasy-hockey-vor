@@ -208,6 +208,19 @@ export function focusPlayerRow(playerId: number): void {
   row.focus({ preventScroll: true });
 }
 
+/** After a filter unmounts the focused row, land on the first mounted row. */
+export function restoreOrphanedBoardRowFocus(): void {
+  if (typeof document === "undefined") return;
+  const firstRow = document.querySelector<HTMLElement>(
+    '#rankings-board-table tbody tr[id^="player-row-"]',
+  );
+  if (firstRow) {
+    firstRow.focus({ preventScroll: true });
+    return;
+  }
+  focusBoardSearch({ preventScroll: true });
+}
+
 /**
  * Before collapsing an expanded panel, move focus back to the row when focus
  * was inside the panel so unmount does not dump focus to body.

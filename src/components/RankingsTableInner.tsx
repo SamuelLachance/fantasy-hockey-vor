@@ -17,6 +17,7 @@ import { useBoardStickyChromeHeight } from "@/hooks/useBoardStickyChromeHeight";
 import { useCoercedExpandFocusRestore } from "@/hooks/useCoercedExpandFocusRestore";
 import { useExpandedRowScroll } from "@/hooks/useExpandedRowScroll";
 import { useHorizontalScrollShadow } from "@/hooks/useHorizontalScrollShadow";
+import { useOrphanedBoardRowFocusRestore } from "@/hooks/useOrphanedBoardRowFocusRestore";
 import { useRankingsBoardState } from "@/hooks/useRankingsBoardState";
 import { useRankingsHashJump } from "@/hooks/useRankingsHashJump";
 import { useRankingsKeyboard } from "@/hooks/useRankingsKeyboard";
@@ -81,6 +82,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
 
   useExpandedRowScroll(board.expandedId, board.sortKey, board.sortDir);
   useCoercedExpandFocusRestore(board.expandedId);
+  useOrphanedBoardRowFocusRestore(board.filterKey);
 
   useRankingsKeyboard({
     filtered: board.filtered,
