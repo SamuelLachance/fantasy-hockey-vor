@@ -113,7 +113,10 @@ export function RankingsStatFilters({
                   type="text"
                   inputMode="decimal"
                   enterKeyHint="done"
+                  name={`stat-range-${key}-min`}
                   autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   spellCheck={false}
                   placeholder="Min"
                   aria-label={`${rangeLabel(key)} minimum`}
@@ -135,7 +138,10 @@ export function RankingsStatFilters({
                   type="text"
                   inputMode="decimal"
                   enterKeyHint="done"
+                  name={`stat-range-${key}-max`}
                   autoComplete="off"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
                   spellCheck={false}
                   placeholder="Max"
                   aria-label={`${rangeLabel(key)} maximum`}
