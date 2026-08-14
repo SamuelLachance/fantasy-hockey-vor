@@ -212,6 +212,7 @@ export function RankingsTableInner({ players }: RankingsTableInnerProps) {
         filteredCount={board.filtered.length}
         totalCount={players.length}
         searchPending={board.query !== board.deferredQuery}
+        linkedPlayerName={pendingPlayer?.name ?? null}
       />
     </div>
   );

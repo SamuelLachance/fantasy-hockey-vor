@@ -44,6 +44,12 @@ assert(
   "settled has no pending suffix",
 );
 assert(
+  boardShowingSummary(50, 200, 1311, { linkedPlayerName: "Beta" }).includes(
+    "Beta is hidden by the current filters",
+  ),
+  "linked player announced in summary",
+);
+assert(
   boardInteractionTipCopy().includes("Enter/Space"),
   "tip mentions Enter/Space",
 );

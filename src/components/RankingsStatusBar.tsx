@@ -10,6 +10,8 @@ interface RankingsStatusBarProps {
   totalCount: number;
   /** True while live query is ahead of deferred filtering. */
   searchPending?: boolean;
+  /** Deep-linked player parked off the filtered board. */
+  linkedPlayerName?: string | null;
 }
 
 export function RankingsStatusBar({
@@ -17,6 +19,7 @@ export function RankingsStatusBar({
   filteredCount,
   totalCount,
   searchPending = false,
+  linkedPlayerName = null,
 }: RankingsStatusBarProps) {
   return (
     <p className="text-center text-xs text-slate-400">
@@ -28,6 +31,7 @@ export function RankingsStatusBar({
       >
         {boardShowingSummary(renderCount, filteredCount, totalCount, {
           searchPending,
+          linkedPlayerName,
         })}
       </span>{" "}
       {boardInteractionTipCopy()} {boardShortcutsStatusCopy()}

@@ -1,4 +1,5 @@
 import { formatCount } from "@/lib/format";
+import { emptyBoardStatusCopy } from "@/lib/board-empty-recovery";
 
 /** Sr-only section heading for the rankings board landmark. */
 export function rankingsSectionHeadingCopy(): string {
@@ -17,10 +18,13 @@ export function boardShowingSummary(
   renderCount: number,
   filteredCount: number,
   totalCount: number,
-  opts?: { searchPending?: boolean },
+  opts?: { searchPending?: boolean; linkedPlayerName?: string | null },
 ): string {
   const shown = Math.min(Math.max(0, renderCount), Math.max(0, filteredCount));
-  const base = `Showing ${formatCount(shown)} of ${formatCount(Math.max(0, filteredCount))} matching players (${formatCount(Math.max(0, totalCount))} total).`;
+  let base = `Showing ${formatCount(shown)} of ${formatCount(Math.max(0, filteredCount))} matching players (${formatCount(Math.max(0, totalCount))} total).`;
+  if (opts?.linkedPlayerName) {
+    base = `${base} ${emptyBoardStatusCopy(opts.linkedPlayerName)}`;
+  }
   if (opts?.searchPending) return `${base} Updating…`;
   return base;
 }

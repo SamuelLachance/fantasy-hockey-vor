@@ -71,6 +71,7 @@ const files: Record<string, string[]> = {
     "revealPendingPlayer",
     "pendingPlayer?.name",
     "pendingPlayerId: board.pendingPlayerId",
+    "linkedPlayerName",
   ],
   "src/lib/board-visible.ts": ["visibleBoardPlayers", "boardRowTabStopId"],
   "src/hooks/useExpandedRowScroll.ts": [
@@ -412,6 +413,7 @@ const files: Record<string, string[]> = {
     "aria-atomic",
     "aria-busy",
     "searchPending",
+    "linkedPlayerName",
     "boardShowingSummary",
     "boardInteractionTipCopy",
     "boardShortcutsStatusCopy",
@@ -427,6 +429,8 @@ const files: Record<string, string[]> = {
     "formatCount",
     "searchPending",
     "Updating…",
+    "linkedPlayerName",
+    "emptyBoardStatusCopy",
   ],
   "src/hooks/useRankingsKeyboard.ts": [
     'e.key === "/"',
