@@ -348,6 +348,7 @@ const files: Record<string, string[]> = {
     "boardActiveAllGoaliesChipLabel",
     "boardActiveShowStartersAriaLabel",
     "boardActiveEditFiltersTitle",
+    "boardActiveEditStatAriaLabel",
     "boardActiveRemoveStatAriaLabel",
     "clearBoardFiltersCopy",
     "boardActiveStatChips",
@@ -376,6 +377,7 @@ const files: Record<string, string[]> = {
     "isInvertedRangeBound",
     "hasLinkedPlayer",
     "showLinkedPlayerChipLabel",
+    "boardActiveEditStatAriaLabel",
   ],
   "src/components/RankingsTableHead.tsx": [
     'column="sigma"',

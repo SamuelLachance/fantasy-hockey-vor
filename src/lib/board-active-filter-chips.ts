@@ -100,6 +100,11 @@ export function boardActiveEditFiltersTitle(): string {
   return "Edit filters";
 }
 
+/** Accessible name for the stat chip that opens the filters panel. */
+export function boardActiveEditStatAriaLabel(label: string): string {
+  return `Edit ${label} filter`;
+}
+
 /** Remove control accessible name for a single stat chip. */
 export function boardActiveRemoveStatAriaLabel(label: string): string {
   return `Remove ${label} filter`;

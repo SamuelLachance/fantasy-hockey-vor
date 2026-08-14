@@ -7,6 +7,7 @@ import {
   boardActiveClearPositionAriaLabel,
   boardActiveClearSearchAriaLabel,
   boardActiveEditFiltersTitle,
+  boardActiveEditStatAriaLabel,
   boardActiveFiltersRegionLabel,
   boardActiveFiltersVisible,
   boardActivePositionChipLabel,
@@ -146,8 +147,9 @@ export function BoardActiveFilters({
           <button
             type="button"
             onClick={onOpenStats}
-            className="py-1 pr-0.5 font-medium tabular-nums transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+            className="inline-flex min-h-11 items-center py-1 pr-0.5 font-medium tabular-nums transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
             title={boardActiveEditFiltersTitle()}
+            aria-label={boardActiveEditStatAriaLabel(chip.label)}
           >
             {chip.label} {chip.bounds}
           </button>

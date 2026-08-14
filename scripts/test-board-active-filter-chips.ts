@@ -7,6 +7,7 @@ import {
   boardActiveClearPositionAriaLabel,
   boardActiveClearSearchAriaLabel,
   boardActiveEditFiltersTitle,
+  boardActiveEditStatAriaLabel,
   boardActiveFiltersRegionLabel,
   boardActiveFiltersVisible,
   boardActivePositionChipLabel,
@@ -113,6 +114,10 @@ assert(
   "show starters aria",
 );
 assert(boardActiveEditFiltersTitle() === "Edit filters", "edit title");
+assert(
+  boardActiveEditStatAriaLabel("VOR") === "Edit VOR filter",
+  "edit stat aria",
+);
 assert(
   boardActiveRemoveStatAriaLabel("VOR") === "Remove VOR filter",
   "remove stat aria",
