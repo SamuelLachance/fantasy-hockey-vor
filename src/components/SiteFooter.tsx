@@ -8,6 +8,7 @@ import {
   footerDraftableCopy,
   footerGeneratedPrefixCopy,
   footerNhlApiCopy,
+  footerSourceLinkAriaLabel,
   footerSourceLinkCopy,
   footerSourceLinkTitle,
 } from "@/lib/site-footer";
@@ -43,7 +44,8 @@ export function SiteFooter({
         target="_blank"
         rel="noopener noreferrer"
         title={footerSourceLinkTitle()}
-        className="rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+        aria-label={footerSourceLinkAriaLabel()}
+        className="inline-flex min-h-11 items-center rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
       >
         {footerSourceLinkCopy()}
       </a>

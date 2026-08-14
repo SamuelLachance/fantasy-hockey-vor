@@ -27,3 +27,8 @@ export function footerSourceLinkCopy(): string {
 export function footerSourceLinkTitle(): string {
   return "View source on GitHub";
 }
+
+/** Accessible name — visible label plus new-tab warning. */
+export function footerSourceLinkAriaLabel(): string {
+  return "View source on GitHub (opens in a new tab)";
+}

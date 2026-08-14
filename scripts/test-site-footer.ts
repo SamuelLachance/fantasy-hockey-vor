@@ -7,6 +7,7 @@ import {
   footerDraftableCopy,
   footerGeneratedPrefixCopy,
   footerNhlApiCopy,
+  footerSourceLinkAriaLabel,
   footerSourceLinkCopy,
   footerSourceLinkTitle,
 } from "../src/lib/site-footer";
@@ -29,6 +30,11 @@ assert(footerSourceLinkCopy() === "GitHub", "source label");
 assert(
   footerSourceLinkTitle() === "View source on GitHub",
   "source title",
+);
+assert(
+  footerSourceLinkAriaLabel() ===
+    "View source on GitHub (opens in a new tab)",
+  "source aria new-tab",
 );
 assert(FOOTER_SOURCE_HREF.includes("github.com"), "source href");
 
