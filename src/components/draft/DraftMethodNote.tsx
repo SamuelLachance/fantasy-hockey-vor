@@ -13,8 +13,19 @@ function ordinal(rank: number | null): string {
   return rank === 1 ? "1er" : `${rank}e`;
 }
 
-/** How the board is built (French), plus the keyboard shortcuts. */
-export function DraftMethodNote({ board }: { board: DraftBoard }) {
+/**
+ * How the board is built (French), plus the draft helper's keyboard
+ * shortcuts (`shortcuts`, on by default: the Joueurs tab has no use for them).
+ */
+export function DraftMethodNote({
+  board,
+  shortcuts = true,
+  summary = "Comment ce classement est calculé",
+}: {
+  board: DraftBoard;
+  shortcuts?: boolean;
+  summary?: string;
+}) {
   const gw = board.goalieWeight;
   const cats = [...board.categories.skater, ...board.categories.goalie].map((c) => CATEGORY_SHORT[c]);
   const skaterIndex = (c: string) => (board.categories.skater as readonly string[]).indexOf(c);
@@ -22,6 +33,7 @@ export function DraftMethodNote({ board }: { board: DraftBoard }) {
   const dGoals = board.skaterGroupOffset.D[skaterIndex("goals")] ?? 0;
   return (
     <div className="space-y-3">
+      {shortcuts ? (
       <details className="group rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300 sm:p-4">
         <summary className="cursor-pointer select-none font-semibold text-slate-200">
           Raccourcis clavier
@@ -39,14 +51,15 @@ export function DraftMethodNote({ board }: { board: DraftBoard }) {
           ))}
         </dl>
       </details>
+      ) : null}
 
       <details className="rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-slate-300 sm:p-4">
         <summary className="cursor-pointer select-none font-semibold text-slate-200">
-          Comment ce classement est calculé
+          {summary}
         </summary>
         <div className="mt-3 space-y-2 text-xs leading-relaxed text-slate-400">
           <p>
-            <strong className="text-slate-200">Projections</strong> : celles du classement principal (ensemble
+            <strong className="text-slate-200">Projections</strong> : celles du site (ensemble
             ML, saison {board.season}), admissibilités Yahoo. Seules les {cats.length} catégories de la ligue
             comptent : {cats.join(", ")} — pas de PIM ni de mises au jeu.
           </p>
@@ -72,7 +85,7 @@ export function DraftMethodNote({ board }: { board: DraftBoard }) {
             volume) × prévisibilité {formatFr(gw.predictabilityRatio, 2)}. Ce second facteur est un choix de
             modèle : les projections de gardiens battent à peine la moyenne, celles des patineurs expliquent
             75 à 85 % de la variance, et l’escompte (0,75 + 0,25 × R² par catégorie) est appliqué tel quel.
-            Sensibilité : adouci de moitié comme dans le classement principal ({formatFr(gw.alt.predictabilityRatio, 2)},
+            Sensibilité : escompte adouci de moitié ({formatFr(gw.alt.predictabilityRatio, 2)},
             poids {formatFr(gw.alt.weight, 2)}), le premier gardien passerait du {ordinal(gw.firstGoalieRank)} au{" "}
             {ordinal(gw.alt.firstGoalieRank)} rang ({gw.goaliesInTop100} → {gw.alt.goaliesInTop100} gardiens
             dans le top 100).

@@ -12,6 +12,12 @@ import {
  * wrapped: private windows, blocked site data or a full quota must leave a
  * fully working (just not remembered) helper. Other tabs stay in sync via
  * the `storage` event.
+ *
+ * The module outlives a page under client-side navigation (a page restored
+ * from the back/forward cache keeps it too), while `storage` events are
+ * only heard with a subscriber: the cached state is dropped when the last
+ * subscriber leaves, and re-read on a `pageshow` from the cache, so a pick
+ * marked in another tab meanwhile is never overwritten by a stale copy.
  */
 export interface DraftStore {
   subscribe(listener: () => void): () => void;
@@ -53,17 +59,26 @@ export function getDraftStore(slug: string, teams: number): DraftStore {
     state = read();
     emit();
   };
+  const onPageShow = (e: PageTransitionEvent) => {
+    if (!e.persisted) return;
+    state = read();
+    emit();
+  };
 
   const store: DraftStore = {
     subscribe(listener) {
       listeners.add(listener);
       if (listeners.size === 1 && typeof window !== "undefined") {
         window.addEventListener("storage", onStorage);
+        window.addEventListener("pageshow", onPageShow);
       }
       return () => {
         listeners.delete(listener);
         if (listeners.size === 0 && typeof window !== "undefined") {
           window.removeEventListener("storage", onStorage);
+          window.removeEventListener("pageshow", onPageShow);
+          // Nobody hears `storage` any more: the next reader re-reads.
+          state = null;
         }
       };
     },

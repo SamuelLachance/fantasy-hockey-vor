@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { SnakeNhlMini } from "@/components/snake/SnakeVerdicts";
 import { availabilityBand } from "@/lib/draft/availability";
 import type { DraftBoard, DraftBoardPlayer } from "@/lib/draft/board-types";
 import { groupRelativeZ, isGoalieBoardPlayer } from "@/lib/draft/board-types";
@@ -82,6 +83,7 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
             {p.name}
           </span>
           <DraftPositionBadges positions={p.pos} vorPos={p.vorPos} />
+          <SnakeNhlMini id={p.id} />
         </div>
         <div className="truncate text-xs text-slate-400">
           {p.team}

@@ -1,53 +1,51 @@
-import { Header } from "@/components/Header";
-import { RankingsTable } from "@/components/RankingsTable";
-import { ScrollToTop } from "@/components/ScrollToTop";
-import { SiteFooter } from "@/components/SiteFooter";
-import { TopPlayers } from "@/components/TopPlayers";
-import { getProjections } from "@/lib/data";
-import { projectionAgeDays as daysSinceProjection } from "@/lib/projection-age";
-import { rankingsJsonLd, serializeJsonLd } from "@/lib/seo-jsonld";
+import type { Metadata } from "next";
+import { BoardLinkNotice } from "@/components/home/BoardLinkNotice";
+import { CategoryDraftLocal } from "@/components/home/CategoryDraftLocal";
+import { LeagueHomeCard } from "@/components/home/LeagueHomeCard";
+import { SnakeHomeCard } from "@/components/home/SnakeHomeCard";
+import { homeLeagues, homeProjectionLine, homeSnake } from "@/lib/leagues/home-data";
+import { SITE_BRAND } from "@/lib/site";
+import { siteDefaultDescription, siteHomeTitle } from "@/lib/site-meta";
 
+const description = siteDefaultDescription();
+
+// The root layout's title template only applies to child segments.
+export const metadata: Metadata = {
+  title: { absolute: siteHomeTitle() },
+  description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: siteHomeTitle(),
+    description,
+    url: "/",
+    siteName: SITE_BRAND,
+    type: "website",
+    locale: "fr_CA",
+  },
+};
+
+/** « Mes ligues »: one card per league of the registry, then Snake. */
 export default function HomePage() {
-  const data = getProjections();
-  const projectionAgeDays = daysSinceProjection(
-    data.generatedAt,
-    process.env.NEXT_PUBLIC_BUILD_TIME,
-  );
-
-  const jsonLd = rankingsJsonLd(data);
-
+  const leagues = homeLeagues();
+  const projections = homeProjectionLine();
   return (
-    <main className="min-h-screen pb-[max(4rem,calc(env(safe-area-inset-bottom,0px)+3rem))]">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
-      />
-      <Header
-        season={data.season}
-        playerCount={data.players.length}
-        leagueTeams={data.league?.teams}
-        generatedAt={data.generatedAt}
-        projectionAgeDays={projectionAgeDays}
-        projectionEngine={data.projectionEngine}
-        aiModel={data.aiModel}
-      />
-
-      <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6 lg:px-8">
-        <TopPlayers
-          players={data.players}
-          categoryWeights={data.categoryWeights}
-          league={data.league}
-        />
-        <RankingsTable players={data.players} />
+    <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">Mes ligues</h1>
+        <p className="mt-2 max-w-2xl text-base text-slate-400">
+          Tout pour vos ligues au même endroit : alignements, repêchages, joueurs.
+        </p>
       </div>
-
-      <SiteFooter
-        season={data.season}
-        generatedAt={data.generatedAt}
-        playerCount={data.players.length}
-        projectionEngine={data.projectionEngine}
-      />
-      <ScrollToTop />
-    </main>
+      <BoardLinkNotice />
+      <div className="grid gap-6 lg:grid-cols-2">
+        {leagues.map(({ entry, card, local }) => (
+          <LeagueHomeCard key={entry.slug} card={card}>
+            {local ? <CategoryDraftLocal {...local} /> : null}
+          </LeagueHomeCard>
+        ))}
+      </div>
+      <SnakeHomeCard data={homeSnake()} />
+      {projections ? <p className="text-xs text-slate-400">{projections}</p> : null}
+    </div>
   );
 }

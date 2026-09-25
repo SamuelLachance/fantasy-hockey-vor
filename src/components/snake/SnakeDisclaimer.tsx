@@ -2,16 +2,19 @@
 
 import Link from "next/link";
 import { Info } from "lucide-react";
-import { SNAKE_DISCLAIMER_SHORT } from "@/lib/snake/copy";
-import { SNAKE_PATH } from "@/lib/snake/url";
+import { SNAKE_DISCLAIMER_SHORT, SNAKE_PATH } from "@/lib/snake/disclaimer";
 
 const LINK_CLASS =
   "rounded-sm text-cyan-400/90 underline underline-offset-2 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80";
 
 /**
  * Short French disclaimer shown next to every piece of Snake content, with
- * a link to the full methodology on /snake. `lang="fr-CA"` so it reads
- * correctly on the English board.
+ * a link to the full methodology on /snake.
+ *
+ * Its text and the Snake route come from `@/lib/snake/disclaimer`, a tiny
+ * module: the league headers render it from the league layout, whose client
+ * chunk every league tab loads (the light Duel tab included), so it must
+ * not pull all of Snake's copy and URL helpers in with it.
  */
 export function SnakeDisclaimerShort({
   className = "",
@@ -29,7 +32,7 @@ export function SnakeDisclaimerShort({
   inPage?: boolean;
 }) {
   return (
-    <p lang="fr-CA" className={`flex gap-1.5 text-xs leading-relaxed text-slate-400 ${className}`.trim()}>
+    <p className={`flex gap-1.5 text-xs leading-relaxed text-slate-400 ${className}`.trim()}>
       <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
       <span>
         {SNAKE_DISCLAIMER_SHORT}

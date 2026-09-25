@@ -1,16 +1,29 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowLeft, ListOrdered } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { loadSnakePlayer, type SnakePlayerRecord } from "@/lib/snake/client";
 import { formatCountFr, plural, positionLabel } from "@/lib/snake/copy";
-import { boardPlayerHref } from "@/lib/snake/url";
+import { LEAGUES } from "@/lib/leagues/registry";
+import { leaguePlayerPath } from "@/lib/leagues/routes";
+import { decodeIdSet } from "@/lib/snake/league-seed";
 import { SITE_BRAND } from "@/lib/site";
 import { SnakeDisclaimerShort } from "./SnakeDisclaimer";
 import { SnakeOpinionItem } from "./SnakeOpinionItem";
 import { SnakeSynthesisCard } from "./SnakeSynthesisCard";
 
 const OPINIONS_PAGE = 20;
+
+export interface BoardLeague {
+  slug: string;
+  name: string;
+  /** NHL ids on its board that Snake discussed (`encodeIdSet`). */
+  nhlIds: string;
+}
+
+/** The Fantrax league whose players Snake's Fantrax ids point to. */
+const fantraxLeague = LEAGUES.find((l) => l.platform === "Fantrax");
 
 type Load = { key: string; state: "loading" } | { key: string; state: "error" } | { key: string; state: "ready"; rec: SnakePlayerRecord | null };
 
@@ -23,6 +36,7 @@ export function SnakePlayerDetail({
   autoFocus = true,
   inMyTeam,
   myTeamName,
+  boardLeagues = [],
 }: {
   playerKey: string;
   onBack: () => void;
@@ -30,6 +44,8 @@ export function SnakePlayerDetail({
   autoFocus?: boolean;
   inMyTeam: (fantraxId: string | null) => boolean;
   myTeamName: string;
+  /** Categories leagues and the NHL ids on their board (players Snake discussed). */
+  boardLeagues?: readonly BoardLeague[];
 }) {
   const [load, setLoad] = useState<Load>({ key: playerKey, state: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -143,6 +159,15 @@ export function SnakePlayerDetail({
 
   const row = rec.row;
   const mine = inMyTeam(row.fx);
+  // His Joueurs row in each league that lists him (Fantrax id; NHL id on a categories league's board).
+  const inLeagues = [
+    ...(row.fx && fantraxLeague
+      ? [{ href: leaguePlayerPath(fantraxLeague.slug, row.fx), label: `${fantraxLeague.shortName} › Joueurs` }]
+      : []),
+    ...boardLeagues
+      .filter((l) => row.nhl !== null && decodeIdSet(l.nhlIds).has(String(row.nhl)))
+      .map((l) => ({ href: leaguePlayerPath(l.slug, String(row.nhl)), label: `${l.name} › Joueurs` })),
+  ];
   return (
     <section aria-labelledby="snake-detail-titre" className="space-y-5">
       {back}
@@ -173,18 +198,20 @@ export function SnakePlayerDetail({
             </span>
           ) : null}
         </p>
-        {row.b && row.nhl ? (
-          <p>
-            {/* A plain link: the board is a full page load anyway (see boardPlayerHref). */}
-            <a
-              href={boardPlayerHref(row.nhl)}
-              className="inline-flex min-h-11 items-center gap-2 rounded-sm text-sm text-cyan-400 underline-offset-2 hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
-            >
-              <ListOrdered className="h-4 w-4" aria-hidden="true" />
-              <span>
-                Voir au classement VOR <span className="text-slate-400">(en anglais)</span>
-              </span>
-            </a>
+        {inLeagues.length ? (
+          <p className="flex flex-wrap items-center gap-x-3 text-sm text-slate-400">
+            <ListOrdered className="h-4 w-4 text-cyan-400" aria-hidden="true" />
+            <span>Dans vos ligues :</span>
+            {inLeagues.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                prefetch={false}
+                className="inline-flex min-h-11 items-center rounded-sm text-cyan-400 underline-offset-2 hover:text-cyan-300 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+              >
+                {l.label}
+              </Link>
+            ))}
           </p>
         ) : null}
       </header>

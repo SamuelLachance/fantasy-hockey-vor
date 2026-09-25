@@ -99,10 +99,10 @@ export function etParts(ms: number): EtParts {
 
 const two = (n: number) => String(n).padStart(2, "0");
 
-/** `17 h 00` */
+/** `17 h`, `22 h 30`, `0 h 05` (Québec style: no `00` on the hour). */
 export function fmtTime(iso: string): string {
   const p = etParts(Date.parse(iso));
-  return `${p.hour}${NBSP}h${NBSP}${two(p.minute)}`;
+  return p.minute === 0 ? `${p.hour}${NBSP}h` : `${p.hour}${NBSP}h${NBSP}${two(p.minute)}`;
 }
 
 /** `HAE` (heure avancée de l'Est) or `HNE` (heure normale). */
@@ -141,9 +141,9 @@ export function fmtShortCalendarDate(date: string): string {
   return `${d}${NBSP}${MONTHS[m - 1]}`;
 }
 
-/** `ven. 25 sept., 10 h 27 HAE` */
+/** `ven. 25 sept., 10 h 27 (HAE)` */
 export function fmtDateTime(iso: string): string {
-  return `${fmtDay(iso)}, ${fmtTime(iso)} ${fmtZone(iso)}`;
+  return `${fmtDay(iso)}, ${fmtTime(iso)} (${fmtZone(iso)})`;
 }
 
 /** Time left before a lock: `dans 4 j 6 h`, `dans 2 h 05 min`, `dans 12 min`, `verrouillé`. */
@@ -313,7 +313,7 @@ export function draftBoardNote(next: number | null, following: number | null, po
     );
   }
   parts.push(
-    "L'âge et le % Fantrax servent d'indices dynastie. Les espoirs sans projection ne sont pas classés ici : l'explorateur de joueurs les liste tous.",
+    `L'âge et le % Fantrax servent d'indices dynastie. La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: voyez la vue Espoirs ou l’onglet Joueurs.`,
   );
   return parts.join(" ");
 }

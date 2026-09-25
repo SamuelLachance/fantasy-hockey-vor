@@ -314,7 +314,8 @@ if (!gitignore.split(/\r?\n/).includes("/src/data/scouting/snake-boisvert.json")
 
 // ---- page contract
 const page = readFileSync(join(root, "src", "app", "snake", "page.tsx"), "utf8");
-for (const needle of ["robots: { index: false", 'canonical: "/snake"', "SnakeDisclaimerShort", "SnakeMethodology", 'lang="fr-CA"']) {
+// The site-wide layout carries lang="fr-CA"; the page keeps noindex and its canonical.
+for (const needle of ["robots: { index: false", 'canonical: "/snake"', "SnakeDisclaimerShort", "SnakeMethodology"]) {
   if (!page.includes(needle)) fail(`src/app/snake/page.tsx missing ${JSON.stringify(needle)}`);
 }
 const item = readFileSync(join(root, "src", "components", "snake", "SnakeOpinionItem.tsx"), "utf8");
@@ -322,13 +323,27 @@ for (const needle of ["youtubeHref(o.vid, o.t)", 'rel="noopener noreferrer"', "S
   if (!item.includes(needle)) fail(`SnakeOpinionItem.tsx missing ${JSON.stringify(needle)}`);
 }
 for (const rel of [
-  "src/components/snake/ExpandedPlayerSnake.tsx",
-  "src/components/league/LeagueDaily.tsx",
+  "src/components/player-table/SnakeDetail.tsx",
+  "src/components/fantrax/FantraxLeagueHeader.tsx",
+  "src/components/draft/CategoryLeagueHeader.tsx",
   "src/components/snake/SnakePlayerDetail.tsx",
-  "src/components/snake/SnakeBoardLegend.tsx",
+  "src/components/home/SnakeHomeCard.tsx",
+  // The old draft address: its board rows carry Snake's chips too.
+  "src/app/draft/light-the-lamp/page.tsx",
 ]) {
   if (!existsSync(join(root, rel)) || !readFileSync(join(root, rel), "utf8").includes("SnakeDisclaimerShort")) {
     fail(`${rel} must show the Snake disclaimer`);
+  }
+}
+
+// The Yahoo draft board's chips have no room for words: their legend (and
+// the unofficial-summary reminder) sits under the board on both addresses.
+{
+  const rel = "src/components/draft/CategoryDraftTab.tsx";
+  if (!readFileSync(join(root, rel), "utf8").includes("<SnakeChipLegend")) fail(`${rel} must explain Snake's chips`);
+  const legend = readFileSync(join(root, "src/components/snake/SnakeChipLegend.tsx"), "utf8");
+  for (const needle of ["Résumés non officiels", "attribution probable", "#sources"]) {
+    if (!legend.includes(needle)) fail(`SnakeChipLegend.tsx missing ${JSON.stringify(needle)}`);
   }
 }
 

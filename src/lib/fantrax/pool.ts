@@ -19,7 +19,7 @@
  * fields are omitted: the file stays small and gzips well.
  */
 import { FANTRAX_ICON, FANTRAX_NO_TEAM } from "./config";
-import { bestFpg, seasonFp } from "./daily-plan";
+import { bestFpg, seasonFp } from "./draft-inputs";
 import { canonicalFirstName, fantraxDisplayName, nameKey } from "./match";
 import type { ValueRecord } from "./snapshot-types";
 

@@ -388,15 +388,6 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onUndo, onFilter, focusSearch]);
 
-  // The page is French: keep <html lang> on fr-CA while mounted (the inline
-  // script in page.tsx sets it before paint) and restore "en" on the way out.
-  useEffect(() => {
-    document.documentElement.lang = "fr-CA";
-    return () => {
-      document.documentElement.lang = "en";
-    };
-  }, []);
-
   // Expose the sticky bar's height so the desktop columns stick under it.
   useEffect(() => {
     const bar = barRef.current;

@@ -3,7 +3,6 @@
 import { Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
-import { useDocumentLang } from "@/hooks/useDocumentLang";
 import { loadSnakeIndex } from "@/lib/snake/client";
 import { formatCountFr, formatSnakeDate, plural, positionLabel } from "@/lib/snake/copy";
 import {
@@ -18,7 +17,7 @@ import type { SnakeIndexFile, SnakeListRow } from "@/lib/snake/types";
 import { snakeKeyFromSearch, snakeSearch } from "@/lib/snake/url";
 import { SnakeProbableMark, SnakeTrendBadge, SnakeVerdictChip } from "./SnakeBadges";
 import { SnakeFilters } from "./SnakeFilters";
-import { SnakePlayerDetail } from "./SnakePlayerDetail";
+import { SnakePlayerDetail, type BoardLeague } from "./SnakePlayerDetail";
 import { SnakeRankings } from "./SnakeRankings";
 
 const PAGE = 40;
@@ -133,14 +132,15 @@ interface SnakeExplorerProps {
   /** Fantrax ids on the user's roster (baked at the last league sync). */
   myFantraxIds: string[];
   myTeamName: string;
+  /** Categories leagues whose board lists the player (« Dans vos ligues »). */
+  boardLeagues?: readonly BoardLeague[];
 }
 
 /**
  * The /snake database: search + filters + list, a player's detail view
  * (`?p=<key>`, deep-linkable on a static export), and his rankings.
  */
-export function SnakeExplorer({ myFantraxIds, myTeamName }: SnakeExplorerProps) {
-  useDocumentLang("fr-CA");
+export function SnakeExplorer({ myFantraxIds, myTeamName, boardLeagues }: SnakeExplorerProps) {
   const [index, setIndex] = useState<SnakeIndexFile | null>(null);
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [attempt, setAttempt] = useState(0);
@@ -293,6 +293,7 @@ export function SnakeExplorer({ myFantraxIds, myTeamName }: SnakeExplorerProps) 
             autoFocus={focusDetail}
             inMyTeam={inMyTeam}
             myTeamName={myTeamName}
+            boardLeagues={boardLeagues}
           />
         ) : (
           <section id="joueurs" aria-labelledby="joueurs-titre" className="scroll-mt-4 space-y-4">

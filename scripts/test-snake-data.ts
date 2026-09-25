@@ -5,8 +5,9 @@
  * helpers.
  * Run: npx tsx scripts/test-snake-data.ts
  */
-import { boardRowAriaLabel } from "../src/lib/board-row-a11y";
-import { siteNavLinks } from "../src/lib/site-nav";
+import { LEAGUES } from "../src/lib/leagues/registry";
+import { leaguePlayerPath } from "../src/lib/leagues/routes";
+import { navItems } from "../src/lib/site-nav";
 import { buildSnakePublicData, publicSynthesis, showLabel, standInOpinion, type SourceDb } from "../src/lib/snake/build";
 import {
   SNAKE_DISCLAIMER_FULL,
@@ -16,7 +17,6 @@ import {
   formatSnakeDate,
   plural,
   seasonOf,
-  snakeBoardRowSuffix,
   snakeDerivedNote,
   snakeVerdictAria,
   stanceScore,
@@ -58,7 +58,6 @@ import { SNAKE_SHARD_COUNT, fnv1a32, snakeShardFile, snakeShardFileForKey, snake
 import { contentStems, traceSets, traceable } from "../src/lib/snake/trace";
 import type { SnakeListRow, SnakeOpinion } from "../src/lib/snake/types";
 import {
-  boardPlayerHref,
   formatClock,
   snakeDataHref,
   snakeKeyFromSearch,
@@ -548,10 +547,8 @@ eq(formatClock(3725), "1:02:05", "clock with hours");
   const prevBase = process.env.NEXT_PUBLIC_BASE_PATH;
   process.env.NEXT_PUBLIC_BASE_PATH = "/fantasy-hockey-vor";
   eq(snakeDataHref("o/07.json", "abc123"), "/fantasy-hockey-vor/snake/o/07.json?v=abc123", "data URL on Pages, versioned by content");
-  eq(boardPlayerHref(8483457), "/fantasy-hockey-vor/?player=8483457#rankings", "board link carries the basePath (plain <a>)");
   delete process.env.NEXT_PUBLIC_BASE_PATH;
   eq(snakeDataHref("index.json", ""), "/snake/index.json", "data URL locally, unversioned");
-  eq(boardPlayerHref(8483457), "/?player=8483457#rankings", "board link locally");
   if (prevBase !== undefined) process.env.NEXT_PUBLIC_BASE_PATH = prevBase;
 }
 eq(formatSnakeDate("2026-09-22"), `22${NB}sept.${NB}2026`, "French date");
@@ -578,16 +575,18 @@ for (const needle of ["pas officielle", "sous-titres automatiques", "paraphrases
 }
 assert(!full.includes("mot pour mot"), "the full disclaimer makes no word-for-word promise the data cannot back");
 
-// ---- board / nav wiring
-eq(
-  boardRowAriaLabel({ name: "Lane Hutson", rank: 45 }, "ALL", 0, snakeBoardRowSuffix("très positif", "en hausse", true)),
-  "Lane Hutson, rank 45, Snake: very positive, trending up (probable attribution)",
-  "row label suffix in English, with trend and probable attribution",
-);
-eq(snakeBoardRowSuffix("mitigé", "inconnue"), "Snake: mixed", "unknown trend omitted");
-eq(boardRowAriaLabel({ name: "Lane Hutson", rank: 45 }, "ALL", 0), "Lane Hutson, rank 45", "row label unchanged without Snake");
-eq(siteNavLinks().map((l) => l.href), ["/league", "/snake"], "nav links");
-assert(siteNavLinks().every((l) => l.label.endsWith("(FR)") && l.hrefLang === "fr-CA"), "nav flags the French pages");
+// ---- nav / league wiring
+{
+  const items = navItems();
+  eq(items[items.length - 1]?.href, "/snake", "Snake is in the global nav (next/link href, no trailing slash)");
+  eq(items[items.length - 1]?.label, "Snake", "Snake nav label");
+  eq(items.length, LEAGUES.length + 2, "nav: home, one item per league, Snake");
+  eq(
+    leaguePlayerPath("captains-dynasty", "05wwg"),
+    "/ligues/captains-dynasty/joueurs?joueur=05wwg",
+    "a Snake player links to his row in his league's Joueurs tab (Fantrax id = row key)",
+  );
+}
 
 if (failed) process.exit(1);
 console.log("OK: snake data (filters, tracing, corrections, id resolution, shards, build, verbatim guard, list filters, copy)");

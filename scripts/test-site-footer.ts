@@ -1,15 +1,15 @@
 /**
- * Unit checks for site footer copy helpers.
+ * Unit checks for site footer copy helpers (French).
  * Run: npx tsx scripts/test-site-footer.ts
  */
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   FOOTER_SOURCE_HREF,
-  footerDraftableCopy,
-  footerGeneratedPrefixCopy,
-  footerNhlApiCopy,
+  footerDisclaimerCopy,
   footerSourceLinkAriaLabel,
   footerSourceLinkCopy,
-  footerSourceLinkTitle,
+  footerSourcesCopy,
 } from "../src/lib/site-footer";
 
 let failed = 0;
@@ -20,23 +20,18 @@ function assert(cond: boolean, msg: string) {
   }
 }
 
-assert(footerDraftableCopy(1311) === "1,311 draftable", "draftable count");
-assert(
-  footerGeneratedPrefixCopy() === "Projections generated",
-  "generated prefix",
-);
-assert(footerNhlApiCopy() === "NHL API", "nhl api chip");
-assert(footerSourceLinkCopy() === "GitHub", "source label");
-assert(
-  footerSourceLinkTitle() === "View source on GitHub",
-  "source title",
-);
-assert(
-  footerSourceLinkAriaLabel() ===
-    "View source on GitHub (opens in a new tab)",
-  "source aria new-tab",
-);
+assert(footerDisclaimerCopy().startsWith("Outil non officiel"), "independence notice");
+for (const name of ["LNH", "Fantrax", "Yahoo", "Simon Boisvert"]) {
+  assert(footerDisclaimerCopy().includes(name), `notice names ${name}`);
+}
+assert(footerSourcesCopy().includes("lecture seule"), "Fantrax read-only");
+assert(footerSourceLinkCopy() === "Code source (GitHub)", "source label");
+assert(footerSourceLinkAriaLabel().includes("nouvel onglet"), "source aria new-tab");
 assert(FOOTER_SOURCE_HREF.includes("github.com"), "source href");
+
+const footer = readFileSync(join(process.cwd(), "src/components/site/SiteFooter.tsx"), "utf8");
+assert(footer.includes('target="_blank"') && footer.includes('rel="noopener noreferrer"'), "new tab link is safe");
+assert(footer.includes("safe-area-inset-bottom"), "footer clears the home indicator");
 
 if (failed) process.exit(1);
 console.log("OK: site-footer");

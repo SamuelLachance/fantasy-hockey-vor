@@ -1,11 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { PROJECTION_SEASON } from "@/lib/nhl-api";
+import { SiteFooter } from "@/components/site/SiteFooter";
+import { SiteHeader } from "@/components/site/SiteHeader";
 import { SITE_BRAND, SITE_SHORT_NAME, SITE_URL } from "@/lib/site";
-import {
-  siteDefaultDescription,
-  siteDefaultTitle,
-} from "@/lib/site-meta";
+import { SITE_TITLE_TEMPLATE, siteDefaultDescription, siteDefaultTitle } from "@/lib/site-meta";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -27,22 +25,15 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
+// Personal league tools: public files, but never meant for search results.
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: defaultTitle,
+  title: { default: defaultTitle, template: SITE_TITLE_TEMPLATE },
   description: defaultDescription,
-  keywords: [
-    "fantasy hockey",
-    "VOR",
-    "NHL rankings",
-    PROJECTION_SEASON,
-    "draft edge",
-    "Yahoo fantasy",
-    "stacked ensemble",
-  ],
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
   },
   openGraph: {
     title: defaultTitle,
@@ -50,10 +41,10 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: SITE_BRAND,
     type: "website",
-    locale: "en_US",
+    locale: "fr_CA",
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: defaultTitle,
     description: defaultDescription,
   },
@@ -62,9 +53,6 @@ export const metadata: Metadata = {
     capable: true,
     title: SITE_SHORT_NAME,
     statusBarStyle: "black-translucent",
-  },
-  alternates: {
-    canonical: "/",
   },
   category: "sports",
 };
@@ -75,14 +63,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // suppressHydrationWarning: /league switches `lang` to fr-CA before
-    // hydration (one attribute on this element only, not its children).
-    <html
-      lang="en"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="fr-CA" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+      <body className="flex min-h-full flex-col">
+        <a
+          href="#contenu"
+          className="sr-only z-50 rounded-xl bg-cyan-500 px-4 py-3 text-sm font-semibold text-slate-950 focus:not-sr-only focus:left-4 focus:top-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-200"
+        >
+          Aller au contenu
+        </a>
+        <SiteHeader />
+        {/* The only <main> of every page: pages render <div>/<section>. */}
+        <main id="contenu" tabIndex={-1} className="flex-1 focus:outline-none">
+          {children}
+        </main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }

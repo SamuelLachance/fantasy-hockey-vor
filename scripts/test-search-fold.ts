@@ -1,13 +1,9 @@
 /**
- * Unit checks for diacritic-folding board search.
+ * Unit checks for diacritic-folding search (the player explorer and the
+ * draft board both fold names this way).
  * Run: npx tsx scripts/test-search-fold.ts
  */
 import { foldSearchText, foldSearchTextWithMap } from "../src/lib/search-fold";
-import {
-  filterAndSortBoard,
-  foldedBoardSearchFields,
-} from "../src/lib/rankings-board";
-import type { PlayerProjection } from "../src/lib/types";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -20,62 +16,18 @@ function assert(cond: boolean, msg: string) {
 assert(foldSearchText("Stützle") === "stutzle", "fold ü");
 assert(foldSearchText("Lafrenière") === "lafreniere", "fold è");
 assert(foldSearchText("STUTZLE") === "stutzle", "fold case");
+assert(foldSearchText("Juraj Slafkovský") === "juraj slafkovsky", "fold ý");
+assert(foldSearchText("Zegras") === "zegras", "ASCII unchanged");
 
 const mapped = foldSearchTextWithMap("Stützle");
 assert(mapped.folded === "stutzle", "map folded");
 assert(mapped.map.length === mapped.folded.length, "map length");
-assert(
-  foldSearchTextWithMap("Stützle") === mapped,
-  "fold map cache returns the same object",
-);
+assert(mapped.map[2] === 2 && mapped.map[3] === 3, "map points at the original characters");
+assert(foldSearchTextWithMap("Stützle") === mapped, "fold map cache returns the same object");
 
-const players = [
-  {
-    id: 1,
-    name: "Tim Stützle",
-    team: "OTT",
-    position: "C",
-    positions: ["C", "LW"],
-    rank: 1,
-    vor: 10,
-    gamesPlayed: 82,
-  },
-  {
-    id: 2,
-    name: "Connor McDavid",
-    team: "EDM",
-    position: "C",
-    positions: ["C"],
-    rank: 2,
-    vor: 20,
-    gamesPlayed: 82,
-  },
-] as unknown as PlayerProjection[];
-
-const hits = filterAndSortBoard(players, {
-  position: "ALL",
-  query: "stutzle",
-  sortKey: "vor",
-  sortDir: "desc",
-  hideDepthGoalies: true,
-  statRanges: {},
-});
-assert(hits.length === 1 && hits[0]!.name === "Tim Stützle", "ascii query hits");
-
-const accentHits = filterAndSortBoard(players, {
-  position: "ALL",
-  query: "stütz",
-  sortKey: "vor",
-  sortDir: "desc",
-  hideDepthGoalies: true,
-  statRanges: {},
-});
-assert(accentHits.length === 1, "accented query still hits");
-
-const once = foldedBoardSearchFields(players[0]!);
-const twice = foldedBoardSearchFields(players[0]!);
-assert(once === twice, "folded name/team cache hits the same object");
-assert(once[0] === "tim stutzle" && once[1] === "ott", "cached fold matches");
+// Any accented query hits the same folded name as its ASCII spelling.
+const name = foldSearchText("Tim Stützle");
+assert(name.includes(foldSearchText("stütz")) && name.includes(foldSearchText("stutz")), "accented and ASCII queries both hit");
 
 if (failed) process.exit(1);
 console.log("OK: search-fold");

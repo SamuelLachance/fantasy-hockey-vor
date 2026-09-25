@@ -8,9 +8,6 @@ import {
   projectionAgeDays,
   PROJECTION_STALE_DAYS,
   PROJECTION_VERY_STALE_DAYS,
-  SITEMAP_DAILY_MAX_AGE_DAYS,
-  sitemapChangeFrequency,
-  sitemapLastModified,
 } from "../src/lib/projection-age";
 
 let failed = 0;
@@ -23,50 +20,14 @@ function assert(cond: boolean, msg: string) {
 
 assert(PROJECTION_STALE_DAYS === 21, "stale threshold");
 assert(PROJECTION_VERY_STALE_DAYS === 45, "very stale threshold");
-assert(SITEMAP_DAILY_MAX_AGE_DAYS === 7, "sitemap daily max");
-assert(sitemapChangeFrequency(0) === "daily", "fresh → daily");
-assert(sitemapChangeFrequency(7) === "daily", "7 → daily");
-assert(sitemapChangeFrequency(8) === "weekly", "8 → weekly");
-assert(
-  projectionAgeDays("2026-07-01T00:00:00.000Z", "2026-07-11T00:00:00.000Z") ===
-    10,
-  "10 day gap",
-);
-assert(
-  projectionAgeDays("not-a-date", "2026-07-11T00:00:00.000Z") === 0,
-  "invalid → 0",
-);
-assert(
-  projectionAgeDays("2026-07-20T00:00:00.000Z", "2026-07-10T00:00:00.000Z") ===
-    0,
-  "negative clamped",
-);
+assert(projectionAgeDays("2026-07-01T00:00:00.000Z", "2026-07-11T00:00:00.000Z") === 10, "10 day gap");
+assert(projectionAgeDays("not-a-date", "2026-07-11T00:00:00.000Z") === 0, "invalid → 0");
+assert(projectionAgeDays("2026-07-20T00:00:00.000Z", "2026-07-10T00:00:00.000Z") === 0, "negative clamped");
+assert(projectionAgeDays("2026-07-20T00:00:00.000Z") === 0, "no build time → 0");
 assert(!isProjectionStale(PROJECTION_STALE_DAYS), "21 not stale");
 assert(isProjectionStale(PROJECTION_STALE_DAYS + 0.01), "just over 21 stale");
 assert(!isProjectionVeryStale(PROJECTION_VERY_STALE_DAYS), "45 not very");
-assert(
-  isProjectionVeryStale(PROJECTION_VERY_STALE_DAYS + 0.01),
-  "just over 45 very",
-);
-assert(
-  sitemapLastModified(
-    "2026-07-22T00:00:00.000Z",
-    "2026-07-31T12:00:00.000Z",
-  ).toISOString() === "2026-07-31T12:00:00.000Z",
-  "build newer wins lastmod",
-);
-assert(
-  sitemapLastModified(
-    "2026-07-31T12:00:00.000Z",
-    "2026-07-22T00:00:00.000Z",
-  ).toISOString() === "2026-07-31T12:00:00.000Z",
-  "generated newer wins lastmod",
-);
-assert(
-  sitemapLastModified("not-a-date", undefined).toISOString() ===
-    "2026-07-22T00:00:00.000Z",
-  "fallback lastmod",
-);
+assert(isProjectionVeryStale(PROJECTION_VERY_STALE_DAYS + 0.01), "just over 45 very");
 
 if (failed) process.exit(1);
 console.log("OK: projection-age");

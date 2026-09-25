@@ -5,9 +5,8 @@ import type { SnakeStance, SnakeTrend } from "./types";
 
 export const SNAKE_SCOUT_NAME = "Simon « Snake » Boisvert";
 
-/** Short disclaimer shown wherever Snake content appears. */
-export const SNAKE_DISCLAIMER_SHORT =
-  "Avis de Simon « Snake » Boisvert : résumés non officiels, générés automatiquement à partir des sous-titres automatiques de ses balados publics. Ce sont des paraphrases, pas des citations, et ils peuvent contenir des erreurs de transcription ou d'attribution. Aucune affiliation avec Simon Boisvert ni les émissions. Écoutez la source.";
+/** Short disclaimer shown wherever Snake content appears (its own tiny module: see ./disclaimer). */
+export { SNAKE_DISCLAIMER_SHORT } from "./disclaimer";
 
 /** Full disclaimer (the /snake page). */
 export const SNAKE_DISCLAIMER_FULL: readonly string[] = [
@@ -188,29 +187,4 @@ export function seasonOf(iso: string): string {
   const m = Number(iso.slice(5, 7));
   const start = m >= 7 ? y : y - 1;
   return `${start}-${String((start + 1) % 100).padStart(2, "0")}`;
-}
-
-const STANCE_EN: Record<SnakeStance, string> = {
-  "très positif": "very positive",
-  positif: "positive",
-  neutre: "neutral",
-  mitigé: "mixed",
-  négatif: "negative",
-  "très négatif": "very negative",
-};
-const TREND_EN: Record<SnakeTrend, string> = {
-  "en hausse": "trending up",
-  stable: "steady",
-  variable: "variable",
-  "en baisse": "trending down",
-  inconnue: "",
-};
-
-/**
- * Suffix for the (English) board row label, e.g. "Snake: very positive,
- * trending up (probable attribution)".
- */
-export function snakeBoardRowSuffix(v: SnakeStance, t?: SnakeTrend | null, probable?: boolean): string {
-  const trend = t ? TREND_EN[t] : "";
-  return `Snake: ${STANCE_EN[v] ?? v}${trend ? `, ${trend}` : ""}${probable ? " (probable attribution)" : ""}`;
 }

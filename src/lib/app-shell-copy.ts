@@ -1,41 +1,39 @@
-/** Route loading status. */
-export function loadingRankingsCopy(): string {
-  return "Loading rankings…";
-}
-
 /** Client error boundary title. */
 export function errorBoundaryTitle(): string {
-  return "Something went wrong";
+  return "Une erreur est survenue";
 }
 
 /** Client error boundary body. */
 export function errorBoundaryBody(): string {
-  return (
-    "The rankings UI hit an unexpected error. Your data files are usually " +
-    "fine — try again, or hard-refresh."
-  );
+  return "Cette page a rencontré une erreur inattendue. Vos données sont intactes : réessayez, ou rechargez la page.";
 }
 
 export function errorTryAgainCopy(): string {
-  return "Try again";
+  return "Réessayer";
 }
 
-export function errorBackToRankingsCopy(): string {
-  return "Back to rankings";
+/** Link back to the home page (« Mes ligues »). */
+export function errorBackHomeCopy(): string {
+  return "Retour à l’accueil";
+}
+
+/** Error reference shown under the message (Next's digest). */
+export function errorReferenceCopy(digest: string): string {
+  return `Référence : ${digest}`;
 }
 
 export function notFoundTitle(): string {
-  return "Page not found";
+  return "Page introuvable";
 }
 
 export function notFoundBody(): string {
-  return "That route is not part of the rankings app. Head back to the full board.";
+  return "Cette adresse n’existe pas ou plus.";
 }
 
 export function globalErrorTitle(): string {
-  return "App error";
+  return "Erreur de l’application";
 }
 
 export function globalErrorBody(): string {
-  return "A root-level failure occurred. Retry to remount the application.";
+  return "Une erreur a empêché l’affichage du site. Réessayez pour le relancer.";
 }

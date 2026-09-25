@@ -1,8 +1,10 @@
 /** URLs for the Snake pages and data (pure). */
 import dataVersion from "../../data/snake-version.json";
 
+import { SNAKE_PATH } from "./disclaimer";
+
 /** Route of the Snake database page (next/link adds the basePath). */
-export const SNAKE_PATH = "/snake";
+export { SNAKE_PATH };
 
 /** Content hash of `public/snake/**`, written by `npm run snake:build`. */
 export const SNAKE_DATA_VERSION: string = (dataVersion as { v?: string }).v ?? "";
@@ -58,19 +60,4 @@ export function formatClock(seconds: number): string {
   const sec = s % 60;
   const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
   return `${h > 0 ? `${h}:` : ""}${mm}:${String(sec).padStart(2, "0")}`;
-}
-
-/**
- * The VOR board (plain `<a>` href, basePath included). Not for next/link:
- * on Pages the root route's RSC payload is `index.txt`, which a client
- * navigation asks for as `/fantasy-hockey-vor.txt` (404, then a full load
- * anyway), so these links load the board directly.
- */
-export function boardHref(): string {
-  return withBasePath("/");
-}
-
-/** Board deep link for a player (plain `<a>` href, basePath included). */
-export function boardPlayerHref(nhlId: number): string {
-  return withBasePath(`/?player=${nhlId}#rankings`);
 }
