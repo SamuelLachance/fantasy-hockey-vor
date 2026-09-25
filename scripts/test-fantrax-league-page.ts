@@ -274,14 +274,56 @@ const contracts: Record<string, string[]> = {
     "setNowMs",
     "aria-busy={busy}",
     'root.lang = "fr-CA"',
+    "<PlayerExplorer",
+    'id: "explorateur"',
+    // The explorer waits for the panels above before watching the viewport.
+    "armed={",
   ],
   // French page under the shared English root layout: switch lang before paint.
   "src/app/layout.tsx": ["suppressHydrationWarning"],
   // A `relative` scroller clips its absolutely positioned sr-only labels;
   // without it they widen the document on phones (page scrolls sideways).
   "src/components/league/WeekGrid.tsx": ["relative -mx-4 overflow-x-auto"],
-  "src/components/league/DraftPanel.tsx": ["relative -mx-4 mt-2 overflow-x-auto"],
-  "src/lib/fantrax/league-client.ts": ['credentials: "omit"', "attempt < 2", "fantraxDataHref", "sessionStorage"],
+  "src/components/league/DraftPanel.tsx": ["relative -mx-4 mt-2 overflow-x-auto", 'preset="repechage"'],
+  "src/components/league/WaiverTargets.tsx": ['preset="autonomes"'],
+  "src/lib/fantrax/league-client.ts": [
+    'credentials: "omit"',
+    "attempt < 2",
+    "fantraxDataHref",
+    "sessionStorage",
+    'fetchSnapshotFile<unknown>("pool.json")',
+    'fantraxDataHref("dynasty.json")',
+    'publicDataHref("snake/index.json")',
+    'publicDataHref("snake/fantrax.json")',
+  ],
+  // The explorer: URL read inside Suspense (static export), native history
+  // writes (no soft navigation), its table scrolls inside its own box.
+  "src/components/league/PlayerExplorer.tsx": [
+    "<Suspense",
+    "useSearchParams",
+    "History.prototype.replaceState",
+    "IntersectionObserver",
+    'role="status"',
+    'id="explorateur"',
+    // Pager buttons keep the focus on the first and last page.
+    "aria-disabled={page <= 1",
+    "aria-disabled={page >= pages",
+  ],
+  "src/components/league/ExplorerTable.tsx": [
+    "relative -mx-4 overflow-x-auto",
+    "aria-sort",
+    'scope="row"',
+    "<caption",
+    // Label in name: the header reads « Joueur ».
+    'sortButtonLabel("Joueur"',
+  ],
+  "src/components/league/ExplorerFilters.tsx": [
+    'role="search"',
+    "aria-pressed",
+    'autoComplete="off"',
+    "data-1p-ignore",
+    "aria-disabled={atDefaults",
+  ],
 };
 for (const [rel, needles] of Object.entries(contracts)) {
   const text = readFileSync(join(process.cwd(), rel), "utf8");
@@ -300,7 +342,13 @@ for (const [rel, needles] of Object.entries(contracts)) {
 
 // The browser only ever reads Fantrax with fxea GETs: no POST of any kind
 // (fxpa has no CORS anyway, and nothing here may look like a write).
-for (const rel of ["src/components/league/LeagueDaily.tsx", "src/app/league/page.tsx", "src/lib/fantrax/league-client.ts"]) {
+for (const rel of [
+  "src/components/league/LeagueDaily.tsx",
+  "src/components/league/PlayerExplorer.tsx",
+  "src/app/league/page.tsx",
+  "src/lib/fantrax/league-client.ts",
+  "src/lib/fantrax/explorer.ts",
+]) {
   const text = readFileSync(join(process.cwd(), rel), "utf8");
   assert(!/fxeaPost|fxpaPost/.test(text), `${rel} never calls a Fantrax POST`);
 }

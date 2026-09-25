@@ -98,6 +98,11 @@ export function nameKey(name: string): string {
   return parts.join("");
 }
 
+/** A folded first-name token under its usual long form ("nick" → "nicholas"). */
+export function canonicalFirstName(token: string): string {
+  return FIRST_NAME_ALIASES[token] ?? token;
+}
+
 /** Fantrax lists names as "Last, First". */
 export function fantraxDisplayName(name: string): string {
   const i = name.indexOf(",");

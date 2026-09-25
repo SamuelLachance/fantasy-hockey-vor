@@ -15,6 +15,7 @@ import {
   teamSearch,
   type LeagueSnapshotBundle,
 } from "@/lib/fantrax/league-client";
+import type { PresetId } from "@/lib/fantrax/explorer";
 import { fmtDateTime, fmtTime } from "@/lib/fantrax/league-copy";
 import { withLiveOverlay, type LiveOverlay } from "@/lib/fantrax/live";
 import { SnakeDisclaimerShort } from "@/components/snake/SnakeDisclaimer";
@@ -25,6 +26,7 @@ import { DraftPanel } from "./DraftPanel";
 import { GoalieStarts } from "./GoalieStarts";
 import type { PlayerLookup } from "./LeagueCard";
 import { LineupCard } from "./LineupCard";
+import { PlayerExplorer, type ExplorerRequest } from "./PlayerExplorer";
 import { RosterAlerts } from "./RosterAlerts";
 import { WaiverTargets } from "./WaiverTargets";
 import { WeekGrid } from "./WeekGrid";
@@ -71,6 +73,13 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId, sna
   const [live, setLive] = useState<LiveOverlay | null>(null);
   const [liveState, setLiveState] = useState<LoadState>("loading");
   const [refreshCount, setRefreshCount] = useState(0);
+  const [explorerRequest, setExplorerRequest] = useState<ExplorerRequest | null>(null);
+  const explore = useCallback(
+    (preset: PresetId) => setExplorerRequest((r) => ({ preset, seq: (r?.seq ?? 0) + 1 })),
+    [],
+  );
+  // Explorer links from the panels keep a non-default team in their href.
+  const exploreSearch = teamSearch("", teamId, defaultTeamId);
 
   // ?team= wins, then the team last picked on this device, then the default.
   const onUrlTeam = useCallback(
@@ -240,6 +249,7 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId, sna
     ...(plan?.draft ? [{ id: "repechage", label: "Repêchage" }] : []),
     { id: "ballottage", label: "Ballottage" },
     { id: "calendrier", label: "Calendrier" },
+    { id: "explorateur", label: "Explorateur" },
   ];
 
   return (
@@ -264,7 +274,7 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId, sna
               </h1>
               <p className="mt-2 max-w-2xl text-base text-slate-400">
                 {
-                  "Aide quotidienne : légalité de l'alignement, capitaine, gardiens, plafonds de matchs, ballottage et repêchage."
+                  "Aide quotidienne : légalité de l'alignement, capitaine, gardiens, plafonds de matchs, ballottage, repêchage et explorateur de joueurs."
                 }
               </p>
             </div>
@@ -375,8 +385,10 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId, sna
               recent={live?.recent ?? null}
               liveAt={live?.fetchedAt ?? null}
               nowMs={nowMs}
+              onExplore={explore}
+              exploreSearch={exploreSearch}
             />
-            <WaiverTargets plan={plan} player={player} />
+            <WaiverTargets plan={plan} player={player} onExplore={explore} exploreSearch={exploreSearch} />
             <WeekGrid plan={plan} player={player} />
           </>
         ) : bundleState === "error" ? (
@@ -395,6 +407,16 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId, sna
             {"Chargement de l'équipe…"}
           </p>
         )}
+        <PlayerExplorer
+          plan={plan}
+          bundle={bundle}
+          live={live}
+          teamId={teamId}
+          teams={teams}
+          teamName={teamName}
+          request={explorerRequest}
+          armed={plan !== null || bundleState === "error"}
+        />
       </div>
     </SnakeLeagueProvider>
   );

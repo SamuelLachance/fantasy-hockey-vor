@@ -312,7 +312,9 @@ export function draftBoardNote(next: number | null, following: number | null, po
       `Dispo. = chance qu'il soit encore là à votre choix ${pickLabel(next)}, selon son rang ADP Fantrax parmi les disponibles et le nombre de choix d'ici là, dont environ ${fmtPct(poolShare)} vont à des joueurs projetés (les autres, à des espoirs).`,
     );
   }
-  parts.push("L'âge et le % Fantrax servent d'indices dynastie. Les espoirs sans projection ne sont pas classés.");
+  parts.push(
+    "L'âge et le % Fantrax servent d'indices dynastie. Les espoirs sans projection ne sont pas classés ici : l'explorateur de joueurs les liste tous.",
+  );
   return parts.join(" ");
 }
 

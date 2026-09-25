@@ -34,6 +34,22 @@ export function fantraxDataHref(file: string): string {
   return `${path}?v=${encodeURIComponent(v)}`;
 }
 
+/**
+ * Any file under `public/` (basePath + build-time cache buster), e.g. the
+ * optional `snake/index.json` the /league explorer probes for.
+ */
+export function publicDataHref(file: string): string {
+  const path = withBasePath(`/${file.replace(/^\/+/, "")}`);
+  const v = process.env.NEXT_PUBLIC_BUILD_TIME?.trim();
+  if (!v) return path;
+  return `${path}?v=${encodeURIComponent(v)}`;
+}
+
+/** A player's page on /snake (no trailing slash: `/snake/` 404s on Pages). */
+export function snakePlayerHref(key: string): string {
+  return withBasePath(`/snake?p=${encodeURIComponent(key)}`);
+}
+
 /** Lazy-loaded expand payload path (build-time cache buster when available). */
 export function playerDetailsHref(): string {
   const path = withBasePath("/player-details.json");

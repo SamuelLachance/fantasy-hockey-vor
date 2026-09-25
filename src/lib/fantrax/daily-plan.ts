@@ -368,6 +368,69 @@ export function planOdds(p: number, sure: boolean): number {
   return sure ? r : Math.min(1 - PLAN_ODDS_EPS, Math.max(PLAN_ODDS_EPS, r));
 }
 
+// ------------------------------------------------------------ draft inputs
+
+/**
+ * Projected players nobody rosters or has drafted. fxpa lists the top
+ * available players by Fantrax's own projection; a player we project who is
+ * missing from it is usually hurt, retired or overseas (e.g. Pietrangelo),
+ * so he is left out. Without fxpa (no flags at all) everyone projected stays.
+ */
+export function availableProjected(state: StateSnapshot, values: ValuesSnapshot): string[] {
+  const rosteredAnywhere = new Set(Object.values(state.rosters).flatMap((r) => r.map((x) => x.id)));
+  const draftedIds = new Set((state.draft?.picks ?? []).map((p) => p.playerId).filter(Boolean) as string[]);
+  return Object.keys(values.players).filter(
+    (id) =>
+      !rosteredAnywhere.has(id) &&
+      !draftedIds.has(id) &&
+      values.players[id]!.src === "proj" &&
+      (!state.fxpaOk || id in state.ros),
+  );
+}
+
+/** A draft is open while it is not done and a pick is still to be made. */
+export function draftIsOpen(state: StateSnapshot): boolean {
+  return !!state.draft && state.draft.state !== "done" && state.draft.picks.some((p) => !p.playerId);
+}
+
+/** Need bonus weights: the share of empty or dead D / G slots in the per-game lineup. */
+export function draftNeed(baseLineup: Pick<PlanLineup, "slots">): Partial<Record<DraftGroup, number>> {
+  const need: Partial<Record<DraftGroup, number>> = {};
+  for (const g of ["D", "G"] as const) {
+    const slots = baseLineup.slots.filter((s) => s.slot === g);
+    const empty = slots.filter((s) => !s.id || s.value <= 0).length;
+    need[g] = slots.length ? empty / slots.length : 0;
+  }
+  return need;
+}
+
+/**
+ * The pool the draft helper ranks (healthy available projected players with
+ * a positive season value) and the share of other teams' picks expected to
+ * land in it. About half the picks in this dynasty draft are unprojected
+ * prospects, who never leave the projected pool: only the observed share of
+ * picks spent on pool players (smoothed) counts toward the players expected
+ * gone ahead of each of yours.
+ */
+export function draftPoolInputs(
+  state: StateSnapshot,
+  values: ValuesSnapshot,
+  available: readonly string[] = availableProjected(state, values),
+): { pool: DraftPoolPlayer[]; poolShare: number } {
+  const pool: DraftPoolPlayer[] = available
+    .filter((id) => !isRuledOut({ team: values.players[id]!.t, icons: state.icons[id] ?? [] }))
+    .map((id) => {
+      const rec = values.players[id]!;
+      const tokens = rec.e.split(",");
+      const groups = (["C", "W", "D", "G"] as const).filter((g) => tokens.includes(g));
+      return { id, groups, seasonFp: seasonFp(rec), adp: state.adp[id] ?? Number.POSITIVE_INFINITY };
+    })
+    .filter((p) => p.seasonFp > 0);
+  const made = (state.draft?.picks ?? []).filter((p) => p.playerId);
+  const fromPool = made.filter((p) => values.players[p.playerId!]?.src === "proj").length;
+  return { pool, poolShare: (fromPool + 1) / (made.length + 2) };
+}
+
 const WAIVER_TARGETS_PER_GROUP = 3;
 
 /** One display group per player: G, then D, then C, then W. */
@@ -626,20 +689,8 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     : null;
 
   // ---- waivers
-  const rosteredAnywhere = new Set(Object.values(state.rosters).flatMap((r) => r.map((x) => x.id)));
-  const draftedIds = new Set((state.draft?.picks ?? []).map((p) => p.playerId).filter(Boolean) as string[]);
   const waiverSet = new Set(state.waivers);
-  // fxpa lists the top available players by Fantrax's own projection; a
-  // player we project who is missing from it is usually hurt, retired or
-  // overseas (e.g. Pietrangelo), so he is not suggested. Without fxpa
-  // (no flags at all) everyone projected stays in.
-  const available = Object.keys(values.players).filter(
-    (id) =>
-      !rosteredAnywhere.has(id) &&
-      !draftedIds.has(id) &&
-      values.players[id]!.src === "proj" &&
-      (!state.fxpaOk || id in state.ros),
-  );
+  const available = availableProjected(state, values);
   const todayEt = torontoDate(nowMs);
   const waiverDays: WaiverDay[] = periodDays.map((p, i) => ({
     candidates: dayCands[i]!,
@@ -722,29 +773,9 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   // ---- draft
   let draft: DailyPlan["draft"] = null;
-  if (state.draft && state.draft.state !== "done" && state.draft.picks.some((p) => !p.playerId)) {
-    const need: Partial<Record<DraftGroup, number>> = {};
-    for (const g of ["D", "G"] as const) {
-      const slots = baseLineup.slots.filter((s) => s.slot === g);
-      const empty = slots.filter((s) => !s.id || s.value <= 0).length;
-      need[g] = slots.length ? empty / slots.length : 0;
-    }
-    const pool: DraftPoolPlayer[] = available
-      .filter((id) => !isRuledOut({ team: values.players[id]!.t, icons: state.icons[id] ?? [] }))
-      .map((id) => {
-        const rec = values.players[id]!;
-        const tokens = rec.e.split(",");
-        const groups = (["C", "W", "D", "G"] as const).filter((g) => tokens.includes(g));
-        return { id, groups, seasonFp: seasonFp(rec), adp: state.adp[id] ?? Number.POSITIVE_INFINITY };
-      })
-      .filter((p) => p.seasonFp > 0);
-    // About half the picks in this dynasty draft are unprojected prospects,
-    // who never leave the projected pool: only the observed share of picks
-    // spent on pool players (smoothed) counts toward the players expected
-    // gone ahead of each of yours.
-    const made = state.draft.picks.filter((p) => p.playerId);
-    const fromPool = made.filter((p) => values.players[p.playerId!]?.src === "proj").length;
-    const poolShare = (fromPool + 1) / (made.length + 2);
+  if (state.draft && draftIsOpen(state)) {
+    const need = draftNeed(baseLineup);
+    const { pool, poolShare } = draftPoolInputs(state, values, available);
     const outlook = draftOutlook(state.draft.picks, teamId, pool, need, { poolShare });
     // Odds are sure only when no other team picks before that pick of mine.
     const sureNext = outlook.picksBefore === 0;

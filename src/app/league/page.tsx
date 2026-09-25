@@ -17,7 +17,7 @@ const today = todayJson as unknown as DailyPlan;
 
 const title = `${league.leagueName} — aide quotidienne | ${SITE_BRAND}`;
 const description =
-  "Aide quotidienne non officielle pour la ligue Fantrax Captains Dynasty : légalité de l'alignement, capitaine, gardiens, plafonds de matchs, ballottage et repêchage.";
+  "Aide quotidienne non officielle pour la ligue Fantrax Captains Dynasty : légalité de l'alignement, capitaine, gardiens, plafonds de matchs, ballottage, repêchage et explorateur de joueurs (espoirs compris).";
 
 // Public but unlisted: never indexed, its own canonical (the root layout's
 // is "/"), and no owner names anywhere in the baked data. The inherited
