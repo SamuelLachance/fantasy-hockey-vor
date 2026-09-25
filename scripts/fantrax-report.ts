@@ -50,6 +50,9 @@ const etTime = (iso: string) => et(iso, { hour: "2-digit", minute: "2-digit", ho
 const pad = (s: string | number, n: number) => String(s).padEnd(n);
 const lpad = (s: string | number, n: number) => String(s).padStart(n);
 const fx = (x: number, d = 2) => x.toFixed(d);
+const signed = (x: number, d = 2) => `${x >= 0 ? "+" : ""}${x.toFixed(d)}`;
+/** Odds as a percent that never rounds to a false certainty. */
+const pct = (p: number) => (p > 0 && p < 1 && (p >= 0.995 || p < 0.005) ? (p < 0.5 ? "<1%" : ">99%") : `${Math.round(p * 100)}%`);
 /** `2026-10-11` → `Oct 11` (calendar date, no time zone involved). */
 const calDay = (date: string) =>
   new Intl.DateTimeFormat("en-CA", { timeZone: "UTC", month: "short", day: "numeric" }).format(new Date(`${date}T12:00:00Z`));
@@ -232,18 +235,32 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
       out.push(
         `Your next pick: #${d.next.pick} (R${d.next.round})${d.picksBefore > 0 ? `, ${d.picksBefore} picks away` : " — YOU ARE ON THE CLOCK"}${d.following ? `; then #${d.following.pick}` : ""} · remaining ${d.remaining.map((p) => `#${p}`).join(" ")}`,
       );
+      const share = d.poolShare;
+      const expected = (m: number) => fx(m * share, 1);
       out.push(
-        `VONA by position (value now − expected at #${d.following?.pick ?? "?"}): ${(["C", "W", "D", "G"] as const).map((g) => `${g} ${d.vona[g].vona == null ? "n/a" : fx(d.vona[g].vona!, 1)} (${name(d.vona[g].bestId)})`).join(" · ")}`,
+        `Odds: ${d.picksBefore} picks before #${d.next.pick}${d.following ? `, ${d.picksBeforeFollowing ?? "?"} before #${d.following.pick}` : ""}; ~${pct(share)} of picks land on projected players (smoothed from the picks so far; the rest go to prospects), so ~${expected(d.picksBefore)}${d.following ? ` / ~${expected(d.picksBeforeFollowing ?? 0)}` : ""} pool players expected gone (the per-player odds over the whole pool add up to exactly that).`,
       );
+      if (d.following) {
+        out.push(`VONA by position (expected best at #${d.next.pick} − expected best at #${d.following.pick}):`);
+        for (const g of ["C", "W", "D", "G"] as const) {
+          const v = d.vona[g];
+          out.push(
+            `  ${g}  ${lpad(v.vona == null ? "n/a" : signed(v.vona, 1), 6)}   #${d.next.pick}: ${pad(`${name(v.bestId)} (${pct(v.bestP)})`, 30)} ~${lpad(fx(v.now, 1), 6)}   #${d.following.pick}: ${pad(`${name(v.laterId)} (${pct(v.laterP)})`, 30)} ~${lpad(fx(v.later, 1), 6)}`,
+          );
+        }
+      } else out.push("Last pick: take the best value.");
     } else out.push("You have no picks left.");
-    out.push(`  ${pad("Best available", 24)} ${pad("Tm", 4)} ${pad("Pos", 10)} ${lpad("SeasonFP", 8)} ${lpad("Value", 6)} ${lpad("VONA", 5)}  Age Ros%`);
+    const availHead = d.next ? `Avail#${d.next.pick}` : "";
+    out.push(
+      `  ${pad("Best available", 24)} ${pad("Tm", 4)} ${pad("Pos", 10)} ${lpad("SeasonFP", 8)} ${lpad("Value", 6)} ${lpad("VONA", 6)} ${lpad(availHead, 9)}  Age Ros%`,
+    );
     for (const b of d.board) {
       out.push(
-        `  ${pad(name(b.id), 24)} ${pad(team(b.id), 4)} ${pad(P[b.id]?.e ?? "", 10)} ${lpad(fx(b.seasonFp, 0), 8)} ${lpad(fx(b.value, 0), 6)} ${lpad(b.vona == null ? "-" : fx(b.vona, 1), 5)}  ${lpad(P[b.id]?.age ?? "?", 3)} ${lpad(P[b.id]?.ros ?? "?", 4)}${b.likelyGone ? "  (likely gone by your pick)" : ""}`,
+        `  ${pad(name(b.id), 24)} ${pad(team(b.id), 4)} ${pad(P[b.id]?.e ?? "", 10)} ${lpad(fx(b.seasonFp, 0), 8)} ${lpad(fx(b.value, 0), 6)} ${lpad(b.vona == null ? "-" : signed(b.vona, 1), 6)} ${lpad(d.next ? pct(b.available) : "", 9)}  ${lpad(P[b.id]?.age ?? "?", 3)} ${lpad(P[b.id]?.ros ?? "?", 4)}`,
       );
     }
     out.push(
-      "Value = season FP + up to 50% when your D/G slots are empty. VONA ignores prospects (no projection); the ADP simulation removes only the share of picks spent on projected players so far.",
+      "Value = season FP + up to 50% when your D/G slots are empty. Avail = chance he is still there at your next pick (ADP rank among the available with log-normal noise ~35% of the rank, binomial count of pool picks; no-ADP players rank last). Player VONA = value − expected best at his position by your following pick (negative: someone better should last). Prospects (no projection) are not ranked.",
     );
   }
 

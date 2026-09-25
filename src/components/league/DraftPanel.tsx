@@ -1,9 +1,20 @@
 import { Trophy } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import { DRAFT_GROUPS } from "@/lib/fantrax/draft";
-import { fmtAgo, fmtNum, fmtSigned, fmtTime, ordinal, positionsLabel } from "@/lib/fantrax/league-copy";
+import {
+  draftBoardNote,
+  draftVonaIntro,
+  fmtAgo,
+  fmtNum,
+  fmtOdds,
+  fmtSigned,
+  fmtTime,
+  ordinal,
+  pickLabel,
+  positionsLabel,
+} from "@/lib/fantrax/league-copy";
 import type { RecentPick } from "@/lib/fantrax/live";
-import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
+import { LeagueCard, PlayerName, type PlayerLookup } from "./LeagueCard";
 
 interface DraftPanelProps {
   plan: DailyPlan;
@@ -16,6 +27,9 @@ interface DraftPanelProps {
   nowMs: number | null;
 }
 
+/** `Vincent Trocheck` → `Trocheck` (narrow VONA cards). */
+const familyName = (n: string) => n.split(" ").slice(1).join(" ") || n;
+
 /**
  * The league draft while it runs: who is on the clock, the user's next
  * picks, value over next available (VONA) by position and the best
@@ -24,7 +38,8 @@ interface DraftPanelProps {
 export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: DraftPanelProps) {
   const d = plan.draft;
   if (!d) return null;
-  const myTurn = !!d.current && !!d.next && d.current.pick === d.next.pick;
+  const { next, following } = d;
+  const myTurn = !!d.current && !!next && d.current.pick === next.pick;
 
   return (
     <LeagueCard
@@ -77,28 +92,60 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
         ) : null}
       </div>
 
-      {d.next ? (
+      {next ? (
         <>
           <h3 className="mt-5 text-sm font-semibold text-white">VONA par position</h3>
-          <p className="mt-1 text-xs text-slate-400">
-            {d.following
-              ? `Valeur du meilleur disponible à votre choix n° ${d.next.pick} moins celle attendue au n° ${d.following.pick}, en retirant les joueurs pris entre-temps selon l'ADP Fantrax. Plus c'est haut, plus il faut prendre cette position maintenant.`
-              : "Dernier choix : prenez simplement la meilleure valeur."}
-          </p>
+          <p className="mt-1 text-xs text-slate-400">{draftVonaIntro(next.pick, following?.pick ?? null)}</p>
           <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {DRAFT_GROUPS.map((g) => {
               const v = d.vona[g];
+              // The most likely best one left at each of my next two picks.
+              const rows = [
+                { pick: next.pick, id: v.bestId, p: v.bestP },
+                ...(following ? [{ pick: following.pick, id: v.laterId, p: v.laterP }] : []),
+              ];
               return (
-                <li key={g} className="rounded-xl border border-white/10 bg-white/[0.03] p-3">
+                <li key={g} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-xs font-semibold text-slate-400">{g}</span>
-                    <span className="text-lg font-semibold text-white">
+                    <span className="text-lg font-semibold tabular-nums text-white">
                       {v.vona == null ? "—" : fmtSigned(v.vona, 1)}
                     </span>
                   </div>
-                  <p className="mt-1 truncate text-xs text-slate-300">
-                    {v.bestId ? (player(v.bestId)?.n ?? "—") : "Personne"}
-                  </p>
+                  <dl className="mt-1 space-y-0.5 text-xs">
+                    {rows.map((r) => (
+                      <div key={r.pick} className="flex min-w-0 items-baseline gap-1.5">
+                        <dt className="shrink-0 tabular-nums text-slate-500">{pickLabel(r.pick)}</dt>
+                        {/* The odds never truncate away with a long name. */}
+                        <dd className="flex min-w-0 flex-1 items-baseline gap-1">
+                          {r.id ? (
+                            <>
+                              <span className="min-w-0 truncate text-slate-300">
+                                {/* Phones show the family name; assistive tech always gets the full one. */}
+                                <span aria-hidden="true" className="sm:hidden">
+                                  {familyName(player(r.id)?.n ?? "—")}
+                                </span>
+                                <span className="max-sm:sr-only">{player(r.id)?.n ?? "—"}</span>
+                              </span>{" "}
+                              <span className="shrink-0 whitespace-nowrap tabular-nums text-slate-500">
+                                {fmtOdds(r.p)}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-slate-300">Personne</span>
+                          )}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {following ? (
+                    <p className="mt-1 text-xs tabular-nums text-slate-500">
+                      Attendu :{" "}
+                      <span className="whitespace-nowrap">
+                        {fmtNum(v.now, 1)} → {fmtNum(v.later, 1)}
+                      </span>
+                    </p>
+                  ) : null}
                 </li>
               );
             })}
@@ -121,9 +168,27 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
               <th scope="col" className="px-2 py-2 text-right font-medium">
                 Valeur
               </th>
-              <th scope="col" className="px-2 py-2 text-right font-medium">
+              <th
+                scope="col"
+                className="px-2 py-2 text-right font-medium"
+                title={
+                  following
+                    ? `Valeur moins le meilleur attendu à sa position au ${pickLabel(following.pick)}`
+                    : undefined
+                }
+              >
                 VONA
               </th>
+              {/* Phones get the odds under the name instead (always in view). */}
+              {next ? (
+                <th
+                  scope="col"
+                  className="hidden whitespace-nowrap px-2 py-2 text-right font-medium sm:table-cell"
+                  title={`Chance qu'il soit encore disponible à votre choix ${pickLabel(next.pick)}`}
+                >
+                  Dispo. au {pickLabel(next.pick)}
+                </th>
+              ) : null}
               <th scope="col" className="px-2 py-2 text-right font-medium">
                 Âge
               </th>
@@ -135,6 +200,8 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
           <tbody className="divide-y divide-white/5">
             {d.board.map((b) => {
               const p = player(b.id);
+              // Under 50 %: likely gone by my next pick.
+              const oddsTone = b.available < 0.5 ? "font-medium text-amber-200" : "text-slate-300";
               return (
                 <tr key={b.id}>
                   <th scope="row" className="px-3 py-2 text-left font-normal">
@@ -142,17 +209,26 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
                     <span className="whitespace-nowrap text-xs text-slate-400">
                       {p?.t} · {p ? positionsLabel(p.e) : ""}
                     </span>
-                    {b.likelyGone ? (
-                      <span className="mt-0.5 block">
-                        <Tag tone="amber">{"risque d'être pris avant votre tour"}</Tag>
+                    {next ? (
+                      <span className={`mt-0.5 block whitespace-nowrap text-xs tabular-nums sm:hidden ${oddsTone}`}>
+                        Dispo. au {pickLabel(next.pick)} : {fmtOdds(b.available)}
                       </span>
                     ) : null}
                   </th>
                   <td className="px-2 py-2 text-right tabular-nums text-slate-300">{fmtNum(b.seasonFp, 0)}</td>
                   <td className="px-2 py-2 text-right font-semibold tabular-nums text-white">{fmtNum(b.value, 0)}</td>
-                  <td className="px-2 py-2 text-right tabular-nums text-violet-200">
-                    {b.vona == null ? "—" : fmtNum(b.vona, 1)}
+                  <td
+                    className={`px-2 py-2 text-right tabular-nums ${
+                      b.vona != null && b.vona < 0 ? "text-slate-400" : "text-violet-200"
+                    }`}
+                  >
+                    {b.vona == null ? "—" : fmtSigned(b.vona, 1)}
                   </td>
+                  {next ? (
+                    <td className={`hidden px-2 py-2 text-right tabular-nums sm:table-cell ${oddsTone}`}>
+                      {fmtOdds(b.available)}
+                    </td>
+                  ) : null}
                   <td className="px-2 py-2 text-right tabular-nums text-slate-300">{p?.age ?? "—"}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-slate-300">
                     {p?.ros !== undefined ? fmtNum(p.ros, 0) : "—"}
@@ -164,9 +240,7 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
         </table>
       </div>
       <p className="mt-2 text-xs text-slate-500">
-        {
-          "Valeur = points projetés sur la saison, jusqu'à +50 % si vos postes D ou G sont vides. L'âge et le % Fantrax servent d'indices dynastie. Les espoirs sans projection ne sont pas classés."
-        }
+        {draftBoardNote(d.next?.pick ?? null, d.following?.pick ?? null, d.poolShare)}
       </p>
 
       {recent && recent.length > 0 ? (
