@@ -30,6 +30,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Local static-serve mirrors (not source).
     ".serve-gh/**",
+    // Claude Code worktrees (full checkouts with their own .next builds).
+    ".claude/**",
   ]),
 ]);
 

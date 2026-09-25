@@ -1,0 +1,373 @@
+{
+ "source": "fxea getLeagueInfo aurcivgfmo2zpwm7 scoringSystem.scoringCategorySettings, fetched 2026-09-25",
+ "scoringCategorySettings": [
+  {
+   "group": {
+    "code": "HOCKEY_SKATING",
+    "id": "2010",
+    "shortName": "Skt"
+   },
+   "configs": [
+    {
+     "position": {
+      "code": "DEFENSE",
+      "id": "202",
+      "shortName": "D"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_BLOCKS",
+      "id": "2092",
+      "name": "Blocks",
+      "shortName": "Blk"
+     },
+     "points": 0.3
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_ASSISTS_SECONDARY",
+      "id": "209a",
+      "name": "Assists (Secondary)",
+      "shortName": "A2"
+     },
+     "points": 1.6
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_ASSISTS_SECONDARY",
+      "id": "209a",
+      "name": "Assists (Secondary)",
+      "shortName": "A2"
+     },
+     "points": 2.4
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_ASSISTS_PRIMARY",
+      "id": "209b",
+      "name": "Assists (Primary)",
+      "shortName": "A1"
+     },
+     "points": 2.4
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_ASSISTS_PRIMARY",
+      "id": "209b",
+      "name": "Assists (Primary)",
+      "shortName": "A1"
+     },
+     "points": 3.6
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_GOALS",
+      "id": "2130",
+      "name": "Goals",
+      "shortName": "G"
+     },
+     "points": 3
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_GOALS",
+      "id": "2130",
+      "name": "Goals",
+      "shortName": "G"
+     },
+     "points": 4.5
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_HAT_TRICKS",
+      "id": "2145",
+      "name": "Hat Tricks",
+      "shortName": "HT"
+     },
+     "points": 2
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_HAT_TRICKS",
+      "id": "2145",
+      "name": "Hat Tricks",
+      "shortName": "HT"
+     },
+     "points": 3
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_HITS",
+      "id": "2147",
+      "name": "Hits",
+      "shortName": "Hit"
+     },
+     "points": 0.3
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_HITS",
+      "id": "2147",
+      "name": "Hits",
+      "shortName": "Hit"
+     },
+     "points": 0.45
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_SHOTS_ON_GOAL",
+      "id": "2270",
+      "name": "Shots on Goal",
+      "shortName": "SOG"
+     },
+     "points": 0.4
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_SHOTS_ON_GOAL",
+      "id": "2270",
+      "name": "Shots on Goal",
+      "shortName": "SOG"
+     },
+     "points": 0.6
+    },
+    {
+     "position": {
+      "code": "DEFENSE",
+      "id": "202",
+      "shortName": "D"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_TAKEAWAYS",
+      "id": "2295",
+      "name": "Takeaways",
+      "shortName": "Tk"
+     },
+     "points": 0.35
+    },
+    {
+     "position": {
+      "code": "DEFENSE",
+      "id": "202",
+      "shortName": "D"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_SHUTOUTS_SKATERS",
+      "id": "229a",
+      "name": "Shutouts (Skaters)",
+      "shortName": "SHO"
+     },
+     "points": 2
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_OVERTIME_POINTS",
+      "id": "232d",
+      "name": "Overtime Points",
+      "shortName": "OTP"
+     },
+     "points": 0.5
+    },
+    {
+     "position": {
+      "code": "SKATER",
+      "id": "208",
+      "shortName": "Skt"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_OVERTIME_POINTS",
+      "id": "232d",
+      "name": "Overtime Points",
+      "shortName": "OTP"
+     },
+     "points": 0.75
+    }
+   ]
+  },
+  {
+   "group": {
+    "code": "HOCKEY_GOALIE",
+    "id": "2020",
+    "shortName": "Goal"
+   },
+   "configs": [
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_OVERTIME_WINS_PLUS_SHOOTOUT_WINS",
+      "id": "0008",
+      "name": "Overtime Wins + Shootout Wins",
+      "shortName": "OSW"
+     },
+     "points": -1
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_ASSISTS",
+      "id": "2090",
+      "name": "Assists",
+      "shortName": "A"
+     },
+     "points": 2
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_GOALS",
+      "id": "2130",
+      "name": "Goals",
+      "shortName": "G"
+     },
+     "points": 3
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_GOALS_AGAINST",
+      "id": "2140",
+      "name": "Goals Against",
+      "shortName": "GA"
+     },
+     "points": -1.5
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_SAVES",
+      "id": "2230",
+      "name": "Saves",
+      "shortName": "SV"
+     },
+     "points": 0.27
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_SHUTOUTS",
+      "id": "2290",
+      "name": "Shutouts",
+      "shortName": "SHO"
+     },
+     "points": 3
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_GOALIE_WINS",
+      "id": "231b",
+      "name": "Wins (Goalies only)",
+      "shortName": "W"
+     },
+     "points": 3
+    },
+    {
+     "position": {
+      "code": "DEFAULT",
+      "id": "-1",
+      "shortName": "Default"
+     },
+     "scoringCategory": {
+      "code": "INDIVIDUAL_OVERTIME_LOSSES_PLUS_SHOOTOUT_LOSSES",
+      "id": "232c",
+      "name": "Overtime Losses + Shootout Losses",
+      "shortName": "OL+ShL"
+     },
+     "points": 1
+    }
+   ]
+  }
+ ]
+}

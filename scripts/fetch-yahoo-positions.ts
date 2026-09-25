@@ -1,4 +1,7 @@
-import { existsSync, readFileSync } from "fs";
+import { execFileSync, spawn } from "child_process";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "fs";
+import { createServer } from "https";
+import { tmpdir } from "os";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { join } from "path";
 import * as readline from "readline";
@@ -66,6 +69,76 @@ async function promptCode(): Promise<string> {
   });
 }
 
+// Yahoo no longer accepts the "oob" redirect, so an https://localhost redirect is
+// caught here with a throwaway self-signed HTTPS listener (openssl ships with Git for Windows).
+function selfSignedCert(): { key: string; cert: string } | null {
+  const dir = mkdtempSync(join(tmpdir(), "yahoo-oauth-"));
+  const keyPath = join(dir, "key.pem");
+  const certPath = join(dir, "cert.pem");
+  try {
+    for (const bin of ["openssl", "C:\\Program Files\\Git\\usr\\bin\\openssl.exe"]) {
+      try {
+        execFileSync(
+          bin,
+          ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", keyPath, "-out", certPath, "-days", "1", "-subj", "/CN=localhost"],
+          { stdio: "ignore", env: { ...process.env, MSYS_NO_PATHCONV: "1" } },
+        );
+        return { key: readFileSync(keyPath, "utf8"), cert: readFileSync(certPath, "utf8") };
+      } catch {
+        // try the next openssl candidate
+      }
+    }
+    return null;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+function openBrowser(url: string): void {
+  const [cmd, args]: [string, string[]] =
+    process.platform === "win32"
+      ? ["rundll32", ["url.dll,FileProtocolHandler", url]]
+      : [process.platform === "darwin" ? "open" : "xdg-open", [url]];
+  try {
+    spawn(cmd, args, { detached: true, stdio: "ignore" }).unref();
+  } catch {
+    // the URL is printed as well
+  }
+}
+
+const escapeHtml = (s: string) =>
+  s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+
+function waitForRedirectCode(redirectUri: string): Promise<string> | null {
+  let target: URL;
+  try {
+    target = new URL(redirectUri);
+  } catch {
+    return null;
+  }
+  if (target.protocol !== "https:" || !["localhost", "127.0.0.1"].includes(target.hostname)) return null;
+  const tls = selfSignedCert();
+  if (!tls) return null;
+  return new Promise((resolve, reject) => {
+    const server = createServer(tls, (req, res) => {
+      const params = new URL(req.url ?? "/", redirectUri).searchParams;
+      const code = params.get("code");
+      res.writeHead(code ? 200 : 400, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(
+        code
+          ? "<h1>Yahoo authorized</h1><p>You can close this tab and go back to the terminal.</p>"
+          : `<h1>No code received</h1><p>${escapeHtml(params.get("error_description") ?? params.get("error") ?? "")}</p>`,
+      );
+      if (code) {
+        server.close();
+        resolve(code);
+      }
+    });
+    server.on("error", reject);
+    server.listen(Number(target.port || 443), target.hostname);
+  });
+}
+
 async function auth() {
   const codeArg = process.argv[3];
   if (codeArg) {
@@ -75,6 +148,17 @@ async function auth() {
   }
 
   const url = yahooAuthUrl();
+  const redirected = waitForRedirectCode(process.env.YAHOO_REDIRECT_URI?.trim() || "oob");
+  if (redirected) {
+    console.log("\nOpening Yahoo in your browser: sign in and click Agree.");
+    console.log("The browser then warns about the local certificate: choose Advanced -> Continue to localhost.");
+    console.log(`\nIf no browser opens, visit:\n${url}\n`);
+    openBrowser(url);
+    await exchangeYahooCode(await redirected);
+    console.log("\nSaved tokens to .yahoo-oauth.json");
+    return;
+  }
+
   console.log("\n1. Open this URL in your browser and authorize the app:\n");
   console.log(url);
   console.log("\n2. Copy the verification code Yahoo shows you.\n");

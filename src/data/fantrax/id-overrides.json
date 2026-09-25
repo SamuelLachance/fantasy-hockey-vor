@@ -1,0 +1,16 @@
+{
+  "description": "Hand-kept Fantrax id -> NHL id overrides for fantrax-sync. They win over automatic matching; nhlId null forces 'no match' (player gets the prior).",
+  "overrides": [
+    { "fantraxId": "05ws3", "name": "Kokko, Niklas", "nhlId": 8483668, "note": "NHL lists him as Nikke Kokko" },
+    { "fantraxId": "04qzh", "name": "St. Ivany, John", "nhlId": 8481030, "note": "NHL lists him as Jack St. Ivany" },
+    { "fantraxId": "03rjc", "name": "Imama, Boko", "nhlId": 8478147, "note": "NHL lists him as Bokondji Imama" },
+    { "fantraxId": "04ajl", "name": "Groulx, Benoit-Olivier", "nhlId": 8480870, "note": "NHL lists him as Bo Groulx" },
+    { "fantraxId": "05wwb", "name": "Zhilkin, Danny", "nhlId": 8483526, "note": "NHL lists him as Danil Zhilkin" },
+    { "fantraxId": "06hrl", "name": "Mooney, L.J.", "nhlId": 8485598, "note": "NHL lists him as John Mooney (not in the repo pool; prior)" },
+    { "fantraxId": "02nq8", "name": "Murray, Matt", "nhlId": 8476899, "note": "Clubless veteran (ex-SEA); Fantrax also has the NSH Matthew Murray" },
+    { "fantraxId": "05rin", "name": "Hughes, Jack", "nhlId": 8483456, "note": "LAK prospect, never the NJD star 8481559" },
+    { "fantraxId": "06hcp", "name": "Silayev, Anton", "nhlId": null, "note": "No NHL id found" },
+    { "fantraxId": "05tpw", "name": "Vyazovoy, Semyon", "nhlId": null, "note": "No NHL id found" },
+    { "fantraxId": "06r6e", "name": "Huovila, Santeri", "nhlId": null, "note": "No NHL id found" }
+  ]
+}

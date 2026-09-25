@@ -1,8 +1,20 @@
-name: Deploy to GitHub Pages
+name: League daily refresh
 
+# Re-syncs the Fantrax league snapshot (read-only: public fxea API plus
+# unauthenticated fxpa reads, no login, <= 1 request/s) and redeploys Pages
+# from a build artifact. Nothing is committed: pushes to master still deploy
+# through deploy-pages.yml, which runs the same sync first.
+#
+# A scheduled run publishes whatever master HEAD is, so it runs the same
+# gates as deploy-pages.yml first: a commit that failed them never goes live
+# through the cron (and a push deploy this run replaces in the shared queue
+# is not skipped past its checks).
 on:
-  push:
-    branches: [master]
+  schedule:
+    # 11:40 EDT / 10:40 EST: after last night's finals, before matinees.
+    - cron: "40 15 * * *"
+    # 17:10 EDT / 16:10 EST: before the 19:00 locks, once goalies are announced.
+    - cron: "10 21 * * *"
   workflow_dispatch:
 
 permissions:
@@ -10,6 +22,7 @@ permissions:
   pages: write
   id-token: write
 
+# Same group as deploy-pages.yml so the two never deploy at once.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -37,26 +50,20 @@ jobs:
       - name: Lint
         run: npm run lint -- --max-warnings=0
 
-      - name: Typecheck
-        run: npm run typecheck
-
+      # Includes the typecheck and the players.json / league snapshot guards.
       - name: Validate data & team continuity
         run: npm run check
 
       - name: Unit checks
         run: npm run test:unit
 
-      # Fresh Fantrax data for /league, so a push never republishes an old
-      # snapshot. Non-fatal: on any failure the committed snapshot (already
-      # validated by `npm run check` above) is restored and used.
-      - name: Refresh league snapshot (non-fatal)
-        run: |
-          if npm run league:sync && npm run check:league; then
-            echo "League snapshot refreshed"
-          else
-            git checkout -- src/data/fantrax public/fantrax || true
-            echo "::warning::league sync failed, using committed snapshot"
-          fi
+      # A failed sync fails the run: the site keeps the last good deploy
+      # instead of republishing an older snapshot.
+      - name: Sync Fantrax league
+        run: npm run league:sync
+
+      - name: Validate league snapshot
+        run: npm run check:league
 
       - name: Build static site
         run: npm run build:pages

@@ -22,6 +22,18 @@ export function homeRankingsHref(): string {
   return withBasePath("/#rankings");
 }
 
+/**
+ * Baked Fantrax snapshot file under `public/fantrax/` for the /league page
+ * (same basePath + build-time cache buster as the expand payload: Pages
+ * serves every file with max-age=600).
+ */
+export function fantraxDataHref(file: string): string {
+  const path = withBasePath(`/fantrax/${file}`);
+  const v = process.env.NEXT_PUBLIC_BUILD_TIME?.trim();
+  if (!v) return path;
+  return `${path}?v=${encodeURIComponent(v)}`;
+}
+
 /** Lazy-loaded expand payload path (build-time cache buster when available). */
 export function playerDetailsHref(): string {
   const path = withBasePath("/player-details.json");
