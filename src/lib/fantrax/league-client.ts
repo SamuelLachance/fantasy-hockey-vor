@@ -17,6 +17,7 @@ import { fxeaGet } from "./client";
 import { FANTRAX_LEAGUE_ID, NHL_SEASON_ID } from "./config";
 import { liveOverlay, type LiveOverlay } from "./live";
 import type {
+  DynastySnapshot,
   LeagueSnapshot,
   ScheduleSnapshot,
   StateSnapshot,
@@ -76,6 +77,24 @@ export function loadLeagueSnapshot(): Promise<LeagueSnapshotBundle> {
     bundlePromise = p;
   }
   return bundlePromise;
+}
+
+// ------------------------------------------------------------ dynasty
+
+let dynastyPromise: Promise<DynastySnapshot | null> | null = null;
+
+/**
+ * public/fantrax/dynasty.json (npm run dynasty:build), fetched once per page
+ * view. Optional: a missing or malformed file gives null and the page keeps
+ * its season-only behaviour.
+ */
+export function loadDynastySnapshot(): Promise<DynastySnapshot | null> {
+  if (!dynastyPromise) {
+    dynastyPromise = fetchSnapshotFile<DynastySnapshot>("dynasty.json")
+      .then((d) => (d && d.version === 1 && d.players && typeof d.players === "object" ? d : null))
+      .catch(() => null);
+  }
+  return dynastyPromise;
 }
 
 // ------------------------------------------------------------ live fxea

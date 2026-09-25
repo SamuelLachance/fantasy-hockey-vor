@@ -8,6 +8,9 @@ import type { IsoPeriod } from "./dates";
 import type { RosterEntry } from "./roster-rules";
 import type { ScoringTable } from "./scoring";
 
+/** public/fantrax/dynasty.json (npm run dynasty:build); see src/lib/dynasty. */
+export type { DynastyRecord, DynastySnapshot } from "../dynasty/types";
+
 /** src/data/fantrax/league.json — settings that change a few times a season. */
 export interface LeagueSnapshot {
   fetchedAt: string;
@@ -115,4 +118,31 @@ export interface NhlIdsSnapshot {
   /** Match method counts, for the check script. */
   methods: Record<string, number>;
   ids: Record<string, number>;
+}
+
+/**
+ * src/data/fantrax/prospect-pool.json — unrostered minors-eligible players
+ * with no values.json row (mostly unprojected draftees), so the dynasty
+ * build can value the prospects still available in the draft. values.json
+ * and state.json are unchanged by it.
+ */
+export interface ProspectPoolSnapshot {
+  fetchedAt: string;
+  source?: string;
+  players: Record<
+    string,
+    {
+      /** Display name, "First Last". */
+      n: string;
+      t: string;
+      /** Fantrax eligiblePos. */
+      e: string;
+      age?: number;
+      ros?: number;
+      adp?: number;
+      /** NHL games played this season so far (Fantrax season-to-date GP; absent before opening night). */
+      gp?: number;
+      icons: string[];
+    }
+  >;
 }

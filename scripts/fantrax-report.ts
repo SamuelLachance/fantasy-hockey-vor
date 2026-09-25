@@ -4,6 +4,8 @@
  * re-reads rosters and draft picks from fxea (public API, no login).
  *
  * Run: npm run league:report -- --team <teamId> [--live] [--now <ISO>]
+ *        [--dynasty winNow|balanced|longTerm] [--no-dynasty]
+ * The dynasty section reads public/fantrax/dynasty.json (npm run dynasty:build).
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
@@ -18,6 +20,10 @@ import {
 } from "../src/lib/fantrax/config";
 import { buildDailyPlan, type DailyPlan, type PlanAlert, type PlanLineup, type TeamGame } from "../src/lib/fantrax/daily-plan";
 import { liveOverlay, withLiveOverlay } from "../src/lib/fantrax/live";
+import { dynastyBoard, dynastyDropProtection } from "../src/lib/dynasty/board";
+import { explainFr, KEEPER_FR, KEEPER_TEAM_FR, keeperView, MODE_FR, PHASE_FR, rosterHintFr } from "../src/lib/dynasty/explain";
+import { MODES, type DynastySnapshot, type Mode } from "../src/lib/dynasty/types";
+import { isRuledOut } from "../src/lib/fantrax/points-model";
 import { deadReason } from "../src/lib/fantrax/roster-rules";
 import type {
   LeagueSnapshot,
@@ -81,7 +87,14 @@ function main() {
   if (!league.teams.some((t) => t.id === teamId)) {
     throw new Error(`team ${teamId} is not in ${league.leagueName}`);
   }
-  return { teamId, nowMs, league, state, values, schedule };
+  const dynastyPath = join(ROOT, "public", "fantrax", "dynasty.json");
+  const dynasty =
+    !args.includes("--no-dynasty") && existsSync(dynastyPath)
+      ? (JSON.parse(readFileSync(dynastyPath, "utf8")) as DynastySnapshot)
+      : null;
+  const modeArg = argValue("--dynasty") ?? "balanced";
+  if (!MODES.includes(modeArg as Mode)) throw new Error(`bad --dynasty ${modeArg} (winNow | balanced | longTerm)`);
+  return { teamId, nowMs, league, state, values, schedule, dynasty, dynastyMode: modeArg as Mode };
 }
 
 async function refreshLive(input: ReturnType<typeof main>) {
@@ -264,7 +277,145 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
     );
   }
 
+  if (input.dynasty) printDynasty(out, plan, input, input.dynasty, input.dynastyMode);
+  else if (!args.includes("--no-dynasty")) {
+    out.push("", "(no public/fantrax/dynasty.json: run npm run dynasty:build for the dynasty section)");
+  }
+
   console.log(out.join("\n"));
+}
+
+/**
+ * Dynasty section: the league's top 25, the team's roster by dynasty value
+ * with its phase and a keep / trade hint, and (during a draft) the best
+ * available by dynasty value with the odds each one lasts to the next pick.
+ */
+function printDynasty(
+  out: string[],
+  plan: DailyPlan,
+  input: ReturnType<typeof main>,
+  dyn: DynastySnapshot,
+  mode: Mode,
+) {
+  const P = dyn.players;
+  const name = (id: string) => P[id]?.n ?? input.values.players[id]?.n ?? id;
+  const team = (id: string) => input.values.players[id]?.t ?? "";
+  const season = (t: number) => `${26 + t}-${27 + t}`;
+  const h = (title: string) => out.push("", `== ${title} ==`);
+  const rank = (id: string) => P[id]?.rank[mode] ?? Number.POSITIVE_INFINITY;
+  const dvCell = (id: string) => lpad(fx(P[id]?.dv[mode] ?? 0, 0), 5);
+
+  h(`Dynasty value: ${MODE_FR[mode]} (delta ${dyn.params.modes[mode].delta}), built ${dyn.builtAt.slice(0, 10)}`);
+  out.push(
+    `Points de dynastie: realized FP above the waiver line over 12 seasons (captain premium in), minus the keeper-slot cost K = ${fx(dyn.params.K.value, 1)}/season once no longer minors-eligible (160 protected league-wide). Not the projected-FP scale above.`,
+  );
+  out.push(
+    `  ${lpad("Rk", 4)} ${pad("Player", 22)} ${pad("Tm", 4)} Pos ${lpad("Age", 4)} ${pad("Phase", 20)} ${lpad("DV", 5)} ${pad("  P10-P90", 12)} ${pad(`P50 by season ${season(0)}..${season(5)}`, 30)} Keeper 2027`,
+  );
+  const top = Object.keys(P)
+    .sort((a, b) => rank(a) - rank(b))
+    .slice(0, 25);
+  const bandCell = (id: string) => {
+    const b = mode === "longTerm" ? P[id]!.band.longTerm : P[id]!.band.balanced;
+    return pad(`  ${fx(b[0], 0)}-${fx(b[2], 0)}`, 12);
+  };
+  const p50Cell = (id: string) => pad(P[id]!.p50G.slice(0, 6).join(" "), 30);
+  // league-wide status (the 160th keeper): the value basis, as on a generic roster
+  const keeperCell = (id: string) => {
+    const r = P[id]!;
+    return r.keeper.status === "free"
+      ? `${KEEPER_FR.free}${r.elig.freeThrough != null ? ` (jusqu'en ${r.elig.freeThrough + 1})` : ""}`
+      : `${KEEPER_FR[r.keeper.status]}${r.keeper.pKept27 != null ? ` (P ${pct(r.keeper.pKept27)})` : ""}`;
+  };
+  // roster view: against the player's own team's 10 keeper slots
+  const teamKeeperCell = (id: string) => {
+    const r = P[id]!;
+    const kv = keeperView(r);
+    if (!kv.team) return `${keeperCell(id)} [ligue]`;
+    return kv.status === "free"
+      ? `${KEEPER_TEAM_FR.free}${r.elig.freeThrough != null ? ` (jusqu'en ${r.elig.freeThrough + 1})` : ""}`
+      : `${KEEPER_TEAM_FR[kv.status]}${kv.p != null ? ` (P ${pct(kv.p)}${kv.rank != null ? `, ${kv.rank}e` : ""})` : ""}`;
+  };
+  for (const id of top) {
+    const r = P[id]!;
+    out.push(
+      `  ${lpad(r.rank[mode], 4)} ${pad(name(id), 22)} ${pad(team(id), 4)} ${pad(r.g, 3)} ${lpad(fx(r.age, 1), 4)} ${pad(PHASE_FR[r.phase], 20)} ${dvCell(id)} ${bandCell(id)} ${p50Cell(id)} ${keeperCell(id)}`,
+    );
+  }
+
+  // ---- the team's roster
+  const roster = input.state.rosters[plan.teamId] ?? [];
+  const ids = roster.map((r) => r.id);
+  const prot = dynastyDropProtection(ids, dyn);
+  h(`${plan.teamName}: roster by dynasty value (${MODE_FR[mode]})`);
+  out.push(
+    `  ${lpad("Rk", 5)} ${pad("Player", 22)} ${pad("St", 7)} Pos ${lpad("Age", 4)} ${pad("Phase", 20)} ${lpad("DV", 5)} ${lpad("LT", 5)} ${pad("Keeper 2027 (team's 10 slots)", 52)} Hint`,
+  );
+  const sorted = [...ids].sort((a, b) => rank(a) - rank(b));
+  for (const id of sorted) {
+    const r = P[id];
+    const st = statusWord(roster.find((x) => x.id === id)?.status);
+    if (!r) {
+      out.push(`  ${lpad("-", 5)} ${pad(name(id), 22)} ${pad(st, 7)} (not modeled)`);
+      continue;
+    }
+    out.push(
+      `  ${lpad(r.rank[mode], 5)} ${pad(name(id), 22)} ${pad(st, 7)} ${pad(r.g, 3)} ${lpad(fx(r.age, 1), 4)} ${pad(PHASE_FR[r.phase], 20)} ${dvCell(id)} ${lpad(fx(r.dv.longTerm, 0), 5)} ${pad(teamKeeperCell(id), 52)} ${rosterHintFr(r)}${prot.protected.has(id) ? "" : " (droppable)"}`,
+    );
+  }
+  const counts = { free: 0, core: 0, bubble: 0, rental: 0 };
+  let expKept = 0;
+  let teamView = false;
+  for (const id of ids) {
+    const r = P[id];
+    if (!r) continue;
+    const kv = keeperView(r);
+    teamView ||= kv.team;
+    counts[kv.status]++;
+    if (kv.status !== "free" && kv.p != null) expKept += kv.p * (1 - r.elig.next);
+  }
+  out.push(
+    `  2027 cutdown outlook (${teamView ? "the team's own 10 slots" : "league-wide line"}): ${counts.core} safe keepers, ${counts.bubble} on the line, ${counts.rental} outside, ${counts.free} free minors stashes; expected keepers from this roster ${fx(expKept, 1)} of 10 (keep 10 + 30 minors-eligible).`,
+  );
+  for (const id of sorted.filter((x) => P[x]).slice(0, 3)) out.push(`  ${name(id)}: ${explainFr(P[id]!)}`);
+
+  // ---- best available during the draft
+  const d = plan.draft;
+  if (d) {
+    const rostered = new Set(Object.values(input.state.rosters).flatMap((r) => r.map((x) => x.id)));
+    const drafted = new Set((input.state.draft?.picks ?? []).map((p) => p.playerId).filter(Boolean) as string[]);
+    const available = Object.keys(P).filter((id) => {
+      if (rostered.has(id) || drafted.has(id)) return false;
+      const v = input.values.players[id];
+      return !v || !isRuledOut({ team: v.t, icons: input.state.icons[id] ?? [] });
+    });
+    const need: Partial<Record<"D" | "G", number>> = {};
+    for (const g of ["D", "G"] as const) {
+      const slots = plan.baseLineup.slots.filter((x) => x.slot === g);
+      need[g] = slots.length ? slots.filter((x) => !x.id || x.value <= 0).length / slots.length : 0;
+    }
+    const board = dynastyBoard(dyn, available, {
+      mode,
+      need,
+      picksBefore: d.next ? d.picksBefore : null,
+      picksBeforeFollowing: d.following ? (d.picksBeforeFollowing ?? null) : null,
+      limit: 20,
+    });
+    const odds = d.next ? `, odds at #${d.next.pick}${d.following ? ` / #${d.following.pick}` : ""}` : "";
+    h(`Best available by dynasty value (${MODE_FR[mode]}${odds})`);
+    out.push(
+      `  ${pad("Player", 22)} ${pad("Tm", 4)} Pos ${lpad("Age", 4)} ${pad("Phase", 20)} ${lpad("Value", 5)} ${lpad("DV", 5)} ${lpad("LT", 5)} ${lpad("Mkt#", 5)} ${lpad("Avail", 6)} ${lpad("Next", 6)}  Why`,
+    );
+    for (const b of board) {
+      const r = P[b.id]!;
+      out.push(
+        `  ${pad(name(b.id), 22)} ${pad(team(b.id), 4)} ${pad(r.g, 3)} ${lpad(fx(r.age, 1), 4)} ${pad(PHASE_FR[r.phase], 20)} ${lpad(fx(b.value, 0), 5)} ${dvCell(b.id)} ${lpad(fx(r.dv.longTerm, 0), 5)} ${lpad(b.marketRank == null ? "-" : fx(b.marketRank, 0), 5)} ${lpad(d.next ? pct(b.available) : "", 6)} ${lpad(b.availableFollowing == null ? "" : pct(b.availableFollowing), 6)}  ${explainFr(r, 140)}`,
+      );
+    }
+    out.push(
+      "  Value = DV + up to 50% of this season's gain when your D/G slots are empty. Every pick counts here (prospects included). Mkt# = market rank among the available (geometric mean of the Ros% and ADP ranks); Avail = chance he lasts to your pick.",
+    );
+  }
 }
 
 function alertLine(a: PlanAlert, name: (id: string | null | undefined) => string): string | null {

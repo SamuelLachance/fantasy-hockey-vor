@@ -1,7 +1,9 @@
 /**
  * Pulls the Captains Dynasty League (Fantrax) state and bakes the /league
- * snapshot: src/data/fantrax/{league,nhl-ids,today}.json and
- * public/fantrax/{values,state,schedule-20262027}.json.
+ * snapshot: src/data/fantrax/{league,nhl-ids,today,prospect-pool}.json and
+ * public/fantrax/{values,state,schedule-20262027}.json, then rebuilds the
+ * dynasty values public/fantrax/dynasty.json (scripts/dynasty-inputs.ts,
+ * ~15 s; skip with --no-dynasty).
  *
  * Read-only and unauthenticated: fxea (public Beta API) for settings,
  * rosters, draft, ids and ADP; two batched fxpa POSTs for caps, injury /
@@ -10,7 +12,7 @@
  * sync still writes everything with `state.fxpaOk = false`; if fxea fails it
  * exits non-zero and leaves the committed snapshot untouched.
  *
- * Run: npm run league:sync [-- --full-schedule] [-- --team <teamId>]
+ * Run: npm run league:sync [-- --full-schedule] [-- --team <teamId>] [-- --no-dynasty]
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
@@ -75,12 +77,14 @@ import type {
   CapUsage,
   LeagueSnapshot,
   NhlIdsSnapshot,
+  ProspectPoolSnapshot,
   ScheduleSnapshot,
   StateSnapshot,
   ValueRecord,
   ValuesSnapshot,
 } from "../src/lib/fantrax/snapshot-types";
 import { fetchJson } from "../src/lib/nhl-api";
+import { runDynastyBuild } from "./dynasty-inputs";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { normalizeTeamAbbrev } from "../src/lib/team-abbreviations";
 import type { GoalieProjection, ProjectionsDataset, SkaterProjection } from "../src/lib/types";
@@ -91,6 +95,7 @@ const PATHS = {
   nhlIds: join(ROOT, "src", "data", "fantrax", "nhl-ids.json"),
   today: join(ROOT, "src", "data", "fantrax", "today.json"),
   overrides: join(ROOT, "src", "data", "fantrax", "id-overrides.json"),
+  prospectPool: join(ROOT, "src", "data", "fantrax", "prospect-pool.json"),
   values: join(ROOT, "public", "fantrax", "values.json"),
   state: join(ROOT, "public", "fantrax", "state.json"),
   schedule: join(ROOT, "public", "fantrax", `schedule-${NHL_SEASON_ID}.json`),
@@ -105,12 +110,16 @@ const argValue = (flag: string) => {
 };
 const TEAM_ID = argValue("--team") ?? FANTRAX_DEFAULT_TEAM_ID;
 const FULL_SCHEDULE = args.includes("--full-schedule");
+const DYNASTY = !args.includes("--no-dynasty");
 const SCHEDULE_MAX_AGE_DAYS = 7;
 /** Available players pulled from fxpa for flags / Ros% (sorted by Fantrax rank). */
 const AVAILABLE_SKATERS = 1500;
 const AVAILABLE_GOALIES = 300;
 /** Only these icons change a decision; news icons (8/9/14) are dropped. */
 const KEPT_ICONS = new Set<string>(Object.values(FANTRAX_ICON));
+/** Prospect pool: unrostered minors-eligible players the crowd owns or drafts. */
+const POOL_MIN_ROS = 1;
+const POOL_MAX_ADP = 290;
 
 const req = { userAgent: SYNC_USER_AGENT };
 const LEAGUE = FANTRAX_LEAGUE_ID;
@@ -575,6 +584,32 @@ async function main() {
     })),
   };
 
+  // ---- prospect-pool.json: unrostered minors-eligible players without a
+  // values row (additive: values.json / state.json are untouched by it)
+  const fxById = new Map(fxPool.map((f) => [f.fantraxId, f]));
+  const poolPlayers: ProspectPoolSnapshot["players"] = {};
+  for (const [id, f] of flags) {
+    if (!f.minorsEligible || rostered.has(id) || players[id]) continue;
+    const fx = fxById.get(id);
+    if (!fx) continue;
+    const a = adp[id];
+    if (!((f.ros ?? 0) >= POOL_MIN_ROS || (a !== undefined && a < POOL_MAX_ADP))) continue;
+    poolPlayers[id] = {
+      n: fantraxDisplayName(fx.name),
+      t: fx.team,
+      e: info.playerInfo[id]?.eligiblePos ?? "",
+      ...(f.age !== undefined ? { age: f.age } : {}),
+      ...(f.ros !== undefined ? { ros: f.ros } : {}),
+      ...(a !== undefined ? { adp: a } : {}),
+      ...(f.ytd && f.ytd[1] > 0 ? { gp: f.ytd[1] } : {}),
+      icons: f.icons,
+    };
+  }
+  const prospectPool: ProspectPoolSnapshot = {
+    fetchedAt: nowIso,
+    players: Object.fromEntries(Object.entries(poolPlayers).sort((x, y) => x[0].localeCompare(y[0]))),
+  };
+
   // ---- schedule
   const schedule = await syncSchedule(info.startDate, now);
   console.log(`schedule: ${schedule.games.length} regular-season games (full rebuild ${schedule.fetchedAt})`);
@@ -589,13 +624,32 @@ async function main() {
   writeFileAtomic(PATHS.state, `${JSON.stringify(state)}\n`);
   writeFileAtomic(PATHS.schedule, `${JSON.stringify(schedule)}\n`);
   writeFileAtomic(PATHS.today, `${JSON.stringify(plan)}\n`);
+  // Without fxpa there are no minors flags: keep the previous pool.
+  if (fxpaOk) writeFileAtomic(PATHS.prospectPool, `${JSON.stringify(prospectPool)}\n`);
 
   const activeIds = Object.values(stateRosters).flat().filter((r) => r.status === "ACTIVE").map((r) => r.id);
   const activeMatched = activeIds.filter((id) => players[id]?.src === "proj").length;
   console.log(
     `values: ${Object.keys(players).length} players (${priorCount} priors); ACTIVE matched ${activeMatched}/${activeIds.length}; ids ${JSON.stringify(methods)}`,
   );
+  console.log(
+    `prospect pool: ${Object.keys(prospectPool.players).length} unrostered minors-eligible players${fxpaOk ? "" : " (not written: fxpa down)"}`,
+  );
   console.log(`OK: league:sync wrote snapshot (fxpaOk=${fxpaOk})`);
+
+  // ---- dynasty values (depend on rosters, Ros%, ADP and the pool just written)
+  // Non-fatal: the season snapshot above is already written; check:league
+  // flags a dynasty.json that no longer matches the rosters.
+  if (DYNASTY) {
+    try {
+      const { result, ms } = runDynastyBuild();
+      console.log(
+        `OK: dynasty values for ${Object.keys(result.snapshot.players).length} players (K ${result.snapshot.params.K.value}, ${(ms / 1000).toFixed(1)} s)`,
+      );
+    } catch (e) {
+      console.warn(`WARN: dynasty build failed, dynasty.json left as is: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
 }
 
 main().catch((e) => {
