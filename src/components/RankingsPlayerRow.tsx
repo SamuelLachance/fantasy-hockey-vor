@@ -25,7 +25,10 @@ import {
 } from "@/lib/board-row-a11y";
 import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { playerPanelLoadingLabel } from "@/lib/player-notes-copy";
+import { useSnakeBoardEntry } from "@/lib/snake/board-store";
+import { snakeBoardRowSuffix } from "@/lib/snake/copy";
 import { PositionBadges } from "./PositionBadge";
+import { SnakeBoardChip } from "./snake/SnakeBoardChip";
 
 function ExpandedPlayerPanelFallback() {
   return (
@@ -93,6 +96,8 @@ export function RankingsPlayerRow({
 }: RankingsPlayerRowProps) {
   const cats = playerCategories(player);
   const vor = vorForFilter(player, position);
+  // Lazy (idle) lookup: null in the prerendered HTML, so hydration matches.
+  const snake = useSnakeBoardEntry(player.id);
   const stickyBg = isExpanded
     ? "bg-slate-900"
     : "bg-slate-950/95 max-md:bg-slate-950";
@@ -114,7 +119,12 @@ export function RankingsPlayerRow({
         aria-controls={
           isExpanded ? `player-panel-${player.id}` : undefined
         }
-        aria-label={boardRowAriaLabel(player, position, idx)}
+        aria-label={boardRowAriaLabel(
+          player,
+          position,
+          idx,
+          snake ? snakeBoardRowSuffix(snake[1], snake[2], snake[3] === 1) : undefined,
+        )}
         onClick={onToggle}
         onKeyDown={onRowKeyDown}
         className={`cursor-pointer scroll-mt-[calc(var(--board-safe-area-inset-top,0px)+var(--board-sticky-chrome-height,0px))] transition hover:bg-cyan-500/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-300/80 ${
@@ -130,7 +140,16 @@ export function RankingsPlayerRow({
           className={`sticky left-10 z-[1] max-w-[9.5rem] truncate px-4 py-3 font-medium text-white sm:left-12 sm:max-w-[14rem] ${STICKY_NAME_BASE} ${STICKY_NAME_SHADOW} ${stickyBg}`}
           title={player.name}
         >
-          {highlightMatch(player.name, deferredQuery)}
+          {snake ? (
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="min-w-0 truncate">
+                {highlightMatch(player.name, deferredQuery)}
+              </span>
+              <SnakeBoardChip entry={snake} />
+            </span>
+          ) : (
+            highlightMatch(player.name, deferredQuery)
+          )}
         </td>
         <td className="px-4 py-3">
           <PositionBadges

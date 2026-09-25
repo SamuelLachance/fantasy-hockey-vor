@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { boardShortcutsFooterChip } from "@/lib/board-shortcuts";
+import { siteNavLinks } from "@/lib/site-nav";
 import {
   DEFAULT_PROJECTION_ENGINE,
   formatProjectionEngine,
@@ -55,6 +57,20 @@ export function SiteFooter({
       <span className="tabular-nums text-slate-400">
         {footerDraftableCopy(playerCount)}
       </span>
+      {siteNavLinks().map((l) => (
+        <span key={l.href}>
+          <span className="mx-2 text-slate-700">·</span>
+          <Link
+            href={l.href}
+            hrefLang={l.hrefLang}
+            title={l.title}
+            prefetch={false}
+            className="inline-flex min-h-11 items-center rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+          >
+            {l.label}
+          </Link>
+        </span>
+      ))}
     </footer>
   );
 }

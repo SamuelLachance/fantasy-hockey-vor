@@ -16,6 +16,7 @@ import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { RankingsBoardFooter } from "./RankingsBoardFooter";
 import { RankingsPlayerRow } from "./RankingsPlayerRow";
 import { RankingsTableHead } from "./RankingsTableHead";
+import { SnakeBoardLegend } from "./snake/SnakeBoardLegend";
 
 interface RankingsBoardTableProps {
   tableScrollRef: RefObject<HTMLDivElement | null>;
@@ -180,6 +181,7 @@ export function RankingsBoardTable({
         pendingPlayerName={pendingPlayerName}
         onRevealPendingPlayer={onRevealPendingPlayer}
       />
+      <SnakeBoardLegend />
     </div>
   );
 }

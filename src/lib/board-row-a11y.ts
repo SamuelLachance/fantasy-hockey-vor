@@ -32,9 +32,12 @@ export function boardRowAriaLabel(
   },
   position: Position | "ALL",
   fallbackIndex: number,
+  /** Extra trailing phrase (e.g. the Snake verdict chip shown in the name cell). */
+  suffix?: string,
 ): string {
+  const tail = suffix ? `, ${suffix}` : "";
   if (position === "ALL") {
-    return `${player.name}, rank ${player.rank}`;
+    return `${player.name}, rank ${player.rank}${tail}`;
   }
   // Announce the rank *at the filtered position*, matching the visible cell.
   const rank =
@@ -42,7 +45,7 @@ export function boardRowAriaLabel(
     (position === player.position ? player.positionRank : undefined) ??
     player.positionRank ??
     fallbackIndex + 1;
-  return `${player.name}, position rank ${rank}`;
+  return `${player.name}, position rank ${rank}${tail}`;
 }
 
 /** Accessible name for the expanded details region. */

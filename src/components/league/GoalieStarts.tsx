@@ -1,6 +1,7 @@
 import { Shield } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import { fmtCalendarDay, fmtNum, fmtPct, gameLabel } from "@/lib/fantrax/league-copy";
+import { SnakeLeagueNote } from "@/components/snake/SnakeLeague";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface GoalieStartsProps {
@@ -29,6 +30,7 @@ export function GoalieStarts({ plan, player }: GoalieStartsProps) {
                 <PlayerName id={g.id} player={player} className="mr-auto" />
                 {g.b2b ? <Tag tone="amber">2e soir de suite</Tag> : null}
               </div>
+              <SnakeLeagueNote id={g.id} name={player(g.id)?.n} className="mt-1" />
               <p className="mt-1 text-xs text-slate-400">{gameLabel(g.game)}</p>
               <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-lg bg-white/5 px-2 py-1.5">

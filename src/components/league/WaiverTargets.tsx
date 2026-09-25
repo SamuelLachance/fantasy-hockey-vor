@@ -1,6 +1,7 @@
 import { UserPlus } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import { claimsText, fmtNum, fmtSigned, plural } from "@/lib/fantrax/league-copy";
+import { SnakeLeagueNote } from "@/components/snake/SnakeLeague";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface WaiverTargetsProps {
@@ -35,6 +36,7 @@ export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
                   <Tag tone="amber">Au ballottage</Tag>
                 )}
               </div>
+              <SnakeLeagueNote id={t.id} name={player(t.id)?.n} line />
               <p className="text-sm text-slate-300">
                 <span className="text-base font-semibold tabular-nums text-emerald-300">
                   {fmtSigned(t.delta, 1)} pts

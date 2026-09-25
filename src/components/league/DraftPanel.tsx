@@ -3,6 +3,7 @@ import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import { DRAFT_GROUPS } from "@/lib/fantrax/draft";
 import { fmtAgo, fmtNum, fmtSigned, fmtTime, ordinal, positionsLabel } from "@/lib/fantrax/league-copy";
 import type { RecentPick } from "@/lib/fantrax/live";
+import { SnakeLeagueNote } from "@/components/snake/SnakeLeague";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface DraftPanelProps {
@@ -130,6 +131,9 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
               <th scope="col" className="px-3 py-2 text-right font-medium" title="Part des ligues Fantrax où il est pris">
                 % Fantrax
               </th>
+              <th scope="col" className="px-3 py-2 font-medium">
+                Avis de Snake
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -157,6 +161,10 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
                   <td className="px-3 py-2 text-right tabular-nums text-slate-300">
                     {p?.ros !== undefined ? fmtNum(p.ros, 0) : "—"}
                   </td>
+                  {/* Its own cell: in the row header it would be read again on every column move. */}
+                  <td className="px-3 py-2 align-top">
+                    <SnakeLeagueNote id={b.id} name={p?.n} line className="min-w-[12rem] max-w-[18rem]" />
+                  </td>
                 </tr>
               );
             })}
@@ -177,6 +185,7 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
               <li key={r.pick} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2">
                 <span className="w-12 tabular-nums text-slate-500">n° {r.pick}</span>
                 <PlayerName id={r.playerId} player={player} className="mr-auto" />
+                <SnakeLeagueNote id={r.playerId} name={player(r.playerId)?.n} />
                 <span className="text-xs text-slate-400">
                   {teamName(r.teamId)}
                   {nowMs !== null && r.time > 0 && r.time <= nowMs ? ` · ${fmtAgo(r.time, nowMs)}` : ""}

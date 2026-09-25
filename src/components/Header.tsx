@@ -21,6 +21,7 @@ import {
 } from "@/lib/header-copy";
 import { HeaderRosterNote } from "./HeaderRosterNote";
 import { HeaderStaleBanner } from "./HeaderStaleBanner";
+import { SiteNav } from "./SiteNav";
 
 interface HeaderProps {
   season: string;
@@ -68,11 +69,14 @@ export function Header({
         {skipToRankingsCopy()}
       </a>
       <div className="relative mx-auto flex max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3 text-cyan-400">
-          <Snowflake className="h-5 w-5" aria-hidden="true" />
-          <span className="text-sm font-medium uppercase tracking-[0.2em]">
-            {headerEyebrowCopy()}
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3 text-cyan-400">
+            <Snowflake className="h-5 w-5" aria-hidden="true" />
+            <span className="text-sm font-medium uppercase tracking-[0.2em]">
+              {headerEyebrowCopy()}
+            </span>
+          </div>
+          <SiteNav />
         </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

@@ -1,6 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import { fmtCalendarDay, gridDay, statusLabel } from "@/lib/fantrax/league-copy";
+import { SnakeLeagueMini } from "@/components/snake/SnakeLeague";
 import { LeagueCard, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface WeekGridProps {
@@ -86,6 +87,7 @@ export function WeekGrid({ plan, player }: WeekGridProps) {
                       <span className="flex items-center gap-1.5 text-xs text-slate-400">
                         {p?.t ?? ""}
                         {tag ? <Tag tone={tag.tone}>{tag.text}</Tag> : null}
+                        <SnakeLeagueMini id={r.id} decorative />
                       </span>
                     </th>
                     {r.games.map((g, i) => (

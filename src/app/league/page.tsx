@@ -3,10 +3,13 @@ import Link from "next/link";
 import { LeagueDaily } from "@/components/league/LeagueDaily";
 import leagueJson from "@/data/fantrax/league.json";
 import todayJson from "@/data/fantrax/today.json";
+import summaryJson from "@/data/snake-summary.json";
 import { FANTRAX_DEFAULT_TEAM_ID } from "@/lib/fantrax/config";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import type { LeagueSnapshot } from "@/lib/fantrax/snapshot-types";
 import { SITE_BRAND } from "@/lib/site";
+import { snakeFantraxSeed } from "@/lib/snake/league-seed";
+import type { SnakeSummaryFile } from "@/lib/snake/types";
 
 // Baked by `npm run league:sync` (the daily Action re-runs it before each build).
 const league = leagueJson as unknown as LeagueSnapshot;
@@ -58,6 +61,7 @@ export default function LeaguePage() {
         teams={teams}
         leagueName={league.leagueName}
         defaultTeamId={defaultTeamId}
+        snakeSeed={snakeFantraxSeed(today, summaryJson as unknown as SnakeSummaryFile)}
       />
       <footer className="mx-auto max-w-6xl border-t border-white/10 px-4 pt-6 text-center text-xs text-slate-400 sm:px-6 lg:px-8">
         Données : API publique de Fantrax (lecture seule) et calendrier de la LNH · projections{" "}
@@ -67,6 +71,14 @@ export default function LeaguePage() {
           className="inline-flex min-h-11 items-center rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
         >
           Classement VOR
+        </Link>
+        {" · "}
+        <Link
+          href="/snake"
+          prefetch={false}
+          className="inline-flex min-h-11 items-center rounded-sm text-cyan-500/80 underline-offset-2 transition hover:text-cyan-400 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/80"
+        >
+          Opinions de Snake
         </Link>
       </footer>
     </main>

@@ -5,6 +5,7 @@ import type { PlayerDetailRecord } from "@/lib/publish-players";
 import { ExpandedPlayerCategories } from "./ExpandedPlayerCategories";
 import { ExpandedPlayerMeta } from "./ExpandedPlayerMeta";
 import { ExpandedPlayerNotes } from "./ExpandedPlayerNotes";
+import { ExpandedPlayerSnake } from "./snake/ExpandedPlayerSnake";
 
 interface ExpandedPlayerPanelProps {
   player: PlayerProjection;
@@ -55,6 +56,7 @@ export function ExpandedPlayerPanel({
         cats={cats}
         playerDetails={playerDetails}
       />
+      <ExpandedPlayerSnake playerId={player.id} />
     </div>
   );
 }

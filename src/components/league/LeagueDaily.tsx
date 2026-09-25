@@ -17,6 +17,9 @@ import {
 } from "@/lib/fantrax/league-client";
 import { fmtDateTime, fmtTime } from "@/lib/fantrax/league-copy";
 import { withLiveOverlay, type LiveOverlay } from "@/lib/fantrax/live";
+import { SnakeDisclaimerShort } from "@/components/snake/SnakeDisclaimer";
+import { SnakeLeagueProvider } from "@/components/snake/SnakeLeague";
+import type { SnakeFantraxFile } from "@/lib/snake/types";
 import { CapMeter } from "./CapMeter";
 import { DraftPanel } from "./DraftPanel";
 import { GoalieStarts } from "./GoalieStarts";
@@ -35,6 +38,8 @@ interface LeagueDailyProps {
   teams: Array<{ id: string; name: string }>;
   leagueName: string;
   defaultTeamId: string;
+  /** Snake verdicts for the baked plan's players (the rest loads when idle). */
+  snakeSeed: SnakeFantraxFile["rows"];
 }
 
 /** Reads `?team=` (inside Suspense, as static export requires) and reports it up. */
@@ -56,7 +61,7 @@ const CLOCK_TICK_MS = 30_000;
  * whichever team is picked, at the current time. "Now" only exists in
  * effects (React purity), so the prerendered HTML carries no countdowns.
  */
-export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId }: LeagueDailyProps) {
+export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId, snakeSeed }: LeagueDailyProps) {
   const [teamId, setTeamId] = useState(defaultTeamId);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const [planNowMs, setPlanNowMs] = useState<number | null>(null);
@@ -238,7 +243,7 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId }: L
   ];
 
   return (
-    <>
+    <SnakeLeagueProvider seed={snakeSeed}>
       <Suspense fallback={null}>
         <TeamFromUrl onTeam={onUrlTeam} />
       </Suspense>
@@ -332,6 +337,8 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId }: L
               "Outil non officiel, en lecture seule : il ne se connecte jamais à votre compte et ne modifie jamais votre équipe. Faites les changements vous-même dans Fantrax."
             }
           </p>
+          {/* Before the first « Snake : … » chip (lineup, waivers, draft), not after them. */}
+          <SnakeDisclaimerShort className="max-w-3xl" />
 
           <nav aria-label="Sections de la page">
             <ul className="flex flex-wrap gap-2">
@@ -389,6 +396,6 @@ export function LeagueDaily({ initialPlan, teams, leagueName, defaultTeamId }: L
           </p>
         )}
       </div>
-    </>
+    </SnakeLeagueProvider>
   );
 }

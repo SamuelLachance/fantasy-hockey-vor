@@ -43,3 +43,8 @@ src/data/ml/gamelog-cache/
 # Local GH Pages static-serve mirror
 .serve-gh/
 
+
+# Snake source DB (local only): it still holds opinions whose attribution is
+# uncertain, caption spelling variants and extraction notes, none of which
+# may be published. `npm run snake:build` bakes the public files from it.
+/src/data/scouting/snake-boisvert.json

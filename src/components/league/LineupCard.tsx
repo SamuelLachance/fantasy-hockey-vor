@@ -11,6 +11,7 @@ import {
   gameLabel,
   moveEndLabel,
 } from "@/lib/fantrax/league-copy";
+import { SnakeLeagueNote } from "@/components/snake/SnakeLeague";
 import { LeagueCard, PlayerName, SlotBadge, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface LineupCardProps {
@@ -80,6 +81,7 @@ function LineupTable({
                           <span className="text-xs text-slate-400 sm:hidden">{gameLabel(s.game)}</span>
                         ) : null}
                       </div>
+                      <SnakeLeagueNote id={s.id} name={player(s.id)?.n} line />
                     </div>
                   ) : (
                     <span className="text-slate-500">— poste vide</span>
