@@ -53,6 +53,11 @@ jobs:
       - name: Regenerate rankings
         run: npm run generate
 
+      # League draft boards are built from players.json: keep the committed
+      # copy in step (build:pages also regenerates it at deploy time).
+      - name: Regenerate draft boards
+        run: npm run draft:board
+
       - name: Validate players data
         run: npm run check:data
 
