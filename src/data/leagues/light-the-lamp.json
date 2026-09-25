@@ -1,0 +1,55 @@
+{
+  "slug": "light-the-lamp",
+  "name": "Light the Lamp",
+  "platform": "yahoo",
+  "leagueId": 57419,
+  "teamId": 12,
+  "season": "2026-27",
+  "format": "redraft",
+  "scoring": "h2h-categories",
+  "matchupPeriod": "weekly",
+  "lineupChanges": "daily",
+  "matchupWeeks": 26,
+  "teams": 12,
+  "categories": {
+    "skater": ["goals", "assists", "powerplayPoints", "shots", "hits", "blocks"],
+    "goalie": ["wins", "goalsAgainstAverage", "savePct", "shutouts"]
+  },
+  "roster": {
+    "C": 2,
+    "LW": 2,
+    "RW": 2,
+    "F": 1,
+    "D": 4,
+    "Util": 1,
+    "G": 2,
+    "BN": 4,
+    "IR+": 4,
+    "NA": 1
+  },
+  "slotEligibility": {
+    "C": ["C"],
+    "LW": ["LW"],
+    "RW": ["RW"],
+    "F": ["C", "LW", "RW"],
+    "D": ["D"],
+    "Util": ["C", "LW", "RW", "D"],
+    "G": ["G"]
+  },
+  "minGoalieAppearancesPerWeek": 4,
+  "maxAcquisitionsPerWeek": 5,
+  "maxAcquisitionsPerSeason": null,
+  "maxTradesPerSeason": null,
+  "tradeEndDate": "2027-03-03",
+  "waivers": { "days": 2, "type": "continual-rolling-list", "mode": "standard" },
+  "playoffs": { "teams": 8, "weeks": [24, 25, 26], "endsOn": "2027-04-04", "reseeding": true },
+  "draft": {
+    "type": "live-standard",
+    "order": "snake",
+    "startsAt": "2026-09-27T14:00:00-04:00",
+    "pickSeconds": 75,
+    "rounds": 18,
+    "mySlot": null
+  },
+  "source": "Paramètres Yahoo « Scoring & Settings » collés par le gérant (équipe 12), 2026-09-25. Aucun appel à l'API Yahoo."
+}
