@@ -354,6 +354,20 @@ function toPlanLineup(res: LineupResult, ctx: Ctx, period: number | null): PlanL
 
 const round = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
 
+/** Closest the plan's draft odds get to 0 or 1 when the outcome is not sure. */
+export const PLAN_ODDS_EPS = 1e-4;
+
+/**
+ * Draft odds for the plan: 4 decimals, but never rounded onto a false
+ * certainty. Unless nobody picks in between (`sure`), they stay within
+ * [0.0001, 0.9999], so the page and the report show `< 1 %` / `> 99 %`
+ * rather than `0 %` / `100 %`.
+ */
+export function planOdds(p: number, sure: boolean): number {
+  const r = round(p, 4);
+  return sure ? r : Math.min(1 - PLAN_ODDS_EPS, Math.max(PLAN_ODDS_EPS, r));
+}
+
 const WAIVER_TARGETS_PER_GROUP = 3;
 
 /** One display group per player: G, then D, then C, then W. */
@@ -726,24 +740,37 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       .filter((p) => p.seasonFp > 0);
     // About half the picks in this dynasty draft are unprojected prospects,
     // who never leave the projected pool: only the observed share of picks
-    // spent on pool players (smoothed) is removed ahead of each of yours.
+    // spent on pool players (smoothed) counts toward the players expected
+    // gone ahead of each of yours.
     const made = state.draft.picks.filter((p) => p.playerId);
     const fromPool = made.filter((p) => values.players[p.playerId!]?.src === "proj").length;
     const poolShare = (fromPool + 1) / (made.length + 2);
     const outlook = draftOutlook(state.draft.picks, teamId, pool, need, { poolShare });
+    // Odds are sure only when no other team picks before that pick of mine.
+    const sureNext = outlook.picksBefore === 0;
+    const sureFollowing = outlook.picksBeforeFollowing === 0;
     draft = {
       ...outlook,
+      poolShare: round(outlook.poolShare, 3),
       remaining: outlook.remaining.map((p) => p.pick),
       board: outlook.board.map((b) => ({
         ...b,
         value: round(b.value, 1),
         seasonFp: round(b.seasonFp, 1),
         vona: b.vona == null ? null : round(b.vona, 1),
+        available: planOdds(b.available, sureNext),
       })),
       vona: Object.fromEntries(
         Object.entries(outlook.vona).map(([g, v]) => [
           g,
-          { ...v, now: round(v.now, 1), later: round(v.later, 1), vona: v.vona == null ? null : round(v.vona, 1) },
+          {
+            ...v,
+            bestP: v.bestId ? planOdds(v.bestP, sureNext) : 0,
+            now: round(v.now, 1),
+            laterP: v.laterId ? planOdds(v.laterP, sureFollowing) : 0,
+            later: round(v.later, 1),
+            vona: v.vona == null ? null : round(v.vona, 1),
+          },
         ]),
       ) as DraftOutlook["vona"],
     };
@@ -798,7 +825,11 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     ...reserveFills,
     ...targets.flatMap((t) => [t.id, ...(t.drop ? [t.drop.id] : [])]),
     ...(draft?.board.map((b) => b.id) ?? []),
-    ...(draft ? Object.values(draft.vona).map((v) => v.bestId).filter((x): x is string => !!x) : []),
+    ...(draft
+      ? Object.values(draft.vona)
+          .flatMap((v) => [v.bestId, v.laterId])
+          .filter((x): x is string => !!x)
+      : []),
   ]);
   const players: Record<string, PlanPlayer> = {};
   for (const id of referenced) {

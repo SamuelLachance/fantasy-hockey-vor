@@ -14,12 +14,15 @@ import { parseLiveCache, pickTeam, teamSearch } from "../src/lib/fantrax/league-
 import {
   alertText,
   claimsText,
+  draftBoardNote,
+  draftVonaIntro,
   fmtAgo,
   fmtCalendarDay,
   fmtCountdown,
   fmtDateTime,
   fmtDay,
   fmtNum,
+  fmtOdds,
   fmtPct,
   fmtShortCalendarDate,
   fmtSigned,
@@ -30,6 +33,7 @@ import {
   legalitySummary,
   moveEndLabel,
   ordinal,
+  pickLabel,
   positionsLabel,
   SLOT_LABEL,
   statusLabel,
@@ -69,6 +73,12 @@ eq(fmtNum(Number.NaN), "—", "non-finite");
 eq(fmtSigned(2.42), "+2,42", "signed positive");
 eq(fmtSigned(-1), "−1,00", "signed negative");
 eq(fmtPct(0.557), `56${NB}%`, "percent with French spacing");
+eq(fmtOdds(0.557), `56${NB}%`, "odds as a percent");
+eq(fmtOdds(0.996), `>${NB}99${NB}%`, "near-certain odds never read 100 %");
+eq(fmtOdds(0.003), `<${NB}1${NB}%`, "tiny odds never read 0 %");
+eq(fmtOdds(1), `100${NB}%`, "certain");
+eq(fmtOdds(Number.NaN), "—", "missing odds");
+eq(pickLabel(20), `n°${NB}20`, "pick number stays on one line");
 eq(ordinal(1), "1re", "first");
 eq(ordinal(2), "2e", "second");
 
@@ -101,6 +111,18 @@ eq(moveEndLabel("W"), "W", "slot codes stay as Fantrax shows them");
 eq(positionsLabel("W,C,F,Skt"), "W/C", "primary positions");
 eq(positionsLabel("D,Skt"), "D", "defense");
 eq(gameLabel(null), "Pas de match", "no game");
+{
+  const intro = draftVonaIntro(20, 27);
+  assert(intro.includes(`n°${NB}20`) && intro.includes(`n°${NB}27`) && intro.includes("attendue"), "VONA intro names both picks");
+  eq(draftVonaIntro(20, null), "Dernier choix : prenez simplement la meilleure valeur.", "last pick");
+  const note = draftBoardNote(20, 27, 0.5);
+  assert(
+    note.includes(`au n°${NB}27`) && note.includes(`choix n°${NB}20`) && note.includes(`50${NB}%`) && note.includes("ADP"),
+    "board note explains per-player VONA, the odds and the pool share",
+  );
+  const noPicks = draftBoardNote(null, null, 0.5);
+  assert(!noPicks.includes("Dispo.") && !noPicks.includes("VONA"), "no picks left: value note only");
+}
 eq(gameLabel({ startUTC: "2026-09-30T02:30:00Z", opp: "VGK", home: false }), `@ VGK · 22${NB}h${NB}30`, "away game");
 eq(gameLabel({ startUTC: "2026-09-29T21:00:00Z", opp: "FLA", home: true }), `vs FLA · 17${NB}h${NB}00`, "home game");
 
