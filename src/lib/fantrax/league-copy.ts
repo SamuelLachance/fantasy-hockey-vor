@@ -36,6 +36,16 @@ export function fmtPct(p: number): string {
   return `${Math.round(p * 100)}${NBSP}%`;
 }
 
+/** Odds that never round to a false certainty: `> 99 %`, `< 1 %`, `100 %` only when sure. */
+export function fmtOdds(p: number): string {
+  if (!Number.isFinite(p)) return "—";
+  if (p >= 1) return `100${NBSP}%`;
+  if (p <= 0) return `0${NBSP}%`;
+  if (p >= 0.995) return `>${NBSP}99${NBSP}%`;
+  if (p < 0.005) return `<${NBSP}1${NBSP}%`;
+  return fmtPct(p);
+}
+
 export function plural(n: number, one: string, many: string): string {
   return Math.abs(n) >= 2 ? many : one;
 }
@@ -276,6 +286,34 @@ export function legalitySummary(l: {
     return `Alignement illégal : ${base}. Il en manque ${l.need} — sinon l'équipe ne marque aucun point.`;
   }
   return l.illegal ? `Alignement illégal : ${base}.` : `Alignement légal : ${base}.`;
+}
+
+/** `n° 20` (never split across lines). */
+export function pickLabel(pick: number): string {
+  return `n°${NBSP}${pick}`;
+}
+
+/** What VONA by position means, for the user's next two picks. */
+export function draftVonaIntro(next: number, following: number | null): string {
+  if (following === null) return "Dernier choix : prenez simplement la meilleure valeur.";
+  return `Meilleure valeur attendue à la position à votre choix ${pickLabel(next)}, moins celle attendue au ${pickLabel(following)} : plus c'est haut, plus il faut prendre cette position maintenant. Sous le chiffre : le meilleur restant le plus probable à chaque choix, et sa probabilité de l'être.`;
+}
+
+/** How the board's per-player VONA and odds are computed. */
+export function draftBoardNote(next: number | null, following: number | null, poolShare: number): string {
+  const parts = [`Valeur = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`];
+  if (next !== null && following !== null) {
+    parts.push(
+      `VONA d'un joueur = sa valeur moins le meilleur attendu à sa position au ${pickLabel(following)} (négative si mieux devrait y rester).`,
+    );
+  }
+  if (next !== null) {
+    parts.push(
+      `Dispo. = chance qu'il soit encore là à votre choix ${pickLabel(next)}, selon son rang ADP Fantrax parmi les disponibles et le nombre de choix d'ici là, dont environ ${fmtPct(poolShare)} vont à des joueurs projetés (les autres, à des espoirs).`,
+    );
+  }
+  parts.push("L'âge et le % Fantrax servent d'indices dynastie. Les espoirs sans projection ne sont pas classés.");
+  return parts.join(" ");
 }
 
 export function claimsText(used: number | null, left: number | null): string {

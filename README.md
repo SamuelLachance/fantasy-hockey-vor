@@ -79,6 +79,13 @@ Evaluation: `npm run ml:backtest`, `npm run ml:sanity-market`; `scripts/benchmar
 - **Skater cats:** G, A, SOG, BLK, HIT, PPP, PIM, FOW (FOW = 0 for D)
 - **Goalie cats:** W, SO, SV, SV%
 
+### Other leagues (draft helpers)
+
+League profiles in `src/data/leagues/<slug>.json` feed a parameterised category engine (`src/lib/leagues/category-vor.ts`) without touching the main board: only the profile's categories, GAA as goals prevented, smoothed shutouts, an optimal flex-aware seat fill (F/Util, multi-eligibility) with flex-chain replacement levels, and a goalie weight = weekly matchup leverage (derived) × a predictability discount (modelling choice; the softer alternative is shown on the page).
+
+- `npm run draft:board [-- <slug>]` → `public/leagues/<slug>/board.json` (deterministic, committed). `build:pages` regenerates it before `next build`, so deploys always match `players.json`; `npm run check:draft-board` (part of `check`) sanity-checks the fresh build and only warns when the committed file lags.
+- `/draft/light-the-lamp` — live snake-draft helper (French, noindex): VOR board, "Repêché"/"Mon choix" marks (Entrée = my pick when on the clock), undo of any action, snake picks from "Ma position", ADP-based availability, lineup + category strength, suggestions (lineup gain + VONA + category balance), localStorage + text export/import
+
 ## Board UX
 
 - URL sync: `pos`, `q`, `sort`, `dir`, `player`, `g=all` (depth goalies), `rf` (stat ranges e.g. `sigma:-50`)

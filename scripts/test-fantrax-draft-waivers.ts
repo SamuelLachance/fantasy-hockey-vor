@@ -36,13 +36,30 @@ const pool: DraftPoolPlayer[] = [
 const o = draftOutlook(picks, "me", pool, {});
 assert(o.state === "running" && o.made === 2, "2 of 10 made");
 assert(o.current?.pick === 3 && o.next?.pick === 4 && o.following?.pick === 8, "current #3, mine #4 then #8");
-assert(o.picksBefore === 1, "one pick before mine");
-// Before #4 the ADP-first survivor (w1, ADP 2) goes; before #8 three more go
-// in ADP order (g1, d1, then g2 at ADP 50).
-assert(o.vona.W.bestId === "w2" && near(o.vona.W.vona!, 0), "W: w1 gone by #4, w2 (ADP 70) still there at #8");
-assert(o.vona.G.bestId === "g1" && near(o.vona.G.vona!, 250), "G: steep drop (g1, g2 both gone by #8)");
-assert(o.vona.D.bestId === "d1" && near(o.vona.D.vona!, 240 - 235), "D: flat");
-assert(o.board[0]!.id === "w1" && o.board[0]!.likelyGone, "best now is flagged as likely gone");
+assert(o.picksBefore === 1 && o.picksBeforeFollowing === 4, "one pick before mine, four before the next one");
+// ADP ranks among the available: w1 1, g1 2, d1 3, g2 4, d2 5, w2 6, c1 7.
+// One pool pick before #4, four before #8 (poolShare 1): G drops from g1
+// (250) to g2 (200) and g1 goes early, so G is the position to take now.
+const row = (out: typeof o, id: string) => out.board.find((b) => b.id === id)!;
+assert(o.vona.G.bestId === "g1" && o.vona.G.vona! > 20, `G: steep drop (${o.vona.G.vona})`);
+assert(
+  o.vona.G.vona! > o.vona.W.vona! && o.vona.G.vona! > o.vona.D.vona! && o.vona.W.vona! > 0 && o.vona.D.vona! > 0,
+  "G outranks the flat W and D",
+);
+assert(near(o.vona.C.vona!, 0) && near(o.vona.C.now, 280), "C: lone deep-ADP c1 is there both times");
+assert(o.vona.G.laterId === "g2", "g2 is the likely best G by #8");
+// One pool pick before #4, shared among the seven: ADP-first w1 is the
+// likeliest to go (~42%), and the odds add up to exactly one player gone.
+assert(
+  o.board[0]!.id === "w1" &&
+    near(o.board[0]!.available, 0.583, 0.005) &&
+    o.board.every((b) => b.available >= o.board[0]!.available),
+  `ADP-first w1: likeliest gone by #4 (${o.board[0]!.available})`,
+);
+assert(near(o.board.reduce((a, b) => a + 1 - b.available, 0), 1, 1e-6), "one pool pick → one player expected gone");
+assert(row(o, "c1").available > 0.98 && !row(o, "c1").likelyGone, "deep ADP survives");
+assert(row(o, "g1").vona! > 40 && row(o, "g1").vonaGroup === "G", "g1: big per-player VONA");
+assert(row(o, "g2").vona! < 0, "g2: worth less than the G expected at #8");
 assert(!o.board.some((b) => b.id === "taken0"), "drafted players leave the board");
 // Empty D/G slots add up to +50%.
 assert(near(draftValue(pool[3]!, { D: 1 }), 240 * 1.5) && near(draftValue(pool[3]!, { G: 1 }), 240), "need bonus");
@@ -52,15 +69,18 @@ const onClock = draftOutlook(
   pool,
 );
 assert(onClock.picksBefore === 0 && onClock.next?.pick === 4, "on the clock → 0 picks before");
+assert(onClock.board.every((b) => b.available === 1), "on the clock → everyone is still there");
+assert(near(onClock.vona.W.now, 300) && onClock.vona.W.bestId === "w1" && onClock.vona.W.bestP === 1, "on the clock → best now is the best left");
 // When two picks in three go to prospects outside the pool, fewer pool
-// players are expected gone: 1 × 1/3 → none before #4, 3 × 1/3 → one
-// (w1, first by ADP) between #4 and #8.
+// players are expected gone: w1 likely survives to #4 and G is less urgent.
 const third = draftOutlook(picks, "me", pool, {}, { poolShare: 1 / 3 });
-assert(third.vona.W.bestId === "w1" && !third.board.find((b) => b.id === "w1")?.likelyGone, "w1 survives to #4");
-assert(near(third.vona.W.vona!, 300 - 290), "W: w1 gone by #8, w2 left");
-assert(third.vona.G.bestId === "g1" && near(third.vona.G.vona!, 0), "G: g1 still there at #8");
+assert(third.vona.W.bestId === "w1" && !row(third, "w1").likelyGone, "w1 likely survives to #4");
+assert(row(third, "w1").available > row(o, "w1").available, "fewer pool picks → better odds");
+assert(third.vona.G.vona! > 0 && third.vona.G.vona! < o.vona.G.vona!, "G less urgent with fewer pool picks");
 const done = draftOutlook(picks.map((p) => ({ ...p, playerId: p.playerId ?? `x${p.pick}` })), "me", pool);
 assert(done.state === "done" && done.next === null, "finished draft");
+const last = draftOutlook(picks.map((p) => (p.pick === 8 ? { ...p, teamId: "t7" } : p)), "me", pool);
+assert(last.following === null && last.vona.G.vona === null && last.board.every((b) => b.vona === null), "last pick: no VONA");
 
 // ---- waivers: roster with an empty D slot; two lineup days.
 const cand = (id: string, e: string, v: number, status = "ACTIVE"): LineupCandidate => {
