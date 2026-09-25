@@ -1,0 +1,1643 @@
+{
+ "version": "dyn-v4-2026-09-25",
+ "season": "2026-27",
+ "firstSeasonYear": 2026,
+ "T": 12,
+ "source": "Frozen from the 2026-09-25 dynasty research (scratchpad/dynasty: aging.json, prospects.json, league-structure.json, design_sim/scale_out.json, spec_check/proto3.cjs + sim3.cjs). Spec: scratchpad/dynasty/SPEC.md. Refit when 2026-27 is complete.",
+ "scale": {
+  "source": "OLS realized 2025-26 FP/G (league scoring, MoneyPuck) on the 2026-27 projection (values.json per-game FP), players with >= 40 GP in both (design_sim/scale.cjs). F x = off; D x = off + max(0, dx). Goalies: identity on gE per start (projected 4.09 vs realized 4.00).",
+  "F": {
+   "a": -1.051,
+   "b": 1.055,
+   "n": 389,
+   "r": 0.968
+  },
+  "D": {
+   "a": -1.512,
+   "b": 1.252,
+   "n": 186,
+   "r": 0.941
+  },
+  "waiverLineProj": {
+   "F": 3.02,
+   "D": 3.04
+  },
+  "offRefProj": 4.801
+ },
+ "repl": {
+  "source": "Skaters: waiver line (265 skaters, cap-adjusted 16.5 skater-equivalents per team, league-structure.json scheduleAndReplacement) mapped to the realized scale. Goalies: per season-slot, a waiver goalie gives ~35 starts x 3.65 (range 100-160); matches revealed keeper behaviour. R_Gs is on the 82-game basis and scales with seasonGames / projectionBasis (84-game season: 131.1).",
+  "Gseason": 128,
+  "GseasonRange": [
+   100,
+   160
+  ]
+ },
+ "year0AgeCal": {
+  "source": "Half-strength calibration of the ML projections' age effect: median of (2025-26 realized x one year of curve growth) / realized-scale projection, players >= 60 GP with a >= 40 GP projection; adj = clamp(1 + 0.5 (1/ratio - 1), 0.94, 1.06); cells with n < 15 set to 1 (D <=21, 22-23, 36+).",
+  "bands": [
+   "<=21",
+   "22-23",
+   "24-26",
+   "27-29",
+   "30-32",
+   "33-35",
+   "36+"
+  ],
+  "F": [
+   1.05,
+   1.01,
+   0.99,
+   0.975,
+   0.965,
+   0.97,
+   0.965
+  ],
+  "D": [
+   1,
+   1,
+   0.985,
+   1,
+   0.96,
+   0.985,
+   1
+  ]
+ },
+ "lambda": {
+  "source": "Scaling of the post-26 decline, c~(a) = c(26) (c(a)/c(26))^lambda: out-of-sample optimum 0.5, in-sample horizon fit 0.75 (design_sim/backtest.cjs); lambda = 0.65 moved no benchmark rank by more than 5.",
+  "value": 0.6
+ },
+ "sigma": {
+  "source": "Year-0 projection error by career GP (design choice); persistent talent shock and transient season noise from aging.json variance decomposition (F .109/.123, D .086/.102; F persistent shrunk to .09); goalies judgment. Young skaters in the growth model (base season at 18-23) use growth.sigma by production band instead of sigma0 / persistent inside the growth window.",
+  "sigma0": {
+   "gp200": 0.1,
+   "gp40": 0.14,
+   "low": 0.18,
+   "G": 0.1
+  },
+  "persistent": {
+   "F": 0.09,
+   "D": 0.086,
+   "G": 0.06
+  },
+  "season": {
+   "F": 0.12,
+   "D": 0.1,
+   "G": 0.12
+  },
+  "goalieShare0": 0.08
+ },
+ "curves": {
+  "source": "aging.json skaters.{F,D}.curve[].levelVs26 (conditional regressed-baseline delta method, MoneyPuck 2008-26) and goalies.svPctCurve.rows[].fpgMultiplier (save% above league, NHL API 1997-2026). Linear interpolation; geometric extrapolation past the last age.",
+  "F": {
+   "age0": 18,
+   "values": [
+    0.641,
+    0.741,
+    0.824,
+    0.892,
+    0.946,
+    0.985,
+    1.008,
+    1.012,
+    1,
+    0.978,
+    0.948,
+    0.907,
+    0.858,
+    0.806,
+    0.756,
+    0.703,
+    0.643,
+    0.581,
+    0.521,
+    0.465,
+    0.413,
+    0.369,
+    0.332,
+    0.292
+   ]
+  },
+  "D": {
+   "age0": 18,
+   "values": [
+    0.74,
+    0.778,
+    0.836,
+    0.9,
+    0.951,
+    0.983,
+    1,
+    1.005,
+    1,
+    0.987,
+    0.968,
+    0.943,
+    0.913,
+    0.874,
+    0.83,
+    0.783,
+    0.733,
+    0.676,
+    0.614,
+    0.548,
+    0.479,
+    0.414,
+    0.366,
+    0.329
+   ]
+  },
+  "G": {
+   "age0": 19,
+   "values": [
+    0.923,
+    0.982,
+    0.996,
+    0.996,
+    0.991,
+    0.994,
+    0.998,
+    1,
+    0.997,
+    0.988,
+    0.975,
+    0.961,
+    0.945,
+    0.93,
+    0.913,
+    0.891,
+    0.858,
+    0.817,
+    0.768,
+    0.715,
+    0.654,
+    0.582,
+    0.494
+   ]
+  }
+ },
+ "availability": {
+  "source": "aging.json skaters.{F,D}.availability: P(regular next) and P(present next) by age at t; P(absent | not regular) = (1 - pPresentNext) / max(0.05, 1 - pRegularNext).",
+  "F": [
+   {
+    "age": 19,
+    "pRegularNext": 0.864,
+    "pPresentNext": 0.97
+   },
+   {
+    "age": 20,
+    "pRegularNext": 0.856,
+    "pPresentNext": 0.973
+   },
+   {
+    "age": 21,
+    "pRegularNext": 0.861,
+    "pPresentNext": 0.978
+   },
+   {
+    "age": 22,
+    "pRegularNext": 0.86,
+    "pPresentNext": 0.973
+   },
+   {
+    "age": 23,
+    "pRegularNext": 0.85,
+    "pPresentNext": 0.961
+   },
+   {
+    "age": 24,
+    "pRegularNext": 0.839,
+    "pPresentNext": 0.954
+   },
+   {
+    "age": 25,
+    "pRegularNext": 0.835,
+    "pPresentNext": 0.952
+   },
+   {
+    "age": 26,
+    "pRegularNext": 0.838,
+    "pPresentNext": 0.952
+   },
+   {
+    "age": 27,
+    "pRegularNext": 0.841,
+    "pPresentNext": 0.948
+   },
+   {
+    "age": 28,
+    "pRegularNext": 0.837,
+    "pPresentNext": 0.941
+   },
+   {
+    "age": 29,
+    "pRegularNext": 0.825,
+    "pPresentNext": 0.933
+   },
+   {
+    "age": 30,
+    "pRegularNext": 0.81,
+    "pPresentNext": 0.924
+   },
+   {
+    "age": 31,
+    "pRegularNext": 0.791,
+    "pPresentNext": 0.907
+   },
+   {
+    "age": 32,
+    "pRegularNext": 0.768,
+    "pPresentNext": 0.887
+   },
+   {
+    "age": 33,
+    "pRegularNext": 0.741,
+    "pPresentNext": 0.863
+   },
+   {
+    "age": 34,
+    "pRegularNext": 0.706,
+    "pPresentNext": 0.821
+   },
+   {
+    "age": 35,
+    "pRegularNext": 0.658,
+    "pPresentNext": 0.758
+   },
+   {
+    "age": 36,
+    "pRegularNext": 0.601,
+    "pPresentNext": 0.695
+   },
+   {
+    "age": 37,
+    "pRegularNext": 0.558,
+    "pPresentNext": 0.644
+   },
+   {
+    "age": 38,
+    "pRegularNext": 0.544,
+    "pPresentNext": 0.616
+   },
+   {
+    "age": 39,
+    "pRegularNext": 0.567,
+    "pPresentNext": 0.625
+   },
+   {
+    "age": 40,
+    "pRegularNext": 0.591,
+    "pPresentNext": 0.648
+   }
+  ],
+  "D": [
+   {
+    "age": 19,
+    "pRegularNext": 0.888,
+    "pPresentNext": 0.998
+   },
+   {
+    "age": 20,
+    "pRegularNext": 0.881,
+    "pPresentNext": 0.991
+   },
+   {
+    "age": 21,
+    "pRegularNext": 0.871,
+    "pPresentNext": 0.98
+   },
+   {
+    "age": 22,
+    "pRegularNext": 0.855,
+    "pPresentNext": 0.97
+   },
+   {
+    "age": 23,
+    "pRegularNext": 0.84,
+    "pPresentNext": 0.967
+   },
+   {
+    "age": 24,
+    "pRegularNext": 0.83,
+    "pPresentNext": 0.967
+   },
+   {
+    "age": 25,
+    "pRegularNext": 0.826,
+    "pPresentNext": 0.966
+   },
+   {
+    "age": 26,
+    "pRegularNext": 0.825,
+    "pPresentNext": 0.962
+   },
+   {
+    "age": 27,
+    "pRegularNext": 0.825,
+    "pPresentNext": 0.957
+   },
+   {
+    "age": 28,
+    "pRegularNext": 0.83,
+    "pPresentNext": 0.957
+   },
+   {
+    "age": 29,
+    "pRegularNext": 0.833,
+    "pPresentNext": 0.961
+   },
+   {
+    "age": 30,
+    "pRegularNext": 0.822,
+    "pPresentNext": 0.954
+   },
+   {
+    "age": 31,
+    "pRegularNext": 0.791,
+    "pPresentNext": 0.926
+   },
+   {
+    "age": 32,
+    "pRegularNext": 0.757,
+    "pPresentNext": 0.889
+   },
+   {
+    "age": 33,
+    "pRegularNext": 0.727,
+    "pPresentNext": 0.855
+   },
+   {
+    "age": 34,
+    "pRegularNext": 0.687,
+    "pPresentNext": 0.817
+   },
+   {
+    "age": 35,
+    "pRegularNext": 0.638,
+    "pPresentNext": 0.77
+   },
+   {
+    "age": 36,
+    "pRegularNext": 0.594,
+    "pPresentNext": 0.715
+   },
+   {
+    "age": 37,
+    "pRegularNext": 0.543,
+    "pPresentNext": 0.646
+   },
+   {
+    "age": 38,
+    "pRegularNext": 0.473,
+    "pPresentNext": 0.56
+   },
+   {
+    "age": 39,
+    "pRegularNext": 0.409,
+    "pPresentNext": 0.474
+   },
+   {
+    "age": 40,
+    "pRegularNext": 0.438,
+    "pPresentNext": 0.468
+   }
+  ]
+ },
+ "retentionLogistic": {
+  "source": "aging.json skaters.{F,D}.retentionLogistic: P(GP share >= 50% next season); age = age at Oct 1 of season t; levelPct = within-season percentile of era-normalized FP/GP among players with >=25% GP (1 = best)",
+  "features": [
+   "1",
+   "(age-27)/5",
+   "max(0,age-30)/5",
+   "max(0,age-34)/3",
+   "levelPct",
+   "levelPct^2",
+   "gpShare_t(cap1)",
+   "levelPct*max(0,age-30)/5",
+   "age<=22 ? (23-age)/3 : 0"
+  ],
+  "F": [
+   -2.9729,
+   -0.3315,
+   -0.5132,
+   -0.285,
+   4.216,
+   -1.0553,
+   3.6363,
+   0.2365,
+   0.0254
+  ],
+  "D": [
+   -2.9062,
+   -0.1751,
+   -0.6867,
+   -0.0954,
+   2.7068,
+   -0.1073,
+   4.0688,
+   -0.1256,
+   0.3255
+  ]
+ },
+ "starterLogistic": {
+  "source": "aging.json goalies.starterLogistic, refitted with two siblings (scratchpad/dynasty/fix2/goalie_roles.cjs, NHL API 1997-98..2025-26, 1,595 goalie-seasons with >= 15 GP prorated): P(games-started share >= 50% next season), P(>= 30%: at least a tandem) and P(present next season, any GP). gsShare is the RAW games-started share of the season, min(1, GS / season length) -- the unit the logistics were fitted in (lib.cjs gsFrac); the prototype fed share / 0.6, which kept starters at ~0.9 odds (keeper audit 2026-09-25). The three reproduce goalies.workloadTable by age band x tier within ~0.05 (e.g. starters 25-27: 0.75 / 0.91 vs 0.73 / 0.86; tandems 28-30: 0.28 / 0.62 vs 0.31 / 0.65).",
+  "features": [
+   "1",
+   "(age-29)/5",
+   "max(0,age-32)/3",
+   "max(0,age-35)/2",
+   "gsShare_t(cap1)",
+   "clamp(sv%-league,±.030)/.010",
+   "age<=25 ? (26-age)/3 : 0"
+  ],
+  "beta": [
+   -3.5903,
+   -0.227,
+   -0.1616,
+   -0.2095,
+   6.4756,
+   0.4801,
+   0.3235
+  ],
+  "tandemBeta": [
+   -1.8259,
+   0.0096,
+   -0.833,
+   0.1848,
+   6.0823,
+   0.4986,
+   0.3498
+  ],
+  "presentBeta": [
+   1.2244,
+   -0.9122,
+   -0.179,
+   -0.1812,
+   4.7767,
+   0.455,
+   -1.0375
+  ]
+ },
+ "phasesByAge": {
+  "source": "aging.json phases.<g>.byAge (expected next-season change and P(regular next)); effective age shifts by the elite and trajectory modifiers.",
+  "F": {
+   "18": "rising",
+   "19": "rising",
+   "20": "rising",
+   "21": "rising",
+   "22": "entering_prime",
+   "23": "entering_prime",
+   "24": "prime",
+   "25": "prime",
+   "26": "prime",
+   "27": "plateau",
+   "28": "plateau",
+   "29": "declining",
+   "30": "declining",
+   "31": "declining",
+   "32": "declining",
+   "33": "declining",
+   "34": "late_career",
+   "35": "late_career",
+   "36": "late_career",
+   "37": "late_career",
+   "38": "late_career",
+   "39": "late_career",
+   "40": "late_career"
+  },
+  "D": {
+   "18": "rising",
+   "19": "rising",
+   "20": "rising",
+   "21": "rising",
+   "22": "entering_prime",
+   "23": "entering_prime",
+   "24": "prime",
+   "25": "prime",
+   "26": "prime",
+   "27": "prime",
+   "28": "plateau",
+   "29": "plateau",
+   "30": "plateau",
+   "31": "declining",
+   "32": "declining",
+   "33": "declining",
+   "34": "late_career",
+   "35": "late_career",
+   "36": "late_career",
+   "37": "late_career",
+   "38": "late_career",
+   "39": "late_career",
+   "40": "late_career"
+  },
+  "G": {
+   "20": "rising",
+   "21": "rising",
+   "22": "rising",
+   "23": "rising",
+   "24": "rising",
+   "25": "prime",
+   "26": "prime",
+   "27": "prime",
+   "28": "plateau",
+   "29": "plateau",
+   "30": "plateau",
+   "31": "plateau",
+   "32": "plateau",
+   "33": "declining",
+   "34": "declining",
+   "35": "late_career",
+   "36": "late_career",
+   "37": "late_career",
+   "38": "late_career",
+   "39": "late_career",
+   "40": "late_career"
+  }
+ },
+ "ladder": {
+  "source": "Realized-scale FP/G rank ladder (MoneyPuck 2023-26, gp >= 41) from prospects.json scales.quantileMap; levelPct = 1 - rank / N.",
+  "F": {
+   "n": 446,
+   "rows": [
+    [
+     1,
+     5.817
+    ],
+    [
+     5,
+     5.128
+    ],
+    [
+     10,
+     4.58
+    ],
+    [
+     20,
+     4.129
+    ],
+    [
+     32,
+     3.861
+    ],
+    [
+     50,
+     3.591
+    ],
+    [
+     75,
+     3.26
+    ],
+    [
+     100,
+     2.953
+    ],
+    [
+     130,
+     2.686
+    ],
+    [
+     160,
+     2.438
+    ],
+    [
+     200,
+     2.182
+    ],
+    [
+     250,
+     1.94
+    ],
+    [
+     300,
+     1.676
+    ],
+    [
+     350,
+     1.434
+    ]
+   ]
+  },
+  "D": {
+   "n": 235,
+   "rows": [
+    [
+     1,
+     4.711
+    ],
+    [
+     5,
+     3.969
+    ],
+    [
+     10,
+     3.594
+    ],
+    [
+     20,
+     3.229
+    ],
+    [
+     32,
+     2.94
+    ],
+    [
+     48,
+     2.582
+    ],
+    [
+     64,
+     2.382
+    ],
+    [
+     96,
+     2.121
+    ],
+    [
+     128,
+     1.87
+    ],
+    [
+     160,
+     1.631
+    ]
+   ]
+  }
+ },
+ "eliteTheta": {
+  "source": "Realized FP/G of about the 40th forward; elite forwards retain 0.940 a year vs 0.907 from ages 33 to 35 (aging.json), so they age one year younger from 31.",
+  "value": 3.74,
+  "fromAge": 31
+ },
+ "games": {
+  "source": "sim3.cjs role model: season-0 regular probability keeps the mean at the projected share; regulars 0.62 + 0.38 sqrt(U) (mean 0.873); partial U(0.05, 0.5); absent at 30+ = retired. Goalies (keeper audit 2026-09-25, scratchpad/dynasty/fix2/goalie_roles.cjs): next-season tier from the starter / >= tandem / present logistics on the raw start share (starterLogistic); a starter draws min(maxShare, max(0.5, 0.547 + 0.225 x last share + 0.10 z)) (starter seasons 1997-2026: mean 0.686, persistence 0.225, resid sd 0.10), a tandem U(0.30, 0.49) (mean 0.393), a backup U(0.04, 0.29) (mean 0.168), else out (retired at 32+). FP/start ~ 3.708 + 0.812 x raw share + 0.0735 x sv% pts above league (per-GP weighted OLS, 1,723 seasons) inverts theta into the sv% feature. Shares are of a season; games = seasonGames x share (84-game NHL schedule from 2026-27, public/fantrax/schedule-20262027.json), projections are shares of projectionBasis = 82 games (players.json gpCalibration fit on 82-game seasons). Durability carry (audit 2026-09-25): a player projected above the mean regular share (skaters, 0.873) keeps that factor on later regular draws (goalies: the next starter share follows the last one, persistence 0.225), mean-reverting by durabilityCarry per season, so a durable full-timer does not lose ~7% of his games at 2027-28 (judgment; the one-season projection is already regressed). Goalie shares capped at maxShare (0.85, as the daily model).",
+  "regShareMean": 0.873,
+  "share0Floor": 0.19,
+  "regular": [
+   0.62,
+   0.38
+  ],
+  "partial": [
+   0.05,
+   0.45
+  ],
+  "absentYear0": 0.3,
+  "retireIfOutAge": 30,
+  "goalie": {
+   "starterNext": {
+    "a": 0.547,
+    "b": 0.225,
+    "sd": 0.1,
+    "min": 0.5
+   },
+   "tandem": [
+    0.3,
+    0.19
+   ],
+   "backup": [
+    0.04,
+    0.25
+   ],
+   "retireIfOutAge": 32,
+   "firstSeason": [
+    0.2,
+    0.1
+   ],
+   "appearancesPerStart": 1.1,
+   "svLeague": 3.708,
+   "svWorkload": 0.812,
+   "svFpPerPt": 0.0735,
+   "maxShare": 0.85
+  },
+  "prospectFirstSeason": {
+   "pRegular": 0.85,
+   "fringeMax": 0.3
+  },
+  "seasonGames": 84,
+  "projectionBasis": 82,
+  "durabilityCarry": 0.85
+ },
+ "status0": {
+  "source": "Year-0 availability for a current Fantrax status (judgment, audit 2026-09-25): the expected share of the season still played when the sync shows NHL IR / LTIR (2), injured (30) or suspended (6). It scales season 0 only (value, FP and GP toward eligibility), never the role carried into 2027-28. Goalie depth: the tandem start share is recomputed with injured / suspended goalies kept in; only minors (4), unsigned (3) and inactive (7) goalies leave the depth chart.",
+  "avail": {
+   "2": 0.75,
+   "6": 0.95,
+   "30": 0.88
+  },
+  "depthIcons": [
+   "3",
+   "4",
+   "7"
+  ]
+ },
+ "prospect": {
+  "source": "Draft-slot fallback for players missing from prospects.json: logit P(200 NHL GP) by ln(pick) and prime FP/G by ln(pick) from prospects.json a_draftOutcomes (2005-2017 classes, AUC 0.81); goalie P(role) buckets; no-arrival odds decay by completed post-draft seasons; ETA lag by pick band.",
+  "slotPMake": {
+   "F": {
+    "a": 4.29,
+    "b": -1.248
+   },
+   "D": {
+    "a": 3.76,
+    "b": -1.175
+   },
+   "G": [
+    [
+     32,
+     0.44
+    ],
+    [
+     64,
+     0.32
+    ],
+    [
+     96,
+     0.23
+    ],
+    [
+     160,
+     0.09
+    ],
+    [
+     100000,
+     0.05
+    ]
+   ]
+  },
+  "slotPrime": {
+   "F": {
+    "a": 3.49,
+    "b": -0.304,
+    "sd": 0.75
+   },
+   "D": {
+    "a": 2.9,
+    "b": -0.189,
+    "sd": 0.58
+   },
+   "G": {
+    "mu": 4.3,
+    "sd": 0.6
+   }
+  },
+  "undraftedPrior": {
+   "F": 2.2,
+   "D": 2
+  },
+  "decay": [
+   1,
+   0.65,
+   0.35,
+   0.14,
+   0.08,
+   0.05
+  ],
+  "etaLag": [
+   [
+    3,
+    0
+   ],
+   [
+    10,
+    1
+   ],
+   [
+    20,
+    2
+   ],
+   [
+    64,
+    3
+   ],
+   [
+    128,
+    4
+   ],
+   [
+    100000,
+    5
+   ]
+  ],
+  "etaLagGoalie": 5,
+  "etaJitter": [
+   [
+    -1,
+    0.1
+   ],
+   [
+    0,
+    0.6
+   ],
+   [
+    1,
+    0.2
+   ],
+   [
+    2,
+    0.1
+   ]
+  ],
+  "primeFloor": {
+   "F": 0.8,
+   "D": 0.8,
+   "G": 2.5
+  },
+  "primeAge": 25,
+  "draftAgeRange": [
+   17,
+   21
+  ]
+ },
+ "growth": {
+  "source": "Conditional growth of young NHL skaters (Captains Dynasty scoring, NHL stats API 2008-09..2025-26, era-adjusted FP/G; rows from scratchpad/dynasty/youth/growth.cjs, fitted by scratchpad/dynasty/fix2/fit2.cjs). Base = a skater-season at 18-23 (Oct 1) with >= 30 GP (prorated); G_k = FP/G k seasons later / base FP/G among survivors (>= 20 GP), 2,653 base seasons. ln G_k = ln[c~(a+k)/c~(a)] (the lambda-scaled curve) x (1 + gamma h(pct)), h = max(0, (pct - 0.5)/0.5)^2 (above-median producers realize less of the curve growth) + A(pos, age band, k) pooled excess over the curve + B(pos, production band, k) regression to the mean (empirical-Bayes shrunk, n0 = sigma2/tau2 by method of moments; non-increasing in production by pool-adjacent-violators) + P(pos, ln pick, pct) pedigree x production surface (audit 2026-09-25: bilinear over 3 pedigree centres, top-10 / 11-32 / 33+ and undrafted at their mean ln pick, x 3 production centres, <p50 / p50-75 / p75+ at their mean pct, flat outside; least squares on the tent basis inside the joint fit, centred within each production centre, each cell shrunk by t2/(1+t2) with its cluster-robust SE; e.g. F p50-75: top-10 +0.083, 11-32 +0.033, late -0.084; D p50-75: top-10 +0.072, late -0.031; F p75+: 11-32 -0.058, late +0.025; the old single ln-pick slope, D -0.004, missed that pedigree matters at mid production and not among top producers) + v_k(pos, band)/2 (lognormal mean: the path shocks are mean-one; residual variance by production band). Joint alternating least squares, then A, B and gamma refitted with the shrunk surface. Age x production cells: method-of-moments variance ~0 -> not used. Linear over the age-band centres and production-band centres (flat outside). Production = percentile of the base FP/G among same-position, same-age backtest rows (pctKnots at pctQuantiles). Young shocks by production band: v_1 = sigma0^2 + season^2 and v_k - v_1 = (k-1) persistent^2 (floors 0.05); the band posterior sd widens sigma0. Checks (scripts/test-dynasty-growth.ts, fixtures scripts/fixtures/dynasty-growth-backtest.json): the mean G_k over 19 historical strata is within 2 SE of the survivors mean ratio in 92/94 stratum x season checks (all within 3 SE; a path 3% off everywhere fails); out of sample (fit on 2008-13 bases, test 2014-24) within 8.3% (F p75+ ~8% conservative at k4-5, pooled F and D within 4%). Target: survivors. End to end through this simulator the published eFP (zero-filled, retention included) matches history within ~10% for 18-20-year-olds and 21-23 top producers but runs high for 21-23-year-olds below the median (F 1.07 -> 1.54, D 1.16 -> 1.50 at k1..k5) and mildly for 21-23 p50-90 (1.05 -> 1.18): the growth path is the survivors growth applied to every path and the retention model keeps too many of them playing (F 22-23 below p50: survival 0.85 flat vs 0.86 -> 0.68). Their value is mostly near or below replacement, so DV moves little, but their eFP is overstated. Every young skater (base age = 2025-26 age < maxBaseAge) takes the same rule: base = the 2025-26 FP/G blended with the projection (w = GP / (GP + blendK), no games threshold; the projection reads as the 2025-26 level, as it does for young players with a base season: ln ratio +0.01, sd 0.10), year 0 = base x G_1; the year-0 sd blends the band sigma0 (weight w) with the projection error by career GP. minBaseGp only labels the base (season vs projection-led).",
+  "maxBaseAge": 24,
+  "horizon": 6,
+  "blendK": 36,
+  "minBaseGp": 30,
+  "scoring": {
+   "A1": {
+    "F": 0.595,
+    "D": 0.467
+   },
+   "otPerPoint": 0.0246,
+   "teamShutoutPerGame": 0.05
+  },
+  "ageCentre": {
+   "F": [
+    19.33,
+    21.153,
+    23.068
+   ],
+   "D": [
+    20.076,
+    22.759
+   ]
+  },
+  "prodBands": [
+   "<p25",
+   "p25-50",
+   "p50-75",
+   "p75-90",
+   "p90-97",
+   "p97+"
+  ],
+  "prodCuts": [
+   0.25,
+   0.5,
+   0.75,
+   0.9,
+   0.97
+  ],
+  "prodCentre": [
+   0.123,
+   0.374,
+   0.625,
+   0.825,
+   0.934,
+   0.984
+  ],
+  "pctQuantiles": [
+   0.02,
+   0.05,
+   0.1,
+   0.25,
+   0.5,
+   0.75,
+   0.9,
+   0.95,
+   0.97,
+   0.99
+  ],
+  "pctKnots": {
+   "F": {
+    "18": [
+     1.27,
+     1.404,
+     1.535,
+     1.719,
+     2.214,
+     2.76,
+     3.492,
+     3.797,
+     3.853,
+     3.945
+    ],
+    "19": [
+     1.046,
+     1.358,
+     1.428,
+     1.737,
+     2.19,
+     2.794,
+     3.384,
+     3.797,
+     4.077,
+     4.736
+    ],
+    "20": [
+     1.104,
+     1.244,
+     1.432,
+     1.698,
+     2.124,
+     2.766,
+     3.537,
+     3.924,
+     4.135,
+     4.429
+    ],
+    "21": [
+     1.045,
+     1.176,
+     1.347,
+     1.776,
+     2.186,
+     2.83,
+     3.575,
+     3.876,
+     4.259,
+     4.683
+    ],
+    "22": [
+     0.966,
+     1.079,
+     1.216,
+     1.55,
+     2.113,
+     2.656,
+     3.543,
+     3.94,
+     4.212,
+     4.898
+    ],
+    "23": [
+     0.915,
+     1.077,
+     1.228,
+     1.61,
+     2.124,
+     2.786,
+     3.609,
+     4.074,
+     4.378,
+     4.952
+    ]
+   },
+   "D": {
+    "19": [
+     1.335,
+     1.416,
+     1.471,
+     1.697,
+     1.994,
+     2.478,
+     2.704,
+     2.863,
+     2.922,
+     3.4
+    ],
+    "20": [
+     1.148,
+     1.234,
+     1.337,
+     1.716,
+     1.999,
+     2.51,
+     2.874,
+     3.04,
+     3.152,
+     3.281
+    ],
+    "21": [
+     1.073,
+     1.218,
+     1.389,
+     1.719,
+     2.082,
+     2.586,
+     2.889,
+     3.112,
+     3.453,
+     3.698
+    ],
+    "22": [
+     1.13,
+     1.318,
+     1.415,
+     1.724,
+     2.031,
+     2.48,
+     2.917,
+     3.271,
+     3.446,
+     3.903
+    ],
+    "23": [
+     1.208,
+     1.265,
+     1.389,
+     1.652,
+     2.008,
+     2.446,
+     3.008,
+     3.486,
+     3.661,
+     4.058
+    ]
+   }
+  },
+  "excessAge": {
+   "F": [
+    [
+     -0.0187,
+     0.0041,
+     -0.0578,
+     -0.0338,
+     -0.0392,
+     -0.0298
+    ],
+    [
+     -0.0146,
+     -0.0001,
+     0.0148,
+     0.004,
+     0.0228,
+     0.0329
+    ],
+    [
+     0.0185,
+     0.0304,
+     0.0392,
+     0.0551,
+     0.0594,
+     0.047
+    ]
+   ],
+   "D": [
+    [
+     0.0051,
+     0.0225,
+     0.0022,
+     0.0263,
+     0.0344,
+     0.0095
+    ],
+    [
+     -0.0025,
+     0.0036,
+     0.0215,
+     0.0285,
+     0.0342,
+     0.038
+    ]
+   ]
+  },
+  "excessProd": {
+   "F": [
+    [
+     0.1163,
+     0.1795,
+     0.225,
+     0.2156,
+     0.219,
+     0.2297
+    ],
+    [
+     0.0086,
+     -0.0028,
+     -0.0111,
+     0.0003,
+     0.0255,
+     0.0342
+    ],
+    [
+     -0.0359,
+     -0.0475,
+     -0.0532,
+     -0.0381,
+     -0.0386,
+     -0.0207
+    ],
+    [
+     -0.0511,
+     -0.0653,
+     -0.066,
+     -0.0679,
+     -0.0653,
+     -0.0871
+    ],
+    [
+     -0.0572,
+     -0.07,
+     -0.096,
+     -0.1064,
+     -0.1348,
+     -0.1367
+    ],
+    [
+     -0.0701,
+     -0.1065,
+     -0.1185,
+     -0.1387,
+     -0.1353,
+     -0.1367
+    ]
+   ],
+   "D": [
+    [
+     0.0771,
+     0.1099,
+     0.1291,
+     0.1469,
+     0.1534,
+     0.1593
+    ],
+    [
+     -0.0073,
+     -0.02,
+     -0.0198,
+     0.0057,
+     0.0097,
+     0.0258
+    ],
+    [
+     -0.0185,
+     -0.02,
+     -0.0198,
+     -0.0235,
+     -0.0143,
+     -0.0213
+    ],
+    [
+     -0.0185,
+     -0.02,
+     -0.0198,
+     -0.0235,
+     -0.0224,
+     -0.0213
+    ],
+    [
+     -0.0185,
+     -0.02,
+     -0.0369,
+     -0.0872,
+     -0.0918,
+     -0.0975
+    ],
+    [
+     -0.0563,
+     -0.0611,
+     -0.0833,
+     -0.0923,
+     -0.1253,
+     -0.1624
+    ]
+   ]
+  },
+  "prodN": {
+   "F": [
+    446,
+    451,
+    450,
+    270,
+    125,
+    56
+   ],
+   "D": [
+    206,
+    217,
+    217,
+    129,
+    60,
+    26
+   ]
+  },
+  "n0": {
+   "F": 7.646,
+   "D": 10.904
+  },
+  "curveShare": {
+   "form": "max(0, (pct - 0.5) / 0.5)^2",
+   "gamma": {
+    "F": -0.208,
+    "D": -0.46
+   },
+   "fit": {
+    "F": {
+     "raw": -0.208,
+     "se": 0.1942
+    },
+    "D": {
+     "raw": -0.46,
+     "se": 0.3335
+    }
+   }
+  },
+  "pedigree": {
+   "form": "bilinear over lnPickCentre (top-10 / 11-32 / 33+ and undrafted) x pctCentre (<p50 / p50-75 / p75+), flat outside; cell[prod][ped] (ln G, every k)",
+   "lnPickUndrafted": 5.7038,
+   "lnPickCentre": {
+    "F": [
+     1.3323,
+     2.953,
+     4.4369
+    ],
+    "D": [
+     1.5414,
+     2.9178,
+     4.4453
+    ]
+   },
+   "pctCentre": {
+    "F": [
+     0.2501,
+     0.6247,
+     0.8752
+    ],
+    "D": [
+     0.2504,
+     0.6254,
+     0.8746
+    ]
+   },
+   "cell": {
+    "F": [
+     [
+      0.0536,
+      -0.0037,
+      -0.0105
+     ],
+     [
+      0.0828,
+      0.0335,
+      -0.0838
+     ],
+     [
+      0.0195,
+      -0.0577,
+      0.0252
+     ]
+    ],
+    "D": [
+     [
+      -0.0357,
+      -0.0001,
+      0.0088
+     ],
+     [
+      0.0724,
+      -0.0103,
+      -0.0312
+     ],
+     [
+      0.0003,
+      -0.0006,
+      0.0001
+     ]
+    ]
+   },
+   "fit": {
+    "F": {
+     "raw": [
+      [
+       0.0847,
+       -0.0027,
+       -0.0188
+      ],
+      [
+       0.0899,
+       0.045,
+       -0.099
+      ],
+      [
+       0.0238,
+       -0.0727,
+       0.0343
+      ]
+     ],
+     "se": [
+      [
+       0.0586,
+       0.0331,
+       0.0247
+      ],
+      [
+       0.0369,
+       0.0358,
+       0.0319
+      ],
+      [
+       0.0195,
+       0.0284,
+       0.0293
+      ]
+     ],
+     "tau": 0.0382
+    },
+    "D": {
+     "raw": [
+      [
+       -0.0613,
+       -0.0088,
+       0.0204
+      ],
+      [
+       0.0912,
+       -0.0145,
+       -0.0379
+      ],
+      [
+       0.0054,
+       -0.0102,
+       0.0021
+      ]
+     ],
+     "se": [
+      [
+       0.0512,
+       0.0324,
+       0.0245
+      ],
+      [
+       0.0329,
+       0.0359,
+       0.0308
+      ],
+      [
+       0.0299,
+       0.0364,
+       0.0434
+      ]
+     ],
+     "tau": 0.0382
+    }
+   }
+  },
+  "meanCorr": {
+   "F": [
+    [
+     0.0473,
+     0.0503,
+     0.0539,
+     0.0661,
+     0.061,
+     0.0585
+    ],
+    [
+     0.0324,
+     0.0395,
+     0.0538,
+     0.0506,
+     0.063,
+     0.0582
+    ],
+    [
+     0.0271,
+     0.0387,
+     0.0461,
+     0.0468,
+     0.0436,
+     0.0426
+    ],
+    [
+     0.0198,
+     0.0228,
+     0.0292,
+     0.0279,
+     0.0308,
+     0.0316
+    ],
+    [
+     0.0112,
+     0.012,
+     0.0173,
+     0.0173,
+     0.0207,
+     0.0254
+    ],
+    [
+     0.006,
+     0.0113,
+     0.0119,
+     0.0159,
+     0.0113,
+     0.0134
+    ]
+   ],
+   "D": [
+    [
+     0.0247,
+     0.0349,
+     0.032,
+     0.0368,
+     0.0328,
+     0.0354
+    ],
+    [
+     0.018,
+     0.0257,
+     0.0283,
+     0.03,
+     0.0288,
+     0.0353
+    ],
+    [
+     0.0131,
+     0.0196,
+     0.0259,
+     0.0254,
+     0.0276,
+     0.0291
+    ],
+    [
+     0.0128,
+     0.0181,
+     0.0192,
+     0.0218,
+     0.021,
+     0.0217
+    ],
+    [
+     0.0091,
+     0.015,
+     0.0136,
+     0.0228,
+     0.0239,
+     0.027
+    ],
+    [
+     0.0081,
+     0.0165,
+     0.0215,
+     0.0141,
+     0.0277,
+     0.0277
+    ]
+   ]
+  },
+  "prodSd": {
+   "F": [
+    0.019,
+    0.016,
+    0.015,
+    0.018,
+    0.026,
+    0.037
+   ],
+   "D": [
+    0.022,
+    0.018,
+    0.017,
+    0.02,
+    0.028,
+    0.039
+   ]
+  },
+  "sigma": {
+   "F": [
+    {
+     "sigma0": 0.283,
+     "persistent": 0.082
+    },
+    {
+     "sigma0": 0.224,
+     "persistent": 0.114
+    },
+    {
+     "sigma0": 0.2,
+     "persistent": 0.096
+    },
+    {
+     "sigma0": 0.159,
+     "persistent": 0.074
+    },
+    {
+     "sigma0": 0.089,
+     "persistent": 0.071
+    },
+    {
+     "sigma0": 0.05,
+     "persistent": 0.062
+    }
+   ],
+   "D": [
+    {
+     "sigma0": 0.198,
+     "persistent": 0.073
+    },
+    {
+     "sigma0": 0.161,
+     "persistent": 0.084
+    },
+    {
+     "sigma0": 0.127,
+     "persistent": 0.087
+    },
+    {
+     "sigma0": 0.125,
+     "persistent": 0.067
+    },
+    {
+     "sigma0": 0.091,
+     "persistent": 0.086
+    },
+    {
+     "sigma0": 0.078,
+     "persistent": 0.091
+    }
+   ]
+  },
+  "arrival": {
+   "source": "Historical first NHL seasons (career GP <= 20 before, >= 30 GP prorated) at 18-23, 2008-26 (scratchpad/dynasty/av/rows.json): ln FP/G sd F 0.30-0.32, D 0.24-0.27 by pick band (F #1-2 0.36, #3-5 0.27; D #1-10 0.23-0.25), less the season noise of a 40-60 GP season (F ~0.15, D ~0.13) -> persistent level sd F 0.26, D 0.22.",
+   "sd": {
+    "F": 0.26,
+    "D": 0.22
+   }
+  }
+ },
+ "trajectory": {
+  "source": "aging.json phases.trajectoryModifiers: TOI up 1.068-1.093 x baseline, TOI down 0.936-0.975. Symmetric rule (audit 2026-09-25): -1 effective year when TOI/GP rose >= 90 s or FP/G beat the curve by > 12%, and FP/G did not fall; +1 when TOI/GP fell >= 90 s or FP/G trailed the curve by > 12%, and FP/G did not rise. Skaters 24+, last two seasons >= 40 GP each; never changes year 0. Not backtested in this form.",
+  "minAge": 24,
+  "minGp": 40,
+  "toiSec": 90,
+  "fpgExcess": 0.12,
+  "fp": {
+   "goals": 3,
+   "assists": 2.04,
+   "shots": 0.4,
+   "hits": 0.3,
+   "dBlocks": 0.3,
+   "dTakeaways": 0.35
+  }
+ },
+ "cutdown": {
+  "source": "Constitution 4.6/4.10: offseason cutdown one week before the league draft; the date is not published, assumed Sep 17 (window Aug 15 - Sep 24).",
+  "month": 9,
+  "day": 17,
+  "window": [
+   "08-15",
+   "09-24"
+  ]
+ },
+ "eligibility": {
+  "source": "Minors-eligible = skater < 100 NHL GP / goalie < 55 GP and age <= 24 (strict Fantrax reading: exactly 100 GP is not eligible).",
+  "skaterGp": 100,
+  "goalieGp": 55,
+  "age": 25
+ },
+ "K": {
+  "source": "Keeper-slot cost: 160th largest E[V_1] among players with P(eligible at the 2027 cutdown) < 0.5 (10 keepers x 16 teams), held constant (stationarity). Band = 128th..192nd. Reference run 41.6 (29.8-54.9). The keep index at a cutdown uses the expected level for the coming season (last level x aging drift x convergence), not the season shock drawn for it; the coming season role (regular / partial / out, starter / backup) counts as known in September. Keeper audit 2026-09-25 (D1): the keep index (a 4-season look-ahead with a games haircut, ~0.83 x V_1 at the line) is compared with a gate in its own units, the 160th largest keep index at the 2027 cutdown per simulated league (ungated pass, averaged; K.gate in dynasty.json), while K (the 160th E[V_1]) stays the cost charged per kept season: ~160 non-eligible keepers at the 2027 cutdown instead of ~143. (D2) goalies: no share floor in the keep index (goalieShareFloor 0), so a known backup is valued as a backup. Keep-index survival (audit 2026-09-25): each look-ahead season after the coming one is weighted by the odds he is still playing then (skaters: 1 - (1 - P(regular next)) x P(absent | not regular) at 30+, the retirement rule; goalies: P(present next) at 32+), so a 41-year-old no longer counts on four seasons. Team-conditional odds (keepers.ts): per path each team keeps its teamSlots (10) best keep indices > 0 among its non-eligible candidates, the rest of the live draft filled pick by pick by market rank; shown for rostered players next to the league-wide status (the value basis).",
+  "rank": 160,
+  "band": [
+   128,
+   192
+  ],
+  "fallback": 41.6,
+  "pass1Paths": 500,
+  "keepDelta": 0.75,
+  "lookahead": 4,
+  "shareFloor": 0.5,
+  "shareFactor": 0.95,
+  "shareIfOut": 0.3,
+  "goalieShareFloor": 0,
+  "teamSlots": 10
+ },
+ "modes": {
+  "source": "DV = sum_t w_t delta^t E[G_t], w_0 = w0, w_1 = w1 (1 unless set), w_t = 1 after. Balanced: the league-revealed discount 0.65-0.75. Win-now (audit 2026-09-25): delta 0.35 (was 0.55, which left 55% of a flat profile after 2026-27 and ranked Celebrini ahead of MacKinnon), so the order follows 2026-27 value above waivers (top 20 within 2 places on average). Long-term / rebuild (audit 2026-09-25): delta 0.95, w0 0.2, w1 0.5 (was delta 0.88, w0 0.6, whose top 100 was nearly the balanced one: 2026-31 still carried 58% of a flat profile, Ovechkin and Crosby ranked with top-10 21-year-olds); a rebuilding team gets little from 2026-27 and 2027-28, so a player whose value ends within two seasons falls out of the long-term top 150 and the top 100 is ~1.5 years younger than balanced (scratchpad/dynasty/fix2/modes2.cjs on the exported eG).",
+  "winNow": {
+   "delta": 0.35,
+   "w0": 1
+  },
+  "balanced": {
+   "delta": 0.75,
+   "w0": 1
+  },
+  "longTerm": {
+   "delta": 0.95,
+   "w0": 0.2,
+   "w1": 0.5
+  }
+ },
+ "market": {
+  "source": "Quantile anchoring for thin segments only: prospects by Fantrax Ros% (ADP tie-break), NHL-path goalies by ADP. NHL skaters never blended (redraft ADP biases against youth). Level-neutral (audit 2026-09-25): each segment is anchored on its own ladder (its members with a weight and a signal, ranked by the signal, mapped onto the same members' model values), so the layer reorders a segment without moving its level; fringe players (no model) are placed on the prospect ladder of their kind. Gap and market rank stay pool-wide (information). u = ln(DV + 10); |w (uK - uM)| <= ln 2.5 when w < 0.5. One posterior factor (balanced) scales eG, bands and every mode.",
+  "enabled": true,
+  "adpMissing": 285,
+  "offset": 10,
+  "capRatio": 2.5,
+  "weights": {
+   "established": 0,
+   "young_nhl": 0,
+   "veteran": 0,
+   "late": 0,
+   "G_est": 0.25,
+   "G_young": 0.25,
+   "prospect": 0.35,
+   "prospect_nhl": 0.25,
+   "prospect_slot": 0.5,
+   "G_prospect": 0.5,
+   "fringe": 1
+  }
+ },
+ "output": {
+  "source": "Unrostered players below this long-term DV are left out of dynasty.json.",
+  "minLongTerm": 0.5
+ }
+}

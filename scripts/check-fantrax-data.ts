@@ -2,7 +2,10 @@
  * CI guard for the committed Fantrax (/league) snapshot. Runs inside
  * `npm run check`, so a truncated or malformed sync can never ship.
  * Staleness only warns: the page refreshes rosters live and says how old
- * the baked data is.
+ * the baked data is. The dynasty values (public/fantrax/dynasty.json) are
+ * optional for the page, but when present they must pass the hard gates of
+ * src/lib/dynasty/checks.ts (schema, coverage, K, composition, Spearman
+ * sanity against ADP / Ros% / the 2027 keep score, the aging guard).
  * Run: npx tsx scripts/check-fantrax-data.ts
  */
 import { existsSync, readFileSync } from "fs";
@@ -14,8 +17,10 @@ import {
   SLOT_ORDER,
 } from "../src/lib/fantrax/config";
 import { POOL_GROUPS, type PoolSnapshot } from "../src/lib/fantrax/pool";
+import { dynastyGates } from "../src/lib/dynasty/checks";
 import { scoringShape } from "../src/lib/fantrax/scoring";
 import type {
+  DynastySnapshot,
   LeagueSnapshot,
   NhlIdsSnapshot,
   ScheduleSnapshot,
@@ -246,6 +251,43 @@ if (overrides) {
   }
 }
 
+// ---- dynasty values (optional file; gated when present)
+const dynastyPath = join(ROOT, "public", "fantrax", "dynasty.json");
+let dynastyNote = "no dynasty.json";
+if (!existsSync(dynastyPath)) {
+  warnings.push("public/fantrax/dynasty.json is missing — run npm run dynasty:build (the page falls back to season values)");
+} else if (values && state) {
+  let dynasty: DynastySnapshot | null = null;
+  try {
+    dynasty = JSON.parse(readFileSync(dynastyPath, "utf8")) as DynastySnapshot;
+  } catch (e) {
+    errors.push(`public/fantrax/dynasty.json is not valid JSON: ${e}`);
+  }
+  if (dynasty) {
+    const benchPath = join(ROOT, "src", "data", "dynasty", "benchmarks.json");
+    const bench = existsSync(benchPath)
+      ? (JSON.parse(readFileSync(benchPath, "utf8")) as { keepScore27: Record<string, number> })
+      : null;
+    const gates = dynastyGates({
+      snapshot: dynasty,
+      values: values.players,
+      rostered: new Set(Object.values(state.rosters).flat().map((r) => r.id)),
+      adp: state.adp,
+      ros: state.ros,
+      minorsEligible: new Set(state.minorsEligible),
+      keepScore27: bench?.keepScore27,
+    });
+    for (const e of gates.errors) errors.push(`dynasty: ${e}`);
+    for (const w of gates.warnings) warnings.push(`dynasty: ${w}`);
+    if (dynasty.inputs?.projectionsAt !== values.projectionsAt) {
+      warnings.push(`dynasty.json was built on projections ${dynasty.inputs?.projectionsAt} (values.json has ${values.projectionsAt}) — run npm run dynasty:build`);
+    }
+    const lagH = (Date.parse(state.fetchedAt) - Date.parse(dynasty.inputs?.stateFetchedAt ?? "")) / 3_600_000;
+    if (!(lagH < 48)) warnings.push(`dynasty.json is ${Number.isFinite(lagH) ? lagH.toFixed(0) : "?"} h older than state.json — run npm run dynasty:build`);
+    dynastyNote = `dynasty ${Object.keys(dynasty.players).length} players (K ${dynasty.params?.K?.value})`;
+  }
+}
+
 // /league is public: the baked files may name teams but never their owners.
 for (const [label, data] of Object.entries({ league, today, state, values, pool })) {
   if (data && /"owner/i.test(JSON.stringify(data))) errors.push(`${label} carries an owner field (owner names must not be published)`);
@@ -262,5 +304,5 @@ if (errors.length > 0) {
 }
 
 console.log(
-  `OK: Fantrax snapshot — ${Object.keys(values?.players ?? {}).length} value records, ${pool?.counts.total ?? 0} pool players (${pool?.counts.prospects ?? 0} prospects), ${schedule?.games.length ?? 0} games, synced ${state?.fetchedAt}`,
+  `OK: Fantrax snapshot — ${Object.keys(values?.players ?? {}).length} value records, ${pool?.counts.total ?? 0} pool players (${pool?.counts.prospects ?? 0} prospects), ${schedule?.games.length ?? 0} games, synced ${state?.fetchedAt}; ${dynastyNote}`,
 );
