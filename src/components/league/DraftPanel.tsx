@@ -13,7 +13,9 @@ import {
   pickLabel,
   positionsLabel,
 } from "@/lib/fantrax/league-copy";
+import type { PresetId } from "@/lib/fantrax/explorer";
 import type { RecentPick } from "@/lib/fantrax/live";
+import { ExploreLink } from "./ExploreLink";
 import { LeagueCard, PlayerName, type PlayerLookup } from "./LeagueCard";
 
 interface DraftPanelProps {
@@ -25,6 +27,10 @@ interface DraftPanelProps {
   /** When the live picks were read, ISO. */
   liveAt: string | null;
   nowMs: number | null;
+  /** Opens the player explorer on a preset (same page). */
+  onExplore?: (preset: PresetId) => void;
+  /** Query the explorer links keep (`?team=…`). */
+  exploreSearch?: string;
 }
 
 /** `Vincent Trocheck` → `Trocheck` (narrow VONA cards). */
@@ -35,7 +41,16 @@ const familyName = (n: string) => n.split(" ").slice(1).join(" ") || n;
  * picks, value over next available (VONA) by position and the best
  * available board. Picks refresh live from Fantrax in the browser.
  */
-export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: DraftPanelProps) {
+export function DraftPanel({
+  plan,
+  player,
+  teamName,
+  recent,
+  liveAt,
+  nowMs,
+  onExplore,
+  exploreSearch,
+}: DraftPanelProps) {
   const d = plan.draft;
   if (!d) return null;
   const { next, following } = d;
@@ -241,6 +256,14 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
       </div>
       <p className="mt-2 text-xs text-slate-500">
         {draftBoardNote(d.next?.pick ?? null, d.following?.pick ?? null, d.poolShare)}
+      </p>
+      <p className="mt-1 flex flex-wrap gap-x-5">
+        <ExploreLink preset="repechage" onExplore={onExplore} search={exploreSearch}>
+          Tous les disponibles dans l&apos;explorateur
+        </ExploreLink>
+        <ExploreLink preset="espoirs" onExplore={onExplore} search={exploreSearch}>
+          Espoirs disponibles
+        </ExploreLink>
       </p>
 
       {recent && recent.length > 0 ? (

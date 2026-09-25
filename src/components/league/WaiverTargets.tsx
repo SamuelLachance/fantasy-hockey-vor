@@ -1,15 +1,21 @@
 import { UserPlus } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
+import type { PresetId } from "@/lib/fantrax/explorer";
 import { claimsText, fmtNum, fmtSigned, plural } from "@/lib/fantrax/league-copy";
+import { ExploreLink } from "./ExploreLink";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface WaiverTargetsProps {
   plan: DailyPlan;
   player: PlayerLookup;
+  /** Opens the player explorer on a preset (same page). */
+  onExplore?: (preset: PresetId) => void;
+  /** Query the explorer link keeps (`?team=…`). */
+  exploreSearch?: string;
 }
 
 /** Free agents / waiver players ranked by points added over the rest of the period. */
-export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
+export function WaiverTargets({ plan, player, onExplore, exploreSearch }: WaiverTargetsProps) {
   const w = plan.waivers;
   return (
     <LeagueCard
@@ -57,6 +63,11 @@ export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
         {
           "Gain = points ajoutés à votre alignement optimal, jour par jour, d'ici la fin de la période de pointage (3 pts ou plus; les 3 meilleurs par position). Un joueur au ballottage ne joue qu'à partir du lendemain. Liste à jour à la dernière synchronisation."
         }
+      </p>
+      <p className="mt-1">
+        <ExploreLink preset="autonomes" onExplore={onExplore} search={exploreSearch}>
+          Tous les agents libres dans l&apos;explorateur
+        </ExploreLink>
       </p>
     </LeagueCard>
   );

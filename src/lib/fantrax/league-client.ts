@@ -11,11 +11,13 @@
  *
  * Storage access is wrapped: private windows and blocked site data throw.
  */
-import { fantraxDataHref } from "@/lib/site";
+import { fantraxDataHref, publicDataHref } from "@/lib/site";
 import type { FxeaDraftResults, FxeaTeamRosters } from "./api-types";
 import { fxeaGet } from "./client";
 import { FANTRAX_LEAGUE_ID, NHL_SEASON_ID } from "./config";
+import { parseDynasty, parseSnakeIndex, type DynastyIndex, type SnakeIndex } from "./explorer-extras";
 import { liveOverlay, type LiveOverlay } from "./live";
+import { isPoolSnapshot, type PoolSnapshot } from "./pool";
 import type {
   LeagueSnapshot,
   ScheduleSnapshot,
@@ -76,6 +78,75 @@ export function loadLeagueSnapshot(): Promise<LeagueSnapshotBundle> {
     bundlePromise = p;
   }
   return bundlePromise;
+}
+
+// ------------------------------------------------------------ explorer
+
+/** The explorer's optional enrichments (each null when not published). */
+export interface ExplorerExtras {
+  /** Null when `fantrax/dynasty.json` is not published (404) or unreadable. */
+  dynasty: DynastyIndex | null;
+  /** Null when neither `snake/index.json` nor `snake/fantrax.json` is published. */
+  snake: SnakeIndex | null;
+}
+
+/**
+ * One GET for a file that may not exist: 404, a non-JSON body (Pages' 404
+ * page), a network error or a timeout all mean "not published" → null.
+ */
+export async function fetchOptionalJson(url: string, timeoutMs = 15_000): Promise<unknown | null> {
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { signal: controller.signal, credentials: "omit" });
+    if (!res.ok) return null;
+    return (await res.json()) as unknown;
+  } catch {
+    return null;
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
+}
+
+let poolPromise: Promise<PoolSnapshot> | null = null;
+let extrasPromise: { [K in keyof ExplorerExtras]: Promise<ExplorerExtras[K]> } | null = null;
+
+/**
+ * The explorer's pool (required; retried like the snapshot). Fetched once
+ * per page view, on demand; the table renders as soon as it is in.
+ */
+export function loadExplorerPool(): Promise<PoolSnapshot> {
+  if (!poolPromise) {
+    const p = fetchSnapshotFile<unknown>("pool.json")
+      .then((pool) => {
+        if (!isPoolSnapshot(pool)) throw new Error("pool.json is malformed");
+        return pool;
+      })
+      .catch((err) => {
+        if (poolPromise === p) poolPromise = null;
+        throw err;
+      });
+    poolPromise = p;
+  }
+  return poolPromise;
+}
+
+/**
+ * The optional dynasty and Snake files, whose columns and filters only
+ * appear when present: one promise each, so each merges in as it arrives,
+ * and neither ever rejects (missing = null) nor holds up the pool. The full
+ * Snake index carries the projection and opinion counts; its compact
+ * Fantrax-keyed sibling is the fallback when only that one is published.
+ */
+export function loadExplorerExtras(): { [K in keyof ExplorerExtras]: Promise<ExplorerExtras[K]> } {
+  if (!extrasPromise) {
+    const dynasty = fetchOptionalJson(fantraxDataHref("dynasty.json")).then(parseDynasty, () => null);
+    const snake = fetchOptionalJson(publicDataHref("snake/index.json"))
+      .then(async (full) => parseSnakeIndex(full) ?? parseSnakeIndex(await fetchOptionalJson(publicDataHref("snake/fantrax.json"))))
+      .catch(() => null);
+    extrasPromise = { dynasty, snake };
+  }
+  return extrasPromise;
 }
 
 // ------------------------------------------------------------ live fxea

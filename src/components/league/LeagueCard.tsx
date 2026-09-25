@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import type { PlanPlayer } from "@/lib/fantrax/daily-plan";
 import type { SlotId } from "@/lib/fantrax/config";
 import { SLOT_LABEL, positionsLabel } from "@/lib/fantrax/league-copy";
@@ -15,6 +15,9 @@ interface LeagueCardProps {
   description?: ReactNode;
   headerExtra?: ReactNode;
   className?: string;
+  /** Lets script move focus to the heading (a link from another panel jumped here). */
+  focusableHeading?: boolean;
+  sectionRef?: Ref<HTMLElement>;
   children: ReactNode;
 }
 
@@ -27,12 +30,15 @@ export function LeagueCard({
   description,
   headerExtra,
   className = "",
+  focusableHeading = false,
+  sectionRef,
   children,
 }: LeagueCardProps) {
   const headingId = `${id}-titre`;
   return (
     <section
       id={id}
+      ref={sectionRef}
       aria-labelledby={headingId}
       className={`min-w-0 scroll-mt-4 rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-950/80 p-4 sm:p-6 ${className}`.trim()}
     >
@@ -41,7 +47,11 @@ export function LeagueCard({
           <span aria-hidden="true" className="inline-flex shrink-0">
             {icon}
           </span>
-          <h2 id={headingId} className="text-lg font-semibold text-white">
+          <h2
+            id={headingId}
+            tabIndex={focusableHeading ? -1 : undefined}
+            className="rounded-md text-lg font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
             {title}
           </h2>
         </div>
@@ -112,10 +122,11 @@ export function Tag({
   tone = "slate",
 }: {
   children: ReactNode;
-  tone?: "slate" | "amber" | "rose" | "emerald" | "violet";
+  tone?: "slate" | "amber" | "rose" | "emerald" | "violet" | "cyan";
 }) {
   const tones = {
     slate: "bg-white/5 text-slate-300 ring-white/10",
+    cyan: "bg-cyan-500/10 text-cyan-200 ring-cyan-500/30",
     amber: "bg-amber-500/10 text-amber-200 ring-amber-500/30",
     rose: "bg-rose-500/10 text-rose-200 ring-rose-500/30",
     emerald: "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30",

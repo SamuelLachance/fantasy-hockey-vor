@@ -1,11 +1,13 @@
 /**
  * Pulls the Captains Dynasty League (Fantrax) state and bakes the /league
  * snapshot: src/data/fantrax/{league,nhl-ids,today}.json and
- * public/fantrax/{values,state,schedule-20262027}.json.
+ * public/fantrax/{values,state,pool,schedule-20262027}.json.
  *
  * Read-only and unauthenticated: fxea (public Beta API) for settings,
  * rosters, draft, ids and ADP; two batched fxpa POSTs for caps, injury /
- * minors flags, Ros% and claims; NHL api-web for the schedule. Fantrax
+ * minors flags, Ros% and claims, plus one for the minors-eligible prospects
+ * the explorer pool lists; NHL api-web for the schedule and the picks of
+ * the recent entry drafts. Fantrax
  * requests are >= 1 s apart with a descriptive User-Agent. If fxpa fails the
  * sync still writes everything with `state.fxpaOk = false`; if fxea fails it
  * exits non-zero and leaves the committed snapshot untouched.
@@ -70,6 +72,7 @@ import {
   skaterValueFromProjection,
   takeawaysPerGame,
 } from "../src/lib/fantrax/points-model";
+import { buildPool, RECENT_NHL_DRAFTS, type PoolDraftPick, type PoolFlags } from "../src/lib/fantrax/pool";
 import { parseScoringTable, scoringShape } from "../src/lib/fantrax/scoring";
 import type {
   CapUsage,
@@ -93,6 +96,8 @@ const PATHS = {
   overrides: join(ROOT, "src", "data", "fantrax", "id-overrides.json"),
   values: join(ROOT, "public", "fantrax", "values.json"),
   state: join(ROOT, "public", "fantrax", "state.json"),
+  pool: join(ROOT, "public", "fantrax", "pool.json"),
+  draftRegistry: join(ROOT, "src", "data", "draft-registry.json"),
   schedule: join(ROOT, "public", "fantrax", `schedule-${NHL_SEASON_ID}.json`),
   players: join(ROOT, "src", "data", "players.json"),
   profiles: join(ROOT, "src", "data", "player-profiles.json"),
@@ -109,6 +114,12 @@ const SCHEDULE_MAX_AGE_DAYS = 7;
 /** Available players pulled from fxpa for flags / Ros% (sorted by Fantrax rank). */
 const AVAILABLE_SKATERS = 1500;
 const AVAILABLE_GOALIES = 300;
+/**
+ * Minors-eligible available players (prospects) for the explorer pool:
+ * about 2,150 in September 2026. Their flags only feed pool.json, never
+ * state.json, so the planner's draft and waiver pools stay as they were.
+ */
+const AVAILABLE_PROSPECTS = 3000;
 /** Only these icons change a decision; news icons (8/9/14) are dropped. */
 const KEPT_ICONS = new Set<string>(Object.values(FANTRAX_ICON));
 
@@ -228,6 +239,62 @@ function weekGames(week: NhlScheduleWeek): Game[] {
       out.push([g.startTimeUTC, normalizeTeamAbbrev(g.awayTeam.abbrev), normalizeTeamAbbrev(g.homeTeam.abbrev)]);
     }
   }
+  return out;
+}
+
+// ------------------------------------------------------------ NHL draft picks
+
+interface NhlDraftPicksResponse {
+  picks?: Array<{
+    overallPick: number;
+    teamAbbrev: string;
+    firstName?: { default?: string };
+    lastName?: { default?: string };
+  }>;
+}
+
+/** A finished entry draft has about 224 picks; fewer means not held yet. */
+const MIN_DRAFT_PICKS = 150;
+
+/**
+ * Every pick of the last `RECENT_NHL_DRAFTS` entry drafts, by year:
+ * draft-registry.json keeps one pick per name (the earliest), so a recent
+ * draftee who shares an older player's name has no line there. Years that
+ * fail to load fall back to the registry's picks. The sync year counts once
+ * its draft is held (June).
+ */
+async function recentDraftPicks(registry: PoolDraftPick[], syncYear: number): Promise<PoolDraftPick[]> {
+  const load = async (year: number): Promise<PoolDraftPick[] | null> => {
+    try {
+      const d = await fetchJson<NhlDraftPicksResponse>(`https://api-web.nhle.com/v1/draft/picks/${year}/all`, 3);
+      const picks = (d.picks ?? [])
+        .filter((p) => p.firstName?.default && p.lastName?.default && Number.isFinite(p.overallPick))
+        .map((p) => ({
+          year,
+          overallPick: p.overallPick,
+          team: p.teamAbbrev,
+          firstName: p.firstName!.default!,
+          lastName: p.lastName!.default!,
+        }));
+      return picks.length >= MIN_DRAFT_PICKS ? picks : null;
+    } catch (e) {
+      console.warn(`WARN: NHL draft ${year} picks unavailable (registry used): ${e instanceof Error ? e.message : String(e)}`);
+      return null;
+    }
+  };
+  const current = await load(syncYear);
+  const last = current ? syncYear : syncYear - 1;
+  const first = last - RECENT_NHL_DRAFTS + 1;
+  const fetched = new Map<number, PoolDraftPick[]>();
+  if (current) fetched.set(syncYear, current);
+  for (let y = first; y <= last; y++) {
+    if (fetched.has(y)) continue;
+    const picks = await load(y);
+    if (picks) fetched.set(y, picks);
+  }
+  const out = registry.filter((p) => !fetched.has(p.year) && p.year <= last);
+  for (const picks of fetched.values()) out.push(...picks);
+  console.log(`NHL drafts ${first}-${last}: ${[...fetched.values()].reduce((n, p) => n + p.length, 0)} picks fetched (${[...fetched.keys()].sort().join(", ") || "none"})`);
   return out;
 }
 
@@ -380,6 +447,32 @@ async function main() {
     fxpaOk = false;
     fxpaError = e instanceof Error ? e.message : String(e);
     console.warn(`WARN: fxpa unavailable, degrading (no caps / icons / Ros%): ${fxpaError}`);
+  }
+  // Prospects' flags (age, Ros%, icons) for the explorer pool only. Optional:
+  // without them the pool still lists every prospect, with fewer details.
+  const prospectFlags = new Map<string, PlayerFlagsRow>();
+  if (fxpaOk) {
+    try {
+      const [d] = await fxpaPost(
+        [
+          {
+            method: "getPlayerStats",
+            data: {
+              leagueId: LEAGUE,
+              statusOrTeamFilter: "MINOR_FANTASY_AVAILABLE",
+              positionOrGroup: "ALL",
+              maxResultsPerPage: String(AVAILABLE_PROSPECTS),
+              pageNumber: "1",
+            },
+          },
+        ],
+        req,
+      );
+      for (const [id, row] of parsePlayerStats(d as FxpaPlayerStatsData | null, false)) prospectFlags.set(id, row);
+      console.log(`fxpa: ${prospectFlags.size} minors-eligible available players (explorer pool)`);
+    } catch (e) {
+      console.warn(`WARN: fxpa prospects unavailable (pool keeps fewer details): ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   // ---- league.json
@@ -575,6 +668,31 @@ async function main() {
     })),
   };
 
+  // ---- pool.json (explorer: projected players + prospects)
+  const registry = readJson<{ byName: Record<string, PoolDraftPick> }>(PATHS.draftRegistry);
+  if (!registry) console.warn("WARN: draft-registry.json missing: the pool only has the recent NHL drafts");
+  const draftPicks = await recentDraftPicks(Object.values(registry?.byName ?? {}), new Date(now).getUTCFullYear());
+  const poolFlags = new Map<string, PoolFlags>(prospectFlags);
+  for (const [id, f] of flags) poolFlags.set(id, f);
+  // Same membership as state.ros (the draft and waiver helpers' "listed by Fantrax").
+  const listed = fxpaOk ? new Set([...flags].filter(([, f]) => f.ros !== undefined).map(([id]) => id)) : null;
+  const pool = buildPool({
+    fetchedAt: nowIso,
+    season: dataset.season,
+    projectionsAt: dataset.generatedAt,
+    leaguePlayers: info.playerInfo,
+    identity: Object.fromEntries(fxPool.map((f) => [f.fantraxId, { name: f.name, team: f.team }])),
+    rosters: stateRosters,
+    values: players,
+    flags: poolFlags,
+    listed,
+    adp,
+    nhlIds: nhlIds.ids,
+    bios: new Map(profiles.map((p) => [p.id, { birthDate: p.bio?.birthDate, draft: p.draft }] as const)),
+    draftPicks,
+    teamAlias: normalizeTeamAbbrev,
+  });
+
   // ---- schedule
   const schedule = await syncSchedule(info.startDate, now);
   console.log(`schedule: ${schedule.games.length} regular-season games (full rebuild ${schedule.fetchedAt})`);
@@ -587,6 +705,7 @@ async function main() {
   writeFileAtomic(PATHS.nhlIds, `${JSON.stringify(nhlIds)}\n`);
   writeFileAtomic(PATHS.values, `${JSON.stringify(values)}\n`);
   writeFileAtomic(PATHS.state, `${JSON.stringify(state)}\n`);
+  writeFileAtomic(PATHS.pool, `${JSON.stringify(pool)}\n`);
   writeFileAtomic(PATHS.schedule, `${JSON.stringify(schedule)}\n`);
   writeFileAtomic(PATHS.today, `${JSON.stringify(plan)}\n`);
 
@@ -594,6 +713,9 @@ async function main() {
   const activeMatched = activeIds.filter((id) => players[id]?.src === "proj").length;
   console.log(
     `values: ${Object.keys(players).length} players (${priorCount} priors); ACTIVE matched ${activeMatched}/${activeIds.length}; ids ${JSON.stringify(methods)}`,
+  );
+  console.log(
+    `pool: ${pool.counts.total} players (${pool.counts.projected} projected, ${pool.counts.prospects} prospects, ${pool.counts.other} other; NHL drafts ${pool.recentDrafts.join("-")})`,
   );
   console.log(`OK: league:sync wrote snapshot (fxpaOk=${fxpaOk})`);
 }
