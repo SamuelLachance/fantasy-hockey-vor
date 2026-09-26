@@ -330,6 +330,26 @@ function columns(board: DraftBoard): Col[] {
       group: GROUP.rank,
       sort: { value: (r) => r.vor, defaultDir: "desc" },
     },
+    // Right after the ranking, not past the category columns where the
+    // table's scroll box cut it off.
+    {
+      key: "verdict",
+      label: "Snake",
+      title: "Verdict de Simon « Snake » Boisvert",
+      align: "left",
+      group: GROUP.snake,
+      // Higher = more positive, so « desc » puts « très positif » first.
+      sort: {
+        value: (r) => {
+          const rank = verdictRank(r.snake?.verdict);
+          return rank === null ? null : -rank;
+        },
+        defaultDir: "desc",
+        label: "Verdict de Snake",
+      },
+      needs: (c) => c.snake,
+      readsExtras: "snake",
+    },
     {
       key: "valeur",
       label: "Valeur",
@@ -388,24 +408,6 @@ function columns(board: DraftBoard): Col[] {
       align: "right",
       group: GROUP.profile,
       sort: { value: (r) => r.age, defaultDir: "asc" },
-    },
-    {
-      key: "verdict",
-      label: "Snake",
-      title: "Verdict de Simon « Snake » Boisvert",
-      align: "left",
-      group: GROUP.snake,
-      // Higher = more positive, so « desc » puts « très positif » first.
-      sort: {
-        value: (r) => {
-          const rank = verdictRank(r.snake?.verdict);
-          return rank === null ? null : -rank;
-        },
-        defaultDir: "desc",
-        label: "Verdict de Snake",
-      },
-      needs: (c) => c.snake,
-      readsExtras: "snake",
     },
     {
       key: "tendance",

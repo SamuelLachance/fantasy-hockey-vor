@@ -645,8 +645,11 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
 
 // ------------------------------------------------------------ columns
 
+// Canonical (display) order. Snake's verdict comes right after the name and
+// status: at the far right the table's scroll box cut it off.
 export const COLUMN_KEYS = [
   "statut",
+  "verdict",
   "valeur",
   "vona",
   "dispo",
@@ -664,7 +667,6 @@ export const COLUMN_KEYS = [
   "conservation",
   "fourchette",
   "conseil",
-  "verdict",
   "tendance",
   "synthese",
   "opinions",
@@ -843,8 +845,9 @@ function autoHide(f: FantraxFilters): ColumnKey[] {
 export type PresetId = "tous" | "repechage" | "dynastie" | "espoirs" | "autonomes" | "ballottage-ww" | "equipe";
 
 /** Season points (VONA, odds) first, the dynasty value right beside them. */
-const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["valeur", "vona", "dispo", "dyn", "fp", "age", "ros", "adp", "synthese"];
+const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "fp", "age", "ros", "adp"];
 const DYNASTIE_COLUMNS: readonly ColumnKey[] = [
+  "verdict",
   "dispo",
   "dyn",
   "age",

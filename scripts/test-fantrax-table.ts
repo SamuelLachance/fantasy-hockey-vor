@@ -724,16 +724,16 @@ eq(
   "the resolved view replaces ?vue=",
 );
 eq(visibleColumns(DEFAULT_VIEW, { ...noExtras, draft: false }).join(), "statut,valeur,fp,fpm,age,ros,adp,lnh", "no draft: no VONA / odds");
-eq(visibleColumns(DEFAULT_VIEW, withExtras).join(), "statut,valeur,vona,dispo,dyn,fp,fpm,age,ros,adp,lnh,phase,verdict", "extras appear");
+eq(visibleColumns(DEFAULT_VIEW, withExtras).join(), "statut,verdict,valeur,vona,dispo,dyn,fp,fpm,age,ros,adp,lnh,phase", "extras appear");
 eq(visibleColumns(presetView(espoirsPreset, DEFAULT_VIEW), noExtras).join(), "age,ros,adp,lnh", "available prospects without dynasty data: age, Ros%, ADP, NHL draft");
 eq(
   visibleColumns(presetView(presetOf(withExtras, "espoirs"), DEFAULT_VIEW), withExtras).join(),
-  "dyn,age,ros,adp,lnh,phase,pnhl,eta,conservation,fourchette,verdict",
+  "verdict,dyn,age,ros,adp,lnh,phase,pnhl,eta,conservation,fourchette",
   "prospects with dynasty data: value, phase, P(NHL), arrival, cutdown, band",
 );
 eq(
   visibleColumns(presetView(presetOf(withExtras, "dynastie"), DEFAULT_VIEW), withExtras).join(),
-  "dispo,dyn,age,ros,adp,phase,evol,pnhl,eta,conservation,fourchette",
+  "verdict,dispo,dyn,age,ros,adp,phase,evol,pnhl,eta,conservation,fourchette",
   "the dynasty chip's own columns",
 );
 eq(visibleColumns({ ...presetView(espoirsPreset, DEFAULT_VIEW), cols: ["valeur", "age"] }, noExtras).join(), "valeur,age", "explicit columns win");
@@ -904,13 +904,13 @@ eq(counterText(0, 1, 1, { label: valeurLabel, dir: "desc" }), "Aucun joueur ne c
   eq(visibleColumnsOf(FANTRAX_TABLE, baseView(team), team, noExtras).join(), "statut,valeur,fpm,age", "Mon équipe columns");
   eq(
     visibleColumnsOf(FANTRAX_TABLE, baseView(team), team, withExtras).join(),
-    "statut,valeur,dyn,fpm,age,phase,evol,conservation,conseil,verdict",
+    "statut,verdict,valeur,dyn,fpm,age,phase,evol,conservation,conseil",
     "Mon équipe columns with dynasty and Snake data",
   );
   const teamDyn = tableBase(FANTRAX_TABLE, "equipe", withExtras, 50);
   eq(teamDyn.sort, { key: "dyn", dir: "desc" }, "Mon équipe: ranked by dynasty value");
   const repView = applyPreset(DEFAULT_VIEW, presetOf(withExtras, "repechage"), TOUS);
-  eq(visibleColumnsOf(FANTRAX_TABLE, repView, TOUS, withExtras).join(), "valeur,vona,dispo,dyn,fp,age,ros,adp,synthese", "the draft chip: season value, VONA and odds, the dynasty value beside them");
+  eq(visibleColumnsOf(FANTRAX_TABLE, repView, TOUS, withExtras).join(), "verdict,valeur,vona,dispo,dyn,fp,age,ros,adp", "the draft chip: Snake first, then season value, VONA and odds, the dynasty value beside them");
   eq(applyPreset(DEFAULT_VIEW, presetOf(noExtras, "autonomes"), TOUS).cols, null, "a chip with the tab's columns keeps them automatic");
 }
 
