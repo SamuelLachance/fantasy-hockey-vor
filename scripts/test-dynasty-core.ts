@@ -79,10 +79,14 @@ const ctx = (over: Partial<SimContext> = {}): SimContext => ({
   assert(realized(params, "F", 3) < realized(params, "F", 3.1), "realized F increasing in x");
   assert(realized(params, "D", 2.5) < realized(params, "D", 2.6), "realized D increasing in x");
   assert(realized(params, "G", 4.1) === 4.1, "goalies: identity");
-  assert(near(repl.F, 2.135, 0.001), `R_F = 2.135 (got ${repl.F})`);
-  assert(near(repl.D, 2.294, 0.001), `R_D = 2.294 (got ${repl.D})`);
-  // −1.051 + 1.055 × 4.801 = 4.0141 (the spec's "4.013" is a rounding slip)
-  assert(near(repl.offRef, 4.014, 0.001), `offRef = 4.014 (got ${repl.offRef})`);
+  // Scale refit on the per-segment recalibrated projections (2026-09-26):
+  // −0.127 + 1.061 × 2.18 and −0.383 + 1.175 × 2.28 (2026-09-25 fit: 2.135 /
+  // 2.294; the forward waiver line rose once young forwards near it were no
+  // longer projected ~20% low).
+  assert(near(repl.F, 2.186, 0.001), `R_F = 2.186 (got ${repl.F})`);
+  assert(near(repl.D, 2.296, 0.001), `R_D = 2.296 (got ${repl.D})`);
+  // −0.127 + 1.061 × 3.933 = 4.0459 (2026-09-25: 4.014)
+  assert(near(repl.offRef, 4.046, 0.001), `offRef = 4.046 (got ${repl.offRef})`);
   // 128 per 82-game season-slot, scaled to the 84-game schedule
   assert(near(repl.Gseason, (128 * 84) / 82, 1e-9), `goalie replacement 128 × 84/82 per season-slot (got ${repl.Gseason})`);
   assert(groupOf("D,Skt", false) === "D", "D group");

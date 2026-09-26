@@ -1,6 +1,7 @@
 /**
  * Post-hoc GP recalibration on committed players.json (no ML regenerate),
- * then full VOR + Edge republish. Idempotent: raw model GP is preserved in
+ * then the rate calibration (when the board carries raw model rates) and a
+ * full VOR + Edge republish. Idempotent: raw model GP is preserved in
  * modelGamesPlayed and every run recalibrates from it.
  * Run: npx tsx scripts/recalibrate-gp.ts
  */
@@ -17,7 +18,16 @@ import {
 import { filterActivePlayers } from "../src/lib/inactive-players";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import type { PlayerProfile } from "../src/lib/profile-types";
-import { splitPublishedPlayer } from "../src/lib/publish-players";
+import { loadRateReference } from "../src/lib/ml/rate-reference";
+import {
+  applyRateCalibration,
+  rateCalibrationMeta,
+} from "../src/lib/rate-calibration";
+import {
+  detailCarryFields,
+  splitPublishedPlayer,
+  type PlayerDetailRecord,
+} from "../src/lib/publish-players";
 import { applyVor } from "../src/lib/vor";
 import type {
   Category,
@@ -37,12 +47,7 @@ const PROFILES = join(process.cwd(), "src", "data", "player-profiles.json");
 const data = JSON.parse(readFileSync(PLAYERS, "utf8")) as ProjectionsDataset;
 const details = JSON.parse(readFileSync(DETAILS, "utf8")) as Record<
   string,
-  {
-    reasoning?: string;
-    profileSummary?: string;
-    perStatSigma?: Partial<Record<Category, number>>;
-    marketEdge?: Partial<Record<Category, number>>;
-  }
+  Partial<PlayerDetailRecord>
 >;
 const profileFile = JSON.parse(readFileSync(PROFILES, "utf8")) as {
   profiles: Record<string, PlayerProfile>;
@@ -111,7 +116,7 @@ for (let i = 0; i < data.players.length; i++) {
   if (prev > 0 && next !== prev) sigmaRatio.set(data.players[i].id, next / prev);
 }
 
-const raw = filterActivePlayers(
+const hydrated = filterActivePlayers(
   calibrated.map((p) => {
     const {
       categoryZScores: _z,
@@ -130,10 +135,21 @@ const raw = filterActivePlayers(
       ...rest,
       reasoning: d?.reasoning,
       profileSummary: d?.profileSummary,
-      ...(d?.marketEdge ? { marketEdge: d.marketEdge } : {}),
+      ...detailCarryFields(d),
     };
   }),
 );
+
+// Same order as generate: GP calibration, then the rate calibration, which
+// recomputes the totals of every skater carrying raw model rates at the new
+// games (a board without them keeps the GP-scaled totals).
+const rates = hydrated.some((p) => p.modelRates)
+  ? applyRateCalibration(hydrated, { reference: loadRateReference().reference })
+  : null;
+const raw = rates ? rates.players : hydrated;
+if (rates) {
+  console.log(`Rate calibration re-applied to ${rates.calibrated} skaters`);
+}
 
 const {
   players: ranked,
@@ -186,6 +202,16 @@ const out: ProjectionsDataset = {
     })),
     pairCount,
   },
+  ...(rates
+    ? {
+        rateCalibration: rateCalibrationMeta(
+          rates.params,
+          rates.calibrated,
+          undefined,
+          data.rateCalibration?.bootstrap,
+        ),
+      }
+    : {}),
   categoryWeights,
   replacementLevels,
   players: slimPlayers,

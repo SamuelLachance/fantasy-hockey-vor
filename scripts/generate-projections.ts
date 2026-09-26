@@ -44,12 +44,25 @@ import {
   buildGoalieRoleMap,
   projectedGoalieGames,
 } from "../src/lib/projection-gp";
+import { loadRateReference } from "../src/lib/ml/rate-reference";
+import {
+  applyRateCalibration,
+  driftShare,
+  meanShiftPer82,
+  RATE_SEGMENTS,
+  rateCalibrationMeta,
+  roundRates,
+} from "../src/lib/rate-calibration";
 import {
   applyYahooPositionsToPlayer,
   loadYahooPositions,
   yahooPositionsSummary,
 } from "../src/lib/yahoo-positions";
-import type { Category, PlayerProjection } from "../src/lib/types";
+import type {
+  Category,
+  PlayerProjection,
+  SkaterCategory,
+} from "../src/lib/types";
 
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
 /** Hard rebuild after this; warn-but-reuse between soft and hard (matches site stale banner). */
@@ -112,6 +125,18 @@ function buildFromProfile(
     const projection = profile.isGoalie
       ? clampGoalieProjection(v2.projection as never, v2.gamesPlayed)
       : clampSkaterProjection(v2.projection as never, v2.gamesPlayed, profile.position);
+    // Raw model state (uncapped per-game rates and edges): the rate
+    // calibration below, and every later `rates:recalibrate`, starts from it.
+    const modelState =
+      "perGame" in v2 && v2.perGame && v2.marketEdge
+        ? {
+            modelRates: roundRates(v2.perGame as Partial<Record<SkaterCategory, number>>),
+            modelMarketEdge: roundRates(
+              v2.marketEdge as Partial<Record<SkaterCategory, number>>,
+            ),
+            ...("segment" in v2 ? { modelSegment: v2.segment } : {}),
+          }
+        : {};
     return {
       id: profile.id,
       name: profile.name,
@@ -128,6 +153,7 @@ function buildFromProfile(
       ...("marketEdge" in v2 && v2.marketEdge
         ? { marketEdge: v2.marketEdge as Partial<Record<Category, number>> }
         : {}),
+      ...modelState,
       ...("uncertainty" in v2 && v2.uncertainty
         ? { uncertainty: v2.uncertainty }
         : {}),
@@ -364,7 +390,7 @@ async function main() {
   console.log(
     `GP calibration: ${gpCurve.curve.length} isotonic blocks from ${gpCurve.pairCount} pairs`,
   );
-  const activePool = tandemAdjusted.map((p) => {
+  const gpCalibrated = tandemAdjusted.map((p) => {
     if (p.isGoalie) return { ...p, modelGamesPlayed: p.gamesPlayed };
     const newGp = calibratedSkaterGp(p, profilesById.get(p.id), gpCurve.curve);
     if (p.gamesPlayed <= 0 || newGp === p.gamesPlayed) {
@@ -378,6 +404,41 @@ async function main() {
       projection: scaleSkaterProjection(p.projection as never, ratio),
     };
   });
+
+  // Post-hoc rate calibration: the edge of the residual models should rank
+  // players against the synthetic market, not move the league's level. Per
+  // meta segment (young / veteran × F / D) and stat, move the edge's fit
+  // against the market onto a healthy board's of the same bundle
+  // (src/data/ml/rate-reference.json), then recompute the totals from the
+  // raw rates at the calibrated games. RATE_CALIBRATION=0 publishes the raw
+  // model (inspection only).
+  let rateCalibration: ReturnType<typeof rateCalibrationMeta> | undefined;
+  let activePool = gpCalibrated;
+  if (process.env.RATE_CALIBRATION !== "0") {
+    const { reference, note } = loadRateReference();
+    console.log(`Rate calibration target: ${note}`);
+    const rates = applyRateCalibration(gpCalibrated, { reference });
+    activePool = rates.players;
+    rateCalibration = rateCalibrationMeta(rates.params, rates.calibrated);
+    const worst = driftShare(gpCalibrated, rates.params);
+    console.log(`Rate calibration: ${rates.calibrated} skaters; mean shift removed per 82 GP:`);
+    for (const seg of RATE_SEGMENTS) {
+      const key = rates.params.keyOf[seg];
+      const s = (c: "goals" | "assists" | "shots" | "powerplayPoints") =>
+        meanShiftPer82(gpCalibrated, rates.params, key, c).toFixed(1);
+      console.log(
+        `  ${seg} (fit ${key}, n ${rates.params.poolSize[key]}): goals ${s("goals")}, assists ${s("assists")}, PPP ${s("powerplayPoints")}, shots ${s("shots")}`,
+      );
+    }
+    if (worst.share > 0.15) {
+      // A healthy regeneration moves the level by a few percent at most. A
+      // large shift means the inference dataset no longer matches what the
+      // bundle was trained on (the 2026-07-30 board: +50% forward goals).
+      console.warn(
+        `WARN: residual-model level drift ${(worst.share * 100).toFixed(0)}% on ${worst.key} ${worst.cat} — calibrated away, but rebuild dataset.json / retrain before trusting the edge`,
+      );
+    }
+  }
 
   const {
     players: ranked,
@@ -465,6 +526,7 @@ async function main() {
       })),
       pairCount: gpCurve.pairCount,
     },
+    ...(rateCalibration ? { rateCalibration } : {}),
     projectionEngine: engine,
     aiModel: aiCache?.model,
     positionSource: yahooPositions ? "yahoo-fantasy" : "nhl-fallback",

@@ -23,6 +23,9 @@ type ExistingDetail = {
     Record<string, { sigma?: number; modelSpread?: number; aleatoric?: number }>
   >;
   marketEdge?: PlayerProjection["marketEdge"];
+  modelRates?: PlayerProjection["modelRates"];
+  modelMarketEdge?: PlayerProjection["modelMarketEdge"];
+  modelSegment?: PlayerProjection["modelSegment"];
 };
 
 function existingPerStat(
@@ -75,6 +78,9 @@ for (const p of filterActivePlayers(data.players)) {
     reasoning: p.reasoning ?? prev?.reasoning,
     profileSummary: p.profileSummary ?? prev?.profileSummary,
     marketEdge: p.marketEdge ?? prev?.marketEdge,
+    modelRates: p.modelRates ?? prev?.modelRates,
+    modelMarketEdge: p.modelMarketEdge ?? prev?.modelMarketEdge,
+    modelSegment: p.modelSegment ?? prev?.modelSegment,
     uncertainty: p.uncertainty
       ? {
           ...p.uncertainty,

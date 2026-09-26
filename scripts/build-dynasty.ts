@@ -69,7 +69,10 @@ const SOFT_BANDS: Array<{ n: string; bal?: [number, number]; lt?: [number, numbe
   { n: "Nathan MacKinnon", bal: [1, 3], lt: [1, 6] },
   { n: "Connor McDavid", bal: [1, 4], lt: [1, 6] },
   { n: "Connor Bedard", bal: [1, 10], lt: [1, 6] },
-  { n: "Matthew Schaefer", bal: [35, 75], lt: [12, 40] },
+  // bal [35, 75] was set on the board that capped his goals at 0.18 per game
+  // and projected young D ~20% low on assists (pooled F / D rate
+  // calibration); per-segment calibration (2026-09-26): 20 G, 37 A, #32.
+  { n: "Matthew Schaefer", bal: [25, 75], lt: [12, 40] },
   { n: "Matvei Michkov", bal: [80, 180], lt: [40, 120] },
   { n: "Ivan Demidov", bal: [55, 140], lt: [20, 90] },
   { n: "Alex Ovechkin", bal: [50, 100], lt: [140, 400] },
@@ -91,7 +94,9 @@ const SOFT_BANDS: Array<{ n: string; bal?: [number, number]; lt?: [number, numbe
   { n: "Igor Shesterkin", bal: [20, 45] },
   { n: "Karel Vejmelka", bal: [70, 130] },
   { n: "Sergei Bobrovsky", bal: [90, 150] },
-  { n: "Cale Makar", bal: [20, 45] },
+  // [20, 45] was set on the board whose D goals were capped at 0.18 per game
+  // (Makar 12 goals); uncapped by rates:recalibrate (2026-09-26) he projects 19.
+  { n: "Cale Makar", bal: [8, 30] },
   { n: "Gabriel Landeskog", bal: [85, 140] },
   { n: "Justin Sourdif", maxBal: 25 },
   { n: "Nikita Chibrikov", maxBal: 3 },

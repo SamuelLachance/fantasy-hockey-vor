@@ -13,13 +13,27 @@ interface SkaterRateLimits {
   faceoffWins: number;
 }
 
-const SKATER_RATE_LIMITS: Record<Exclude<Position, "G">, SkaterRateLimits> = {
+/**
+ * Per-game ceilings that only catch broken model output (a runaway head, a
+ * unit bug): they sit above the best realized seasons, never inside the
+ * range real players reach. The D goals limit used to be 0.18 (14.8 per 82
+ * games) while 11 to 16 defensemen beat it every season since 2023-24: it
+ * clipped Makar (model rate 0.32), Werenski, Bouchard, Dahlin, Schaefer,
+ * Chychrun... to 12-14 goals. Highest D goals rate since 2008-09: 0.456
+ * (Mike Green), 99.9th percentile 0.354. D PPP (0.45), D shots (3.5, bound
+ * Werenski) and hits (5.5 / 4.5, bound Colton Dach and Luke Schenn) were
+ * raised the same way. src/lib/rate-calibration.ts keeps the old table to
+ * find the cells they clipped on boards generated before.
+ */
+export const SKATER_RATE_LIMITS: Readonly<
+  Record<Exclude<Position, "G">, Readonly<SkaterRateLimits>>
+> = {
   C: {
     goals: 1.35,
     assists: 1.65,
     shots: 6.5,
     blocks: 2,
-    hits: 5.5,
+    hits: 6,
     powerplayPoints: 1.3,
     penaltyMinutes: 4.5,
     faceoffWins: 18,
@@ -29,7 +43,7 @@ const SKATER_RATE_LIMITS: Record<Exclude<Position, "G">, SkaterRateLimits> = {
     assists: 1.65,
     shots: 6.5,
     blocks: 1.6,
-    hits: 5.5,
+    hits: 6,
     powerplayPoints: 1.3,
     penaltyMinutes: 4.5,
     faceoffWins: 3,
@@ -39,18 +53,18 @@ const SKATER_RATE_LIMITS: Record<Exclude<Position, "G">, SkaterRateLimits> = {
     assists: 1.65,
     shots: 6.5,
     blocks: 1.6,
-    hits: 5.5,
+    hits: 6,
     powerplayPoints: 1.3,
     penaltyMinutes: 4.5,
     faceoffWins: 3,
   },
   D: {
-    goals: 0.18,
+    goals: 0.45,
     assists: 1.1,
-    shots: 3.5,
+    shots: 4.3,
     blocks: 3.2,
-    hits: 4.5,
-    powerplayPoints: 0.45,
+    hits: 5.2,
+    powerplayPoints: 0.65,
     penaltyMinutes: 4.5,
     faceoffWins: 0,
   },

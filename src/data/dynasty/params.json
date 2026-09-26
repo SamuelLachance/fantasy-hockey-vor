@@ -5,24 +5,24 @@
  "T": 12,
  "source": "Frozen from the 2026-09-25 dynasty research (scratchpad/dynasty: aging.json, prospects.json, league-structure.json, design_sim/scale_out.json, spec_check/proto3.cjs + sim3.cjs). Spec: scratchpad/dynasty/SPEC.md. Refit when 2026-27 is complete.",
  "scale": {
-  "source": "OLS realized 2025-26 FP/G (league scoring, MoneyPuck) on the 2026-27 projection (values.json per-game FP), players with >= 40 GP in both (design_sim/scale.cjs). F x = off; D x = off + max(0, dx). Goalies: identity on gE per start (projected 4.09 vs realized 4.00).",
+  "source": "OLS realized 2025-26 FP/G (league scoring, MoneyPuck) on the 2026-27 projection (values.json per-game FP), players with >= 40 GP in both (design_sim/scale.cjs). F x = off; D x = off + max(0, dx). Goalies: identity on gE per start (projected 4.09 vs realized 4.00). Refit 2026-09-26 after the per-segment skater rate calibration (npm run rates:recalibrate: the projections lost their ~0.85 FP/G inflation, so the 2026-09-25 map F -1.051 + 1.055x, D -1.512 + 1.252x would have taken it off twice): same fit on the recalibrated values.json (scratchpad/ratefix/scalefit.ts, realized FP/G from the league's points model on player-profiles.json; on the old values.json it reproduces the 2026-09-25 fit to F -1.073 + 1.065x, D -1.403 + 1.250x, and that gap to the MoneyPuck-based fit is carried over): raw refit F -0.149 + 1.071x (r .972), D -0.274 + 1.173x (r .957). The waiver line (265 skaters, km/repl.cjs, k = 1.27: F 2.183, D 2.282; old values 3.020 / 3.036) and the #24 forward's off (3.933; old 4.801) are recomputed the same way: realized replacement levels R_F 2.135 -> 2.186 (young forwards near the waiver line are no longer projected ~20% low), R_D 2.294 -> 2.296, offRef 4.014 -> 4.046.",
   "F": {
-   "a": -1.051,
-   "b": 1.055,
+   "a": -0.127,
+   "b": 1.061,
    "n": 389,
-   "r": 0.968
+   "r": 0.972
   },
   "D": {
-   "a": -1.512,
-   "b": 1.252,
+   "a": -0.383,
+   "b": 1.175,
    "n": 186,
-   "r": 0.941
+   "r": 0.957
   },
   "waiverLineProj": {
-   "F": 3.02,
-   "D": 3.04
+   "F": 2.18,
+   "D": 2.28
   },
-  "offRefProj": 4.801
+  "offRefProj": 3.933
  },
  "repl": {
   "source": "Skaters: waiver line (265 skaters, cap-adjusted 16.5 skater-equivalents per team, league-structure.json scheduleAndReplacement) mapped to the realized scale. Goalies: per season-slot, a waiver goalie gives ~35 starts x 3.65 (range 100-160); matches revealed keeper behaviour. R_Gs is on the 82-game basis and scales with seasonGames / projectionBasis (84-game season: 131.1).",

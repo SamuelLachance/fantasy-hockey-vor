@@ -95,7 +95,11 @@ assert.equal(startingSeatCount(board), 14);
   assert.ok(Math.abs(gain - BENCH_SKATER_SHARE * weakD.vor) < 1e-9, `gain = bench share (${gain})`);
   // Two such D for the last D seat + Util: the better one keeps the D
   // seat, the other is benched (Util stays with waivers).
-  const [hi, lo] = board.players.filter((p) => p.pos.includes("D") && p.vor > 0 && p.value < util).slice(0, 2);
+  // (Two D whose published values differ: board values are rounded to 0.01,
+  // and a tie is broken by id, not by the unrounded VOR.)
+  const weakDs = board.players.filter((p) => p.pos.includes("D") && p.vor > 0 && p.value < util);
+  const hi = weakDs[0];
+  const lo = weakDs.find((p) => p.value < hi!.value);
   const strongD = board.players.filter((p) => p.pos.includes("D")).slice(0, 3);
   for (const order of [[lo!, hi!], [hi!, lo!]]) {
     const pair = buildLineup(board, [...strongD, ...order]);
@@ -226,8 +230,16 @@ assert.equal(startingSeatCount(board), 14);
     }
   }
   assert.ok(checked > 0, "at least one below-average-in-weak-cats D was checked");
+  // Heiskanen used to be pinned at 0 here: he sat below the average D seat in
+  // HIT and BLK. On the recalibrated projections his blocks z (3.07) edges
+  // past the seat's (3.05), so the rule above, not his name, is the check;
+  // a D above the seat in a weak category may earn a bonus, never a penalty.
   const heiskanen = r.suggestions.find((x) => x.player.name === "Miro Heiskanen");
-  if (heiskanen) assert.equal(heiskanen.balance, 0);
+  if (heiskanen) {
+    const below = [...weak].every((c) => heiskanen.player.z[catIdx(c)]! <= avgD[catIdx(c)]!);
+    if (below) assert.equal(heiskanen.balance, 0);
+    else assert.ok(heiskanen.balance >= 0, "no balance penalty for a D above the seat");
+  }
 }
 
 // Group-relative bars: a D's blocks are measured against defensemen.
