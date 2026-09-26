@@ -9,6 +9,8 @@ import { join } from "path";
 import todayJson from "@/data/fantrax/today.json";
 import summaryJson from "@/data/snake-summary.json";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
+import { teamDynastySummary, type TeamDynastySummary } from "@/lib/fantrax/dynasty-hints";
+import { parseDynasty } from "@/lib/fantrax/dynasty-index";
 import { formatDateFr } from "@/lib/draft/draft-copy";
 import { projectionAgeDays } from "@/lib/projection-age";
 import { plural } from "@/lib/fantrax/league-copy";
@@ -38,6 +40,23 @@ function readBoard<T>(slug: string): T {
   return JSON.parse(readFileSync(join(process.cwd(), "public", "leagues", slug, "board.json"), "utf8")) as T;
 }
 
+/**
+ * My roster's 2027 cutdown outlook from the committed dynasty.json and
+ * state.json (the same sync); null when either is missing or unreadable.
+ */
+function captainsDynasty(teamId: string): TeamDynastySummary | null {
+  try {
+    const dir = join(process.cwd(), "public", "fantrax");
+    const index = parseDynasty(JSON.parse(readFileSync(join(dir, "dynasty.json"), "utf8")));
+    const state = JSON.parse(readFileSync(join(dir, "state.json"), "utf8")) as { rosters?: Record<string, Array<{ id: string }>> };
+    const roster = state.rosters?.[teamId];
+    if (!index || !roster?.length) return null;
+    return teamDynastySummary(roster.map((e) => index.byFantrax.get(e.id) ?? null));
+  } catch {
+    return null;
+  }
+}
+
 interface ProfileJson {
   teams: number;
   draft: { startsAt: string; rounds: number; pickSeconds: number };
@@ -46,7 +65,8 @@ interface ProfileJson {
 export function homeLeagues(): HomeLeague[] {
   return LEAGUES.map((entry): HomeLeague => {
     if (entry.kind === "fantrax-points") {
-      return { entry, card: fantraxHomeCard(entry, todayJson as unknown as DailyPlan), local: null };
+      const plan = todayJson as unknown as DailyPlan;
+      return { entry, card: fantraxHomeCard(entry, plan, captainsDynasty(entry.myTeamId)), local: null };
     }
     const profile = readProfile<ProfileJson>(entry.profileSlug ?? entry.slug);
     return {

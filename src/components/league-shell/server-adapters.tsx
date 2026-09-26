@@ -58,8 +58,8 @@ export interface ServerLeagueAdapter {
 // Baked by `npm run league:sync` (the daily Action re-runs it before each build).
 const fantraxLeague = leagueJson as unknown as LeagueSnapshot;
 const fantraxToday = todayJson as unknown as DailyPlan;
-// Dynasty values (no pipeline publishes them yet): without the file at
-// build time, the browser never asks for it.
+// Dynasty values (rebuilt by every `npm run league:sync`): without the
+// file at build time, the browser never asks for it.
 const hasDynasty = existsSync(join(process.cwd(), "public", "fantrax", "dynasty.json"));
 
 function FantraxShell({ entry, children }: { entry: LeagueEntry; children: ReactNode }) {

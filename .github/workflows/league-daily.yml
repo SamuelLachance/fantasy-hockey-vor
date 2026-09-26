@@ -58,10 +58,14 @@ jobs:
         run: npm run test:unit
 
       # A failed sync fails the run: the site keeps the last good deploy
-      # instead of republishing an older snapshot.
+      # instead of republishing an older snapshot. The sync ends with the
+      # dynasty values (public/fantrax/dynasty.json, ~30 s); if only that
+      # step fails, the committed dynasty.json ships and check:league says so.
       - name: Sync Fantrax league
         run: npm run league:sync
+        timeout-minutes: 10
 
+      # Snapshot and dynasty gates (schema, coverage of every rostered player, K, ranks).
       - name: Validate league snapshot
         run: npm run check:league
 

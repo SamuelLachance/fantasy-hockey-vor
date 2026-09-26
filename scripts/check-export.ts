@@ -61,6 +61,20 @@ for (const p of tabPages) {
   if (!segs.some((s) => s.endsWith("__next._tree.txt"))) fail(`${p}/: segment payloads missing`);
 }
 if (existsSync(join(OUT, "sitemap.xml"))) fail("sitemap.xml is published (the site is noindex)");
+// The Captains tabs fetch the browser's copy of dynasty.json (build:pages writes it): same build, same players.
+if (existsSync(join(OUT, "fantrax", "dynasty.json"))) {
+  const slimPath = join(OUT, "fantrax", "dynasty-table.json");
+  if (!existsSync(slimPath)) fail("fantrax/dynasty-table.json missing (run tsx scripts/build-dynasty-client.ts before next build)");
+  else {
+    type Snap = { builtAt?: string; players?: Record<string, unknown>; zero?: string[] };
+    const full = JSON.parse(read("fantrax/dynasty.json")) as Snap;
+    const slim = JSON.parse(readFileSync(slimPath, "utf8")) as Snap;
+    const ids = (s: Snap) => Object.keys(s.players ?? {}).sort().join(",");
+    if (full.builtAt !== slim.builtAt || ids(full) !== ids(slim) || (full.zero ?? []).length !== (slim.zero ?? []).length) {
+      fail("fantrax/dynasty-table.json does not match fantrax/dynasty.json (stale copy)");
+    }
+  }
+}
 
 // ---- helpers
 /** HTML with script / style / template bodies removed (tags and attributes kept). */
@@ -226,8 +240,13 @@ const BUDGETS: Budget[] = [
   {
     label: "Captains · autres onglets",
     match: isTab("captains-dynasty", ["repechage", "joueurs", "ballottage", "mon-equipe"]),
-    // Spec limit. The tabs import the league through its context module
-    // (never the provider's), so the planner is not shipped twice.
+    // Spec limit (measured 61.7–64.4 with the dynasty columns). The tabs
+    // import the league through its context module (never the provider's),
+    // so the planner is not shipped twice; the details row (the model's
+    // sentence, the six-season chart, the « Conseil » sentences, Snake's
+    // take), the dynasty filter row and the 2027 cutdown card load on
+    // demand, and Snake's verdict store never pulls the dynasty modules
+    // (Aujourd'hui stays at ~40).
     js: 65,
     htmlRaw: 200,
     htmlGz: 35,

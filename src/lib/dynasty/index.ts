@@ -302,12 +302,12 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
   const players: Record<string, DynastyRecord> = {};
   const zero: string[] = [];
   const rostered = new Set(inputs.players.filter((x) => x.rostered).map((x) => x.id));
-  // values.json rows carry `proj` (projected or prior): list the dropped ones.
-  const inValues = new Set(inputs.players.filter((x) => x.proj).map((x) => x.id));
+  // Every modeled player left out (values.json rows and prospects alike) is
+  // listed, so the tables read 0 for him instead of « not modeled ».
   for (const id of Object.keys(all).sort()) {
     const rec = all[id]!;
     if (rostered.has(id) || rec.dv.longTerm >= p.output.minLongTerm) players[id] = rec;
-    else if (inValues.has(id)) zero.push(id);
+    else zero.push(id);
   }
 
   const meta = inputs.meta;

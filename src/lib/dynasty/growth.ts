@@ -252,14 +252,14 @@ export const GROWTH_FALL = 0.95;
 
 /** French pedigree phrase for the growth clause. */
 export function pedigreeFr(pick: number | null | undefined): string {
-  if (pick == null || !(pick > 0)) return "d'un joueur non repêché";
-  if (pick === 1) return "d'un 1er choix au total";
-  if (pick <= 3) return "d'un choix du top 3";
-  if (pick <= 5) return "d'un choix du top 5";
-  if (pick <= 10) return "d'un choix du top 10";
-  if (pick <= 32) return "d'un choix de 1re ronde";
-  if (pick <= 64) return "d'un choix de 2e ronde";
-  return "d'un choix tardif";
+  if (pick == null || !(pick > 0)) return "d’un joueur non repêché";
+  if (pick === 1) return "d’un 1er choix au total";
+  if (pick <= 3) return "d’un choix du top 3";
+  if (pick <= 5) return "d’un choix du top 5";
+  if (pick <= 10) return "d’un choix du top 10";
+  if (pick <= 32) return "d’un choix de 1re ronde";
+  if (pick <= 64) return "d’un choix de 2e ronde";
+  return "d’un choix tardif";
 }
 
 /** French production phrase (percentile among same-age NHL seasons). */

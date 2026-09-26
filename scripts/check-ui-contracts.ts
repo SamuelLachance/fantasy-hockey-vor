@@ -185,6 +185,9 @@ const files: Record<string, string[]> = {
     "TABLE_COPY.notInPool",
     "wantFullSnake",
     "aria-labelledby",
+    // A page setting the rows follow (the dynasty mode) is said in the one live region.
+    "announce?: { key: string; text: string }",
+    "bump(announceText)",
   ],
   "src/components/player-table/usePlayerTableView.tsx": [
     "<Suspense",
@@ -222,7 +225,35 @@ const files: Record<string, string[]> = {
   "src/components/player-table/PlayerTableColumns.tsx": ["<legend", "TABLE_COPY.lazyColumn"],
   "src/lib/player-table/url.ts": ["ownedParams", "PRESET_PARAM", "FOCUS_PARAM", 'encodeRange(r) || "-"'],
   "src/lib/player-table/search.ts": ["NAME_PUNCTUATION", "foldSearchText"],
-  "src/components/fantrax/fantrax-table.tsx": ["FANTRAX_ADAPTER", "peekFantraxPool", "hasDynasty", "fantraxFallbackRows", "ensureFullSnakeIndex"],
+  "src/components/fantrax/fantrax-table.tsx": [
+    "FANTRAX_ADAPTER",
+    "peekFantraxPool",
+    "hasDynasty",
+    "fantraxFallbackRows",
+    "ensureFullSnakeIndex",
+    "useDynastyIndex",
+    "<DynastyModeSwitch",
+    // The details row, the « Conseil » from the page's team's side, the mode said in the live region.
+    'import("./FantraxDetail")',
+    "hintSide(r.owner, ctx.teamId)",
+    "syncOwnersOf(bundle?.state)",
+    "announce=",
+    "DYNASTY_LEGEND",
+  ],
+  "src/components/fantrax/FantraxDetail.tsx": ["<DynastyDetail", "dynastyHintText(row.dynasty, hintSide(row.owner, ctx.teamId))", "<SnakeDetail"],
+  // Dynasty values in the Captains tabs: one mode for every tab, in the address and the tab links.
+  "src/lib/fantrax/dynasty-mode.ts": ["DYNASTY_MODE_PARAM", "dynastyModeSearch", "parseDynastyMode", "DEFAULT_DYNASTY_MODE"],
+  "src/components/fantrax/FantraxLeagueProvider.tsx": ["dynastyModeSearch(teamSearch(", "chooseMode", "History.prototype.replaceState"],
+  // One segmented row of 44 px options at every width (short words on a phone).
+  "src/components/fantrax/DynastyModeSwitch.tsx": ["<fieldset", "<legend", 'type="radio"', "chooseMode", "aria-describedby", "focus-within:ring-2", "grid-cols-3", "flex min-h-11 cursor-pointer", "DYNASTY_MODE_SHORT"],
+  "src/components/fantrax/DynastyDetail.tsx": ["explainFr", 'aria-hidden="true"', "<figcaption", '<ul className="sr-only">', "<title>", "fill-cyan-600"],
+  // The team view holds on the sync's roster only; arrivals since are listed apart.
+  "src/components/fantrax/DynastyTeamCard.tsx": ['id="ecremage"', "teamDynastySummary", "<DynastyModeSwitch", 'role="status"', "currentRecord(rec, e.id, teamId, syncOwners)", "Arrivés depuis la synchro"],
+  "src/components/fantrax/FantraxTeamTab.tsx": ['import("./DynastyTeamCard")', "ssr: false", 'id="ecremage"'],
+  "src/components/fantrax/FantraxTableFilters.tsx": ['import("./FantraxDynastyFilters")'],
+  "src/components/fantrax/FantraxDynastyFilters.tsx": ["KEEPER_FILTER_LABEL", "FREE_AT_YEARS", "DYNASTY_MODE_LABEL[mode]", "PHASE_FILTER_LABEL", '"Gratuit aux écrémages"'],
+  // The browser's copy of dynasty.json first, the file itself on a dev server before any build.
+  "src/lib/fantrax/pool-client.ts": ['fantraxDataHref("dynasty-table.json")', 'fantraxDataHref("dynasty.json")'],
   "src/components/league-shell/TabLink.tsx": ["useTabSearch", "prefetch={false}", "leagueTabPath"],
 
   // ---- shared helpers kept for the unified player table
@@ -322,6 +353,22 @@ const forbidden: Array<{ file: string; needle: string; why: string }> = [
   { file: "src/components/snake/SnakeDisclaimer.tsx", needle: '@/lib/snake/url"', why: "keeps Snake's URL helpers out of the league layout chunk" },
   // The Captains provider holds the verdicts store only; the chips (and their copy) ship with the tabs.
   { file: "src/components/fantrax/FantraxLeagueProvider.tsx", needle: '@/components/snake/SnakeVerdicts"', why: "import the store from SnakeVerdictsContext" },
+  // Snake's verdict store (every page) must not pull the dynasty modules: they have their own reader.
+  { file: "src/lib/fantrax/extras.ts", needle: 'from "./dynasty', why: "keeps the dynasty code out of every page's verdict store" },
+  { file: "src/lib/fantrax/extras.ts", needle: "@/lib/dynasty/", why: "keeps the dynasty code out of every page's verdict store" },
+  // The model's sentence builder (and its growth clauses) loads with a details row, not with the tab.
+  { file: "src/lib/fantrax/dynasty-hints.ts", needle: '@/lib/dynasty/explain"', why: "import the keeper view from @/lib/dynasty/keeper-view" },
+  { file: "src/lib/fantrax/table.ts", needle: '@/lib/dynasty/explain"', why: "import the keeper view from @/lib/dynasty/keeper-view" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: '@/lib/dynasty/explain"', why: "DynastyDetail (lazy) is the only table piece that needs it" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: 'import { DynastyDetail }', why: "DynastyDetail is loaded with next/dynamic" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: 'import { FantraxDetail }', why: "the details row is loaded with next/dynamic" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: "@/components/player-table/SnakeDetail", why: "Snake's take ships with the lazy details row" },
+  { file: "src/components/fantrax/FantraxTeamTab.tsx", needle: 'import { DynastyTeamCard }', why: "the cutdown card is loaded with next/dynamic" },
+  // The « Conseil » sentences (and the owner's hint) load with the details row, not with the tab.
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: "dynasty-hint-text", why: "the cell shows the short words only" },
+  { file: "src/lib/fantrax/dynasty-hints.ts", needle: "roster-hint", why: "the hint sentences load with the details row" },
+  { file: "src/lib/fantrax/table.ts", needle: "roster-hint", why: "the hint sentences load with the details row" },
+  { file: "src/lib/dynasty/keeper-view.ts", needle: "rosterHintFr", why: "the owner's hint lives in roster-hint.ts (lazy)" },
   // Categories leagues' pages inline their board and a complete Snake seed: nothing to fetch.
   { file: "src/components/draft/category-table.tsx", needle: "loadSnake", why: "the seed is complete" },
   { file: "src/components/draft/category-table.tsx", needle: "fetch(", why: "the board is inlined" },

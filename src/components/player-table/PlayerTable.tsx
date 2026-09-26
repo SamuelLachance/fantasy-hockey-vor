@@ -46,6 +46,14 @@ export interface PlayerTableProps<R, F, Caps, Ctx> {
   perPage: number;
   /** « eager »: the data hook loads at once; « viewport »: when the table nears the screen. */
   load?: "eager" | "viewport";
+  /** Shown between the description and the toolbar, at every width (e.g. a mode switch). */
+  lead?: ReactNode;
+  /**
+   * A page setting the rows follow (e.g. the dynasty mode): when `key`
+   * changes after the first paint, the live region says `text` before the
+   * new count.
+   */
+  announce?: { key: string; text: string };
   toolbarExtra?: ReactNode;
   /** Extra note under the table (the tab's own). */
   footer?: ReactNode;
@@ -72,6 +80,8 @@ export function PlayerTable<R, F, Caps, Ctx>({
   presets: chipIds,
   perPage,
   load = "eager",
+  lead,
+  announce,
   toolbarExtra,
   footer,
   compactFilters = false,
@@ -161,6 +171,14 @@ export function PlayerTable<R, F, Caps, Ctx>({
           : "";
   const announcer = useCountAnnouncer(counter, showRows && pendingPreset === null);
   const { bump } = announcer;
+  const announceKey = announce?.key;
+  const announceText = announce?.text;
+  const lastAnnounced = useRef(announceKey);
+  useEffect(() => {
+    if (lastAnnounced.current === announceKey) return;
+    lastAnnounced.current = announceKey;
+    if (announceText) bump(announceText);
+  }, [announceKey, announceText, bump]);
 
   // ---- actions (each announces the new count)
   const onFilters = useCallback(
@@ -303,6 +321,7 @@ export function PlayerTable<R, F, Caps, Ctx>({
         ) : null}
       </div>
       {description ? <p className="mb-4 text-sm text-slate-400">{description}</p> : null}
+      {lead ? <div className="mb-4">{lead}</div> : null}
       {reader}
 
       <PlayerTableToolbar

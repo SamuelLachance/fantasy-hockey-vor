@@ -6,7 +6,9 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import type { DailyPlan } from "../src/lib/fantrax/daily-plan";
-import { categoryHomeCard, fantraxHomeCard, snakeHomeCard } from "../src/lib/leagues/home-summary";
+import { teamDynastySummary } from "../src/lib/fantrax/dynasty-hints";
+import { parseDynasty } from "../src/lib/fantrax/dynasty-index";
+import { categoryHomeCard, dynastyHomeNote, fantraxHomeCard, snakeHomeCard } from "../src/lib/leagues/home-summary";
 import { getLeague } from "../src/lib/leagues/registry";
 
 let failed = 0;
@@ -142,6 +144,30 @@ const base: HomePlan = {
   );
   eq(card.dates[0]?.endLabel, "terminé", "draft over label");
   eq(card.tabs.map((t) => t.label), ["Repêchage", "Joueurs", "Mon équipe", "Duel de la semaine"], "tab labels");
+}
+
+// ---- the dynasty line (2027 cutdown against my 10 keeper slots)
+{
+  eq(fantraxHomeCard(captains, base).note, null, "no dynasty data: no line");
+  const s = { core: 5, bubble: 6, tradeBefore: 3, text: "5 à protéger, 6 à décider, 6 en location, 28 gratuits (mineures)" };
+  eq(
+    fantraxHomeCard(captains, base, s).note,
+    {
+      text: "Écrémage 2027 : 6 à décider pour 5 places · 3 joueurs en location à échanger avant l’écrémage.",
+      tab: "mon-equipe",
+      hash: "ecremage",
+    },
+    "decisions and rentals, linked to Mon équipe",
+  );
+  eq(dynastyHomeNote({ core: 9, bubble: 1, tradeBefore: 1, text: "" }).text, "Écrémage 2027 : 1 à décider pour 1 place · 1 joueur en location à échanger avant l’écrémage.", "singulars");
+  eq(dynastyHomeNote({ core: 4, bubble: 0, tradeBefore: 0, text: "4 à protéger, 0 à décider, 0 en location, 3 gratuits (mineures)" }).text, "Écrémage 2027 : 4 à protéger, 0 à décider, 0 en location, 3 gratuits (mineures).", "nothing to decide: the summary");
+  eq(categoryHomeCard(ltl, { draft: { startsAt: "2026-09-27T18:00:00.000Z", rounds: 18, pickSeconds: 75 } }).note, null, "categories league: no line");
+  // The committed files (same sync): my roster is covered.
+  const idx = parseDynasty(load<unknown>("public", "fantrax", "dynasty.json"));
+  const st = load<{ rosters: Record<string, Array<{ id: string }>> }>("public", "fantrax", "state.json");
+  const sum = teamDynastySummary((st.rosters[captains.myTeamId] ?? []).map((e) => idx?.byFantrax.get(e.id) ?? null));
+  eq(sum.unknown, 0, "committed dynasty.json covers my roster");
+  assert(fantraxHomeCard(captains, base, sum).note!.text.startsWith("Écrémage 2027 : "), "committed data: a dynasty line");
 }
 
 // ---- Snake card

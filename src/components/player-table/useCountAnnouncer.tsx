@@ -10,18 +10,25 @@ const ANNOUNCE_DELAY_MS = 600;
  * after the user's own changes only (`bump`), once they pause: never for
  * the 90 s draft polling or the load itself.
  */
-export function useCountAnnouncer(counter: string, ready: boolean): { bump: () => void; region: ReactNode } {
+export function useCountAnnouncer(counter: string, ready: boolean): { bump: (lead?: string) => void; region: ReactNode } {
   const [seq, setSeq] = useState(0);
   const [announcement, setAnnouncement] = useState("");
   const announced = useRef(0);
-  const bump = useCallback(() => setSeq((n) => n + 1), []);
+  /** Said before the count (« Valeurs dynastie en mode Long terme. »), once. */
+  const lead = useRef("");
+  const bump = useCallback((text?: string) => {
+    if (text) lead.current = text;
+    setSeq((n) => n + 1);
+  }, []);
 
   useEffect(() => {
     if (seq === announced.current || !ready) return;
     const id = window.setTimeout(() => {
       announced.current = seq;
+      const words = lead.current ? `${lead.current} ${counter}` : counter;
+      lead.current = "";
       // Same words again: a trailing space makes screen readers repeat them.
-      setAnnouncement((prev) => (prev === counter ? `${counter} ` : counter));
+      setAnnouncement((prev) => (prev === words ? `${words} ` : words));
     }, ANNOUNCE_DELAY_MS);
     return () => window.clearTimeout(id);
   }, [seq, counter, ready]);

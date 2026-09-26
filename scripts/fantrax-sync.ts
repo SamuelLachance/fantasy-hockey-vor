@@ -702,10 +702,15 @@ async function main() {
     teamAlias: normalizeTeamAbbrev,
   });
   // ---- prospect-pool.json: unrostered minors-eligible players without a
-  // values row (additive: values.json / state.json are untouched by it)
+  // values row (additive: values.json / state.json are untouched by it).
+  // Same flags as pool.json (the minors-eligible read included), so every
+  // prospect the player table lists with a Ros% or an ADP gets a dynasty
+  // value: the general available list alone only reaches ~120 of them.
   const fxById = new Map(fxPool.map((f) => [f.fantraxId, f]));
   const poolPlayers: ProspectPoolSnapshot["players"] = {};
-  for (const [id, f] of flags) {
+  const prospectCandidates = new Map<string, PlayerFlagsRow>(prospectFlags);
+  for (const [id, f] of flags) prospectCandidates.set(id, f);
+  for (const [id, f] of prospectCandidates) {
     if (!f.minorsEligible || rostered.has(id) || players[id]) continue;
     const fx = fxById.get(id);
     if (!fx) continue;

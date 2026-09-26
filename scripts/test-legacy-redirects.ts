@@ -86,10 +86,14 @@ for (const [, , , want] of CASES) {
   const draft = LEGACY_RULES.find((r) => r.from === "/draft/light-the-lamp")!;
   eq(draft.tab, "repechage", "the draft address is pinned to Repêchage, not the league's default tab");
 }
+// Filters added after the move (dynasty cutdown and minors eligibility) never were in a /league bookmark.
+const NEWER_TABLE_PARAMS = ["conservation", "gratuit"];
 eq(
   [...OLD_EXPLORER_PARAMS].sort(),
-  ownedParams(FANTRAX_TABLE).filter((k) => k !== PRESET_PARAM && k !== FOCUS_PARAM).sort(),
-  "old explorer params = the explorer's URL params except vue",
+  ownedParams(FANTRAX_TABLE)
+    .filter((k) => k !== PRESET_PARAM && k !== FOCUS_PARAM && !NEWER_TABLE_PARAMS.includes(k))
+    .sort(),
+  "old explorer params = the explorer's URL params except vue (and the filters added since)",
 );
 eq(
   LEGACY_RULES.map((r) => r.from).sort(),

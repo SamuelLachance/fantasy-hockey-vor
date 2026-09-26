@@ -284,6 +284,14 @@ if (!existsSync(dynastyPath)) {
     }
     const lagH = (Date.parse(state.fetchedAt) - Date.parse(dynasty.inputs?.stateFetchedAt ?? "")) / 3_600_000;
     if (!(lagH < 48)) warnings.push(`dynasty.json is ${Number.isFinite(lagH) ? lagH.toFixed(0) : "?"} h older than state.json — run npm run dynasty:build`);
+    else if (dynasty.inputs?.stateFetchedAt !== state.fetchedAt) {
+      // league:sync rebuilds it last: an older one means that step failed (or --no-dynasty).
+      warnings.push(`dynasty.json comes from an earlier sync (${dynasty.inputs?.stateFetchedAt}, state.json ${state.fetchedAt}): the 2027 cutdown odds follow the older rosters — run npm run dynasty:build`);
+    }
+    // The player table's prospects (pool.json) should carry the dynasty values of the same sync.
+    if (pool && dynasty.inputs?.poolFetchedAt && dynasty.inputs.poolFetchedAt !== pool.fetchedAt) {
+      warnings.push(`dynasty.json was built on prospect-pool ${dynasty.inputs.poolFetchedAt}, pool.json is from ${pool.fetchedAt}`);
+    }
     dynastyNote = `dynasty ${Object.keys(dynasty.players).length} players (K ${dynasty.params?.K?.value})`;
   }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { SlidersHorizontal } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useId, useState } from "react";
 import type { FilterUiProps } from "@/components/player-table/adapter";
 import { CHIP, RangeField, Select, Toggle } from "@/components/player-table/fields";
@@ -17,11 +18,18 @@ import {
 } from "@/lib/fantrax/table";
 import { TYPE_LABEL } from "@/lib/fantrax/table-copy";
 
+// The dynasty row (phase, value, 2027 cutdown, free at the cutdowns, NHL
+// odds): its own chunk, loaded once dynasty.json is in (it only shows then).
+const FantraxDynastyFilters = dynamic(() => import("./FantraxDynastyFilters").then((m) => m.FantraxDynastyFilters), {
+  ssr: false,
+});
+
 /**
  * Captains Dynasty's filters in the player table's form: status (a team
  * included), NHL club, type, positions, age, the NHL-active / minors /
- * healthy toggles, then « Plus de filtres » (projection ranges, and the
- * dynasty and Snake filters once their data is in). The table's own
+ * healthy toggles, the dynasty row once dynasty.json is in (phase, value in
+ * the page's mode, 2027 cutdown, free in the minors until, P(NHL)), then
+ * « Plus de filtres » (projection ranges, ETA, Snake). The table's own
  * buttons (`actions`) sit next to « Plus de filtres ».
  */
 export function FantraxTableFilters({
@@ -35,8 +43,8 @@ export function FantraxTableFilters({
 }: FilterUiProps<Filters, FantraxCaps, FantraxCtx>) {
   const moreId = useId();
   const advancedCount =
-    [f.fp, f.fpg, f.ros, f.adp, f.pNhl, f.eta, f.dyn].filter((r) => r.min !== null || r.max !== null).length +
-    [f.verdict, f.trend, f.phase].filter(Boolean).length;
+    [f.fp, f.fpg, f.ros, f.adp, f.eta].filter((r) => r.min !== null || r.max !== null).length +
+    [f.verdict, f.trend].filter(Boolean).length;
   // Open by default when a bookmarked view carries advanced filters; the
   // user's own toggle wins from then on.
   const [moreOpen, setMoreOpen] = useState<boolean | null>(null);
@@ -137,7 +145,7 @@ export function FantraxTableFilters({
           <div className="flex flex-wrap gap-2">
             <Toggle
               label="Admissibles aux mineures"
-              title="Admissibles aux postes des mineures de la ligue"
+              title="Admissibles aux postes des mineures de la ligue cette saison (Fantrax)"
               checked={f.minors}
               onChange={(minors) => onFilters({ minors })}
             />
@@ -156,6 +164,8 @@ export function FantraxTableFilters({
           </div>
         </fieldset>
       </div>
+
+      {caps.dynasty ? <FantraxDynastyFilters filters={f} mode={ctx.mode} phases={phases} onFilters={onFilters} /> : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -186,24 +196,8 @@ export function FantraxTableFilters({
         <RangeField label="FP/match" value={f.fpg} onChange={(fpg) => onFilters({ fpg })} />
         <RangeField label="% Fantrax" unit="%" value={f.ros} onChange={(ros) => onFilters({ ros })} />
         <RangeField label="ADP" value={f.adp} onChange={(adp) => onFilters({ adp })} />
-        {caps.dynasty.has("value") ? (
-          <RangeField label="Valeur dynastie" value={f.dyn} onChange={(dyn) => onFilters({ dyn })} />
-        ) : null}
-        {caps.dynasty.has("pNhl") ? (
-          <RangeField label="P(LNH)" unit="%" value={f.pNhl} onChange={(pNhl) => onFilters({ pNhl })} />
-        ) : null}
-        {caps.dynasty.has("eta") ? (
-          <RangeField label="ETA (saison)" value={f.eta} onChange={(eta) => onFilters({ eta })} />
-        ) : null}
-        {caps.dynasty.has("phase") && phases.length ? (
-          <Select label="Phase de carrière" value={f.phase} onChange={(phase) => onFilters({ phase })}>
-            <option value="">Toutes</option>
-            {phases.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </Select>
+        {caps.dynasty ? (
+          <RangeField label="Arrivée LNH (année)" value={f.eta} onChange={(eta) => onFilters({ eta })} />
         ) : null}
         {caps.snake && verdicts.length ? (
           <Select label="Verdict de Snake" value={f.verdict} onChange={(verdict) => onFilters({ verdict })}>

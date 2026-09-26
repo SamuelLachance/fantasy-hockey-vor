@@ -76,11 +76,16 @@ export function spearman(a: readonly number[], b: readonly number[]): number {
 
 const finite = (x: unknown) => typeof x === "number" && Number.isFinite(x);
 
+const PHASES = ["prospect", "rising", "entering_prime", "prime", "plateau", "declining", "late_career"];
+const KEEPER_STATUSES = ["free", "core", "bubble", "rental"];
+
 function recordProblems(id: string, r: DynastyRecord, T: number): string[] {
   const bad: string[] = [];
   if (typeof r.n !== "string" || !r.n) bad.push("name");
   if (!["F", "D", "G"].includes(r.g)) bad.push("g");
   if (!["nhl", "prospect", "fringe"].includes(r.path)) bad.push("path");
+  // The Captains tables read these (phase labels and filter, 2027 cutdown column).
+  if (!PHASES.includes(r.phase)) bad.push("phase");
   if (!finite(r.age)) bad.push("age");
   for (const m of MODES) {
     if (!finite(r.dv?.[m])) bad.push(`dv.${m}`);
@@ -95,8 +100,11 @@ function recordProblems(id: string, r: DynastyRecord, T: number): string[] {
     if (!Array.isArray(b) || b.length !== 3 || !b.every(finite) || b[0]! > b[1]! || b[1]! > b[2]!) bad.push(`band.${k}`);
   }
   if (!finite(r.pNhl) || r.pNhl < 0 || r.pNhl > 1) bad.push("pNhl");
-  if (!r.elig || !finite(r.elig.next)) bad.push("elig");
-  if (!r.keeper || !["free", "core", "bubble", "rental"].includes(r.keeper.status)) bad.push("keeper");
+  if (!r.elig || !finite(r.elig.next) || typeof r.elig.now !== "boolean") bad.push("elig");
+  if (r.elig && r.elig.freeThrough !== null && !Number.isInteger(r.elig.freeThrough)) bad.push("elig.freeThrough");
+  if (!r.keeper || !KEEPER_STATUSES.includes(r.keeper.status)) bad.push("keeper");
+  if (r.keeper?.team && !KEEPER_STATUSES.includes(r.keeper.team.status)) bad.push("keeper.team");
+  if (r.eta !== null && !Number.isInteger(r.eta)) bad.push("eta");
   if (!r.market || !finite(r.market.w)) bad.push("market");
   return bad.length ? [`${id} (${r.n}): ${bad.join(", ")}`] : [];
 }

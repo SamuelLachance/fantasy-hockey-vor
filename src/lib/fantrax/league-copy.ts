@@ -299,9 +299,13 @@ export function draftVonaIntro(next: number, following: number | null): string {
   return `Meilleure valeur attendue à la position à votre choix ${pickLabel(next)}, moins celle attendue au ${pickLabel(following)} : plus c'est haut, plus il faut prendre cette position maintenant. Sous le chiffre : le meilleur restant le plus probable à chaque choix, et sa probabilité de l'être.`;
 }
 
-/** How the board's per-player VONA and odds are computed. */
-export function draftBoardNote(next: number | null, following: number | null, poolShare: number): string {
-  const parts = [`Valeur = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`];
+/**
+ * How the board's per-player VONA and odds are computed. With dynasty
+ * values published, the last sentence points to the dynasty view instead
+ * of age and Ros% as dynasty clues.
+ */
+export function draftBoardNote(next: number | null, following: number | null, poolShare: number, dynasty = false): string {
+  const parts = [`Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`];
   if (next !== null && following !== null) {
     parts.push(
       `VONA d'un joueur = sa valeur moins le meilleur attendu à sa position au ${pickLabel(following)} (négative si mieux devrait y rester).`,
@@ -313,7 +317,9 @@ export function draftBoardNote(next: number | null, following: number | null, po
     );
   }
   parts.push(
-    `L'âge et le % Fantrax servent d'indices dynastie. La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: voyez la vue Espoirs ou l’onglet Joueurs.`,
+    dynasty
+      ? `La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: la vue «${NBSP}Meilleure valeur dynastie disponible${NBSP}» classe joueurs et espoirs ensemble.`
+      : `L'âge et le % Fantrax servent d'indices dynastie. La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: voyez la vue Espoirs ou l’onglet Joueurs.`,
   );
   return parts.join(" ");
 }

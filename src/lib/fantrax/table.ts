@@ -1,9 +1,11 @@
 /**
  * Captains Dynasty's player table (the unified PlayerTable's Fantrax
  * adapter, model side): rows (pool.json + live rosters and draft picks +
- * the draft helper's odds + Snake and, once published, dynasty data), the
- * filters (parse / serialize / test), columns, presets and the tab views.
- * No React, no DOM: everything here is unit-tested.
+ * the draft helper's odds + Snake's verdicts + dynasty.json), the filters
+ * (parse / serialize / test), columns, presets and the tab views. Dynasty
+ * values, ranks, bands and filters follow the page's mode (`ctx.mode`:
+ * Gagner maintenant, Équilibré, Long terme). No React, no DOM: everything
+ * here is unit-tested.
  *
  * Statuses follow the live fxea read when there is one: a player drafted or
  * signed since the sync leaves « disponible » at the next poll.
@@ -16,8 +18,22 @@ import { FANTRAX_ICON, NON_PLAYING_ICONS } from "./config";
 import type { DailyPlan, PlanLineup, PlanPlayer } from "./daily-plan";
 import { draftOutlook, draftValue, type DraftPickInfo } from "./draft";
 import { draftIsOpen, draftNeed, draftPoolInputs, planOdds, seasonFp } from "./draft-inputs";
-import { dynastyHints, type DynastyHint } from "./dynasty-hints";
-import { lookupExtra, VERDICT_POSITIVE, verdictRank, type DynastyIndex, type DynastyInfo, type SnakeIndex, type SnakeInfo } from "./extras";
+import type { DynastyRecord, KeeperStatus, Phase } from "@/lib/dynasty/types";
+import { keeperView } from "@/lib/dynasty/keeper-view";
+import {
+  bandOf,
+  currentRecord,
+  dynastyValueOf,
+  keeperFromToken,
+  keeperSortValue,
+  KEEPER_TOKEN,
+  PHASE_ORDER,
+  phaseFromToken,
+  phaseToken,
+} from "./dynasty-hints";
+import { DEFAULT_DYNASTY_MODE, type DynastyMode } from "./dynasty-mode";
+import type { DynastyIndex } from "./dynasty-index";
+import { lookupExtra, VERDICT_POSITIVE, verdictRank, type SnakeIndex, type SnakeInfo } from "./extras";
 import { POOL_GROUPS, type PoolGroup, type PoolRosterStatus, type PoolSnapshot, type PoolSource } from "./pool";
 import type { StateSnapshot, ValuesSnapshot } from "./snapshot-types";
 import { columnCopy, SORT_LABEL } from "./table-copy";
@@ -67,10 +83,16 @@ export interface FantraxRow {
   available: number | null;
   src: PoolSource;
   nhl: number | null;
-  dynasty: DynastyInfo | null;
+  /**
+   * His dynasty.json record, once the file is in (null: not in it), as it
+   * holds now: the team view of the 2027 cutdown only on the roster the
+   * model saw (see `currentRecord`). The « Conseil » cell reads it from the
+   * page's team's side.
+   */
+  dynasty: DynastyRecord | null;
+  /** dynasty.json lists him as modeled but worth 0 in every mode. */
+  dynZero: boolean;
   snake: SnakeInfo | null;
-  /** « Conseil » (dynasty value and phase), when the dynasty file is published. */
-  hint: DynastyHint | null;
 }
 
 /** Icons that make a player « blessé » for the « exclure les blessés » toggle (day-to-day is not). */
@@ -117,6 +139,16 @@ export interface FantraxRowsInput {
   draft: FantraxDraftOdds | null;
   dynasty: DynastyIndex | null;
   snake: SnakeIndex | null;
+  /** Owners at the sync the dynasty values were built on (`syncOwnersOf`); absent: records as is. */
+  syncOwners?: ReadonlyMap<string, string> | null;
+}
+
+/** Player → team of a snapshot's rosters (the sync the dynasty values saw). */
+export function syncOwnersOf(state: Pick<StateSnapshot, "rosters"> | null | undefined): Map<string, string> | null {
+  if (!state) return null;
+  const out = new Map<string, string>();
+  for (const [team, roster] of Object.entries(state.rosters)) for (const e of roster) out.set(e.id, team);
+  return out;
 }
 
 const LETTER: Record<string, PoolRosterStatus> = {
@@ -155,6 +187,8 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
       value = draftValue({ id: r.id, groups, seasonFp: sFp, adp: Number.POSITIVE_INFINITY }, need);
     }
     const d = !own ? draft?.byId.get(r.id) : undefined;
+    const model = input.dynasty?.byFantrax.get(r.id);
+    const dyn = model ? currentRecord(model, r.id, own?.team ?? null, input.syncOwners) : null;
     rows.push({
       id: r.id,
       name: r.n,
@@ -181,27 +215,28 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
       available: d ? d.available : null,
       src: r.src,
       nhl: r.nhl ?? null,
-      dynasty: lookupExtra(input.dynasty, r.id, r.nhl),
+      dynasty: dyn,
+      dynZero: !dyn && !!input.dynasty?.zero.has(r.id),
       snake: lookupExtra(input.snake, r.id, r.nhl),
-      hint: null,
     });
-  }
-  if (input.dynasty) {
-    const hints = dynastyHints(rows);
-    for (const row of rows) row.hint = hints.get(row.id) ?? null;
   }
   return rows;
 }
 
 const CLUBLESS = new Set(["", "(N/A)", "FA"]);
 
-function planRow(
-  id: string,
-  p: PlanPlayer,
-  over: Partial<FantraxRow>,
-  snake: SnakeIndex | null,
-): FantraxRow {
+/** Optional data the rows merge (the same indexes as the pool's rows). */
+export interface FantraxExtras {
+  dynasty: DynastyIndex | null;
+  snake: SnakeIndex | null;
+  /** Owners at the dynasty values' sync (see `FantraxRowsInput.syncOwners`). */
+  syncOwners?: ReadonlyMap<string, string> | null;
+}
+
+function planRow(id: string, p: PlanPlayer, over: Partial<FantraxRow>, extras: FantraxExtras): FantraxRow {
   const team = CLUBLESS.has(p.t) ? "" : p.t;
+  const rec = extras.dynasty?.byFantrax.get(id);
+  const dyn = rec ? currentRecord(rec, id, over.owner ?? null, extras.syncOwners) : null;
   const eligible = p.e.split(",");
   const icons = p.icons ?? [];
   return {
@@ -230,9 +265,9 @@ function planRow(
     available: null,
     src: p.src === "proj" ? "p" : "n",
     nhl: null,
-    dynasty: null,
-    snake: lookupExtra(snake, id, undefined),
-    hint: null,
+    dynasty: dyn,
+    dynZero: !dyn && !!extras.dynasty?.zero.has(id),
+    snake: lookupExtra(extras.snake, id, undefined),
     ...over,
   };
 }
@@ -243,19 +278,19 @@ function planRow(
  * available, live picks out) or the team's roster. Pool-only fields stay
  * empty.
  */
-export function fantraxFallbackRows(plan: DailyPlan | null, kind: "draft" | "team", snake: SnakeIndex | null): FantraxRow[] {
+export function fantraxFallbackRows(plan: DailyPlan | null, kind: "draft" | "team", extras: FantraxExtras): FantraxRow[] {
   if (!plan) return [];
   if (kind === "draft") {
     return (plan.draft?.board ?? []).flatMap((b) => {
       const p = plan.players[b.id];
       return p
-        ? [planRow(b.id, p, { fp: b.seasonFp, value: b.value, vona: b.vona, available: b.available, src: "p" }, snake)]
+        ? [planRow(b.id, p, { fp: b.seasonFp, value: b.value, vona: b.vona, available: b.available, src: "p" }, extras)]
         : [];
     });
   }
   return Object.entries(plan.players)
     .filter(([, p]) => p.st !== "FA" && p.st !== "WW")
-    .map(([id, p]) => planRow(id, p, { owner: plan.teamId, free: null, rosterStatus: LETTER[p.st] ?? null }, snake));
+    .map(([id, p]) => planRow(id, p, { owner: plan.teamId, free: null, rosterStatus: LETTER[p.st] ?? null }, extras));
 }
 
 /**
@@ -269,17 +304,20 @@ export function fantraxRosterRows(
   roster: ReadonlyArray<{ id: string; status: string }>,
   values: ValuesSnapshot["players"],
   teamId: string,
-  snake: SnakeIndex | null,
+  extras: FantraxExtras,
 ): FantraxRow[] {
   return roster.flatMap((e) => {
     const p = plan?.players[e.id];
     const over: Partial<FantraxRow> = { owner: teamId, free: null, rosterStatus: LETTER[e.status] ?? null };
-    if (p) return [planRow(e.id, p, over, snake)];
+    if (p) return [planRow(e.id, p, over, extras)];
     const v = values[e.id];
-    if (!v) return [];
-    const base: PlanPlayer = { n: v.n, t: v.t, e: v.e, st: e.status, fpg: 0, src: v.src, age: v.age };
+    // A drafted prospect has no values row: his dynasty record still names him.
+    const d = extras.dynasty?.byFantrax.get(e.id);
+    const named = v ?? (d ? { n: d.n, t: "", e: d.g === "F" ? "" : d.g, src: "prior" as const, age: Math.floor(d.age) } : null);
+    if (!named) return [];
+    const base: PlanPlayer = { n: named.n, t: named.t, e: named.e, st: e.status, fpg: 0, src: named.src, age: named.age };
     // No per-game value outside the plan: left empty, not 0.
-    return [planRow(e.id, base, { ...over, fpg: null }, snake)];
+    return [planRow(e.id, base, { ...over, fpg: null, ...(v ? {} : { src: "e" as const }) }, extras)];
   });
 }
 
@@ -314,11 +352,18 @@ export interface FantraxFilters {
   active: boolean;
   verdict: string;
   trend: string;
-  phase: string;
+  /** Career phase (dynasty.json). */
+  phase: Phase | "";
   /** P(NHL) in percent. */
   pNhl: Range;
+  /** First NHL season (start year) of a prospect. */
   eta: Range;
+  /** Dynasty value in the page's mode. */
   dyn: Range;
+  /** 2027 cutdown outlook (his team's 10 slots when rostered). */
+  keeper: KeeperStatus | "";
+  /** Still minors-eligible (free) at the cutdown of this year or later. */
+  freeAt: number | null;
 }
 
 export const DEFAULT_FILTERS: FantraxFilters = {
@@ -341,13 +386,24 @@ export const DEFAULT_FILTERS: FantraxFilters = {
   pNhl: ANY,
   eta: ANY,
   dyn: ANY,
+  keeper: "",
+  freeAt: null,
 };
+
+/** Cutdowns the « Gratuit (mineures) » filter offers. */
+export const FREE_AT_YEARS: readonly number[] = [2027, 2028, 2029];
 
 /** What the data on hand can show (columns, sorts and filters without data hide). */
 export interface FantraxCaps {
   /** The draft is open and I still pick: VONA and odds exist. */
   draft: boolean;
-  dynasty: ReadonlySet<string>;
+  /** dynasty.json is in: its columns, filters and sorts show. */
+  dynasty: boolean;
+  /**
+   * The build published dynasty.json: presets sort by dynasty value from the
+   * first paint (their rows wait for the file rather than jump once it lands).
+   */
+  dynastyPublished: boolean;
   /** Snake's verdicts are in (the compact file). */
   snake: boolean;
   /** The full Snake index is in (opinion counts). */
@@ -362,6 +418,18 @@ export interface FantraxCtx {
   nextPick: number | null;
   teamName: (id: string) => string;
   teamIds: readonly string[];
+  /** Dynasty value mode (Gagner maintenant, Équilibré, Long terme). */
+  mode: DynastyMode;
+  /** dynasty.json is in (a row without a record then reads « non évalué »). */
+  dynastyIn?: boolean;
+}
+
+/** The mode a sort or filter reads (sorts may run without a context in tests). */
+const modeOf = (ctx: Partial<Pick<FantraxCtx, "mode">> | undefined): DynastyMode => ctx?.mode ?? DEFAULT_DYNASTY_MODE;
+
+/** Dynasty value in a mode: his record's, 0 for a zero-value id, null without either. */
+export function rowDynastyValue(r: Pick<FantraxRow, "dynasty" | "dynZero">, mode: DynastyMode): number | null {
+  return dynastyValueOf(r.dynasty, r.dynZero, mode);
 }
 
 const inRange = (x: number | null | undefined, r: Range) =>
@@ -369,7 +437,7 @@ const inRange = (x: number | null | undefined, r: Range) =>
   (x !== null && x !== undefined && (r.min === null || x >= r.min) && (r.max === null || x <= r.max));
 
 /** Row test (every filter, the text query included). */
-export function matchesFilters(r: FantraxRow, f: FantraxFilters, ctx: Pick<FantraxCtx, "teamId">): boolean {
+export function matchesFilters(r: FantraxRow, f: FantraxFilters, ctx: Pick<FantraxCtx, "teamId"> & Partial<Pick<FantraxCtx, "mode">>): boolean {
   if (f.q && !matchesQuery(r.search, f.q)) return false;
   if (f.pos.length && !r.groups.some((g) => f.pos.includes(g))) return false;
   switch (f.status) {
@@ -408,14 +476,20 @@ export function matchesFilters(r: FantraxRow, f: FantraxFilters, ctx: Pick<Fantr
     } else if (r.snake?.verdict !== f.verdict) return false;
   }
   if (f.trend && r.snake?.trend !== f.trend) return false;
-  if (f.phase && r.dynasty?.phase !== f.phase) return false;
-  const pNhl = r.dynasty?.pNhl;
-  if (!inRange(pNhl === undefined ? null : Math.round(pNhl * 1000) / 10, f.pNhl)) return false;
-  if (!inRange(r.dynasty?.eta, f.eta) || !inRange(r.dynasty?.value, f.dyn)) return false;
+  const d = r.dynasty;
+  if (f.phase && d?.phase !== f.phase) return false;
+  if (!inRange(d ? Math.round(d.pNhl * 1000) / 10 : null, f.pNhl)) return false;
+  if (!inRange(d?.eta ?? null, f.eta) || !inRange(rowDynastyValue(r, modeOf(ctx)), f.dyn)) return false;
+  if (f.keeper && (!d || keeperView(d).status !== f.keeper)) return false;
+  if (f.freeAt !== null && !(d?.elig.now && d.elig.freeThrough !== null && d.elig.freeThrough >= f.freeAt)) return false;
   return true;
 }
 
-export function filterRows(rows: readonly FantraxRow[], f: FantraxFilters, ctx: Pick<FantraxCtx, "teamId">): FantraxRow[] {
+export function filterRows(
+  rows: readonly FantraxRow[],
+  f: FantraxFilters,
+  ctx: Pick<FantraxCtx, "teamId"> & Partial<Pick<FantraxCtx, "mode">>,
+): FantraxRow[] {
   return rows.filter((r) => matchesFilters(r, f, ctx));
 }
 
@@ -455,6 +529,8 @@ function activeCount(f: FantraxFilters, base: FantraxFilters): number {
   if (f.verdict !== base.verdict) n++;
   if (f.trend !== base.trend) n++;
   if (f.phase !== base.phase) n++;
+  if (f.keeper !== base.keeper) n++;
+  if (f.freeAt !== base.freeAt) n++;
   return n;
 }
 
@@ -483,6 +559,8 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     "pnhl",
     "eta",
     "dyn",
+    "conservation",
+    "gratuit",
   ],
   parse(params, base) {
     const f: FantraxFilters = { ...base };
@@ -501,9 +579,19 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     f.minors = readFlag(params, "mineures", base.minors);
     f.healthy = readFlag(params, "sansblesses", base.healthy);
     f.active = readFlag(params, "actifs", base.active);
-    for (const [param, key] of [["verdict", "verdict"], ["tendance", "trend"], ["phase", "phase"]] as const) {
+    for (const [param, key] of [["verdict", "verdict"], ["tendance", "trend"]] as const) {
       const v = params.get(param);
       if (v !== null) f[key] = cleanText(v);
+    }
+    // Dynasty labels: a token the model does not use is off, as a label the data lacks.
+    const phase = params.get("phase");
+    if (phase !== null) f.phase = phaseFromToken(phase) ?? "";
+    const keeper = params.get("conservation");
+    if (keeper !== null) f.keeper = keeperFromToken(keeper) ?? "";
+    const free = params.get("gratuit");
+    if (free !== null) {
+      const y = Number(free);
+      f.freeAt = FREE_AT_YEARS.includes(y) ? y : null;
     }
     return f;
   },
@@ -520,7 +608,9 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     writeFlag(out, "actifs", f.active, base.active);
     if (f.verdict !== base.verdict) out.push(["verdict", f.verdict]);
     if (f.trend !== base.trend) out.push(["tendance", f.trend]);
-    if (f.phase !== base.phase) out.push(["phase", f.phase]);
+    if (f.phase !== base.phase) out.push(["phase", f.phase ? phaseToken(f.phase) : ""]);
+    if (f.keeper !== base.keeper) out.push(["conservation", f.keeper ? KEEPER_TOKEN[f.keeper] : ""]);
+    if (f.freeAt !== base.freeAt) out.push(["gratuit", f.freeAt === null ? "" : String(f.freeAt)]);
     return out;
   },
   normalize(f, { caps, labels, ctx }) {
@@ -531,10 +621,12 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
       status: knownStatus ? f.status : "tous",
       verdict: caps.snake && (f.verdict === VERDICT_POSITIVE || verdicts.includes(f.verdict)) ? f.verdict : "",
       trend: caps.snake && (labels.trends ?? []).includes(f.trend) ? f.trend : "",
-      phase: caps.dynasty.has("phase") && (labels.phases ?? []).includes(f.phase) ? f.phase : "",
-      pNhl: caps.dynasty.has("pNhl") ? f.pNhl : ANY,
-      eta: caps.dynasty.has("eta") ? f.eta : ANY,
-      dyn: caps.dynasty.has("value") ? f.dyn : ANY,
+      phase: caps.dynasty && f.phase && (labels.phases ?? []).includes(f.phase) ? f.phase : "",
+      pNhl: caps.dynasty ? f.pNhl : ANY,
+      eta: caps.dynasty ? f.eta : ANY,
+      dyn: caps.dynasty ? f.dyn : ANY,
+      keeper: caps.dynasty ? f.keeper : "",
+      freeAt: caps.dynasty ? f.freeAt : null,
     };
   },
   test: matchesFilters,
@@ -543,7 +635,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     const set = (r: Range) => r.min !== null || r.max !== null;
     const out: ExtraKind[] = [];
     if (f.verdict || f.trend) out.push("snake");
-    if (f.phase || set(f.pNhl) || set(f.eta) || set(f.dyn)) out.push("dynasty");
+    if (f.phase || set(f.pNhl) || set(f.eta) || set(f.dyn) || f.keeper || f.freeAt !== null) out.push("dynasty");
     return out;
   },
   query: (f) => f.q,
@@ -558,16 +650,18 @@ export const COLUMN_KEYS = [
   "valeur",
   "vona",
   "dispo",
+  "dyn",
   "fp",
   "fpm",
   "age",
   "ros",
   "adp",
   "lnh",
-  "dyn",
   "phase",
+  "evol",
   "pnhl",
   "eta",
+  "conservation",
   "fourchette",
   "conseil",
   "verdict",
@@ -581,6 +675,7 @@ export const SORT_KEYS = [
   "valeur",
   "vona",
   "dispo",
+  "dyn",
   "fp",
   "fpm",
   "age",
@@ -588,9 +683,12 @@ export const SORT_KEYS = [
   "ros",
   "lnh",
   "nom",
-  "dyn",
+  "phase",
+  "evol",
   "pnhl",
   "eta",
+  "conservation",
+  "fourchette",
   "verdict",
   "opinions",
 ] as const;
@@ -601,13 +699,13 @@ export const DEFAULT_COLUMNS: readonly ColumnKey[] = [
   "valeur",
   "vona",
   "dispo",
+  "dyn",
   "fp",
   "fpm",
   "age",
   "ros",
   "adp",
   "lnh",
-  "dyn",
   "phase",
   "verdict",
 ];
@@ -628,16 +726,18 @@ const COLUMN_GROUP: Record<ColumnKey, string> = {
   valeur: GROUP.projection,
   vona: GROUP.draft,
   dispo: GROUP.draft,
+  dyn: GROUP.dynasty,
   fp: GROUP.projection,
   fpm: GROUP.projection,
   age: GROUP.profile,
   ros: GROUP.profile,
   adp: GROUP.profile,
   lnh: GROUP.profile,
-  dyn: GROUP.dynasty,
   phase: GROUP.dynasty,
+  evol: GROUP.dynasty,
   pnhl: GROUP.dynasty,
   eta: GROUP.dynasty,
+  conservation: GROUP.dynasty,
   fourchette: GROUP.dynasty,
   conseil: GROUP.dynasty,
   verdict: GROUP.snake,
@@ -646,22 +746,33 @@ const COLUMN_GROUP: Record<ColumnKey, string> = {
   opinions: GROUP.snake,
 };
 
-const LEFT: ReadonlySet<ColumnKey> = new Set(["statut", "phase", "conseil", "verdict", "tendance", "synthese"]);
+const LEFT: ReadonlySet<ColumnKey> = new Set(["statut", "phase", "conservation", "conseil", "verdict", "tendance", "synthese"]);
+
+/** Columns dynasty.json fills (shown once it is in; sorting by one waits for it). */
+const DYNASTY_COLUMNS: readonly ColumnKey[] = ["dyn", "phase", "evol", "pnhl", "eta", "conservation", "fourchette", "conseil"];
 
 type SortSpec = NonNullable<Col["sort"]>;
 const SORTS: Partial<Record<ColumnKey, Omit<SortSpec, "label">>> = {
   valeur: { value: (r) => r.value, defaultDir: "desc" },
   vona: { value: (r) => r.vona, defaultDir: "desc" },
   dispo: { value: (r) => r.available, defaultDir: "desc" },
+  dyn: { value: (r, ctx) => rowDynastyValue(r, modeOf(ctx)), defaultDir: "desc" },
   fp: { value: (r) => r.fp, defaultDir: "desc" },
   fpm: { value: (r) => r.fpg, defaultDir: "desc" },
   age: { value: (r) => r.age, defaultDir: "asc" },
   ros: { value: (r) => r.ros, defaultDir: "desc" },
   adp: { value: (r) => r.adp, defaultDir: "asc" },
   lnh: { value: (r) => r.nhlDraft?.overall, defaultDir: "asc" },
-  dyn: { value: (r) => r.dynasty?.value, defaultDir: "desc" },
+  // Career order: espoir first.
+  phase: { value: (r) => (r.dynasty ? PHASE_ORDER.indexOf(r.dynasty.phase) : null), defaultDir: "asc" },
+  evol: { value: (r) => r.dynasty?.trend ?? null, defaultDir: "desc" },
   pnhl: { value: (r) => r.dynasty?.pNhl, defaultDir: "desc" },
-  eta: { value: (r) => r.dynasty?.eta, defaultDir: "asc" },
+  eta: { value: (r) => r.dynasty?.eta ?? null, defaultDir: "asc" },
+  // Status first (Protéger, Gratuit, À décider, Location), then the odds: team
+  // odds and the league's are never ranked against each other across statuses.
+  conservation: { value: (r) => (r.dynasty ? keeperSortValue(r.dynasty) : null), defaultDir: "desc" },
+  // The ceiling (P90) of the mode's band.
+  fourchette: { value: (r, ctx) => (r.dynasty ? bandOf(r.dynasty, modeOf(ctx))[2] : null), defaultDir: "desc" },
   // Higher = more positive, so « desc » puts « très positif » first.
   verdict: {
     value: (r) => {
@@ -673,15 +784,11 @@ const SORTS: Partial<Record<ColumnKey, Omit<SortSpec, "label">>> = {
   opinions: { value: (r) => r.snake?.opinions, defaultDir: "desc" },
 };
 
+const hasDynasty = (c: FantraxCaps) => c.dynasty;
 const NEEDS: Partial<Record<ColumnKey, (c: FantraxCaps) => boolean>> = {
   vona: (c) => c.draft,
   dispo: (c) => c.draft,
-  dyn: (c) => c.dynasty.has("value"),
-  phase: (c) => c.dynasty.has("phase"),
-  pnhl: (c) => c.dynasty.has("pNhl"),
-  eta: (c) => c.dynasty.has("eta"),
-  fourchette: (c) => c.dynasty.has("p10") || c.dynasty.has("p90"),
-  conseil: (c) => c.dynasty.has("value") && c.dynasty.has("phase"),
+  ...Object.fromEntries(DYNASTY_COLUMNS.map((k) => [k, hasDynasty])),
   verdict: (c) => c.snake,
   tendance: (c) => c.snake,
   synthese: (c) => c.snake,
@@ -689,9 +796,7 @@ const NEEDS: Partial<Record<ColumnKey, (c: FantraxCaps) => boolean>> = {
 };
 
 const EXTRAS: Partial<Record<ColumnKey, ExtraKind>> = {
-  dyn: "dynasty",
-  pnhl: "dynasty",
-  eta: "dynasty",
+  ...Object.fromEntries(DYNASTY_COLUMNS.map((k) => [k, "dynasty" as const])),
   verdict: "snake",
   opinions: "snake",
 };
@@ -700,11 +805,11 @@ export const FANTRAX_COLUMNS: readonly Col[] = COLUMN_KEYS.map((key): Col => {
   const sort = SORTS[key];
   return {
     key,
-    label: (ctx) => columnCopy(key, ctx.nextPick).label,
-    title: (ctx) => columnCopy(key, ctx.nextPick).title,
+    label: (ctx) => columnCopy(key, ctx).label,
+    title: (ctx) => columnCopy(key, ctx).title,
     align: LEFT.has(key) ? "left" : "right",
     group: COLUMN_GROUP[key],
-    ...(sort ? { sort: { ...sort, label: SORT_LABEL[key as SortKey] } } : {}),
+    ...(sort ? { sort: { ...sort, label: SORT_LABEL[key as SortKey], ...(key === "fourchette" ? { button: "plafond de la fourchette" } : {}) } } : {}),
     ...(NEEDS[key] ? { needs: NEEDS[key] } : {}),
     ...(key === "opinions" ? { lazy: "snakeFull" as const } : {}),
     ...(EXTRAS[key] ? { readsExtras: EXTRAS[key] } : {}),
@@ -735,30 +840,60 @@ function autoHide(f: FantraxFilters): ColumnKey[] {
 
 // ------------------------------------------------------------ presets
 
-export type PresetId = "tous" | "repechage" | "espoirs" | "autonomes" | "ballottage-ww" | "equipe";
+export type PresetId = "tous" | "repechage" | "dynastie" | "espoirs" | "autonomes" | "ballottage-ww" | "equipe";
 
-const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["valeur", "vona", "dispo", "fp", "age", "ros", "adp", "synthese"];
-const EQUIPE_COLUMNS: readonly ColumnKey[] = [
-  "statut",
-  "valeur",
-  "fpm",
+/** Season points (VONA, odds) first, the dynasty value right beside them. */
+const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["valeur", "vona", "dispo", "dyn", "fp", "age", "ros", "adp", "synthese"];
+const DYNASTIE_COLUMNS: readonly ColumnKey[] = [
+  "dispo",
+  "dyn",
   "age",
   "ros",
+  "adp",
+  "phase",
+  "evol",
+  "pnhl",
+  "eta",
+  "conservation",
+  "fourchette",
+];
+const ESPOIRS_COLUMNS: readonly ColumnKey[] = [
   "dyn",
+  "age",
+  "ros",
+  "adp",
+  "lnh",
   "phase",
   "pnhl",
   "eta",
+  "conservation",
+  "fourchette",
+  "verdict",
+];
+const EQUIPE_COLUMNS: readonly ColumnKey[] = [
+  "statut",
+  "valeur",
+  "dyn",
+  "fpm",
+  "age",
+  "phase",
+  "evol",
+  "conservation",
   "conseil",
   "verdict",
 ];
 
-const prospectSort = (caps: FantraxCaps): SortState =>
-  caps.dynasty.has("value") ? { key: "dyn", dir: "desc" } : { key: "ros", dir: "desc" };
+/** By dynasty value when the build published it, else the season's fallback. */
+const dynastyOr =
+  (fallback: SortState) =>
+  (caps: FantraxCaps): SortState =>
+    caps.dynastyPublished ? { key: "dyn", dir: "desc" } : fallback;
 
 /**
- * One-click views (the chips) and each tab's starting view. Prospects sort
- * by dynasty value when that file is published, else by Ros% (the best
- * signal Fantrax gives for them).
+ * One-click views (the chips) and each tab's starting view. Prospects and
+ * Mon équipe sort by dynasty value (in the page's mode) when the build
+ * published dynasty.json, else by Ros% (the best signal Fantrax gives for
+ * prospects) and by season value.
  */
 export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] = [
   {
@@ -781,12 +916,23 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     cols: REPECHAGE_COLUMNS,
   },
   {
+    id: "dynastie",
+    label: "Meilleure valeur dynastie disponible",
+    description: "Joueurs et espoirs que personne n’a, par valeur dynastie (dans le mode choisi).",
+    filters: { status: "dispo" },
+    sort: { key: "dyn", dir: "desc" },
+    cols: DYNASTIE_COLUMNS,
+  },
+  {
     id: "espoirs",
     label: "Espoirs ≤ 21 ans disponibles",
-    description: "Espoirs sans projection LNH, 21 ans ou moins, que personne n'a.",
+    description: (caps) =>
+      caps.dynastyPublished
+        ? "Espoirs sans projection LNH, 21 ans ou moins, que personne n’a, par valeur dynastie."
+        : "Espoirs sans projection LNH, 21 ans ou moins, que personne n'a.",
     filters: { status: "dispo", type: "espoirs", age: { min: null, max: 21 } },
-    sort: prospectSort,
-    cols: DEFAULT_COLUMNS,
+    sort: dynastyOr({ key: "ros", dir: "desc" }),
+    cols: ESPOIRS_COLUMNS,
   },
   {
     id: "autonomes",
@@ -807,9 +953,12 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
   {
     id: "equipe",
     label: "Mon équipe",
-    description: "Tout votre effectif, mineures comprises.",
+    description: (caps) =>
+      caps.dynastyPublished
+        ? "Tout votre effectif, mineures comprises, par valeur dynastie."
+        : "Tout votre effectif, mineures comprises.",
     filters: { status: "moi" },
-    sort: { key: "valeur", dir: "desc" },
+    sort: dynastyOr({ key: "valeur", dir: "desc" }),
     cols: EQUIPE_COLUMNS,
   },
 ];

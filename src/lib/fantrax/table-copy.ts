@@ -6,6 +6,7 @@
  */
 import { fmtInt } from "@/lib/player-table/copy";
 import { FANTRAX_ICON } from "./config";
+import { DEFAULT_DYNASTY_MODE, DYNASTY_MODE_LABEL, type DynastyMode } from "./dynasty-mode";
 import type { ColumnKey, FantraxRow, FantraxType, SortKey } from "./table";
 import { fmtNum, fmtOdds, pickLabel } from "./league-copy";
 
@@ -19,12 +20,29 @@ export interface ColumnCopy {
   title: string;
 }
 
-export function columnCopy(col: ColumnKey, nextPick: number | null): ColumnCopy {
+/** What a header says depends on the next pick (odds) and the dynasty mode. */
+export interface ColumnCopyCtx {
+  nextPick: number | null;
+  mode?: DynastyMode;
+}
+
+/** « Valeur dynastie » units, said once wherever it sits next to season points. */
+const DYNASTY_UNITS = "points au-dessus du remplacement sur les 12 prochaines saisons, les plus lointaines comptant moins selon le mode";
+
+/**
+ * The legend under the mode switch (visible: headers' titles are not read
+ * on a touch screen).
+ */
+export const DYNASTY_LEGEND = `Valeur dyn.${NBSP}: points au-dessus du remplacement sur 12 saisons, pas des points de la saison (ne pas additionner). Fourchette${NBSP}: 8 chances sur 10 que la valeur finisse entre ces bornes. Chances LNH${NBSP}: devenir un régulier. Tendance${NBSP}: évolution attendue de sa production par an. Conseil${NBSP}: indice automatique, à vérifier.`;
+
+export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
+  const nextPick = ctx.nextPick;
+  const mode = ctx.mode ?? DEFAULT_DYNASTY_MODE;
   switch (col) {
     case "statut":
       return { label: "Statut", title: "Où il est : disponible, au ballottage ou dans quelle équipe" };
     case "valeur":
-      return { label: "Valeur", title: `Points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides` };
+      return { label: "Valeur saison", title: `Points projetés sur la saison 2026-27, jusqu'à +50${NBSP}% si vos postes D ou G sont vides` };
     case "vona":
       return { label: "VONA", title: "Valeur moins le meilleur attendu à sa position à votre choix suivant" };
     case "dispo":
@@ -45,15 +63,36 @@ export function columnCopy(col: ColumnKey, nextPick: number | null): ColumnCopy 
     case "lnh":
       return { label: "Repêchage LNH", title: "Année, rang et équipe au repêchage de la LNH" };
     case "dyn":
-      return { label: "Valeur dyn.", title: "Valeur dynastie (modèle à long terme)" };
+      return {
+        label: "Valeur dyn.",
+        title: `Valeur dynastie, mode ${DYNASTY_MODE_LABEL[mode]} (${DYNASTY_UNITS}), et son rang dans la ligue. Autre unité que la valeur de la saison${NBSP}: ne pas les additionner`,
+      };
     case "phase":
-      return { label: "Phase", title: "Phase de carrière" };
+      return {
+        label: "Phase",
+        title: `Phase de carrière selon le modèle (espoir, en progression, prime, plateau, déclin…)${NBSP}: d’après l’âge ajusté pour l’élite et la trajectoire, et la progression attendue des jeunes, pas l’âge seul`,
+      };
+    case "evol":
+      return {
+        label: "Tendance %/an",
+        title: "Évolution attendue de sa production par match, en % par an, sur les deux prochaines saisons (croissance des jeunes, vieillissement des autres)",
+      };
     case "pnhl":
-      return { label: "P(LNH)", title: "Probabilité de devenir un régulier dans la LNH" };
+      return { label: "Chances LNH", title: "Chances de devenir un régulier dans la LNH (200 matchs, ou une saison de 40 départs pour un gardien)" };
     case "eta":
-      return { label: "ETA", title: "Saison d'arrivée prévue dans la LNH" };
+      return { label: "Arrivée", title: "Première saison prévue dans la LNH (médiane) d’un espoir" };
+    case "conservation":
+      return {
+        label: "Écrémage 2027",
+        title: `À l’écrémage de 2027${NBSP}: Protéger, À décider ou Location, avec ses chances d’être parmi les 10 protégés de son équipe (ou les 160 de la ligue, «${NBSP}ligue${NBSP}», s’il est libre ou arrivé depuis la synchro), ou Gratuit tant qu’il est admissible aux mineures`,
+      };
     case "fourchette":
-      return { label: "p10–p90", title: "Fourchette de la valeur dynastie : 10e, 50e et 90e centiles" };
+      return {
+        label: mode === "winNow" ? "Fourchette (éq.)" : "Fourchette",
+        title: `8 chances sur 10 que la valeur dynastie finisse entre ces deux bornes (10e et 90e centiles des carrières simulées), mode ${
+          mode === "winNow" ? "Équilibré (le mode Gagner maintenant n’en a pas)" : DYNASTY_MODE_LABEL[mode]
+        }`,
+      };
     case "verdict":
       return { label: "Snake", title: "Verdict de Simon « Snake » Boisvert" };
     case "tendance":
@@ -65,13 +104,13 @@ export function columnCopy(col: ColumnKey, nextPick: number | null): ColumnCopy 
     case "conseil":
       return {
         label: "Conseil",
-        title: "Indice automatique d’après la valeur dynastie et la phase de carrière — à vérifier",
+        title: `Indice automatique, du point de vue de l’équipe choisie (valeur dynastie, phase, écrémage 2027)${NBSP}: quoi faire de ses joueurs, l’intérêt des disponibles, la situation de ceux des autres équipes. À vérifier`,
       };
   }
 }
 
 export const SORT_LABEL: Record<SortKey, string> = {
-  valeur: "Valeur",
+  valeur: "Valeur saison",
   vona: "VONA",
   dispo: "Disponibilité à mon prochain choix",
   fp: "FP saison",
@@ -82,8 +121,12 @@ export const SORT_LABEL: Record<SortKey, string> = {
   lnh: "Rang au repêchage LNH",
   nom: "Nom",
   dyn: "Valeur dynastie",
-  pnhl: "P(LNH)",
-  eta: "ETA",
+  phase: "Phase de carrière",
+  evol: "Tendance par an",
+  pnhl: "Chances LNH",
+  eta: "Arrivée dans la LNH",
+  conservation: "Écrémage 2027 (statut, puis chances)",
+  fourchette: "Plafond de la fourchette",
   verdict: "Verdict de Snake",
   opinions: "Opinions de Snake",
 };
@@ -175,6 +218,19 @@ export function pctCell(x: number | null | undefined): string {
   return x === null || x === undefined ? "—" : `${Math.round(x * 100)}${NBSP}%`;
 }
 
+/** 2027 → `2027-28`. */
+export function seasonLabel(y: number): string {
+  return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+}
+
+/** Yearly trend 0.044 → `+4 %/an`, −0.074 → `−7 %/an`, under half a point → `stable`. */
+export function trendCell(x: number | null | undefined): string {
+  if (x === null || x === undefined || !Number.isFinite(x)) return "—";
+  const pts = Math.round(x * 100);
+  if (pts === 0) return "stable";
+  return `${pts > 0 ? "+" : "−"}${Math.abs(pts)}${NBSP}%/an`;
+}
+
 /** The note under the table: what the numbers mean and where they come from. */
 export function fantraxTableNote(opts: {
   draftOpen: boolean;
@@ -183,6 +239,8 @@ export function fantraxTableNote(opts: {
   counts: { projected: number; prospects: number };
   recentDrafts: [number, number];
   dynasty: boolean;
+  /** The page's dynasty mode (named in the note). */
+  mode?: DynastyMode;
   snake: boolean;
   /** Under the Repêchage tab's own note (value, VONA and odds already explained there). */
   brief?: boolean;
@@ -191,17 +249,31 @@ export function fantraxTableNote(opts: {
     `${fmtInt(opts.counts.projected)} joueurs projetés et ${fmtInt(opts.counts.prospects)} espoirs${NBSP}: les joueurs que nous projetons, ceux qui ont un ADP Fantrax, ceux d'une équipe de la ligue ou au ballottage, les choix des repêchages de la LNH ${opts.recentDrafts[0]} à ${opts.recentDrafts[1]} et ceux pris dans au moins 1${NBSP}% des ligues Fantrax.`,
   ];
   if (!opts.brief) {
-    parts.push(`Valeur = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides (comme au repêchage).`);
+    parts.push(`Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides (comme au repêchage).`);
     if (opts.draftOpen && opts.nextPick !== null) {
       parts.push(
         `VONA et Dispo. (chance d'être encore là à votre choix ${pickLabel(opts.nextPick)}) : mêmes calculs que l’onglet Repêchage, pour les joueurs projetés; les choix faits en direct retirent les joueurs repêchés.`,
       );
     }
   }
-  parts.push("Les espoirs n'ont pas de projection : triez-les par % Fantrax, ADP, âge ou rang au repêchage de la LNH.");
+  parts.push(
+    opts.dynasty
+      ? `Les espoirs n’ont pas de projection de saison${NBSP}: triez-les par valeur dynastie, chances LNH, % Fantrax, ADP, âge ou rang au repêchage de la LNH.`
+      : "Les espoirs n'ont pas de projection : triez-les par % Fantrax, ADP, âge ou rang au repêchage de la LNH.",
+  );
   if (opts.dynasty) {
-    parts.push("Valeur dynastie : modèle à long terme publié avec le site. Conseil : indice automatique d’après la valeur dynastie et la phase de carrière, à vérifier.");
+    parts.push(
+      `Valeur dyn. = ${DYNASTY_UNITS}${opts.mode ? ` (mode ${DYNASTY_MODE_LABEL[opts.mode]})` : ""}; une autre unité que la valeur de la saison, à ne pas additionner. «${NBSP}—${NBSP}»${NBSP}: joueur absent des données du modèle (non évalué); 0${NBSP}: évalué, sous le seuil de la liste publiée. Conseil${NBSP}: indice automatique d’après la valeur dynastie, la phase et l’écrémage de 2027, à vérifier.`,
+    );
   }
   if (opts.snake) parts.push("Snake : synthèse des opinions de Simon « Snake » Boisvert (paraphrases générées automatiquement).");
   return parts.join(" ");
+}
+
+/**
+ * Repêchage: what the season columns and the dynasty value each measure
+ * (one line, under the board note).
+ */
+export function dynastyDraftNote(mode: DynastyMode): string {
+  return `Valeur saison, VONA et Dispo. comptent les points de la saison 2026-27 (comme un repêchage d’un an); Valeur dyn. (mode ${DYNASTY_MODE_LABEL[mode]}) compte les 12 prochaines saisons, écrémages et mineures compris${NBSP}: deux unités différentes, à ne pas additionner.`;
 }

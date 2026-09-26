@@ -537,13 +537,13 @@ const volCells: string[] = [];
 {
   const rec = (over: Partial<DynastyRecord>): Pick<DynastyRecord, "growth"> => ({ ...over });
   const s = growthClauseFr(rec({ growth: { src: "season", base: 2.47, baseAge: 19.8, pct: 0.62, pick: 5, m: [1.1, 1.19, 1.2, 1.27, 1.28, 1.3] } }));
-  assert(s === "progression attendue d'un choix du top 5 productif à 19 ans (+20 % d'ici 2028-29)", `growth clause: ${s}`);
+  assert(s === "progression attendue d’un choix du top 5 productif à 19 ans (+20 % d’ici 2028-29)", `growth clause: ${s}`);
   const e = growthClauseFr(rec({ growth: { src: "season", base: 5.0, baseAge: 19.3, pct: 0.995, pick: 1, m: [1.02, 1.07, 1.04, 1.08, 1.08, 1.09] } }));
-  assert(e === "peu de progression attendue d'un 1er choix au total déjà élite à 19 ans (+4 % d'ici 2028-29)", `elite clause: ${e}`);
+  assert(e === "peu de progression attendue d’un 1er choix au total déjà élite à 19 ans (+4 % d’ici 2028-29)", `elite clause: ${e}`);
   const r = growthClauseFr(rec({ growth: { src: "season", base: 4.0, baseAge: 22.5, pct: 0.95, pick: 9, m: [0.97, 0.96, 0.94, 0.93, 0.92, 0.9] } }));
-  assert(r!.startsWith("recul attendu d'un choix du top 10 parmi les meilleurs de son âge à 22 ans (−6"), `regression clause: ${r}`);
+  assert(r!.startsWith("recul attendu d’un choix du top 10 parmi les meilleurs de son âge à 22 ans (−6"), `regression clause: ${r}`);
   const rk = growthClauseFr(rec({ growth: { src: "projection", base: 3.4, baseAge: 18.9, pct: 0.9, pick: 6, m: [1.02, 1.08, 1.07, 1.1, 1.09, 1.08] } }));
-  assert(rk!.includes("projeté") && rk!.includes("d'ici 2028-29"), `rookie clause counts from the 2025-26 base like everyone: ${rk}`);
+  assert(rk!.includes("projeté") && rk!.includes("d’ici 2028-29"), `rookie clause counts from the 2025-26 base like everyone: ${rk}`);
   assert(growthClauseFr(rec({})) === null, "no growth record → no clause");
 }
 

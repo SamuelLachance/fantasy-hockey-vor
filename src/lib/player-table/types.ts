@@ -60,6 +60,8 @@ export interface ColumnDef<R, Caps, Ctx> {
     defaultDir: SortDir;
     /** Name in the counter's « trié par … » (defaults to the label). */
     label?: string;
+    /** Name of the header's sort button when the label does not say what it sorts (« plafond de la fourchette »). */
+    button?: string;
   };
   /** Unavailable with this data: hidden from the chooser, ignored in the URL. */
   needs?: (caps: Caps) => boolean;

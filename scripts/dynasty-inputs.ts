@@ -19,6 +19,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
+import { writeClientDynasty } from "./dynasty-client";
 import { normalizeDraftName, type DraftRegistry } from "../src/lib/draft-registry";
 import { depthChartShares } from "../src/lib/dynasty/segment";
 import {
@@ -291,5 +292,7 @@ export function runDynastyBuild(
   const result = buildDynasty(inputs, L.params, { ...opts, paths: opts.paths ?? DEFAULT_PATHS });
   const out = opts.out ?? L.paths.out;
   writeFileAtomic(out, `${JSON.stringify(result.snapshot)}\n`);
+  // The browser's copy (dynasty-table.json), next to it.
+  writeClientDynasty(out);
   return { result, inputs, ms: Date.now() - t0, out };
 }

@@ -4,6 +4,7 @@
  * (« À la synchro du … »), so a stale « dans 3 choix » never reads as live.
  */
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
+import type { TeamDynastySummary } from "@/lib/fantrax/dynasty-hints";
 import {
   alertText,
   fmtDateTime,
@@ -13,6 +14,7 @@ import {
   legalitySummary,
   ordinal,
   pickLabel,
+  plural,
 } from "@/lib/fantrax/league-copy";
 import { formatDraftStartFr } from "@/lib/draft/draft-copy";
 import { DRAFT_DONE_AFTER_MS } from "@/lib/draft/draft-done";
@@ -23,6 +25,13 @@ export interface HomeAlert {
   level: "error" | "warn" | "info";
   text: string;
   /** The tab that deals with it (and a section of it). */
+  tab: LeagueTab;
+  hash?: string;
+}
+
+/** One line of the card that is neither urgent nor a date (the dynasty outlook), with its tab. */
+export interface HomeNote {
+  text: string;
   tab: LeagueTab;
   hash?: string;
 }
@@ -51,6 +60,8 @@ export interface HomeCardData {
   syncedText: string | null;
   alerts: HomeAlert[];
   dates: HomeDate[];
+  /** The dynasty line (Fantrax dynasty league), null elsewhere. */
+  note: HomeNote | null;
   tabs: Array<{ tab: LeagueTab; label: string }>;
   defaultTab: LeagueTab;
   /**
@@ -64,7 +75,7 @@ export interface HomeCardData {
   accent: LeagueEntry["accent"];
 }
 
-function baseCard(entry: LeagueEntry): Omit<HomeCardData, "myTeam" | "syncedAt" | "syncedText" | "alerts" | "dates" | "search"> {
+function baseCard(entry: LeagueEntry): Omit<HomeCardData, "myTeam" | "syncedAt" | "syncedText" | "alerts" | "dates" | "search" | "note"> {
   return {
     slug: entry.slug,
     title: entry.name,
@@ -85,8 +96,38 @@ function lockText(iso: string): string {
 
 type FantraxHomePlan = Pick<DailyPlan, "teamName" | "dataAsOf" | "legality" | "alerts" | "draft" | "target" | "players">;
 
-/** The Fantrax points league: roster legality, empty slots, the live draft, the next lock. */
-export function fantraxHomeCard(entry: LeagueEntry, plan: FantraxHomePlan): HomeCardData {
+/** Keeper slots per team at the offseason cutdown, and the first cutdown. */
+const KEEPER_SLOTS = 10;
+const FIRST_CUTDOWN = 2027;
+
+/**
+ * The dynasty line of the card: what the 2027 cutdown asks of my roster
+ * (« Écrémage 2027 : 6 à décider pour 5 places · 3 joueurs en location à
+ * échanger avant »), else its summary.
+ */
+export function dynastyHomeNote(s: Pick<TeamDynastySummary, "core" | "bubble" | "tradeBefore" | "text">): HomeNote {
+  const left = Math.max(0, KEEPER_SLOTS - s.core);
+  const parts: string[] = [];
+  if (s.bubble > 0) parts.push(`${s.bubble} à décider pour ${left} ${plural(left, "place", "places")}`);
+  if (s.tradeBefore > 0) {
+    parts.push(`${s.tradeBefore} ${plural(s.tradeBefore, "joueur", "joueurs")} en location à échanger avant l’écrémage`);
+  }
+  return {
+    text: `Écrémage ${FIRST_CUTDOWN} : ${parts.length ? parts.join(" · ") : s.text}.`,
+    tab: "mon-equipe",
+    hash: "ecremage",
+  };
+}
+
+/**
+ * The Fantrax points league: roster legality, empty slots, the live draft,
+ * the next lock, and (with dynasty values) the 2027 cutdown line.
+ */
+export function fantraxHomeCard(
+  entry: LeagueEntry,
+  plan: FantraxHomePlan,
+  dynasty: Pick<TeamDynastySummary, "core" | "bubble" | "tradeBefore" | "text"> | null = null,
+): HomeCardData {
   const name = (id: string | null | undefined) => (id ? plan.players[id]?.n : undefined) ?? "Un joueur";
   const alerts: HomeAlert[] = [];
   if (plan.legality.illegal || plan.legality.need > 0) {
@@ -132,6 +173,7 @@ export function fantraxHomeCard(entry: LeagueEntry, plan: FantraxHomePlan): Home
     syncedText: `À la synchro du ${fmtDateTime(plan.dataAsOf)}`,
     alerts,
     dates,
+    note: dynasty ? dynastyHomeNote(dynasty) : null,
   };
 }
 
@@ -152,6 +194,7 @@ export function categoryHomeCard(entry: LeagueEntry, profile: CategoryHomeProfil
     myTeam: null,
     syncedAt: null,
     syncedText: null,
+    note: null,
     alerts: [],
     dates: [
       {

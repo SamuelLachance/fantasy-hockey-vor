@@ -18,6 +18,13 @@ import {
   type LeagueSnapshotBundle,
 } from "@/lib/fantrax/league-client";
 import { withLiveOverlay, type LiveOverlay } from "@/lib/fantrax/live";
+import {
+  DEFAULT_DYNASTY_MODE,
+  DYNASTY_MODE_PARAM,
+  dynastyModeSearch,
+  parseDynastyMode,
+  type DynastyMode,
+} from "@/lib/fantrax/dynasty-mode";
 import type { RosterLimits } from "@/lib/fantrax/config";
 import type { SnakeFantraxFile } from "@/lib/snake/types";
 import { FantraxLeagueContext, type FantraxLeagueValue, type LoadState } from "./fantrax-league-context";
@@ -38,14 +45,34 @@ interface FantraxLeagueProviderProps {
   children: ReactNode;
 }
 
-/** Reads `?team=` (inside Suspense, as static export requires) and reports it up. */
-function TeamFromUrl({ onTeam }: { onTeam: (teamId: string | null) => void }) {
+/** Reads `?team=` and `?mode=` (inside Suspense, as static export requires) and reports them up. */
+function LeagueFromUrl({
+  onTeam,
+  onMode,
+}: {
+  onTeam: (teamId: string | null) => void;
+  onMode: (mode: DynastyMode) => void;
+}) {
   const params = useSearchParams();
   const team = params.get("team");
+  const mode = parseDynastyMode(params.get(DYNASTY_MODE_PARAM));
   useEffect(() => {
     onTeam(team);
   }, [team, onTeam]);
+  useEffect(() => {
+    onMode(mode);
+  }, [mode, onMode]);
   return null;
+}
+
+/** Native History API: Next's patched replaceState soft-navigates, which scrolls to top on static export. */
+function replaceSearch(search: string): void {
+  try {
+    const url = `${window.location.pathname}${search}${window.location.hash}`;
+    History.prototype.replaceState.call(window.history, window.history.state, "", url);
+  } catch {
+    // Sandboxed frames can refuse history writes; the choice still applies.
+  }
 }
 
 const CLOCK_TICK_MS = 30_000;
@@ -69,6 +96,7 @@ export function FantraxLeagueProvider({
   children,
 }: FantraxLeagueProviderProps) {
   const [teamId, setTeamId] = useState(defaultTeamId);
+  const [mode, setMode] = useState<DynastyMode>(DEFAULT_DYNASTY_MODE);
   const [nowMs, setNowMs] = useState<number | null>(null);
   const [planNowMs, setPlanNowMs] = useState<number | null>(null);
   const [bundle, setBundle] = useState<LeagueSnapshotBundle | null>(null);
@@ -95,18 +123,18 @@ export function FantraxLeagueProvider({
     (next: string) => {
       setTeamId(next);
       storeTeam(next);
-      try {
-        // Native History API: Next's patched replaceState soft-navigates,
-        // which scrolls to top on static export. The tab links carry the
-        // team from state (TabSearchContext), not from the URL.
-        const url = `${window.location.pathname}${teamSearch(window.location.search, next, defaultTeamId)}${window.location.hash}`;
-        History.prototype.replaceState.call(window.history, window.history.state, "", url);
-      } catch {
-        // Sandboxed frames can refuse history writes; the choice still applies.
-      }
+      // The tab links carry the team from state (TabSearchContext), not from the URL.
+      replaceSearch(teamSearch(window.location.search, next, defaultTeamId));
     },
     [defaultTeamId],
   );
+
+  // The dynasty mode: from the address (Back / Forward, a shared link), or picked on a tab.
+  const onUrlMode = useCallback((m: DynastyMode) => setMode(m), []);
+  const chooseMode = useCallback((next: DynastyMode) => {
+    setMode(next);
+    replaceSearch(dynastyModeSearch(window.location.search, next));
+  }, []);
 
   // ---- baked snapshot (values / state / schedule / league)
   useEffect(() => {
@@ -253,19 +281,21 @@ export function FantraxLeagueProvider({
       player,
       teamName,
       hasDynasty,
+      mode,
+      chooseMode,
     }),
-    [teams, leagueName, limits, defaultTeamId, teamId, chooseTeam, plan, bundle, bundleState, state, live, liveState, busy, nowMs, refresh, player, teamName, hasDynasty],
+    [teams, leagueName, limits, defaultTeamId, teamId, chooseTeam, plan, bundle, bundleState, state, live, liveState, busy, nowMs, refresh, player, teamName, hasDynasty, mode, chooseMode],
   );
-  // Tab links keep a non-default team (from state: the URL write above is
-  // invisible to useSearchParams).
-  const tabSearch = teamSearch("", teamId, defaultTeamId);
+  // Tab links keep a non-default team and dynasty mode (from state: the URL
+  // writes above are invisible to useSearchParams).
+  const tabSearch = dynastyModeSearch(teamSearch("", teamId, defaultTeamId), mode);
 
   return (
     <FantraxLeagueContext.Provider value={value}>
       <TabSearchContext.Provider value={tabSearch}>
         <SnakeVerdictsProvider kind="fx" seed={snakeSeed}>
           <Suspense fallback={null}>
-            <TeamFromUrl onTeam={onUrlTeam} />
+            <LeagueFromUrl onTeam={onUrlTeam} onMode={onUrlMode} />
           </Suspense>
           {children}
         </SnakeVerdictsProvider>

@@ -46,12 +46,15 @@ jobs:
       - name: Unit checks
         run: npm run test:unit
 
-      # Fresh Fantrax data for /league, so a push never republishes an old
-      # snapshot. Non-fatal: on any failure the committed snapshot (already
-      # validated by `npm run check` above) is restored and used.
+      # Fresh Fantrax data for the Captains tabs, so a push never republishes
+      # an old snapshot. The sync ends with the dynasty build (~30 s,
+      # public/fantrax/dynasty.json) and check:league gates both. Non-fatal:
+      # on any failure the committed snapshot and dynasty.json (already
+      # validated by `npm run check` above) are restored and used.
       - name: Refresh league snapshot (non-fatal)
         run: |
-          if npm run league:sync && npm run check:league; then
+          # 10 min budget (a sync takes ~1 min): a hung read counts as a failure.
+          if timeout 600 npm run league:sync && npm run check:league; then
             echo "League snapshot refreshed"
           else
             git checkout -- src/data/fantrax public/fantrax || true

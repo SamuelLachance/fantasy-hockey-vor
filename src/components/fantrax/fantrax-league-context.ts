@@ -9,6 +9,7 @@
 import { createContext, useContext } from "react";
 import type { RosterLimits } from "@/lib/fantrax/config";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
+import type { DynastyMode } from "@/lib/fantrax/dynasty-mode";
 import type { LeagueSnapshotBundle } from "@/lib/fantrax/league-client";
 import type { LiveOverlay } from "@/lib/fantrax/live";
 import type { StateSnapshot } from "@/lib/fantrax/snapshot-types";
@@ -41,6 +42,9 @@ export interface FantraxLeagueValue {
   teamName: (id: string) => string;
   /** The build saw `public/fantrax/dynasty.json` (else it is never fetched). */
   hasDynasty: boolean;
+  /** Dynasty value mode of every Captains tab (`?mode=`, Équilibré by default). */
+  mode: DynastyMode;
+  chooseMode: (mode: DynastyMode) => void;
 }
 
 export const FantraxLeagueContext = createContext<FantraxLeagueValue | null>(null);

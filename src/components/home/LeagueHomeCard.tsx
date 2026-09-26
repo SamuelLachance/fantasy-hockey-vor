@@ -84,6 +84,19 @@ export function LeagueHomeCard({ card, children }: { card: HomeCardData; childre
 
       {children}
 
+      {card.note ? (
+        <p className="text-sm">
+          <Link
+            href={`${leagueTabPath(card.slug, card.note.tab, card.search)}${card.note.hash ? `#${card.note.hash}` : ""}`}
+            prefetch={false}
+            className="inline-flex min-h-11 items-start gap-2 rounded-md text-slate-200 underline-offset-2 hover:text-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+          >
+            <span className="min-w-0 flex-1">{card.note.text}</span>
+            <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
+          </Link>
+        </p>
+      ) : null}
+
       {card.alerts.length > 0 ? (
         <div>
           {card.syncedText ? <p className="mb-2 text-xs text-slate-400">{card.syncedText} :</p> : null}

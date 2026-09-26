@@ -10,7 +10,7 @@ export function FantraxPlayersTab() {
       title="Liste des joueurs"
       description="Espoirs compris. La vue (filtres, tri, colonnes) est gardée dans l’adresse de la page : mettez-la en favori ou partagez-la."
       base="tous"
-      presets={["tous", "repechage", "espoirs", "autonomes", "equipe"]}
+      presets={["tous", "repechage", "dynastie", "espoirs", "autonomes", "equipe"]}
       perPage={50}
       showTotal
     />

@@ -177,7 +177,7 @@ export function PlayerTableGrid<R, F, Caps, Ctx>({
                     <button
                       type="button"
                       onClick={() => onSort(c)}
-                      aria-label={sortButtonLabel(label, active, sort.dir)}
+                      aria-label={sortButtonLabel(def.sort?.button ?? label, active, sort.dir)}
                       className={`inline-flex min-h-11 items-center gap-1 rounded-md uppercase tracking-wider hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
                         active ? "text-cyan-200" : ""
                       } ${align === "text-right" ? "flex-row-reverse" : ""}`}

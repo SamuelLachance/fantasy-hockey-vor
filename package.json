@@ -7,8 +7,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "npm run generate && next build",
-    "build:pages": "tsx scripts/build-draft-board.ts && next build && tsx scripts/check-export.ts",
+    "build": "npm run generate && tsx scripts/build-dynasty-client.ts && next build",
+    "build:pages": "tsx scripts/build-draft-board.ts && tsx scripts/build-dynasty-client.ts && next build && tsx scripts/check-export.ts",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
