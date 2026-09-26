@@ -696,13 +696,14 @@ export const SORT_KEYS = [
 ] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 
+// « FP saison » is left to the column chooser: it repeats « Valeur saison »
+// (the same number unless the team has empty D/G slots).
 export const DEFAULT_COLUMNS: readonly ColumnKey[] = [
   "statut",
   "valeur",
   "vona",
   "dispo",
   "dyn",
-  "fp",
   "fpm",
   "age",
   "ros",
@@ -845,7 +846,7 @@ function autoHide(f: FantraxFilters): ColumnKey[] {
 export type PresetId = "tous" | "repechage" | "dynastie" | "espoirs" | "autonomes" | "ballottage-ww" | "equipe";
 
 /** Season points (VONA, odds) first, the dynasty value right beside them. */
-const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "fp", "age", "ros", "adp"];
+const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "age", "ros", "adp"];
 const DYNASTIE_COLUMNS: readonly ColumnKey[] = [
   "verdict",
   "dispo",

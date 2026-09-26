@@ -17,7 +17,7 @@ export function CategoryDraftTab({ board, seed }: { board: DraftBoard; seed: Sna
   return (
     <SnakeVerdictsProvider kind="nhl" seed={seed} complete>
       <DraftHelper board={board} />
-      <div className="mx-auto max-w-[96rem] px-4 pt-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[120rem] px-4 pt-6 sm:px-6 lg:px-8">
         <SnakeChipLegend className="max-w-4xl" />
       </div>
     </SnakeVerdictsProvider>

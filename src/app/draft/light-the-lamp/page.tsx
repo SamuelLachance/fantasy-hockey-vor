@@ -52,7 +52,7 @@ export default function LightTheLampDraftPage() {
   const rounds = board.league.rounds;
   return (
     <div className="pb-[max(5rem,calc(env(safe-area-inset-bottom,0px)+4rem))]">
-      <header className="mx-auto max-w-[96rem] px-4 pb-3 pt-4 sm:px-6 lg:px-8">
+      <header className="mx-auto max-w-[120rem] px-4 pb-3 pt-4 sm:px-6 lg:px-8">
         <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-cyan-400/40 bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50">
           <span>Nouvelle adresse :</span>
           <Link

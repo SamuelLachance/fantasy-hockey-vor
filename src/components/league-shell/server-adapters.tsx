@@ -103,7 +103,7 @@ function FantraxTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
 
 const FANTRAX_POINTS: ServerLeagueAdapter = {
   kind: "fantrax-points",
-  widthClass: "max-w-6xl",
+  widthClass: "max-w-[120rem]",
   fullBleedTabs: [],
   Shell: FantraxShell,
   Header: () => <FantraxHeaderPart />,
@@ -152,7 +152,7 @@ function categoryLead(entry: LeagueEntry, tab: LeagueTab): string {
 
 const YAHOO_CATEGORIES: ServerLeagueAdapter = {
   kind: "yahoo-categories",
-  widthClass: "max-w-[96rem]",
+  widthClass: "max-w-[120rem]",
   fullBleedTabs: ["repechage"],
   Shell: CategoryShell,
   Header: ({ entry }) => <CategoryLeagueHeader board={categoryBoard(entry)} />,

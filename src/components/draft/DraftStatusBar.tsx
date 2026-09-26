@@ -85,7 +85,7 @@ export function DraftStatusBar({
       ref={barRef}
       className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/95 pt-[env(safe-area-inset-top,0px)] backdrop-blur motion-reduce:backdrop-blur-none"
     >
-      <div className="mx-auto flex max-w-[96rem] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-[120rem] flex-wrap items-center gap-x-4 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
         <div className="min-w-0">
           {draftOver ? (
             <p className="text-sm font-semibold text-white">Repêchage terminé ({totalPicks} choix)</p>

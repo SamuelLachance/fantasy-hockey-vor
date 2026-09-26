@@ -142,7 +142,7 @@ const files: Record<string, string[]> = {
     "coarsePointer",
     "DRAFT_FILTERS",
     "--draft-bar-h",
-    "max-w-[96rem]",
+    "max-w-[120rem]",
   ],
   "src/lib/draft/draft-store.ts": ["`vor-draft:${slug}:v1`", '"pageshow"', "state = null", '"storage"'],
   "src/components/draft/CategoryLeagueHeader.tsx": ["SnakeDisclaimerShort", "Détails de la ligue", "<details", "CATEGORY_FR"],

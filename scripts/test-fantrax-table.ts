@@ -723,8 +723,8 @@ eq(
   "?team=abc&statut=dispo&type=espoirs&age=-21&tri=ros&cols=dyn%2Cage%2Cros%2Cadp%2Clnh%2Cphase%2Cpnhl%2Ceta%2Cconservation%2Cfourchette%2Cverdict",
   "the resolved view replaces ?vue=",
 );
-eq(visibleColumns(DEFAULT_VIEW, { ...noExtras, draft: false }).join(), "statut,valeur,fp,fpm,age,ros,adp,lnh", "no draft: no VONA / odds");
-eq(visibleColumns(DEFAULT_VIEW, withExtras).join(), "statut,verdict,valeur,vona,dispo,dyn,fp,fpm,age,ros,adp,lnh,phase", "extras appear");
+eq(visibleColumns(DEFAULT_VIEW, { ...noExtras, draft: false }).join(), "statut,valeur,fpm,age,ros,adp,lnh", "no draft: no VONA / odds");
+eq(visibleColumns(DEFAULT_VIEW, withExtras).join(), "statut,verdict,valeur,vona,dispo,dyn,fpm,age,ros,adp,lnh,phase", "extras appear");
 eq(visibleColumns(presetView(espoirsPreset, DEFAULT_VIEW), noExtras).join(), "age,ros,adp,lnh", "available prospects without dynasty data: age, Ros%, ADP, NHL draft");
 eq(
   visibleColumns(presetView(presetOf(withExtras, "espoirs"), DEFAULT_VIEW), withExtras).join(),
@@ -738,8 +738,8 @@ eq(
 );
 eq(visibleColumns({ ...presetView(espoirsPreset, DEFAULT_VIEW), cols: ["valeur", "age"] }, noExtras).join(), "valeur,age", "explicit columns win");
 // The explorer's owned / available presets on its default columns (the presets now carry their own columns, below).
-eq(visibleColumns({ ...DEFAULT_VIEW, filters: presetOf(noExtras, "equipe").filters }, noExtras).join(), "statut,valeur,fp,fpm,age,ros,adp,lnh", "owned players: no VONA / odds");
-eq(visibleColumns({ ...DEFAULT_VIEW, filters: presetOf(noExtras, "repechage").filters }, noExtras).join(), "valeur,vona,dispo,fp,fpm,age,ros,adp,lnh", "available players keep them, without the Statut column");
+eq(visibleColumns({ ...DEFAULT_VIEW, filters: presetOf(noExtras, "equipe").filters }, noExtras).join(), "statut,valeur,fpm,age,ros,adp,lnh", "owned players: no VONA / odds");
+eq(visibleColumns({ ...DEFAULT_VIEW, filters: presetOf(noExtras, "repechage").filters }, noExtras).join(), "valeur,vona,dispo,fpm,age,ros,adp,lnh", "available players keep them, without the Statut column");
 eq(visibleColumns({ ...DEFAULT_VIEW, filters: { ...DEFAULT_FILTERS, status: "ww" } }, noExtras)[0], "valeur", "waivers only: no Statut column either");
 eq(visibleColumns(DEFAULT_VIEW, { ...withExtras, snakeOpinions: false }).includes("opinions"), false, "no opinion counts, no Opinions column");
 
@@ -910,7 +910,7 @@ eq(counterText(0, 1, 1, { label: valeurLabel, dir: "desc" }), "Aucun joueur ne c
   const teamDyn = tableBase(FANTRAX_TABLE, "equipe", withExtras, 50);
   eq(teamDyn.sort, { key: "dyn", dir: "desc" }, "Mon équipe: ranked by dynasty value");
   const repView = applyPreset(DEFAULT_VIEW, presetOf(withExtras, "repechage"), TOUS);
-  eq(visibleColumnsOf(FANTRAX_TABLE, repView, TOUS, withExtras).join(), "verdict,valeur,vona,dispo,dyn,fp,age,ros,adp", "the draft chip: Snake first, then season value, VONA and odds, the dynasty value beside them");
+  eq(visibleColumnsOf(FANTRAX_TABLE, repView, TOUS, withExtras).join(), "verdict,valeur,vona,dispo,dyn,age,ros,adp", "the draft chip: Snake first, then season value, VONA and odds, the dynasty value beside them");
   eq(applyPreset(DEFAULT_VIEW, presetOf(noExtras, "autonomes"), TOUS).cols, null, "a chip with the tab's columns keeps them automatic");
 }
 

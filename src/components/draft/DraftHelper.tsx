@@ -425,7 +425,7 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
         onSearch={onJumpToSearch}
       />
 
-      <div className="mx-auto flex max-w-[96rem] flex-col gap-4 px-4 py-4 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:px-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="mx-auto flex max-w-[120rem] flex-col gap-4 px-4 py-4 sm:px-6 lg:grid lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start lg:px-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <div className={`order-2 min-w-0 lg:order-none ${columnClass} rounded-2xl`}>
           <DraftBoardList
             rows={rows}
