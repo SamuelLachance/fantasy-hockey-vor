@@ -149,6 +149,17 @@ export interface V2SkaterResult {
   reasoning: string;
   /** Per-stat model rate minus synthetic market rate (per game). */
   marketEdge?: Partial<Record<string, number>>;
+  /**
+   * Model per-game rates before any rate cap (market + edge). Published as
+   * `modelRates`, the anchor of the post-hoc rate calibration.
+   */
+  perGame: Record<string, number>;
+  /**
+   * Meta-learner segment the rates came from (young = at most 2 eligible
+   * NHL seasons). Published as `modelSegment`: the rate calibration is
+   * fitted per segment.
+   */
+  segment: "young" | "vet";
   /** Calibrated uncertainty on the projection (Principle 3). */
   uncertainty: ProjectionUncertainty;
 }
@@ -286,6 +297,8 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
     gamesPlayed,
     projection,
     marketEdge,
+    perGame,
+    segment: young ? "young" : "vet",
     uncertainty,
     reasoning: `v2 stacked ensemble (GBDT+ridge+Marcel+EB${rt.bundle.marketTraining ? "+market-residual" : ""}, ${eligible.length} NHL seasons${young ? ", young segment" : ""}). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };

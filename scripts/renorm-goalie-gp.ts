@@ -6,12 +6,15 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
-import { splitPublishedPlayer } from "../src/lib/publish-players";
+import {
+  detailCarryFields,
+  splitPublishedPlayer,
+  type PlayerDetailRecord,
+} from "../src/lib/publish-players";
 import type { GoalieProjection, ProjectionsDataset } from "../src/lib/types";
 import { attachDraftEdge } from "../src/lib/draft-edge";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { applyVor } from "../src/lib/vor";
-import type { Category } from "../src/lib/types";
 
 const PLAYERS = join(process.cwd(), "src", "data", "players.json");
 const DETAILS = join(process.cwd(), "public", "player-details.json");
@@ -19,12 +22,7 @@ const DETAILS = join(process.cwd(), "public", "player-details.json");
 const data = JSON.parse(readFileSync(PLAYERS, "utf8")) as ProjectionsDataset;
 const details = JSON.parse(readFileSync(DETAILS, "utf8")) as Record<
   string,
-  {
-    reasoning?: string;
-    profileSummary?: string;
-    perStatSigma?: Partial<Record<Category, number>>;
-    marketEdge?: Partial<Record<Category, number>>;
-  }
+  Partial<PlayerDetailRecord>
 >;
 
 const prevGp = new Map(data.players.map((p) => [p.id, p.gamesPlayed]));
@@ -35,7 +33,7 @@ const adjusted = renormalizeGoalieGamesByTeam(
       ...p,
       reasoning: d?.reasoning,
       profileSummary: d?.profileSummary,
-      ...(d?.marketEdge ? { marketEdge: d.marketEdge } : {}),
+      ...detailCarryFields(d),
     };
   }),
 ).map((p) => {

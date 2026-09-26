@@ -318,8 +318,12 @@ const gamesOf = (projGp: number) => (params.games.seasonGames * projGp) / params
     adp: 50,
     rostered: true,
   });
+  // Projected off per game on the recalibrated scale (params.scale refit
+  // 2026-09-26): 2.11 + 0.12 k and 2.5 are the old 3.0 + 0.12 k and 3.4
+  // (realized 2.11-3.90 and 2.54), the projections having lost their
+  // ~0.9 FP/G inflation.
   const players: DynastyInput[] = [
-    ...Array.from({ length: 200 }, (_, i) => vet(`v${i}`, 24 + (i % 14), 3.0 + (i % 17) * 0.12)),
+    ...Array.from({ length: 200 }, (_, i) => vet(`v${i}`, 24 + (i % 14), 2.11 + (i % 17) * 0.12)),
     {
       id: "kid",
       n: "Kid Prospect",
@@ -365,7 +369,7 @@ const gamesOf = (projGp: number) => (params.games.seasonGames * projGp) / params
       rostered: false,
     })),
     // a young NHL regular, a 2024 #10 pick (rising: his growth driver is quoted even at 78 GP)
-    { ...vet("young", 20, 3.4), birthDate: "2006-05-01", careerGp: 160, draft: { year: 2024, pick: 10 }, draftSource: "profile" },
+    { ...vet("young", 20, 2.5), birthDate: "2006-05-01", careerGp: 160, draft: { year: 2024, pick: 10 }, draftSource: "profile" },
   ];
   const res = buildDynasty(
     { players, meta: { valuesFetchedAt: "2026-09-25T00:00:00Z", stateFetchedAt: "2026-09-25T00:00:00Z", projectionsAt: "2026-08-11T00:00:00Z", prospectsBuiltAt: "2026-09-25T00:00:00Z" } },

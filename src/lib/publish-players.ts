@@ -1,7 +1,9 @@
 import type {
   Category,
+  ModelSegment,
   PlayerProjection,
   ProjectionUncertainty,
+  SkaterCategory,
   StatUncertainty,
 } from "@/lib/types";
 
@@ -15,6 +17,28 @@ export interface PlayerDetailRecord {
    */
   perStatUncertainty?: Partial<Record<Category, StatUncertainty>>;
   marketEdge?: Partial<Record<Category, number>>;
+  /** Raw v2 per-game rates (uncapped, uncalibrated): `rates:recalibrate` anchor. */
+  modelRates?: Partial<Record<SkaterCategory, number>>;
+  /** Raw v2 model − market per game: `rates:recalibrate` anchor. */
+  modelMarketEdge?: Partial<Record<SkaterCategory, number>>;
+  /** v2 meta segment of the raw rates (young = at most 2 NHL seasons). */
+  modelSegment?: ModelSegment;
+}
+
+/**
+ * Detail-side fields a republish script must hand back to the player before
+ * `splitPublishedPlayer`, so the edge and the raw model state survive every
+ * rewrite of player-details.json.
+ */
+export function detailCarryFields(
+  d: Partial<PlayerDetailRecord> | undefined,
+): Pick<PlayerProjection, "marketEdge" | "modelRates" | "modelMarketEdge" | "modelSegment"> {
+  return {
+    ...(d?.marketEdge ? { marketEdge: d.marketEdge } : {}),
+    ...(d?.modelRates ? { modelRates: d.modelRates } : {}),
+    ...(d?.modelMarketEdge ? { modelMarketEdge: d.modelMarketEdge } : {}),
+    ...(d?.modelSegment ? { modelSegment: d.modelSegment } : {}),
+  };
 }
 
 /** Resolve per-stat σ from slim or legacy detail shapes. */
@@ -95,6 +119,9 @@ export function splitPublishedPlayer(p: PlayerProjection): {
     reasoning,
     profileSummary,
     marketEdge,
+    modelRates,
+    modelMarketEdge,
+    modelSegment,
     uncertainty,
     ...rest
   } = compactBoardNumbers(p);
@@ -116,5 +143,12 @@ export function splitPublishedPlayer(p: PlayerProjection): {
   if (marketEdge && Object.keys(marketEdge).length > 0) {
     detail.marketEdge = marketEdge;
   }
+  if (modelRates && Object.keys(modelRates).length > 0) {
+    detail.modelRates = modelRates;
+  }
+  if (modelMarketEdge && Object.keys(modelMarketEdge).length > 0) {
+    detail.modelMarketEdge = modelMarketEdge;
+  }
+  if (modelSegment) detail.modelSegment = modelSegment;
   return { board, detail };
 }

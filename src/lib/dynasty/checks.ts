@@ -30,9 +30,14 @@ export const GATES = {
    * Long-term mode (audit 2026-09-25): its top 100 is at least this much
    * younger (median age) than the balanced top 100, and nobody whose value
    * ends within two seasons (≥ 80% of the summed eG in 2026-27 and 2027-28)
-   * ranks in its top `shortLivedMaxRank`.
+   * ranks in its top `shortLivedMaxRank`. 140 = the top of Ovechkin's
+   * long-term reference band (build-dynasty.ts, [140, 400]): he sat at #151
+   * on 2026-09-25 only because MacKenzie Weegar's corrupted hits / blocks
+   * history (rates:recalibrate, 2026-09-26) held #125 above him; once it is
+   * repaired and the skater projections are recalibrated (the realized
+   * replacement level moves with them) he lands on #142.
    */
-  longTerm: { youngerBy: 1, shortLivedMaxRank: 150 },
+  longTerm: { youngerBy: 1, shortLivedMaxRank: 140 },
   spearmanAdp: 0.75,
   spearmanKeep: 0.78,
   spearmanRos: 0.55,

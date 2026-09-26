@@ -31,6 +31,10 @@ export const GOALIE_CATEGORIES = [
 ] as const;
 
 export type SkaterCategory = (typeof SKATER_CATEGORIES)[number];
+
+/** v2 meta-learner segment: young = at most 2 eligible NHL seasons. */
+export type ModelSegment = "young" | "vet";
+
 export type GoalieCategory = (typeof GOALIE_CATEGORIES)[number];
 export type Category = SkaterCategory | GoalieCategory;
 
@@ -127,8 +131,24 @@ export interface PlayerProjection {
   confidence?: number;
   reasoning?: string;
   profileSummary?: string;
-  /** Per-stat model − synthetic-market rate (per game), when market training is on. */
+  /**
+   * Per-stat model − synthetic-market rate (per game), when market training
+   * is on. On the published board it is the calibrated edge (raw edge minus
+   * the rate calibration's shift, see src/lib/rate-calibration.ts).
+   */
   marketEdge?: Partial<Record<Category, number>>;
+  /**
+   * Raw v2 per-game rates before any rate cap or calibration (idempotence
+   * anchor of `rates:recalibrate`). Lives in player-details.json.
+   */
+  modelRates?: Partial<Record<SkaterCategory, number>>;
+  /** Raw v2 model − market per game (idempotence anchor). Lives in player-details.json. */
+  modelMarketEdge?: Partial<Record<SkaterCategory, number>>;
+  /**
+   * v2 meta-learner segment of the raw rates (young = at most 2 eligible NHL
+   * seasons): the rate calibration works per segment. Lives in player-details.json.
+   */
+  modelSegment?: ModelSegment;
   /** Calibrated projection uncertainty (v2 ML skaters). */
   uncertainty?: ProjectionUncertainty;
   /** Rank if ordered by synthetic-market-only fantasy value (1 = best). */
@@ -171,6 +191,8 @@ export interface ProjectionsDataset {
   dataManifest?: DataManifest;
   /** Post-hoc GP calibration provenance (see src/lib/gp-calibration.ts). */
   gpCalibration?: import("./gp-calibration").GpCalibrationMeta;
+  /** Post-hoc skater rate calibration provenance (see src/lib/rate-calibration.ts). */
+  rateCalibration?: import("./rate-calibration").RateCalibrationMeta;
   replacementLevels: Partial<Record<Position, number>>;
   /** Per-category scarcity weights used in weighted fantasy value / VOR. */
   categoryWeights?: import("./stat-difficulty").CategoryDifficultyWeights;

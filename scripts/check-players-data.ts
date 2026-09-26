@@ -16,6 +16,8 @@ import {
 } from "../src/lib/inactive-players";
 import { PROJECTION_SEASON } from "../src/lib/nhl-api";
 import { DEFAULT_PROJECTION_ENGINE } from "../src/lib/projection-engine-label";
+import type { PlayerDetailRecord } from "../src/lib/publish-players";
+import { segmentLevelIssues } from "../src/lib/rate-calibration";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const PLAYERS_PATH = join(process.cwd(), "src", "data", "players.json");
@@ -317,6 +319,83 @@ if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.4) {
   warnings.push(
     `only ${mlWithUnc}/${mlSkaters} ML skaters carry uncertainty — regenerate after train-v2`,
   );
+}
+
+// League level of the skater projections: goals and shots per skater-game
+// over the ML regulars (40+ GP). Realized 2023-26: ~0.17-0.19 goals and
+// ~1.6-1.7 shots. The 2026-07-30 regeneration published 0.27 and 2.1 (a
+// residual-model drift, see src/lib/rate-calibration.ts) and nothing caught it.
+{
+  const regulars = players.filter(
+    (p) => !p.isGoalie && p.projectionMethod === "ml" && p.gamesPlayed >= 40,
+  );
+  const games = regulars.reduce((s, p) => s + p.gamesPlayed, 0);
+  if (regulars.length > 300 && games > 0) {
+    const perGame = (cat: "goals" | "shots") =>
+      regulars.reduce(
+        (s, p) => s + ((p.projection as unknown as Record<string, number>)[cat] ?? 0),
+        0,
+      ) / games;
+    const goals = perGame("goals");
+    const shots = perGame("shots");
+    if (goals < 0.13 || goals > 0.22) {
+      errors.push(
+        `skater goals per game ${goals.toFixed(3)} outside 0.13-0.22 — projection level drift (npm run rates:recalibrate)`,
+      );
+    }
+    if (shots < 1.3 || shots > 1.9) {
+      errors.push(
+        `skater shots per game ${shots.toFixed(2)} outside 1.3-1.9 — projection level drift (npm run rates:recalibrate)`,
+      );
+    }
+  }
+  if (mlSkaters > 100 && !data.rateCalibration) {
+    warnings.push("players.json has no rateCalibration block — run npm run rates:recalibrate");
+  } else if (data.rateCalibration && data.rateCalibration.targetSource === "zero") {
+    warnings.push(
+      "rate calibration has no healthy reference for this bundle (zero-edge target) — npm run rates:reference",
+    );
+  }
+
+  // Per meta segment (young / veteran × F / D): the league-wide band above
+  // cannot see a drift inside one segment (young players are ~20% of the
+  // regulars). A pooled F / D calibration left young forwards at 0.80 of
+  // their no-growth market on goals and PPP while the league level looked
+  // fine; this compares each segment with its market (raw rate − raw edge,
+  // from player-details.json).
+  if (existsSync(DETAILS_PATH)) {
+    try {
+      const details = JSON.parse(readFileSync(DETAILS_PATH, "utf8")) as Record<
+        string,
+        Partial<PlayerDetailRecord>
+      >;
+      const hydrated = players
+        .filter((p) => !p.isGoalie && p.projectionMethod === "ml")
+        .map((p) => {
+          const d = details[String(p.id)];
+          return {
+            ...p,
+            modelRates: d?.modelRates,
+            modelMarketEdge: d?.modelMarketEdge,
+            modelSegment: d?.modelSegment,
+          };
+        });
+      const withState = hydrated.filter((p) => p.modelRates && p.modelMarketEdge);
+      const noSegment = withState.filter((p) => !p.modelSegment).length;
+      if (withState.length > 100 && noSegment > withState.length * 0.02) {
+        errors.push(
+          `${noSegment}/${withState.length} v2 skaters without modelSegment — the rate calibration falls back to F / D (npm run rates:recalibrate)`,
+        );
+      }
+      if (withState.length > 300) {
+        for (const issue of segmentLevelIssues(withState)) {
+          errors.push(`${issue} — segment level drift (npm run rates:recalibrate)`);
+        }
+      }
+    } catch {
+      // Invalid details JSON is reported below.
+    }
+  }
 }
 
 // Board payload contract: heavy fields belong in player-details.json.
