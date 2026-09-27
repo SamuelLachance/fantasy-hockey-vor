@@ -32,10 +32,10 @@ interface LeagueInfo {
   teamInfo?: Record<string, { name?: string; id?: string }>;
 }
 interface Rosters {
-  rosters: Record<string, { teamName?: string; rosterItems: Array<{ id: string }> }>;
+  rosters: Record<string, { teamName?: string; rosterItems?: Array<{ id: string }> }>;
 }
 interface Draft {
-  draftPicks: Array<{ pick: number; teamId: string; playerId?: string }>;
+  draftPicks?: Array<{ pick: number; teamId: string; playerId?: string }>;
 }
 
 async function get<T>(path: string): Promise<T> {
@@ -54,28 +54,44 @@ async function main() {
   const info = from ? read<LeagueInfo>("n_getLeagueInfo.json") : await get<LeagueInfo>(`getLeagueInfo?leagueId=${SLAPSHOT_LEAGUE_ID}`);
   const rosters = from ? read<Rosters>("n_getTeamRosters.json") : await get<Rosters>(`getTeamRosters?leagueId=${SLAPSHOT_LEAGUE_ID}`);
   const draft = from ? read<Draft>("n_draft.json") : await get<Draft>(`getDraftResults?leagueId=${SLAPSHOT_LEAGUE_ID}`);
+  const snap = slapshotPoolFrom(info, rosters, draft, new Date().toISOString());
+  writeSlapshotPool(snap);
+}
+
+/**
+ * The dynasty build's league snapshot from the three fxea payloads; shared
+ * with `npm run league:sync -- --league slapshot`, which already fetched
+ * them (so the daily sync makes no extra request).
+ */
+export function slapshotPoolFrom(info: LeagueInfo, rosters: Rosters, draft: Draft | null, fetchedAt: string): SlapshotPool {
   const pos: Record<string, string> = {};
   for (const [id, p] of Object.entries(info.playerInfo)) if (p.eligiblePos) pos[id] = p.eligiblePos;
-  const snap: SlapshotPool = {
-    fetchedAt: new Date().toISOString(),
+  return {
+    fetchedAt,
     leagueId: SLAPSHOT_LEAGUE_ID,
     pos: Object.fromEntries(Object.entries(pos).sort((a, b) => a[0].localeCompare(b[0]))),
     rosters: Object.fromEntries(
-      Object.entries(rosters.rosters).map(([t, r]) => [t, r.rosterItems.map((x) => x.id).sort()]),
+      Object.entries(rosters.rosters).map(([t, r]) => [t, (r.rosterItems ?? []).map((x) => x.id).sort()]),
     ),
     teamNames: Object.fromEntries(Object.entries(rosters.rosters).map(([t, r]) => [t, r.teamName ?? t])),
-    picks: draft.draftPicks
+    picks: (draft?.draftPicks ?? [])
       .filter((p) => p.playerId)
       .sort((a, b) => a.pick - b.pick)
       .map((p) => [p.pick, p.teamId, p.playerId!]),
   };
-  writeFileAtomic(OUT, `${JSON.stringify(snap)}\n`);
+}
+
+export function writeSlapshotPool(snap: SlapshotPool, out: string = OUT): void {
+  writeFileAtomic(out, `${JSON.stringify(snap)}\n`);
   console.log(
-    `OK: slapshot pool ${Object.keys(snap.pos).length} positions, ${Object.values(snap.rosters).flat().length} rostered, ${snap.picks.length} picks → ${OUT}`,
+    `OK: slapshot pool ${Object.keys(snap.pos).length} positions, ${Object.values(snap.rosters).flat().length} rostered, ${snap.picks.length} picks → ${out}`,
   );
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// Run only as a script (the sync imports the builder above).
+if (/slapshot-sync\.[cm]?[jt]s$/.test(process.argv[1] ?? "")) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

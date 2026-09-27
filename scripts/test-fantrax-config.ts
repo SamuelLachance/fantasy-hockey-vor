@@ -11,8 +11,10 @@
  *     fails if anything moves.
  *  2. Pin the Slapshot entry and prove the engine really is parameterised
  *     by it: 32 teams, C4 LW4 RW4 D6 G2 with LW and RW apart, no captain,
- *     no minors, no games caps, no keeper model, fxpa closed, 84 two-day
- *     matchups, and a scoring table whose per-slot zeros are the rule. Every
+ *     Minors 17 open to anyone, IR 5, 40 max, no games caps, a full dynasty
+ *     without a cutdown (its own dynasty profile), a 105 M$ salary cap over
+ *     the 23 Active + Reserve players, fxpa closed, 84 custom matchups of 1
+ *     to 4 days, and a scoring table whose per-slot zeros are the rule. Every
  *     value comes from the exported config, so a change to the real league's
  *     settings has to come through here.
  *
@@ -102,7 +104,20 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   eq(c.slots.counts, { C: 3, W: 5, F: 1, D: 3, Skt: 1, G: 2 }, "Captains slot counts");
   eq(c.limits, { minTotal: 15, maxActive: 15, maxReserve: 5, maxIr: 6, maxMinors: 35, healthyIrGracePeriods: 2 }, "Captains roster limits");
   eq(c.cadence, { scoringPeriods: 24, rosterPeriods: 188, scoringPeriodDays: 7, claimWeekStartsOn: 1 }, "Captains cadence");
-  eq(c.features, { captainSlot: true, minors: true, gamesCaps: true, dynasty: true, fxpa: true, claimsPerWeek: 5 }, "Captains features");
+  eq(
+    c.features,
+    {
+      captainSlot: true,
+      minors: true,
+      gamesCaps: true,
+      dynasty: true,
+      keeperCutdown: true,
+      minorsAnyPlayer: false,
+      fxpa: true,
+      claimsPerWeek: 5,
+    },
+    "Captains features",
+  );
   eq(c.scoringSource, "settings", "Captains reads scoringCategorySettings (its zero rows are redundant)");
   eq(c.dInSkt, "default", "Captains D-in-Skt fallback");
   eq(c.slots.counts.C! + c.slots.counts.W! + c.slots.counts.F! + c.slots.counts.D! + c.slots.counts.Skt! + c.slots.counts.G!, c.limits.maxActive, "Captains slots add up to maxActive");
@@ -217,32 +232,59 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
     "Slapshot: the slots add up to maxTotalActivePlayers (20)",
   );
   eq(SLAPSHOT.limits.maxReserve, 3, "Slapshot: maxTotalReservePlayers");
-  // fxea publishes no minimum, no IR cap and no Minors cap for this league.
-  // They must be the loosest value consistent with maxTotalPlayers 40, so the
-  // tool can never call a roster illegal on a rule it has not read.
+  // The commissioner's rules (fxea publishes maxTotalPlayers 40 only): IR 5,
+  // Minors 17 open to any player, neither counted toward the roster limits;
+  // 40 = Active 20 + Reserve 3 + Minors 17, IR apart. No published minimum.
   eq(SLAPSHOT.limits.minTotal, 0, "Slapshot: no published Active+Reserve minimum");
-  assert(
-    SLAPSHOT.limits.maxIr + SLAPSHOT.limits.maxActive + SLAPSHOT.limits.maxReserve <= 40,
-    "Slapshot: the IR cap stands inside maxTotalPlayers 40",
+  eq(SLAPSHOT.limits.maxIr, 5, "Slapshot: IR 5");
+  eq(SLAPSHOT.limits.maxMinors, 17, "Slapshot: Minors 17");
+  eq(SLAPSHOT.limits.maxTotal, 40, "Slapshot: 40 max");
+  eq(
+    SLAPSHOT.limits.maxActive + SLAPSHOT.limits.maxReserve + SLAPSHOT.limits.maxMinors,
+    SLAPSHOT.limits.maxTotal,
+    "Slapshot: 40 = Active + Reserve + Minors (IR apart)",
   );
-  assert(
-    SLAPSHOT.limits.maxMinors + SLAPSHOT.limits.maxActive + SLAPSHOT.limits.maxReserve <= 40,
-    "Slapshot: the Minors cap stands inside maxTotalPlayers 40",
+  eq(CAPTAINS_DYNASTY.limits.maxTotal, undefined, "Captains publishes no total: none is checked");
+  eq(
+    SLAPSHOT.cadence,
+    {
+      scoringPeriods: 84,
+      rosterPeriods: 152,
+      scoringPeriodDays: 2,
+      scoringPeriodDaysRange: [1, 4],
+      lock: { kind: "game", minutesBefore: 5 },
+      draftPollMs: 20_000,
+      claimWeekStartsOn: null,
+    },
+    "Slapshot cadence: 84 custom periods of 1 to 4 days, per-game lock 5 minutes before, live draft polled every 20 s",
   );
-  eq(SLAPSHOT.cadence, { scoringPeriods: 84, rosterPeriods: 152, scoringPeriodDays: 2, claimWeekStartsOn: null }, "Slapshot cadence");
   eq(
     SLAPSHOT.features,
-    { captainSlot: false, minors: false, gamesCaps: false, dynasty: false, fxpa: false, claimsPerWeek: null },
-    "Slapshot features: none of Captains' five",
+    {
+      captainSlot: false,
+      minors: true,
+      gamesCaps: false,
+      dynasty: true,
+      keeperCutdown: false,
+      minorsAnyPlayer: true,
+      fxpa: false,
+      claimsPerWeek: null,
+    },
+    "Slapshot features: full dynasty without a cutdown, Minors open to anyone, no captain, no games caps, fxpa closed",
   );
+  eq(SLAPSHOT.dynastyProfile, "slapshot", "Slapshot runs the dynasty engine under its own profile");
+  eq(CAPTAINS_DYNASTY.dynastyProfile, "captains", "Captains keeps its profile");
+  eq(
+    SLAPSHOT.salaryCap,
+    { base: 105, firstSeason: 2026, countedStatuses: ["ACTIVE", "RESERVE"], countedSpots: 23 },
+    "Slapshot salary cap: 105 M$ in 2026-27 over the 23 Active + Reserve players",
+  );
+  eq(CAPTAINS_DYNASTY.salaryCap, null, "Captains has no salary cap");
   eq([...SLAPSHOT.eligibility.groups], ["C", "LW", "RW", "D", "G"], "Slapshot ranks the two wings apart");
   eq([...CAPTAINS_DYNASTY.eligibility.groups], ["C", "W", "D", "G"], "Captains has one winger group");
-  // The ACTIVE-projection floor is a property of the ROSTER SHAPE, not of the
-  // draft clock: a league with no Minors slots has to leave its unprojected
-  // juniors and late picks ACTIVE for good, so a floor keyed to "the draft is
-  // still running" would snap back to 95% on the last pick and fail the deploy
-  // of the whole site.
-  assert(SLAPSHOT.minActiveMatch < CAPTAINS_DYNASTY.minActiveMatch, "no Minors slots: a lower ACTIVE floor, permanently");
+  // The ACTIVE-projection floor: during the startup draft Fantrax seats every
+  // pick ACTIVE, so unprojected juniors sit there until their owners move them.
+  assert(SLAPSHOT.minActiveMatch < CAPTAINS_DYNASTY.minActiveMatch, "Slapshot: a lower ACTIVE floor");
   eq(CAPTAINS_DYNASTY.minActiveMatch, 0.95, "Captains parks its prospects in the minors, so 95% of ACTIVE is projected");
   eq(SLAPSHOT.scoringSource, "categories", "Slapshot reads the complete scoring view");
   eq(SLAPSHOT.baseSlot, "C", "Slapshot scores a forward in the C column, not the unreachable Default one");
@@ -258,7 +300,7 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   );
   // Registered, and its registry entry agrees (section 2 checks the rest).
   eq(fantraxLeague("slapshot"), SLAPSHOT, "fantraxLeague('slapshot') is this config");
-  eq(getLeague("slapshot")?.format, "keeper", "Slapshot is a keeper league in the registry, never a dynasty");
+  eq(getLeague("slapshot")?.format, "dynastie", "Slapshot is a dynasty league in the registry (every player carries over)");
 }
 
 // ---- paths of a second league never touch league 1's
@@ -275,8 +317,10 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   }
   // Shared repo inputs stay shared (one projections file for every league).
   eq([p.players, p.profiles], [mine.players, mine.profiles], "projections and profiles are shared");
-  // No keeper model, no dynasty build: the gate the sync relies on.
-  throws(() => dynastyPaths(ROOT, SLAPSHOT), "dynastyPaths refuses a league whose config has no dynasty model");
+  // The Captains-profile build never reads another league's files: the gate the sync relies on.
+  throws(() => dynastyPaths(ROOT, SLAPSHOT), "dynastyPaths refuses a league that does not run the Captains profile");
+  eq(rel(p.dynasty), "public/fantrax/slapshot/dynasty.json", "second league: its own dynasty.json");
+  eq(rel(p.contracts), "public/fantrax/slapshot/contracts.json", "second league: its own contracts.json");
 }
 
 // ---- eligibility: LW/RW tokens, and Captains unchanged

@@ -8,7 +8,9 @@ import {
   plural,
   statusLabel,
 } from "@/lib/fantrax/league-copy";
+import type { RosterLimits } from "@/lib/fantrax/config";
 import { deadReason } from "@/lib/fantrax/roster-rules";
+import { salaryLine } from "@/lib/fantrax/salary-cap";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface RosterAlertsProps {
@@ -16,6 +18,10 @@ interface RosterAlertsProps {
   player: PlayerLookup;
   /** The league HAS Minors slots: the legality line only mentions them then. */
   minors: boolean;
+  /** The league's limits, when it publishes its total / IR / Minors caps (named in the line). */
+  limits?: Pick<RosterLimits, "maxActive" | "maxReserve" | "maxIr" | "maxMinors" | "maxTotal">;
+  /** A per-game lineup lock (« 5 minutes avant son match »), said under the line. */
+  lockNote?: string | null;
 }
 
 /**
@@ -25,7 +31,7 @@ interface RosterAlertsProps {
  * other alert. The dead-player advice in the alerts comes from the same
  * after-moves count, so following all of it leaves a legal roster.
  */
-export function RosterAlerts({ plan, player, minors }: RosterAlertsProps) {
+export function RosterAlerts({ plan, player, minors, limits, lockNote }: RosterAlertsProps) {
   const L = plan.legality;
   const name = (id: string | null | undefined) => (id ? (player(id)?.n ?? "Nouveau joueur") : "—");
   const others = L.movableFromMinors.filter((id) => !L.fixes.includes(id) && !L.reserveFills.includes(id));
@@ -60,8 +66,20 @@ export function RosterAlerts({ plan, player, minors }: RosterAlertsProps) {
             : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
         }`}
       >
-        {legalitySummary(L, minors)}
+        {legalitySummary(L, minors, limits)}
       </p>
+      {plan.salary ? (
+        <p
+          className={`mt-2 rounded-xl px-4 py-2 text-sm ${
+            plan.salary.over
+              ? "border border-amber-500/40 bg-amber-500/10 text-amber-100"
+              : "border border-white/10 bg-white/[0.03] text-slate-200"
+          }`}
+        >
+          {salaryLine(plan.salary)}
+        </p>
+      ) : null}
+      {lockNote ? <p className="mt-2 text-xs text-slate-400">{lockNote}</p> : null}
 
       {L.fixes.length + L.reserveFills.length > 0 ? (
         <div className="mt-4">

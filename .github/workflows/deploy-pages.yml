@@ -54,8 +54,9 @@ jobs:
       # failed. Order matters: Captains runs first and its restore is recursive,
       # so there is no fresh Slapshot data for it to discard; Slapshot's restore
       # names its own two directories, so its failure cannot undo the Captains
-      # refresh above. The Captains sync ends with the dynasty build (~30 s,
-      # public/fantrax/dynasty.json) and its check gates both. Non-fatal: on
+      # refresh above. Each sync also rebuilds its league's dynasty values
+      # (Captains ~30 s after its snapshot; Slapshot ~1 min before its plan,
+      # with its salary-cap contracts) and its check gates both. Non-fatal: on
       # failure that league's committed snapshot (already validated by
       # `npm run check` above) is restored and used.
       - name: Refresh Captains Dynasty snapshot (non-fatal)
@@ -75,7 +76,7 @@ jobs:
             && npm run check:league:slapshot; then
             echo "Slapshot snapshot refreshed"
           else
-            git checkout -- src/data/fantrax/slapshot public/fantrax/slapshot || true
+            git checkout -- src/data/fantrax/slapshot public/fantrax/slapshot src/data/dynasty/slapshot/pool.json || true
             echo "::warning::slapshot sync failed, using committed snapshot"
           fi
 

@@ -36,6 +36,8 @@ export interface FantraxLeaguePaths {
   pool: string;
   schedule: string;
   dynasty: string;
+  /** Salary-cap league: the cap and every player's cap hits (derived from dynasty.json). */
+  contracts: string;
   /** Shared repo inputs (one copy for every league). */
   players: string;
   profiles: string;
@@ -64,6 +66,7 @@ export function fantraxPaths(
     pool: pub("pool.json"),
     schedule: pub(fantraxScheduleFile(cfg)),
     dynasty: pub("dynasty.json"),
+    contracts: pub("contracts.json"),
     players: join(root, "src", "data", "players.json"),
     profiles: join(root, "src", "data", "player-profiles.json"),
     draftRegistry: join(root, "src", "data", "draft-registry.json"),

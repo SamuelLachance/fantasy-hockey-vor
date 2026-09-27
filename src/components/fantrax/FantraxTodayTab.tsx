@@ -35,7 +35,12 @@ function sectionsOf(hasCaps: boolean) {
  * matchups a week.
  */
 export function FantraxTodayTab({ slug }: { slug: string }) {
-  const { config, player, nowMs } = useFantraxLeague();
+  const { config, player, nowMs, limits } = useFantraxLeague();
+  const lock = config.cadence.lock;
+  const lockNote =
+    lock?.kind === "game"
+      ? `Verrouillage : chaque joueur se verrouille ${lock.minutesBefore} minutes avant le début de son propre match (pas d’heure unique pour tout l’alignement). Un joueur qui joue tôt doit être placé avant son match; les autres restent modifiables.`
+      : null;
   const sections = sectionsOf(config.features.gamesCaps);
   const tabSearch = useTabSearch();
   return (
@@ -80,7 +85,7 @@ export function FantraxTodayTab({ slug }: { slug: string }) {
                   </Link>
                 </p>
               ) : null}
-              <RosterAlerts plan={plan} player={player} minors={config.features.minors} />
+              <RosterAlerts plan={plan} player={player} minors={config.features.minors} limits={limits} lockNote={lockNote} />
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
                 <LineupCard plan={plan} player={player} nowMs={nowMs} />
                 <div className="min-w-0 space-y-6">

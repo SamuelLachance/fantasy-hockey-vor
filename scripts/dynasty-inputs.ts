@@ -46,13 +46,15 @@ import type { PlayerProfile } from "../src/lib/profile-types";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 /**
- * Files of the dynasty build, for one Fantrax league. Only a league whose
- * config enables the keeper model ever gets here (see `features.dynasty`);
- * the default is the Captains league, with its historical flat paths.
+ * Files of the Captains-profile dynasty build, for one Fantrax league. Only a
+ * league whose config runs that profile ever gets here (see
+ * `dynastyProfile`); the default is the Captains league, with its historical
+ * flat paths. The Slapshot profile has its own inputs
+ * (scripts/dynasty-slapshot.ts `slapshotPaths`).
  */
 export function dynastyPaths(root = process.cwd(), cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY) {
-  if (!cfg.features.dynasty) {
-    throw new Error(`league ${cfg.slug} has no dynasty model (features.dynasty: false)`);
+  if (cfg.dynastyProfile !== "captains") {
+    throw new Error(`league ${cfg.slug} does not run the Captains dynasty profile (dynastyProfile: ${cfg.dynastyProfile})`);
   }
   const p = fantraxPaths(cfg, root);
   return {

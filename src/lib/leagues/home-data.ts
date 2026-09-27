@@ -73,8 +73,8 @@ export function homeLeagues(): HomeLeague[] {
       // league has that model at all.
       const cfg = fantraxLeague(entry.slug);
       const plan = fantraxBaked(entry.slug).today;
-      const dynasty = cfg.features.dynasty ? captainsDynasty(entry.myTeamId) : null;
-      return { entry, card: fantraxHomeCard(entry, plan, dynasty, cfg.features.minors), local: null };
+      const dynasty = cfg.dynastyProfile === "captains" ? captainsDynasty(entry.myTeamId) : null;
+      return { entry, card: fantraxHomeCard(entry, plan, dynasty, cfg.features.minors, cfg.limits), local: null };
     }
     const profile = readProfile<ProfileJson>(entry.profileSlug ?? entry.slug);
     return {

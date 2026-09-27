@@ -81,6 +81,10 @@ import type {
 } from "../src/lib/fantrax/snapshot-types";
 import { fetchJson } from "../src/lib/nhl-api";
 import { dynastyPaths, loadDynastyFiles, runDynastyBuild } from "./dynasty-inputs";
+import { writeClientDynasty } from "./dynasty-client";
+import { runSlapshotBuild, slapshotChecks, slapshotPaths } from "./dynasty-slapshot";
+import { slapshotPoolFrom, writeSlapshotPool } from "./slapshot-sync";
+import type { ContractsFile } from "../src/lib/fantrax/salary-cap";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { normalizeTeamAbbrev } from "../src/lib/team-abbreviations";
 import type { ProjectionsDataset } from "../src/lib/types";
@@ -701,6 +705,33 @@ async function main() {
   const schedule = await syncSchedule(info.startDate, now);
   console.log(`schedule: ${schedule.games.length} regular-season games (full rebuild ${schedule.fetchedAt})`);
 
+  // ---- Slapshot profile: dynasty values and contracts before the plan
+  // Every player carries over and a salary cap binds, so the plan's cap line
+  // reads the contracts the dynasty build derives. The build does not read
+  // this league's values/state files (its universe is the shared projection
+  // set), only its own rosters and picks, written first from the payloads
+  // above. Non-fatal: without a fresh build the committed contracts stay.
+  let contracts: ContractsFile | null = null;
+  if (CFG.dynastyProfile === "slapshot") {
+    writeSlapshotPool(slapshotPoolFrom(info, rosters, draft, nowIso), slapshotPaths(ROOT).pool);
+    if (DYNASTY) {
+      try {
+        const b = runSlapshotBuild({ out: PATHS.dynasty });
+        const errs = slapshotChecks(b);
+        for (const e of errs) console.warn(`WARN: dynasty (slapshot): ${e}`);
+        console.log(
+          `OK: dynasty values for ${Object.keys(b.snapshot.players).length} players (λ ${b.snapshot.params.lambda[0]} pts/M$, ${(b.ms / 1000).toFixed(1)} s)`,
+        );
+      } catch (e) {
+        console.warn(`WARN: dynasty build failed, dynasty.json left as is: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    // The browser's copies (and contracts.json) of whatever dynasty.json is there now.
+    writeClientDynasty(PATHS.dynasty);
+    contracts = readJson<ContractsFile>(PATHS.contracts);
+    if (!contracts) console.warn("WARN: no contracts.json: the plan carries no cap line");
+  }
+
   // ---- today.json (default team plan, server-rendered by the league's tabs)
   // The value model the draft board ranks by, built once from this league's
   // own projected pool (null for a league `points-vor` does not cover).
@@ -714,6 +745,7 @@ async function main() {
     nowMs: now,
     config: CFG,
     vor,
+    contracts,
   });
 
   // All fetched: write everything (each file atomically).
@@ -740,15 +772,15 @@ async function main() {
   console.log(`OK: league:sync wrote snapshot (fxpaOk=${fxpaOk})`);
 
   // ---- dynasty values (depend on rosters, Ros%, ADP and the pool just written)
-  // Only for a league whose config enables the keeper model: the Captains
-  // cutdown (10 keepers + 30 minors-eligible) is that league's rule and must
-  // never be computed, let alone shown, for another one.
-  // Non-fatal: the season snapshot above is already written; check:league
-  // flags a dynasty.json that no longer matches the rosters.
+  // Only for the Captains profile here: its cutdown (10 keepers + 30
+  // minors-eligible) is that league's rule and must never be computed, let
+  // alone shown, for another one. The Slapshot profile ran above, before the
+  // plan. Non-fatal: the season snapshot above is already written;
+  // check:league flags a dynasty.json that no longer matches the rosters.
   if (DYNASTY && !CFG.features.dynasty) {
     console.log(`dynasty: skipped (${CFG.slug} has no keeper-forever model)`);
   }
-  if (DYNASTY && CFG.features.dynasty) {
+  if (DYNASTY && CFG.dynastyProfile === "captains") {
     try {
       const { result, ms } = runDynastyBuild({}, loadDynastyFiles(dynastyPaths(ROOT, CFG)));
       console.log(

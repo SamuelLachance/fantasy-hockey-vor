@@ -107,9 +107,26 @@ function FantraxTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
 function fantraxLead(entry: LeagueEntry, tab: LeagueTab): string {
   const cfg = fantraxLeague(entry.slug);
   if (tab === "aujourdhui" && !cfg.features.captainSlot) {
-    const parts = ["Légalité", `alignement optimal (${cfg.limits.maxActive} postes)`, "gardiens"];
+    const parts = [
+      cfg.salaryCap ? "Légalité et masse salariale" : "Légalité",
+      `alignement optimal (${cfg.limits.maxActive} postes)`,
+      "gardiens",
+    ];
     if (cfg.features.gamesCaps) parts.push("plafonds");
-    return `${parts.join(", ")}, duel de ${cfg.cadence.scoringPeriodDays} jours.`;
+    const range = cfg.cadence.scoringPeriodDaysRange;
+    const duel = range ? `duels de ${range[0]} à ${range[1]} jours` : `duel de ${cfg.cadence.scoringPeriodDays} jours`;
+    const lock =
+      cfg.cadence.lock?.kind === "game"
+        ? `; chaque joueur se verrouille ${cfg.cadence.lock.minutesBefore} minutes avant son match`
+        : "";
+    return `${parts.join(", ")}, ${duel}${lock}.`;
+  }
+  if (tab === "repechage" && cfg.salaryCap) {
+    const s = Math.round((cfg.cadence.draftPollMs ?? 90_000) / 1000);
+    return `Le repêchage en direct (relu toutes les ${s} secondes) : au tour de qui, vos choix, votre masse salariale et vos besoins par position, meilleurs disponibles en valeur dynastie.`;
+  }
+  if (tab === "mon-equipe" && cfg.salaryCap) {
+    return "Votre effectif par statut, sa masse salariale saison par saison et qui envoyer aux mineures pour libérer de l’espace.";
   }
   return TAB_META[tab].description;
 }
@@ -121,9 +138,8 @@ const FANTRAX_POINTS: ServerLeagueAdapter = {
   Shell: FantraxShell,
   Header: () => <FantraxHeaderPart />,
   Tab: FantraxTab,
-  // The format is the league's, not the kind's: « dynastie » for Captains,
-  // « keeper » for Slapshot. Saying « dynastie » for a keeper league would
-  // promise a cutdown model that does not apply to it.
+  // The format is the league's, not the kind's (both Fantrax leagues are
+  // « dynastie »; a keeper league would say « keeper »).
   // The same wording as the tab's own lead, so the meta description cannot
   // promise a captain or a games cap the league has not got.
   describe: (entry, tab) =>

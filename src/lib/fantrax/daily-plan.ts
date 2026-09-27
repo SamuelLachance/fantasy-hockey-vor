@@ -66,6 +66,7 @@ import type {
   ValuesSnapshot,
 } from "./snapshot-types";
 import { waiverTargets, type DropOption, type WaiverDay, type WaiverTarget } from "./waivers";
+import { salaryUsage, type ContractsFile, type SalaryUsage } from "./salary-cap";
 
 // Shared with the browser's player table (see draft-inputs.ts).
 export {
@@ -101,6 +102,11 @@ export interface PlanInputs {
    * the one snapshot it loaded — keeps working unchanged.
    */
   config?: FantraxLeagueConfig;
+  /**
+   * A salary-cap league's contracts (`<public>/contracts.json`): the plan then
+   * carries the team's cap use (`salary`). Ignored for a league without a cap.
+   */
+  contracts?: ContractsFile | null;
 }
 
 export interface TeamGame {
@@ -119,7 +125,9 @@ export type AlertCode =
   | "fxpa-down"
   /** This league never exposes the injury / minors / caps details (fxpa closed). */
   | "fxpa-closed"
-  | "stale-data";
+  | "stale-data"
+  /** Salary-cap league: the counted players' cap hits pass the league cap. */
+  | "salary-over";
 
 /**
  * Where a dead active player should go. Reserve keeps him counted toward
@@ -229,6 +237,12 @@ export interface DailyPlan {
     targets: WaiverTarget[];
   };
   draft: (Omit<DraftOutlook, "remaining"> & { remaining: number[] }) | null;
+  /**
+   * Salary-cap leagues only (absent elsewhere): the team's cap use over its
+   * counted players (Active + Reserve), this season and the next ones; null
+   * when the contracts file was not available.
+   */
+  salary?: SalaryUsage | null;
   players: Record<string, PlanPlayer>;
 }
 
@@ -494,8 +508,11 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   }
   const fixSet = new Set(fixes);
   const minorsEligible = new Set(state.minorsEligible);
+  // A league whose Minors take anyone (Slapshot) needs no eligibility flag.
   const canReturnToMinors = (id: string) =>
-    minorsEligible.has(id) || (state.icons[id] ?? []).includes(FANTRAX_ICON.minorsEligible);
+    config.features.minorsAnyPlayer ||
+    minorsEligible.has(id) ||
+    (state.icons[id] ?? []).includes(FANTRAX_ICON.minorsEligible);
   // Reserve bodies: Minors players who can go back down later first, then
   // by per-game value (the likeliest to be playing soon). The count needs no
   // icons, so this works even when fxpa was down.
@@ -822,6 +839,18 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   if (afterMoves > maxCounted) {
     alerts.push({ level: "warn", code: "over-max-after-moves", count: afterMoves, limit: maxCounted });
   }
+  // ---- salary cap (Active + Reserve only)
+  const salaryPart =
+    config.salaryCap && input.contracts ? salaryUsage(roster, input.contracts, config.salaryCap) : null;
+  if (salaryPart?.over) {
+    alerts.push({
+      level: "warn",
+      code: "salary-over",
+      count: Math.round(salaryPart.used[0]! * 100) / 100,
+      limit: salaryPart.cap[0]!,
+      ids: salaryPart.top.slice(0, 3).map(([id]) => id),
+    });
+  }
 
   // ---- referenced players
   const referenced = new Set<string>([
@@ -855,6 +884,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   const teamName = league.teams.find((t) => t.id === teamId)?.name ?? teamId;
   return {
+    ...(config.salaryCap ? { salary: salaryPart } : {}),
     generatedAt: new Date(nowMs).toISOString(),
     dataAsOf: state.fetchedAt,
     teamId,

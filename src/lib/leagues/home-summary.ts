@@ -5,6 +5,8 @@
  */
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import type { TeamDynastySummary } from "@/lib/fantrax/dynasty-hints";
+import { salaryLine } from "@/lib/fantrax/salary-cap";
+import type { RosterLimits } from "@/lib/fantrax/config";
 import {
   alertText,
   fmtDateTime,
@@ -94,7 +96,7 @@ function lockText(iso: string): string {
   return `${fmtDay(iso)}, ${fmtTime(iso)} (${fmtZone(iso)})`;
 }
 
-type FantraxHomePlan = Pick<DailyPlan, "teamName" | "dataAsOf" | "legality" | "alerts" | "draft" | "target" | "players">;
+type FantraxHomePlan = Pick<DailyPlan, "teamName" | "dataAsOf" | "legality" | "alerts" | "draft" | "target" | "players" | "salary">;
 
 /** Keeper slots per team at the offseason cutdown, and the first cutdown. */
 const KEEPER_SLOTS = 10;
@@ -129,11 +131,13 @@ export function fantraxHomeCard(
   dynasty: Pick<TeamDynastySummary, "core" | "bubble" | "tradeBefore" | "text"> | null = null,
   /** The league HAS Minors slots (`features.minors`): the legality line only names them then. */
   minors = true,
+  /** The league's limits, when it publishes its total / IR / Minors caps (the legality line then names them). */
+  limits?: Pick<RosterLimits, "maxActive" | "maxReserve" | "maxIr" | "maxMinors" | "maxTotal">,
 ): HomeCardData {
   const name = (id: string | null | undefined) => (id ? plan.players[id]?.n : undefined) ?? "Un joueur";
   const alerts: HomeAlert[] = [];
   if (plan.legality.illegal || plan.legality.need > 0) {
-    alerts.push({ level: "error", text: legalitySummary(plan.legality, minors), tab: "aujourdhui", hash: "alertes" });
+    alerts.push({ level: "error", text: legalitySummary(plan.legality, minors, limits), tab: "aujourdhui", hash: "alertes" });
   }
   const empty: string[] = [];
   for (const a of plan.alerts) {
@@ -175,7 +179,12 @@ export function fantraxHomeCard(
     syncedText: `À la synchro du ${fmtDateTime(plan.dataAsOf)}`,
     alerts,
     dates,
-    note: dynasty ? dynastyHomeNote(dynasty) : null,
+    // A salary-cap league: the cap line (Active + Reserve only) at the sync.
+    note: dynasty
+      ? dynastyHomeNote(dynasty)
+      : plan.salary
+        ? { text: salaryLine(plan.salary), tab: "mon-equipe", hash: "masse-salariale" }
+        : null,
   };
 }
 

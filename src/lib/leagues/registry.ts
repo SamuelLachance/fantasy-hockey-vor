@@ -117,7 +117,9 @@ export const LEAGUES: readonly LeagueEntry[] = [
     name: "Slapshot Fantasy League",
     shortName: "Slapshot",
     platform: "Fantrax",
-    format: "keeper",
+    // Full dynasty: every player carries over every season (no cutdown), with
+    // a salary cap on the 23 Active + Reserve players.
+    format: "dynastie",
     scoring: "points",
     season: "2026-27",
     teams: slapshot.teams,

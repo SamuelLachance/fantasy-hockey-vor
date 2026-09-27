@@ -193,7 +193,7 @@ function main() {
   }
   // Only a keeper-forever league has dynasty values at all.
   const dynasty =
-    CFG.features.dynasty && !args.includes("--no-dynasty") && existsSync(PATHS.dynasty)
+    CFG.dynastyProfile === "captains" && !args.includes("--no-dynasty") && existsSync(PATHS.dynasty)
       ? (JSON.parse(readFileSync(PATHS.dynasty, "utf8")) as DynastySnapshot)
       : null;
   const modeArg = argValue("--dynasty") ?? "balanced";
@@ -393,7 +393,7 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
   }
 
   if (input.dynasty) printDynasty(out, plan, input, input.dynasty, input.dynastyMode);
-  else if (CFG.features.dynasty && !args.includes("--no-dynasty")) {
+  else if (CFG.dynastyProfile === "captains" && !args.includes("--no-dynasty")) {
     out.push("", `(no ${CFG.paths.public}/dynasty.json: run npm run dynasty:build for the dynasty section)`);
   }
 

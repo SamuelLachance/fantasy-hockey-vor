@@ -102,6 +102,13 @@ if (league) {
   if (activeSlots !== league.limits.maxActive) {
     errors.push(`${activeSlots} active slots but maxActive ${league.limits.maxActive}`);
   }
+  // The limits fxea does not publish come from the league's rules (its
+  // config): a baked league.json from before a rule change must be re-synced.
+  for (const k of ["minTotal", "maxIr", "maxMinors", "maxTotal"] as const) {
+    if (league.limits[k] !== CFG.limits[k]) {
+      errors.push(`limits.${k} is ${league.limits[k]} in league.json, ${CFG.limits[k]} in the config — run npm run league:sync -- --league ${CFG.slug}`);
+    }
+  }
   if (league.scoringPeriods.length !== EXPECTED_SCORING_PERIODS) {
     errors.push(`${league.scoringPeriods.length} scoring periods (expected ${EXPECTED_SCORING_PERIODS})`);
   }
@@ -253,7 +260,7 @@ if (state && values) {
     errors.push(`ACTIVE projection match ${matched}/${active.length} (${pct}%) below this league's floor of ${floor * 100}%`);
   } else if (active.length > 0 && share < IDEAL_ACTIVE_MATCH) {
     warnings.push(
-      `only ${matched}/${active.length} ACTIVE players are projected (${pct}%) — expected in a league with no Minors slots, where unprojected prospects and late picks sit on the active roster`,
+      `only ${matched}/${active.length} ACTIVE players are projected (${pct}%) — expected while unprojected prospects and late picks sit on active rosters (a startup draft seats every pick ACTIVE)`,
     );
   }
   if (!state.fxpaOk && CFG.features.fxpa) warnings.push(`snapshot built without fxpa (${state.fxpaError ?? "unknown error"})`);
@@ -381,14 +388,24 @@ if (overrides) {
   }
 }
 
-// ---- dynasty values (optional file; gated when present, forbidden for a
-// league whose config has no keeper-forever model)
+// ---- dynasty values (optional file for the Captains profile; gated when
+// present; REQUIRED for the Slapshot profile, whose draft and cap views are
+// built on it; forbidden for a league whose config has no keeper-forever model)
 const dynastyPath = P.dynasty;
 const dynastyLabel = `${CFG.paths.public}/dynasty.json`;
 let dynastyNote = CFG.features.dynasty ? "no dynasty.json" : "no dynasty model";
 if (!CFG.features.dynasty) {
   if (existsSync(dynastyPath)) {
     errors.push(`${dynastyLabel} exists but ${CFG.slug} has no keeper-forever model (features.dynasty: false)`);
+  }
+} else if (CFG.dynastyProfile === "slapshot") {
+  if (!existsSync(dynastyPath)) {
+    errors.push(`${dynastyLabel} is missing — run npm run dynasty:build -- --league ${CFG.slug} (required: every player carries over and the cap views read it)`);
+  } else {
+    const r = checkSlapshotDynasty(dynastyPath);
+    dynastyNote = r.note;
+    errors.push(...r.errors.map((e) => `dynasty: ${e}`));
+    warnings.push(...r.warnings.map((w) => `dynasty: ${w}`));
   }
 } else if (!existsSync(dynastyPath)) {
   warnings.push(`${dynastyLabel} is missing — run npm run dynasty:build (the page falls back to season values)`);
@@ -450,3 +467,90 @@ if (errors.length > 0) {
 console.log(
   `OK: Fantrax snapshot ${CFG.slug} — ${Object.keys(values?.players ?? {}).length} value records, ${pool?.counts.total ?? 0} pool players (${pool?.counts.prospects ?? 0} prospects), ${schedule?.games.length ?? 0} games, synced ${state?.fetchedAt}; ${dynastyNote}`,
 );
+
+/**
+ * The Slapshot profile's dynasty.json (scripts/dynasty-slapshot.ts): the
+ * schema the draft, player and cap views read, the cap rule (the file's
+ * first-season cap must be the config's), a finite non-negative λ, unique
+ * ranks, and coverage of the players this league has rostered or drafted.
+ */
+function checkSlapshotDynasty(path: string): { errors: string[]; warnings: string[]; note: string } {
+  const errs: string[] = [];
+  const warns: string[] = [];
+  type Rec = {
+    n?: string;
+    dv?: Record<string, number>;
+    rank?: Record<string, number>;
+    eG?: number[];
+    contract?: { cap?: number[]; signed?: number };
+    explanation?: string;
+  };
+  type Snap = {
+    version?: number;
+    league?: { id?: string };
+    inputs?: { poolFetchedAt?: string; projectionsAt?: string };
+    params?: { T?: number; lambda?: number[]; cap?: { league?: number[] } };
+    players?: Record<string, Rec>;
+    zero?: string[];
+  };
+  let s: Snap;
+  try {
+    s = JSON.parse(readFileSync(path, "utf8")) as Snap;
+  } catch (e) {
+    return { errors: [`not valid JSON: ${e}`], warnings: [], note: "dynasty.json unreadable" };
+  }
+  const players = s.players ?? {};
+  const recs = Object.values(players);
+  if (s.version !== 1) errs.push(`version ${s.version} (expected 1)`);
+  if (s.league?.id !== CFG.leagueId) errs.push(`league ${s.league?.id} (expected ${CFG.leagueId})`);
+  if (recs.length < 800) errs.push(`only ${recs.length} players`);
+  const T = s.params?.T ?? 0;
+  const lambda = s.params?.lambda ?? [];
+  if (lambda.length !== T || !lambda.every((x) => Number.isFinite(x) && x >= 0)) errs.push("λ is not one finite value ≥ 0 per season");
+  const cap0 = s.params?.cap?.league?.[0];
+  if (CFG.salaryCap && cap0 !== CFG.salaryCap.base) errs.push(`first-season cap ${cap0} M$ (config says ${CFG.salaryCap.base})`);
+  const bad = recs.filter(
+    (r) =>
+      !r.n ||
+      !r.dv ||
+      !r.rank ||
+      !Array.isArray(r.eG) ||
+      r.eG.length !== T ||
+      !Array.isArray(r.contract?.cap) ||
+      r.contract!.cap!.length !== T ||
+      ![...Object.values(r.dv), ...r.eG, ...r.contract!.cap!].every(Number.isFinite) ||
+      !r.explanation,
+  );
+  if (bad.length) errs.push(`${bad.length} malformed records (${bad.slice(0, 3).map((r) => r.n).join(", ")})`);
+  for (const m of ["winNow", "balanced", "longTerm"]) {
+    const ranks = recs.map((r) => r.rank?.[m]);
+    if (new Set(ranks).size !== ranks.length) errs.push(`${m} ranks are not unique`);
+  }
+  // Coverage: whoever is on a roster or was drafted must have a value (or a zero entry).
+  const zero = new Set(s.zero ?? []);
+  const held = new Set<string>();
+  for (const roster of Object.values(state?.rosters ?? {})) for (const e of roster) held.add(e.id);
+  for (const p of state?.draft?.picks ?? []) if (p.playerId) held.add(p.playerId);
+  const covered = [...held].filter((id) => players[id] || zero.has(id)).length;
+  const share = held.size ? covered / held.size : 1;
+  if (share < 0.9) errs.push(`only ${covered}/${held.size} rostered or drafted players have a dynasty value`);
+  else if (share < 0.97) warns.push(`${held.size - covered} rostered or drafted players have no dynasty value (${covered}/${held.size})`);
+  if (state && s.inputs?.poolFetchedAt) {
+    const lagH = (Date.parse(state.fetchedAt) - Date.parse(s.inputs.poolFetchedAt)) / 3_600_000;
+    if (!(lagH < 48)) {
+      warns.push(`built on rosters of ${s.inputs.poolFetchedAt}, ${Number.isFinite(lagH) ? lagH.toFixed(0) : "?"} h before state.json — run npm run league:sync -- --league ${CFG.slug}`);
+    }
+  }
+  if (values && s.inputs?.projectionsAt && s.inputs.projectionsAt !== values.projectionsAt) {
+    warns.push(`built on projections ${s.inputs.projectionsAt} (values.json has ${values.projectionsAt})`);
+  }
+  // The baked plan carries the team's cap use (the home card and the first paint read it).
+  if (CFG.salaryCap && today && !(today as { salary?: unknown }).salary) {
+    errs.push("today.json has no salary block (the sync builds it from the dynasty contracts)");
+  }
+  return {
+    errors: errs,
+    warnings: warns,
+    note: `dynasty ${recs.length} players (λ ${lambda[0]} pts/M$, cap ${cap0} M$, ${covered}/${held.size} held players valued)`,
+  };
+}

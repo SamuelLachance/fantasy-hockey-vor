@@ -49,6 +49,8 @@ src/data/ml/gamelog-cache/
 # may be published. `npm run snake:build` bakes the public files from it.
 /src/data/scouting/snake-boisvert.json
 
-# The browser's copy of public/fantrax/dynasty.json (scripts/dynasty-client.ts:
+# The browser's copies of each league's dynasty.json (scripts/dynasty-client.ts:
 # written by every dynasty build and before every site build)
 /public/fantrax/dynasty-table.json
+/public/fantrax/*/dynasty-table.json
+/public/fantrax/*/contracts.json

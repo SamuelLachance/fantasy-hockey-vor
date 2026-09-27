@@ -67,14 +67,15 @@ jobs:
         run: npm run league:sync -- --league captains-dynasty
         timeout-minutes: 10
 
-      # Slapshot skips the dynasty build entirely (features.dynasty: false) and
-      # makes about the same handful of fxea calls, so ~1 min inside the budget.
+      # Slapshot makes about the same handful of fxea calls, then runs its own
+      # dynasty build (Slapshot profile with the salary cap, ~1 min) before its
+      # plan, whose cap line reads the contracts that build derives.
       - name: Sync Slapshot
         run: npm run league:sync -- --league slapshot
         timeout-minutes: 10
 
-      # Both leagues' snapshots, and the Captains dynasty gates (schema,
-      # coverage of every rostered player, K, ranks).
+      # Both leagues' snapshots and dynasty gates (Captains: schema, coverage of
+      # every rostered player, K, ranks; Slapshot: schema, cap, λ, coverage).
       - name: Validate league snapshots
         run: npm run check:league
 

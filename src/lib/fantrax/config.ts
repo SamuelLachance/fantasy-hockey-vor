@@ -158,6 +158,19 @@ export interface FantraxCadence {
   /** Nominal days per scoring period (7 = a weekly matchup, 2 = four a week). */
   scoringPeriodDays: number;
   /**
+   * Shortest and longest scoring period in days when the league's periods are
+   * custom (Slapshot: 84 periods of 1 to 4 days); absent = all nominal.
+   */
+  scoringPeriodDaysRange?: readonly [number, number];
+  /**
+   * Lineup lock: "period" = the whole lineup locks at the start of the lineup
+   * period (Captains' daily lock); "game" = each player locks
+   * `minutesBefore` minutes before his own game (Slapshot: 5).
+   */
+  lock?: { kind: "period" | "game"; minutesBefore: number };
+  /** Live draft: how often the browser re-reads the picks while the draft runs (ms). */
+  draftPollMs?: number;
+  /**
    * Weekday the FA/WW claim counter resets on (1 = Monday, Eastern), or null
    * when the league has no weekly reset (or it could not be confirmed).
    */
@@ -205,6 +218,12 @@ export interface RosterLimits {
   maxMinors: number;
   /** A healthy player left on IR makes the roster illegal after this many lineup periods. */
   healthyIrGracePeriods: number;
+  /**
+   * Most players on the roster, IR excluded (Active + Reserve + Minors), when
+   * the league publishes one (Slapshot: 40 = 20 + 3 + 17). Absent: no total
+   * cap is checked (Captains' has never been read).
+   */
+  maxTotal?: number;
 }
 
 /**
@@ -220,6 +239,19 @@ export interface FantraxFeatures {
   gamesCaps: boolean;
   /** Keep-forever league: the dynasty model (src/lib/dynasty) applies. */
   dynasty: boolean;
+  /**
+   * The Captains cutdown: 10 protected players a team each September plus a
+   * free Minors stash for the minors-eligible (`elig`, `keeper` in
+   * dynasty.json). Everything about « écrémage », « protégés » and minors
+   * eligibility is gated on it: a dynasty league where every player carries
+   * over and anyone may sit in the minors (Slapshot) has none of it.
+   */
+  keeperCutdown: boolean;
+  /**
+   * ANY player may be sent to the Minors slots (no eligibility rule): every
+   * rostered player can make room there, not only Fantrax's minors-eligible.
+   */
+  minorsAnyPlayer: boolean;
   /** fxpa answers unauthenticated for this league (icons, Ros%, caps, claims). */
   fxpa: boolean;
   /** FA + WW claims per week, or null when the league has no known limit. */
@@ -284,7 +316,34 @@ export interface FantraxLeagueConfig {
    */
   minActiveMatch: number;
   features: FantraxFeatures;
+  /**
+   * Which profile of the dynasty engine values this league (null = none):
+   * "captains" = src/lib/dynasty/* as built for the Captains Dynasty League
+   * (cutdown, minors eligibility, captain premium); "slapshot" = the same
+   * engine under src/lib/dynasty/slapshot.ts (its scoring and replacement, no
+   * cutdown, the salary-cap layer).
+   */
+  dynastyProfile: "captains" | "slapshot" | null;
+  /** Commissioner salary cap, or null for a league without one. */
+  salaryCap: SalaryCapConfig | null;
   paths: FantraxPathConfig;
+}
+
+/**
+ * A league salary cap on real NHL cap hits. Only the rules live here; the
+ * numbers per season (the cap, its growth, every player's cap hit) come from
+ * the dynasty build (`<public>/contracts.json`), whose profile
+ * (src/data/dynasty/<slug>/league.json `cap`) holds the one growth knob.
+ */
+export interface SalaryCapConfig {
+  /** League cap in the first season, M$ (asserted against the dynasty profile by the tests). */
+  base: number;
+  /** Start year of the first capped season. */
+  firstSeason: number;
+  /** Roster statuses whose players count against the cap (IR and Minors do not). */
+  countedStatuses: readonly string[];
+  /** Spots that count (Active + Reserve): the cap is spread over them. */
+  countedSpots: number;
 }
 
 /** Fantrax spells its slots the same way it spells `eligiblePos` tokens. */
@@ -363,9 +422,13 @@ export const CAPTAINS_DYNASTY: FantraxLeagueConfig = {
     minors: true,
     gamesCaps: true,
     dynasty: true,
+    keeperCutdown: true,
+    minorsAnyPlayer: false,
     fxpa: true,
     claimsPerWeek: 5,
   },
+  dynastyProfile: "captains",
+  salaryCap: null,
   paths: {
     data: "src/data/fantrax",
     public: "public/fantrax",
@@ -376,24 +439,31 @@ export const CAPTAINS_DYNASTY: FantraxLeagueConfig = {
 /**
  * Slapshot Fantasy League — 32 teams named after the NHL clubs, first season
  * (`getLeagueInfo` has no `leagueHistoryId`), HEAD_TO_HEAD_POINTS_BASED.
- * Everything below was read from the public fxea `getLeagueInfo` /
- * `getTeamRosters` of 2026-09-27 and cross-checked against Captains; the
- * report in the worktree notes lists the evidence per line.
+ * Settings read from the public fxea `getLeagueInfo` / `getTeamRosters` of
+ * 2026-09-27; the rules fxea does not publish (dynasty, minors, IR, salary
+ * cap, lineup lock) are the commissioner's, as the user relayed them.
  *
  * What makes it a different league, not a second copy of Captains:
  * - LW and RW are SEPARATE slots (Captains has one W plus a flex F), there
- *   is no captain slot and no Minors slot; 20 starters instead of 15.
- * - Its scoring table carries per-slot zeros that MEAN zero, so it is read
- *   from `scoringCategories` and scored in the `C` column (see `baseSlot`).
- * - 84 two-day matchups instead of 24 weekly ones, with daily lineups.
+ *   is no captain slot; 20 starters (C4 LW4 RW4 D6 G2) instead of 15.
+ * - Its scoring table carries per-slot zeros that MEAN zero (Hit and SB
+ *   score 0 in every slot), so it is read from `scoringCategories` and
+ *   scored in the `C` column (see `baseSlot`).
+ * - 84 custom scoring periods of 1 to 4 days (playoffs: periods 83-84), daily
+ *   lineups that lock 5 minutes before each game, no games-played caps.
+ * - FULL DYNASTY, but not the Captains kind: every player carries over every
+ *   season (the startup protected 1 keeper + 1 prospect a team, then a
+ *   38-round snake draft), there is no September cutdown and ANY player may
+ *   sit in the 17 Minors slots — so `keeperCutdown` is false and the dynasty
+ *   engine runs under its own profile (`dynastyProfile: "slapshot"`).
+ * - A salary cap on real NHL cap hits: 105 M$ in 2026-27, growing every year,
+ *   counted over the 23 Active + Reserve players only (IR and Minors are
+ *   free). A player's salary is his real cap hit for the season; after his
+ *   contract ends, his next real NHL contract (projected until it is signed).
  * - fxpa answers `WARNING_NOT_LOGGED_IN` for this league while the same
- *   calls succeed on Captains, so there are no injury icons, no Ros%, no
- *   games caps and no claim history: `features.fxpa` is false and the tool
+ *   calls succeed on Captains, so there are no injury icons, no Ros%, no ages
+ *   from Fantrax and no claim history: `features.fxpa` is false and the tool
  *   says it does not know rather than guessing.
- * - Keepers were a one-off 1 + 1 protection before this first draft (64
- *   players, exactly 2 per team, all from the club the fantasy team is named
- *   after), NOT a dynasty: `features.dynasty` is false, so
- *   `src/lib/dynasty/*` can never run, let alone publish, for it.
  */
 export const SLAPSHOT: FantraxLeagueConfig = {
   slug: "slapshot",
@@ -430,33 +500,36 @@ export const SLAPSHOT: FantraxLeagueConfig = {
   // No captain slot at all, so the fallback never applies.
   dInSkt: "default",
   cadence: {
-    /** 82 regular-season + 2 playoff matchups. */
+    /** 82 regular-season + 2 playoff matchups (periods 83-84). */
     scoringPeriods: 84,
     rosterPeriods: 152,
-    /** Four matchups a week: dim→mar, mar→jeu, jeu→sam, sam→dim. */
+    /** Nominal: the 84 custom periods run 1 to 4 days (about four a week). */
     scoringPeriodDays: 2,
+    scoringPeriodDaysRange: [1, 4],
+    /** Each player locks 5 minutes before his own game (commissioner rule). */
+    lock: { kind: "game", minutesBefore: 5 },
+    /** The 38-round draft runs for days, 6 minutes a pick: re-read the picks every 20 s. */
+    draftPollMs: 20_000,
     // No weekly claim reset could be confirmed (fxpa is closed), and a
     // 4-matchups-a-week cadence lines up with no weekday in particular.
     claimWeekStartsOn: null,
   },
   limits: {
-    // fxea exposes maxTotalActivePlayers, maxTotalReservePlayers and
-    // maxTotalPlayers (40) only. The three below are NOT published for this
-    // league and are deliberately the loosest value consistent with what is,
-    // so the tool can never invent an illegal roster it cannot verify:
     /** No published Active+Reserve minimum: never claim a roster is short. */
     minTotal: 0,
     maxActive: 20,
     maxReserve: 3,
-    // 40 total − 20 Active − 3 Reserve = 17 seats left for Minors and IR
-    // together; the real caps are at most this and are not published.
-    maxIr: 17,
+    /** Commissioner rules: IR 5, Minors 17 (any player), neither counts toward the roster limits. */
+    maxIr: 5,
     maxMinors: 17,
     /**
-     * Unknown, and unreachable anyway: without fxpa icons nobody on IR can
-     * be called healthy (`iconsKnown: false`), so no grace period is counted.
+     * Not published, and unreachable anyway: without fxpa icons nobody on IR
+     * can be called healthy (`iconsKnown: false`), so no grace period is
+     * ever counted against the roster.
      */
-    healthyIrGracePeriods: 17,
+    healthyIrGracePeriods: 2,
+    /** fxea `maxTotalPlayers`: 40 = 20 Active + 3 Reserve + 17 Minors (IR apart). */
+    maxTotal: 40,
   },
   priors: {
     /**
@@ -478,25 +551,33 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     regularMinFpg: 1.28,
   },
   /**
-   * No Minors slot in `positionConstraints`, so the 32 junior keepers — and
-   * every late pick of a 38-round draft that runs well past the projection
-   * horizon — sit ACTIVE with no projection to match. The measured share on
-   * 2026-09-27 was 135/147 (91.8%) with 88 of 1,216 picks made, and the draft
-   * ENDING does not settle it, so this is the league's permanent floor and not
-   * a draft-day exception: a real name-match break is caught by
-   * `minProjectionsMatched`, which this shape cannot move. The 95% shortfall
+   * During the startup draft Fantrax seats every pick ACTIVE (221 ACTIVE, 5
+   * MINORS on 2026-09-27), so junior keepers and late prospect picks sit
+   * active with no projection to match until their owners move them to the
+   * 17 Minors slots. A real name-match break is caught by
+   * `minProjectionsMatched`, which this shape cannot move; the 95% shortfall
    * is still reported as a warning.
    */
   minActiveMatch: 0.5,
   features: {
     captainSlot: false,
-    // No Minors slot in positionConstraints, and no minors-eligible flag
-    // without fxpa — 5 players league-wide sit in MINORS.
-    minors: false,
+    // 17 Minors slots, open to ANY player (no eligibility rule, so Fantrax's
+    // minors-eligible flag means nothing here — and fxpa does not send it).
+    minors: true,
     gamesCaps: false,
-    dynasty: false,
+    dynasty: true,
+    // Every player carries over: no September cutdown, no protected list.
+    keeperCutdown: false,
+    minorsAnyPlayer: true,
     fxpa: false,
     claimsPerWeek: null,
+  },
+  dynastyProfile: "slapshot",
+  salaryCap: {
+    base: 105,
+    firstSeason: 2026,
+    countedStatuses: ["ACTIVE", "RESERVE"],
+    countedSpots: 23,
   },
   paths: {
     data: "src/data/fantrax/slapshot",

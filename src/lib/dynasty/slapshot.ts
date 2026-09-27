@@ -926,7 +926,9 @@ export function explainSlapshotFr(r: SlapshotRecord, y0 = 2026, maxLen = 240): s
   if (c.signed > 0) {
     const until = seasonLabel(y0 + c.signed - 1);
     const kind = c.elc ? "contrat d’entrée" : "contrat";
-    const next = c.expiry != null && c.nextAav != null ? `, puis ~${money(c.nextAav)} projetés (${c.status ?? "JAS"})` : "";
+    // French status: JAS (joueur autonome sans compensation) / JAC (avec compensation).
+    const st = c.status === "RFA" ? "JAC" : "JAS";
+    const next = c.expiry != null && c.nextAav != null ? `, puis ~${money(c.nextAav)} projetés (${st})` : "";
     // a signed extension that starts later (Celebrini: ELC in 2026-27, then 18.8 M$)
     const ch = c.cap.slice(1, c.signed).findIndex((x) => Math.abs(x - c.cap[0]!) > 0.05 * Math.max(1, c.cap[0]!));
     const now =

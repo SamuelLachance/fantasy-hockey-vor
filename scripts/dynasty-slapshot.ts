@@ -47,6 +47,7 @@ import type { PlayerProfile } from "../src/lib/profile-types";
 import type { ProjectionsDataset } from "../src/lib/types";
 import { assembleDynastyInputs, loadDynastyFiles, type LoadedDynastyFiles } from "./dynasty-inputs";
 import type { ContractSeasonsFile } from "./fetch-contract-seasons";
+import { writeClientDynasty } from "./dynasty-client";
 import type { SlapshotPool } from "./slapshot-sync";
 
 export function slapshotPaths(root = process.cwd()) {
@@ -89,7 +90,8 @@ export interface SlapshotSnapshot {
     /** Replacement: season points by position, skaters per NHL game (fantasy season), goalies per season slot. */
     repl: { season: Record<SlapPos, number>; perGame: Record<string, number>; G: number };
     kDefault: Record<Group, number>;
-    cap: { league: number[]; nhl: number[]; min: number[]; growthAfter: number };
+    /** League cap, NHL cap and league minimum per season, M$; `announced`: start years whose NHL cap is announced. */
+    cap: { league: number[]; nhl: number[]; min: number[]; growthAfter: number; announced: number[] };
     /** Cap shadow price per season (league points per M$ above the minimum). */
     lambda: number[];
     /** Per solved season (2026-27 …): both estimators and the snake allocation's team caps. */
@@ -378,7 +380,15 @@ export function runSlapshotBuild(
         G: Math.round(pr.repl.G),
       },
       kDefault: { F: r3(pr.kDefault.F), D: r3(pr.kDefault.D), G: r3(pr.kDefault.G) },
-      cap: { league: pr.capSeries.league, nhl: pr.capSeries.nhl, min: pr.capSeries.min, growthAfter: profile.cap.growthAfter },
+      cap: {
+        league: pr.capSeries.league,
+        nhl: pr.capSeries.nhl,
+        min: pr.capSeries.min,
+        growthAfter: profile.cap.growthAfter,
+        announced: Object.keys(profile.cap.nhl)
+          .map(Number)
+          .sort((a, b) => a - b),
+      },
       lambda: pr.lambda.map(r3),
       lambdaDiag: {
         method: profile.lambda.method,
@@ -411,7 +421,12 @@ export function runSlapshotBuild(
     players,
     zero,
   };
-  if (opts.out !== null) writeFileAtomic(opts.out ?? SP.out, `${JSON.stringify(snapshot)}\n`);
+  if (opts.out !== null) {
+    const out = opts.out ?? SP.out;
+    writeFileAtomic(out, `${JSON.stringify(snapshot)}\n`);
+    // The browser's copies (dynasty-table.json, contracts.json) follow every write.
+    writeClientDynasty(out);
+  }
   return { result, prep: pr, snapshot, records, pool, profile, model: md, salaryRowCount, noCap, ms: Date.now() - t0 };
 }
 

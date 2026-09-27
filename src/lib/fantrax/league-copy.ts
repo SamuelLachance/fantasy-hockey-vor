@@ -9,9 +9,10 @@
  * narrow no-break space, which would be a hydration mismatch. `Intl` is
  * only used for Eastern wall-clock parts, which every engine agrees on.
  */
-import { CLAIMS_PER_WEEK, FANTRAX_GROUPS, LEAGUE_TIME_ZONE, type SlotId } from "./config";
+import { CLAIMS_PER_WEEK, FANTRAX_GROUPS, LEAGUE_TIME_ZONE, type RosterLimits, type SlotId } from "./config";
 import type { PlanAlert, TeamGame } from "./daily-plan";
 import type { DeadReason } from "./roster-rules";
+import { fmtMoney } from "./salary-cap";
 
 // ------------------------------------------------------------ numbers
 
@@ -248,6 +249,7 @@ const LIMIT_LABEL: Record<string, string> = {
   "too-many-reserve": "Trop de joueurs en réserve",
   "too-many-ir": "Trop de joueurs sur la liste des blessés",
   "too-many-minors": "Trop de joueurs dans les mineures",
+  "too-many-total": "Trop de joueurs au total (Actifs + Réserve + Mineures)",
   "slot-over": "Trop de joueurs au poste",
 };
 
@@ -278,6 +280,10 @@ export function alertText(a: PlanAlert, name: NameOf): string | null {
       return "Cette ligue ne publie pas ses détails joueur : blessures, % de ligues Fantrax et priorité au ballottage ne sont pas lisibles sans être membre. L'alignement optimal ne sait donc pas qui est blessé — vérifiez dans Fantrax avant de le reproduire.";
     case "stale-data":
       return `Les données datent de ${n}${NBSP}h : la synchronisation automatique semble en retard.`;
+    case "salary-over": {
+      const top = (a.ids ?? []).map((id) => name(id)).join(", ");
+      return `Masse salariale dépassée : ${fmtMoney(n)} pour un plafond de ${fmtMoney(a.limit ?? 0)} (Actifs + Réserve). Envoyez un salarié aux mineures ou sur la liste des blessés (ils ne comptent pas)${top ? `; plus gros salaires : ${top}` : ""}.`;
+    }
     default:
       return null;
   }
@@ -290,7 +296,8 @@ export function alertText(a: PlanAlert, name: NameOf): string | null {
  * Active+Reserve minimum is not published (`minTotal: 0`, Slapshot) gets no
  * denominator — « 5/0 joueurs comptés » was nonsense — and a league with no
  * Minors slots is never told what its mineures do not count, because it has
- * none.
+ * none. With `limits` (a league that publishes its total, IR and Minors caps,
+ * Slapshot) the line ends with them: « 40 max, IR 5, mineures 17 ».
  */
 export function legalitySummary(
   l: {
@@ -301,11 +308,21 @@ export function legalitySummary(
   },
   /** The league HAS Minors slots (`features.minors`). */
   minors = true,
+  limits?: Pick<RosterLimits, "maxActive" | "maxReserve" | "maxIr" | "maxMinors" | "maxTotal">,
 ): string {
   const c = l.counts;
-  const counted = l.minTotal > 0 ? `${c.counted}/${l.minTotal}` : `${c.counted}`;
+  const counted =
+    l.minTotal > 0
+      ? `${c.counted}/${l.minTotal}`
+      : limits?.maxTotal !== undefined
+        ? `${c.counted}/${limits.maxActive + limits.maxReserve}`
+        : `${c.counted}`;
   const out = minors ? `blessés ${c.ir} et mineures ${c.minors} ne comptent pas` : `blessés ${c.ir} ne comptent pas`;
-  const base = `${counted} joueurs comptés (Actifs ${c.active} + Réserve ${c.reserve}; ${out})`;
+  const caps =
+    limits?.maxTotal !== undefined
+      ? ` — ${c.counted + c.minors}/${limits.maxTotal} au total (${limits.maxTotal} max hors IR), IR ${c.ir}/${limits.maxIr}, mineures ${c.minors}/${limits.maxMinors}`
+      : "";
+  const base = `${counted} joueurs comptés (Actifs ${c.active} + Réserve ${c.reserve}; ${out})${caps}`;
   if (l.need > 0) {
     return `Alignement illégal : ${base}. Il en manque ${l.need} — sinon l'équipe ne marque aucun point.`;
   }

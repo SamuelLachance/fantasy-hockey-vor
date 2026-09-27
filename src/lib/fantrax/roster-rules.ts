@@ -56,6 +56,7 @@ export type RosterIssueCode =
   | "too-many-reserve"
   | "too-many-ir"
   | "too-many-minors"
+  | "too-many-total"
   | "slot-over"
   | "healthy-ir";
 
@@ -177,6 +178,8 @@ export function evaluateRoster(
   over("too-many-reserve", counts.reserve, limits.maxReserve);
   over("too-many-ir", counts.ir, limits.maxIr);
   over("too-many-minors", counts.minors, limits.maxMinors);
+  // A league's total (Slapshot: 40 = Active + Reserve + Minors; IR apart).
+  if (limits.maxTotal !== undefined) over("too-many-total", counts.counted + counts.minors, limits.maxTotal);
   for (const s of slotOrder) {
     const f = slots[s];
     if (f && f.filled > f.max) {
