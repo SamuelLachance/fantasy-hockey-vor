@@ -117,6 +117,16 @@ export interface DraftBoard {
     };
   };
   /**
+   * SV% over-dispersion removed before anybody is valued
+   * (`src/lib/leagues/goalie-shrink.ts`): each goalie's projected SV% gap to
+   * `mean` is divided by `factor`, shots against and GP held, so the SV%,
+   * saves and GAA of this board sit closer to the mean than the shared
+   * `players.json` (the main table) shows. `spread` is the projections' SD
+   * over workhorse goalies before the shrink, `skillSd` the most that three
+   * seasons of history can justify.
+   */
+  goalieSavePctShrink: { factor: number; mean: number; spread: number; skillSd: number };
+  /**
    * Per skater category (aligned with `categories.skater`), the z a group
    * starts from: (group mean − common mean) ÷ SD. z is centred on F and D
    * together so a D and a forward compare for Util; z − offset is the gap to

@@ -81,8 +81,8 @@ export function parseRankAdjustments(raw: unknown, slug: string): RankAdjustment
 /**
  * The adjusted order: every listed row removed, then re-inserted deepest
  * `insertAt` first at index `insertAt - 1`. Listed ids missing from `order`
- * are skipped and returned (the board check fails on them; the build does
- * not, so a projection refresh never blocks a deploy on its own).
+ * are skipped and returned (the build and the board check both warn: a
+ * projection refresh must never block a deploy on its own).
  */
 export function applyRankAdjustments<T>(
   order: readonly T[],

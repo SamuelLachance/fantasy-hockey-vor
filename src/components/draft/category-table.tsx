@@ -189,7 +189,9 @@ function detailFor(board: DraftBoard) {
       ["Équipe", r.team || "—"],
       ["Positions Yahoo", `${r.pos.join(", ")}${r.pos.length > 1 ? ` (VOR mesurée à ${r.vorPos})` : ""}`],
       ["Rang", `${ordinal(r.rank)} dans la ligue${posRanks ? ` · ${posRanks}` : ""}`],
-      ["Valeur · VOR", `${formatFr(r.value, 2)} · ${formatFr(r.vor, 2)}`],
+      r.adjusted
+        ? ["Valeur (modèle) · VOR ajustée", `${formatFr(r.value, 2)} · ${formatFr(r.vor, 2)}`]
+        : ["Valeur · VOR", `${formatFr(r.value, 2)} · ${formatFr(r.vor, 2)}`],
       ...(r.adjusted
         ? ([
             [

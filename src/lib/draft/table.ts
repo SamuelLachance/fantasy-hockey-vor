@@ -356,7 +356,9 @@ function columns(board: DraftBoard): Col[] {
     {
       key: "valeur",
       label: "Valeur",
-      title: "Valeur : somme de ses cotes z dans les catégories de la ligue (gardiens pondérés)",
+      title: `Valeur : somme de ses cotes z dans les catégories de la ligue (gardiens pondérés)${
+        handMoved ? ". « ajusté » : joueur déplacé à la main, sa valeur reste celle du modèle (le tri par valeur ne suit donc pas son nouveau rang)" : ""
+      }`,
       align: "right",
       group: GROUP.rank,
       sort: { value: (r) => r.value, defaultDir: "desc" },

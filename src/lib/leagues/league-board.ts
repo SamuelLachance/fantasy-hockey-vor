@@ -15,6 +15,7 @@ import {
   type CategoryVorResult,
   type LeaguePoolPlayer,
 } from "./category-vor";
+import { GOALIE_SAVE_PCT_SKILL_SD } from "./goalie-shrink";
 import { applyRankAdjustments, bridgeValues, type RankAdjustmentsFile } from "./rank-adjustments";
 import type { CategoryLeagueProfile, LeagueCategory, StartingSlot } from "./types";
 
@@ -37,7 +38,12 @@ export interface BuiltBoard {
   board: DraftBoard;
   vor: CategoryVorResult;
   adp: AdpMatchReport;
-  /** Adjusted ids that are not on the board (skipped; check:draft-board fails on them). */
+  /**
+   * The board rows in the engine's order, before any hand move (what
+   * `check:draft-board` compares the adjusted board's rank slots with).
+   */
+  enginePlayers: DraftBoardPlayer[];
+  /** Adjusted ids that are not on the board (skipped; check:draft-board warns on them). */
   adjustmentsMissing: number[];
 }
 
@@ -108,6 +114,12 @@ const RANK_KEYS: readonly BoardPosition[] = ["C", "LW", "RW", "F", "D", "G"];
  * `adjusted` with the engine's rank and VOR. Position ranks follow too:
  * each position's own engine order with the adjusted rows taken out and put
  * back in front of the first player the new overall order puts after them.
+ *
+ * Ranks are slots, not indexes: the k-th row of the new order takes the
+ * k-th smallest engine rank (likewise per position). The board is 1..400
+ * with no gap today, so that is `i + 1`; but the goalie floor can keep a
+ * goalie ranked beyond `BOARD_DEPTH` (437), and he must keep 437 — the
+ * pick-availability odds read the rank of a player without ADP.
  */
 export function adjustBoardPlayers(
   players: readonly DraftBoardPlayer[],
@@ -121,9 +133,10 @@ export function adjustBoardPlayers(
     order.map((p) => p.vor),
     isAdjusted,
   );
+  const rankSlots = players.map((p) => p.rank).sort((a, b) => a - b);
   const out: DraftBoardPlayer[] = order.map((p, i) => {
     const reason = reasons.get(p.id);
-    const row: DraftBoardPlayer = { ...p, rank: i + 1, posRank: { ...p.posRank } };
+    const row: DraftBoardPlayer = { ...p, rank: rankSlots[i]!, posRank: { ...p.posRank } };
     if (reason === undefined) return row;
     return {
       ...row,
@@ -137,6 +150,7 @@ export function adjustBoardPlayers(
     const list = out
       .filter((p) => p.posRank[key] != null)
       .sort((a, b) => a.posRank[key]! - b.posRank[key]!);
+    const slots = list.map((p) => p.posRank[key]!);
     const stay = list.filter((p) => !reasons.has(p.id));
     const moved = list.filter((p) => reasons.has(p.id)).sort((a, b) => newRank.get(a.id)! - newRank.get(b.id)!);
     for (const m of moved) {
@@ -144,7 +158,7 @@ export function adjustBoardPlayers(
       stay.splice(at < 0 ? stay.length : at, 0, m);
     }
     stay.forEach((p, i) => {
-      p.posRank[key] = i + 1;
+      p.posRank[key] = slots[i]!;
     });
   }
   return { players: out, missing };
@@ -301,12 +315,18 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
         ...goalieRankSummary(adjustedOrder(alt.players)),
       },
     },
+    goalieSavePctShrink: {
+      factor: round(vor.goalieSavePctShrink.factor, 3),
+      mean: round(vor.goalieSavePctShrink.mean, 4),
+      spread: round(vor.goalieSavePctShrink.spread, 4),
+      skillSd: GOALIE_SAVE_PCT_SKILL_SD,
+    },
     skaterGroupOffset: groupOffset,
     replacement,
     averageTeam: { slots },
     players,
   };
-  return { board, vor, adp, adjustmentsMissing };
+  return { board, vor, adp, enginePlayers, adjustmentsMissing };
 }
 
 /**

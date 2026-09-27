@@ -27,6 +27,7 @@ export function DraftMethodNote({
   summary?: string;
 }) {
   const gw = board.goalieWeight;
+  const sv = board.goalieSavePctShrink;
   const cats = [...board.categories.skater, ...board.categories.goalie].map((c) => CATEGORY_SHORT[c]);
   const skaterIndex = (c: string) => (board.categories.skater as readonly string[]).indexOf(c);
   const dBlk = board.skaterGroupOffset.D[skaterIndex("blocks")] ?? 0;
@@ -77,8 +78,18 @@ export function DraftMethodNote({
           <p>
             <strong className="text-slate-200">Gardiens</strong> : SV% compte en arrêts au-dessus de la
             moyenne (le volume compte : ,915 sur 55 matchs pèse plus que ,918 sur 20), GAA en buts évités
-            par rapport à la moyenne sur les matchs joués (buts alloués = arrêts ÷ SV% − arrêts). Les
-            blanchissages projetés sont arrondis à l’entier ; ils sont lissés (moitié projection, moitié
+            par rapport à la moyenne sur les matchs joués (buts alloués = arrêts ÷ SV% − arrêts).
+            {sv && sv.factor > 1 ? (
+              <>
+                {" "}
+                La SV% projetée est d’abord ramenée vers la moyenne ({formatFr(sv.mean, 3)}) : l’écart de
+                chaque gardien est divisé par {formatFr(sv.factor, 2)}, car les projections étalent les gardiens
+                réguliers sur un écart type de {formatFr(sv.spread, 4)}, alors que trois saisons d’historique
+                n’en justifient qu’environ {formatFr(sv.skillSd, 4)}. Arrêts, buts alloués et GAA suivent : ces
+                chiffres sont donc plus serrés que les projections générales du site.
+              </>
+            ) : null}{" "}
+            Les blanchissages projetés sont arrondis à l’entier ; ils sont lissés (moitié projection, moitié
             matchs joués × probabilité de blanchissage selon la GAA), d’où les décimales. La valeur d’un
             gardien est multipliée par {formatFr(gw.weight, 2)} = levier hebdomadaire{" "}
             {formatFr(gw.leverageRatio, 2)} (calculé : deux gardiens portent 4 catégories, douze patineurs se

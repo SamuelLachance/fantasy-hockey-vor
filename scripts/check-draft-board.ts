@@ -34,7 +34,7 @@ for (const slug of slugs) {
   }
 
   const inputs = loadBoardInputs(slug);
-  const { board: fresh, adjustmentsMissing } = buildLeagueBoard(inputs);
+  const { board: fresh, enginePlayers, adjustmentsMissing } = buildLeagueBoard(inputs);
   if (!existsSync(path)) {
     // The page imports the file: typecheck and build need it.
     errors.push(`${path} missing — run npm run draft:board`);
@@ -98,11 +98,18 @@ for (const slug of slugs) {
     }
   }
   // Hand rank moves: every listed id is on the board under that name and
-  // carries its reason; ranks stay a permutation of 1..N; the published VOR
-  // never rises down the board (a VOR sort agrees with the rank); each
-  // position's ranks stay a permutation of 1..n.
+  // carries its reason; the moves only reorder rows (the rank slots, overall
+  // and per position, are the engine's); the published VOR never rises down
+  // the board (a VOR sort agrees with the rank).
+  // An id that has left the board (engine rank past BOARD_DEPTH after a
+  // retrain, or dropped from players.json) only warns, like the builder that
+  // skips it: this check gates every Pages deploy and the daily refresh of
+  // the other leagues, which a stale Light the Lamp move must not block.
   const adjustments = inputs.rankAdjustments?.adjustments ?? [];
-  for (const id of adjustmentsMissing) errors.push(`adjusted id ${id} is not on the board`);
+  for (const id of adjustmentsMissing) {
+    const a = adjustments.find((x) => x.id === id);
+    warnings.push(`adjusted id ${id}${a ? ` (${a.name})` : ""} is not on the board — move skipped; review ${adjPath}`);
+  }
   const byId = new Map(board.players.map((p) => [p.id, p]));
   for (const a of adjustments) {
     const p = byId.get(a.id);
@@ -124,17 +131,22 @@ for (const slug of slugs) {
     if (!Number.isFinite(p.adjusted!.vorModel) || !(p.adjusted!.fromRank >= 1)) errors.push(`${p.name}: adjustment figures`);
   }
   if (adjustments.length > 0) {
-    const ranks = board.players.map((p) => p.rank);
-    if (!ranks.every((r, i) => r === i + 1)) errors.push("ranks are not 1..N in board order");
+    const sorted = (xs: (number | undefined)[]) =>
+      xs.filter((r): r is number => r != null).sort((a, b) => a - b).join(",");
+    if (board.players.length !== enginePlayers.length) errors.push("hand moves changed the board size");
+    // Ranks strictly increase down the board (checked above), so equal slot
+    // sets mean the k-th row holds the engine's k-th rank.
+    if (sorted(board.players.map((p) => p.rank)) !== sorted(enginePlayers.map((p) => p.rank))) {
+      errors.push("hand moves changed the rank slots (ranks must be the engine's, reordered)");
+    }
     board.players.forEach((p, i) => {
       if (i > 0 && p.vor > board.players[i - 1]!.vor) errors.push(`VOR rises at ${p.name} (rank ${p.rank})`);
     });
     for (const key of ["C", "LW", "RW", "F", "D", "G"] as const) {
-      const seq = board.players
-        .map((p) => p.posRank[key])
-        .filter((r): r is number => r != null)
-        .sort((a, b) => a - b);
-      if (!seq.every((r, i) => r === i + 1)) errors.push(`position ranks ${key} are not a permutation of 1..n`);
+      const got = board.players.filter((p) => p.posRank[key] != null);
+      if (sorted(got.map((p) => p.posRank[key])) !== sorted(enginePlayers.map((p) => p.posRank[key]))) {
+        errors.push(`position ranks ${key} are not the engine's, reordered`);
+      }
     }
   }
 

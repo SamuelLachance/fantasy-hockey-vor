@@ -114,6 +114,24 @@ const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: i + 1 }))
     rankAdjustmentText(p5.adjusted!),
     "Rang ajusté à la main (modèle : 5e, VOR 2,00). Matchs sous-estimés (test).",
   );
+
+  // Ranks are the engine's slots, reordered: a goalie the goalie floor keeps
+  // past BOARD_DEPTH (engine rank 437, G 51) keeps 437 and G 51 — not his
+  // list index — so the availability odds that read the rank do not move.
+  const tail = [
+    mk(1, ["C"], 9, 1, { C: 1, F: 1 }),
+    mk(2, ["C"], 8, 2, { C: 2, F: 2 }),
+    mk(3, ["G"], 7, 3, { G: 50 }),
+    mk(9, ["G"], -3, 437, { G: 51 }),
+  ];
+  const moved = adjustBoardPlayers(tail, {
+    ...file,
+    adjustments: [{ id: 3, name: "P3", engineRank: 3, insertAt: 1, reason: "Test de la queue de gardiens." }],
+  }).players;
+  assert.deepEqual(ids(moved), [3, 1, 2, 9]);
+  assert.deepEqual(moved.map((p) => p.rank), [1, 2, 3, 437], "tail goalie keeps his engine rank");
+  assert.deepEqual(moved.map((p) => p.posRank.G ?? null), [50, null, null, 51], "G ranks keep their slots");
+  assert.deepEqual(adjustBoardPlayers(tail, null).players.map((p) => p.rank), [1, 2, 3, 437]);
 }
 
 // 5. File shape errors.
@@ -150,6 +168,9 @@ const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: i + 1 }))
 //    at his published VOR.
 {
   const board = JSON.parse(readFileSync(leagueBoardPath("light-the-lamp"), "utf8")) as DraftBoard;
+  // The SV% shrink the method note explains is published with the board.
+  const sv = board.goalieSavePctShrink;
+  assert.ok(sv.factor > 1 && sv.spread > sv.skillSd && sv.mean > 0.89 && sv.mean < 0.92, "SV% shrink published");
   const byVor = [...board.players].sort((a, b) => b.vor - a.vor || a.rank - b.rank);
   assert.deepEqual(ids(byVor), ids(board.players), "VOR sort = rank order");
   for (const p of board.players.filter((x) => x.adjusted)) {

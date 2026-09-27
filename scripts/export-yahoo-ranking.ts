@@ -11,6 +11,12 @@
  * deliberately NOT taken from Yahoo — that file is a few months old, so its
  * teams can be stale even where its eligibility is right.
  *
+ * A name the board holds once can still be shared with someone off the board
+ * in Yahoo's pool (Sebastian Aho: CAR C and PIT D; Elias Pettersson: two VAN
+ * players, C and D, where a team suffix would not even help). The printed
+ * list is left as it is (it is what was pasted into Yahoo), and each such line
+ * is reported on stderr so the pick can be checked in Yahoo by hand.
+ *
  * Run: npm run draft:ranking -- [slug] [--depth N] [--plain | --table]
  *   --plain  names only, no numbers
  *   --table  rank, name, positions, team, VOR, ADP and the hand moves
@@ -46,7 +52,35 @@ const label = (p: DraftBoardPlayer) => {
   return (nameCount.get(name) ?? 0) > 1 ? `${name} (${p.team})` : name;
 };
 
+// Yahoo's whole pool (matched and unmatched rows), by name: another player
+// under a printed name makes that line ambiguous for a name-based import.
+type PoolEntry = { key: string; nhlId: number | null; team: string; pos: string };
+const pool = new Map<string, PoolEntry[]>();
+const addToPool = (name: string, entry: PoolEntry) => {
+  const k = name.trim().toLowerCase();
+  pool.set(k, [...(pool.get(k) ?? []), entry]);
+};
+for (const [id, r] of Object.entries(yahoo?.byNhlId ?? {})) {
+  addToPool(r.name, { key: `nhl ${id}`, nhlId: Number(id), team: r.team, pos: r.positions.join("/") });
+}
+for (const u of yahoo?.unmatchedPlayers ?? []) {
+  addToPool(u.name, { key: `yahoo ${u.yahooPlayerId}`, nhlId: null, team: u.team, pos: "" });
+}
+const ambiguous: string[] = [];
+
 rows.forEach((p, i) => {
+  const others = (pool.get(yahooName(p).trim().toLowerCase()) ?? []).filter((e) => e.nhlId !== p.id);
+  // A team suffix settles it unless the other player is on the same team.
+  const printedTeam = label(p) !== yahooName(p);
+  const unresolved = others.filter((e) => !printedTeam || e.team === p.team);
+  if (unresolved.length > 0) {
+    ambiguous.push(
+      `line ${i + 1} « ${label(p)} » is ${p.team} ${p.pos.join("/")}; Yahoo also lists ${unresolved
+        .map((e) => `${yahooName(p)} (${[e.team, e.pos].filter(Boolean).join(" ")}, ${e.key})`)
+        .join(", ")}`,
+    );
+  }
+
   if (flag("table")) {
     console.log(
       [
@@ -67,6 +101,7 @@ rows.forEach((p, i) => {
     console.log(`${i + 1}. ${label(p)}`);
   }
 });
+for (const line of ambiguous) console.error(`WARN: ambiguous name, check it in Yahoo: ${line}`);
 const adjusted = rows.filter((p) => p.adjusted).length;
 console.error(
   `${rows.length} names for ${board.leagueName} (${join("public", "leagues", slug)})${adjusted ? `, ${adjusted} hand-adjusted` : ""}`,
