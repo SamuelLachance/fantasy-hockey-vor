@@ -11922,7 +11922,7 @@
         "gamesPlayedLastSeason": 4,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 11,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.13,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 4 NHL GP + 38 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -12083,7 +12083,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 26 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -25380,7 +25380,7 @@
         "avgGamesPlayedLast3": 18,
         "durabilityScore": 0.34,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 8 NHL GP + 30 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 8 NHL GP + 30 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 4250000,
@@ -25552,7 +25552,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Andreas Athanasiou (C, CHI). Age 31, 74\" / 190lb, shoots L. Drafted 2012 round 4 (#110 overall) by DET. Team CHI ranks #31 (43.9% pts), 2.60 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 8 NHL GP + 30 AHL GP (games in another league, not absences). Contract: $4.25M cap hit, 1 year remaining (UFA). Last season (2024-25): 8 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":8}",
+      "contextNarrative": "Andreas Athanasiou (C, CHI). Age 31, 74\" / 190lb, shoots L. Drafted 2012 round 4 (#110 overall) by DET. Team CHI ranks #31 (43.9% pts), 2.60 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 8 NHL GP + 30 AHL GP (games in another league, not absences). Contract: $4.25M cap hit, 1 year remaining (UFA). Last season (2024-25): 8 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":8}",
       "collectedAt": "2026-07-30T23:53:27.032Z"
     },
     {
@@ -25810,7 +25810,7 @@
         "avgGamesPlayedLast3": 40,
         "durabilityScore": 0.71,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 3 NHL GP + 52 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 3 NHL GP + 52 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 900000,
@@ -25945,7 +25945,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Andreas Englund (D, CGY). Age 30, 76\" / 200lb, shoots L. Drafted 2014 round 2 (#40 overall) by OTT. Team history: LAK → NSH (recent change affects linemates/usage). Team NSH ranks #23 (52.4% pts), 3.01 GF/G. Durability: moderate — Missed ~0 games last season; split season: 3 NHL GP + 52 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2025-26): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
+      "contextNarrative": "Andreas Englund (D, CGY). Age 30, 76\" / 200lb, shoots L. Drafted 2014 round 2 (#40 overall) by OTT. Team history: LAK → NSH (recent change affects linemates/usage). Team NSH ranks #23 (52.4% pts), 3.01 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 3 NHL GP + 52 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2025-26): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
       "collectedAt": "2026-07-30T23:52:34.546Z"
     },
     {
@@ -33519,7 +33519,7 @@
         "gamesPlayedLastSeason": 24,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 24,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.29,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 24 NHL GP + 8 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -34556,7 +34556,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 41 AHL/ECHL GP (games in another league, not absences)); platoon risk"
       },
@@ -36427,7 +36427,7 @@
         "avgGamesPlayedLast3": 22,
         "durabilityScore": 0.4,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 2 NHL GP + 70 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 2 NHL GP + 70 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -36545,7 +36545,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 2
       },
-      "contextNarrative": "Arthur Kaliyev (RW, OTT). Age 25, 74\" / 212lb, shoots L. Drafted 2019 round 2 (#33 overall) by LAK. Team history: LAK → NYR → OTT (recent change affects linemates/usage). Team OTT ranks #9 (60.4% pts), 3.39 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 2 NHL GP + 70 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA (No QO)). Last season (2025-26): 2 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":4}",
+      "contextNarrative": "Arthur Kaliyev (RW, OTT). Age 25, 74\" / 212lb, shoots L. Drafted 2019 round 2 (#33 overall) by LAK. Team history: LAK → NYR → OTT (recent change affects linemates/usage). Team OTT ranks #9 (60.4% pts), 3.39 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 2 NHL GP + 70 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA (No QO)). Last season (2025-26): 2 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":4}",
       "collectedAt": "2026-07-30T23:53:06.116Z"
     },
     {
@@ -37401,7 +37401,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 37 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -38743,7 +38743,7 @@
         "avgGamesPlayedLast3": 23,
         "durabilityScore": 0.4,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 13 NHL GP + 60 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 13 NHL GP + 60 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -38915,7 +38915,7 @@
         "evenStrengthGoalDiff": 1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Austin Watson (LW, DET). Age 34, 76\" / 203lb, shoots R. Drafted 2010 round 1 (#18 overall) by NSH. Team history: TBL → DET (recent change affects linemates/usage). Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 13 NHL GP + 60 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 13 GP, key stats {\"goals\":3,\"assists\":0,\"points\":3,\"shots\":13}",
+      "contextNarrative": "Austin Watson (LW, DET). Age 34, 76\" / 203lb, shoots R. Drafted 2010 round 1 (#18 overall) by NSH. Team history: TBL → DET (recent change affects linemates/usage). Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 13 NHL GP + 60 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 13 GP, key stats {\"goals\":3,\"assists\":0,\"points\":3,\"shots\":13}",
       "collectedAt": "2026-07-30T23:52:19.582Z"
     },
     {
@@ -45843,7 +45843,7 @@
         "avgGamesPlayedLast3": 29,
         "durabilityScore": 0.55,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 13 NHL GP + 59 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 13 NHL GP + 59 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 812500,
@@ -46015,7 +46015,7 @@
         "evenStrengthGoalDiff": 1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Bo Groulx (C, TOR). Age 26, 74\" / 202lb, shoots L. Drafted 2018 round 2 (#54 overall) by ANA. Team history: ANA → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 13 NHL GP + 59 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2025-26): 13 GP, key stats {\"goals\":3,\"assists\":2,\"points\":5,\"shots\":15}",
+      "contextNarrative": "Bo Groulx (C, TOR). Age 26, 74\" / 202lb, shoots L. Drafted 2018 round 2 (#54 overall) by ANA. Team history: ANA → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 13 NHL GP + 59 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2025-26): 13 GP, key stats {\"goals\":3,\"assists\":2,\"points\":5,\"shots\":15}",
       "collectedAt": "2026-07-30T23:53:26.841Z"
     },
     {
@@ -54606,7 +54606,7 @@
         "gamesPlayedLastSeason": 2,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 2 NHL GP + 43 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -60377,7 +60377,7 @@
         "avgGamesPlayedLast3": 37,
         "durabilityScore": 0.58,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 15 NHL GP + 11 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 15 NHL GP + 11 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 800000,
@@ -60549,7 +60549,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Brendan Smith (D, CBJ). Age 37, 74\" / 200lb, shoots L. Drafted 2007 round 1 (#27 overall) by DET. Team history: NJD → DAL → CBJ (recent change affects linemates/usage). Team CBJ ranks #17 (56.1% pts), 3.09 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 15 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $0.80M cap hit, 0 years remaining (UFA). Last season (2025-26): 15 GP, key stats {\"goals\":0,\"assists\":2,\"points\":2,\"shots\":10}",
+      "contextNarrative": "Brendan Smith (D, CBJ). Age 37, 74\" / 200lb, shoots L. Drafted 2007 round 1 (#27 overall) by DET. Team history: NJD → DAL → CBJ (recent change affects linemates/usage). Team CBJ ranks #17 (56.1% pts), 3.09 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 15 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $0.80M cap hit, 0 years remaining (UFA). Last season (2025-26): 15 GP, key stats {\"goals\":0,\"assists\":2,\"points\":2,\"shots\":10}",
       "collectedAt": "2026-07-30T23:52:22.567Z"
     },
     {
@@ -63315,7 +63315,7 @@
         "avgGamesPlayedLast3": 45,
         "durabilityScore": 0.79,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 6 NHL GP + 56 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 6 NHL GP + 56 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -63489,7 +63489,7 @@
         "evenStrengthGoalDiff": -2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Brett Leason (RW, SJS). Age 27, 77\" / 220lb, shoots R. Drafted 2019 round 2 (#56 overall) by WSH. Team history: ANA → WSH (recent change affects linemates/usage). Team WSH ranks #12 (57.9% pts), 3.21 GF/G. Durability: moderate — Missed ~0 games last season; split season: 6 NHL GP + 56 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Awards: E.J. McGuire Award of Excellence. Last season (2025-26): 6 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":1}",
+      "contextNarrative": "Brett Leason (RW, SJS). Age 27, 77\" / 220lb, shoots R. Drafted 2019 round 2 (#56 overall) by WSH. Team history: ANA → WSH (recent change affects linemates/usage). Team WSH ranks #12 (57.9% pts), 3.21 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 6 NHL GP + 56 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Awards: E.J. McGuire Award of Excellence. Last season (2025-26): 6 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":1}",
       "collectedAt": "2026-07-30T23:53:29.240Z"
     },
     {
@@ -68384,7 +68384,7 @@
         "gamesPlayedLastSeason": 5,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 5,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.06,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 5 NHL GP + 28 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -75291,7 +75291,7 @@
         "avgGamesPlayedLast3": 51,
         "durabilityScore": 0.65,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 47 NHL GP + 19 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 47 NHL GP + 19 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1000000,
@@ -75463,7 +75463,7 @@
         "evenStrengthGoalDiff": 5,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Carl Grundstrom (RW, PHI). Age 28, 72\" / 200lb, shoots L. Drafted 2016 round 2 (#57 overall) by TOR. Team history: LAK → SJS → PHI (recent change affects linemates/usage). Team PHI ranks #11 (59.8% pts), 3.05 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 47 NHL GP + 19 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 1 year remaining (UFA). Last season (2025-26): 47 GP, key stats {\"goals\":9,\"assists\":4,\"points\":13,\"shots\":56}",
+      "contextNarrative": "Carl Grundstrom (RW, PHI). Age 28, 72\" / 200lb, shoots L. Drafted 2016 round 2 (#57 overall) by TOR. Team history: LAK → SJS → PHI (recent change affects linemates/usage). Team PHI ranks #11 (59.8% pts), 3.05 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 47 NHL GP + 19 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 1 year remaining (UFA). Last season (2025-26): 47 GP, key stats {\"goals\":9,\"assists\":4,\"points\":13,\"shots\":56}",
       "collectedAt": "2026-07-30T23:52:11.668Z"
     },
     {
@@ -75532,7 +75532,7 @@
         "gamesPlayedLastSeason": 8,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 8,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.1,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 8 NHL GP + 35 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -79371,7 +79371,7 @@
         "avgGamesPlayedLast3": 29,
         "durabilityScore": 0.63,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 5 NHL GP + 50 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 5 NHL GP + 50 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -79542,7 +79542,7 @@
         "evenStrengthGoalDiff": 2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Chad Ruhwedel (D, NYR). Age 36, 71\" / 189lb, shoots R. Undrafted or draft data unavailable. Team history: PIT → NYR (recent change affects linemates/usage). Team NYR ranks #30 (47.0% pts), 2.90 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 5 NHL GP + 50 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, term unknown (UFA). Last season (2024-25): 5 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":1}",
+      "contextNarrative": "Chad Ruhwedel (D, NYR). Age 36, 71\" / 189lb, shoots R. Undrafted or draft data unavailable. Team history: PIT → NYR (recent change affects linemates/usage). Team NYR ranks #30 (47.0% pts), 2.90 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 5 NHL GP + 50 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, term unknown (UFA). Last season (2024-25): 5 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":1}",
       "collectedAt": "2026-07-30T23:52:14.014Z"
     },
     {
@@ -81992,7 +81992,7 @@
         "gamesPlayedLastSeason": 2,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 2 NHL GP + 39 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -85158,7 +85158,7 @@
         "gamesPlayedLastSeason": 4,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.03,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 4 NHL GP + 37 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -96244,7 +96244,7 @@
         "avgGamesPlayedLast3": 35,
         "durabilityScore": 0.44,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 32 NHL GP + 11 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 32 NHL GP + 11 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1950000,
@@ -96353,7 +96353,7 @@
         }
       ],
       "advancedSeasonLatest": {},
-      "contextNarrative": "Connor Ingram (G, EDM). Age 29, 73\" / 218lb, shoots L. Drafted 2016 round 3 (#88 overall) by TBL. Team history: ARI → UTA → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 32 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $1.95M cap hit, 0 years remaining (UFA). Awards: Bill Masterton Memorial Trophy. Last season (2025-26): 32 GP, key stats {\"wins\":16,\"savePct\":0.89908}",
+      "contextNarrative": "Connor Ingram (G, EDM). Age 29, 73\" / 218lb, shoots L. Drafted 2016 round 3 (#88 overall) by TBL. Team history: ARI → UTA → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 32 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $1.95M cap hit, 0 years remaining (UFA). Awards: Bill Masterton Memorial Trophy. Last season (2025-26): 32 GP, key stats {\"wins\":16,\"savePct\":0.89908}",
       "collectedAt": "2026-07-30T23:53:39.326Z"
     },
     {
@@ -103437,7 +103437,7 @@
         "avgGamesPlayedLast3": 21,
         "durabilityScore": 0.57,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 812500,
@@ -103608,7 +103608,7 @@
         "evenStrengthGoalDiff": -3,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Dakota Mermis (D, TOR). Age 32, 72\" / 197lb, shoots L. Undrafted or draft data unavailable. Team history: MIN → UTA → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2025-26): 11 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":5}",
+      "contextNarrative": "Dakota Mermis (D, TOR). Age 32, 72\" / 197lb, shoots L. Undrafted or draft data unavailable. Team history: MIN → UTA → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2025-26): 11 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":5}",
       "collectedAt": "2026-07-30T23:52:04.535Z"
     },
     {
@@ -105522,7 +105522,7 @@
         "avgGamesPlayedLast3": 23,
         "durabilityScore": 0.41,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1250000,
@@ -105621,7 +105621,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Daniil Miromanov (D, CGY). Age 29, 76\" / 207lb, shoots R. Undrafted or draft data unavailable. Team history: VGK → CGY (recent change affects linemates/usage). Team CGY ranks #29 (47.0% pts), 2.59 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
+      "contextNarrative": "Daniil Miromanov (D, CGY). Age 29, 76\" / 207lb, shoots R. Undrafted or draft data unavailable. Team history: VGK → CGY (recent change affects linemates/usage). Team CGY ranks #29 (47.0% pts), 2.59 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
       "collectedAt": "2026-07-30T23:52:41.854Z"
     },
     {
@@ -114535,7 +114535,7 @@
         "avgGamesPlayedLast3": 24,
         "durabilityScore": 0.38,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 8 NHL GP + 6 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 8 NHL GP + 6 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -114706,7 +114706,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Dennis Gilbert (D, BUF). Age 29, 74\" / 216lb, shoots L. Drafted 2015 round 3 (#91 overall) by CHI. Team history: CGY → BUF → OTT (recent change affects linemates/usage). Team OTT ranks #9 (60.4% pts), 3.39 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 8 NHL GP + 6 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 8 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":2}",
+      "contextNarrative": "Dennis Gilbert (D, BUF). Age 29, 74\" / 216lb, shoots L. Drafted 2015 round 3 (#91 overall) by CHI. Team history: CGY → BUF → OTT (recent change affects linemates/usage). Team OTT ranks #9 (60.4% pts), 3.39 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 8 NHL GP + 6 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 8 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":2}",
       "collectedAt": "2026-07-30T23:53:00.370Z"
     },
     {
@@ -114795,7 +114795,7 @@
         "gamesPlayedLastSeason": 20,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 13,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.16,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 20 NHL GP + 23 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -117436,7 +117436,7 @@
         "gamesPlayedLastSeason": 9,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 16,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.2,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 9 NHL GP + 42 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -123104,7 +123104,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.03,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 37 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -125148,7 +125148,7 @@
         "gamesPlayedLastSeason": 6,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 6,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.07,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 6 NHL GP + 21 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -127115,7 +127115,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 36 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -138424,7 +138424,7 @@
         "avgGamesPlayedLast3": 46,
         "durabilityScore": 0.83,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 2 NHL GP + 39 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 2 NHL GP + 39 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1000000,
@@ -138542,7 +138542,7 @@
         "evenStrengthGoalDiff": -2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Erik Gustafsson (D, LAK). Age 34, 72\" / 190lb, shoots L. Drafted 2012 round 4 (#93 overall) by EDM. Team history: NYR → DET (recent change affects linemates/usage). Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: moderate — Missed ~0 games last season; split season: 2 NHL GP + 39 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 1 year remaining (UFA). Last season (2025-26): 2 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":3}",
+      "contextNarrative": "Erik Gustafsson (D, LAK). Age 34, 72\" / 190lb, shoots L. Drafted 2012 round 4 (#93 overall) by EDM. Team history: NYR → DET (recent change affects linemates/usage). Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 2 NHL GP + 39 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 1 year remaining (UFA). Last season (2025-26): 2 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":3}",
       "collectedAt": "2026-07-30T23:53:12.844Z"
     },
     {
@@ -139836,7 +139836,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 24 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -145279,7 +145279,7 @@
         "gamesPlayedLastSeason": 5,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 5,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.06,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 5 NHL GP + 24 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -153687,7 +153687,7 @@
         "gamesPlayedLastSeason": 8,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 5,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.06,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 8 NHL GP + 21 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -153983,7 +153983,7 @@
         "avgGamesPlayedLast3": 25,
         "durabilityScore": 0.44,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 13 NHL GP + 16 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 13 NHL GP + 16 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -154155,7 +154155,7 @@
         "evenStrengthGoalDiff": -3,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Givani Smith (RW, SJS). Age 28, 74\" / 214lb, shoots L. Drafted 2016 round 2 (#46 overall) by DET. Team SJS ranks #24 (52.4% pts), 3.06 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 13 NHL GP + 16 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 13 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":5}",
+      "contextNarrative": "Givani Smith (RW, SJS). Age 28, 74\" / 214lb, shoots L. Drafted 2016 round 2 (#46 overall) by DET. Team SJS ranks #24 (52.4% pts), 3.06 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 13 NHL GP + 16 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 13 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":5}",
       "collectedAt": "2026-07-30T23:53:25.605Z"
     },
     {
@@ -160105,7 +160105,7 @@
         "avgGamesPlayedLast3": 38,
         "durabilityScore": 0.73,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 4 NHL GP + 55 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 4 NHL GP + 55 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -160258,7 +160258,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Henry Thrun (D, WPG). Age 25, 74\" / 211lb, shoots L. Drafted 2019 round 4 (#101 overall) by ANA. Team history: SJS → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: moderate — Missed ~0 games last season; split season: 4 NHL GP + 55 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 4 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":4}",
+      "contextNarrative": "Henry Thrun (D, WPG). Age 25, 74\" / 211lb, shoots L. Drafted 2019 round 4 (#101 overall) by ANA. Team history: SJS → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 4 NHL GP + 55 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 4 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":4}",
       "collectedAt": "2026-07-30T23:52:43.135Z"
     },
     {
@@ -160447,7 +160447,7 @@
         "avgGamesPlayedLast3": 44,
         "durabilityScore": 0.55,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 43 NHL GP + 7 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 43 NHL GP + 7 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -160619,7 +160619,7 @@
         "evenStrengthGoalDiff": -4,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Hudson Fasching (RW, NYI). Age 31, 75\" / 214lb, shoots R. Drafted 2013 round 4 (#118 overall) by LAK. Team NYI ranks #19 (55.5% pts), 2.84 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 43 NHL GP + 7 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 43 GP, key stats {\"goals\":2,\"assists\":2,\"points\":4,\"shots\":51}",
+      "contextNarrative": "Hudson Fasching (RW, NYI). Age 31, 75\" / 214lb, shoots R. Drafted 2013 round 4 (#118 overall) by LAK. Team NYI ranks #19 (55.5% pts), 2.84 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 43 NHL GP + 7 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 43 GP, key stats {\"goals\":2,\"assists\":2,\"points\":4,\"shots\":51}",
       "collectedAt": "2026-07-30T23:53:19.804Z"
     },
     {
@@ -161917,7 +161917,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 19 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -169543,7 +169543,7 @@
         "gamesPlayedLastSeason": 11,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 11,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.13,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 11 NHL GP + 21 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -172228,7 +172228,7 @@
         "gamesPlayedLastSeason": 5,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 5,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.06,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 5 NHL GP + 33 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -179086,7 +179086,7 @@
         "gamesPlayedLastSeason": 17,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 17,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.21,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 17 NHL GP + 27 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -189595,7 +189595,7 @@
         "gamesPlayedLastSeason": 2,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 2 NHL GP + 22 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -196661,7 +196661,7 @@
         "avgGamesPlayedLast3": 19,
         "durabilityScore": 0.38,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 7 NHL GP + 51 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 7 NHL GP + 51 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -196833,7 +196833,7 @@
         "evenStrengthGoalDiff": 3,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Jaret Anderson-Dolan (C, WPG). Age 26, 71\" / 200lb, shoots L. Drafted 2017 round 2 (#41 overall) by LAK. Team history: LAK → WPG (recent change affects linemates/usage). Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 7 NHL GP + 51 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA (No QO)). Last season (2024-25): 7 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":8}",
+      "contextNarrative": "Jaret Anderson-Dolan (C, WPG). Age 26, 71\" / 200lb, shoots L. Drafted 2017 round 2 (#41 overall) by LAK. Team history: LAK → WPG (recent change affects linemates/usage). Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 7 NHL GP + 51 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA (No QO)). Last season (2024-25): 7 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":8}",
       "collectedAt": "2026-07-30T23:53:26.720Z"
     },
     {
@@ -199177,7 +199177,7 @@
         "gamesPlayedLastSeason": 6,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 6,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.07,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 6 NHL GP + 21 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -199542,7 +199542,7 @@
         "avgGamesPlayedLast3": 19,
         "durabilityScore": 0.54,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 4 NHL GP + 64 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 4 NHL GP + 64 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 825000,
@@ -199695,7 +199695,7 @@
         "evenStrengthGoalDiff": -5,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Jaycob Megna (D, VGK). Age 33, 78\" / 214lb, shoots L. Drafted 2012 round 7 (#210 overall) by ANA. Team history: CHI → FLA → VGK (recent change affects linemates/usage). Team VGK ranks #13 (57.9% pts), 3.23 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 4 NHL GP + 64 AHL GP (games in another league, not absences). Contract: $0.82M cap hit, 1 year remaining (UFA). Last season (2025-26): 4 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":1}",
+      "contextNarrative": "Jaycob Megna (D, VGK). Age 33, 78\" / 214lb, shoots L. Drafted 2012 round 7 (#210 overall) by ANA. Team history: CHI → FLA → VGK (recent change affects linemates/usage). Team VGK ranks #13 (57.9% pts), 3.23 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 4 NHL GP + 64 AHL GP (games in another league, not absences). Contract: $0.82M cap hit, 1 year remaining (UFA). Last season (2025-26): 4 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":1}",
       "collectedAt": "2026-07-30T23:53:17.260Z"
     },
     {
@@ -208566,7 +208566,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 4,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 30 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -211163,7 +211163,7 @@
         "gamesPlayedLastSeason": 15,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 15,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.18,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 15 NHL GP + 18 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -217173,7 +217173,7 @@
         "avgGamesPlayedLast3": 21,
         "durabilityScore": 0.4,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 8 NHL GP + 31 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 8 NHL GP + 31 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -217344,7 +217344,7 @@
         "evenStrengthGoalDiff": -4,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "John Ludvig (D, COL). Age 25, 73\" / 210lb, shoots L. Drafted 2019 round 3 (#69 overall) by FLA. Team history: PIT → COL (recent change affects linemates/usage). Team COL ranks #1 (73.8% pts), 3.68 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 8 NHL GP + 31 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA (No QO)). Last season (2024-25): 8 GP, key stats {\"goals\":0,\"assists\":2,\"points\":2,\"shots\":9}",
+      "contextNarrative": "John Ludvig (D, COL). Age 25, 73\" / 210lb, shoots L. Drafted 2019 round 3 (#69 overall) by FLA. Team history: PIT → COL (recent change affects linemates/usage). Team COL ranks #1 (73.8% pts), 3.68 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 8 NHL GP + 31 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA (No QO)). Last season (2024-25): 8 GP, key stats {\"goals\":0,\"assists\":2,\"points\":2,\"shots\":9}",
       "collectedAt": "2026-07-30T23:52:41.299Z"
     },
     {
@@ -232769,7 +232769,7 @@
         "avgGamesPlayedLast3": 31,
         "durabilityScore": 0.62,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 10 NHL GP + 39 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 10 NHL GP + 39 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": null,
@@ -232939,7 +232939,7 @@
         "evenStrengthGoalDiff": -2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Joshua Brown (D, EDM). Age 32, 77\" / 220lb, shoots R. Drafted 2013 round 6 (#152 overall) by FLA. Team history: ARI → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 10 NHL GP + 39 AHL GP (games in another league, not absences). Contract: Contract data unavailable. Last season (2024-25): 10 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":9}",
+      "contextNarrative": "Joshua Brown (D, EDM). Age 32, 77\" / 220lb, shoots R. Drafted 2013 round 6 (#152 overall) by FLA. Team history: ARI → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 10 NHL GP + 39 AHL GP (games in another league, not absences). Contract: Contract data unavailable. Last season (2024-25): 10 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":9}",
       "collectedAt": "2026-07-30T23:52:53.836Z"
     },
     {
@@ -238193,7 +238193,7 @@
         "avgGamesPlayedLast3": 40,
         "durabilityScore": 0.68,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 9 NHL GP + 41 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 9 NHL GP + 41 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 900000,
@@ -238364,7 +238364,7 @@
         "evenStrengthGoalDiff": 5,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Justin Holl (D, WSH). Age 34, 76\" / 194lb, shoots R. Drafted 2010 round 2 (#54 overall) by CHI. Team history: DET → STL (recent change affects linemates/usage). Team STL ranks #22 (52.4% pts), 2.82 GF/G. Durability: moderate — Missed ~0 games last season; split season: 9 NHL GP + 41 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2025-26): 9 GP, key stats {\"goals\":1,\"assists\":1,\"points\":2,\"shots\":7}",
+      "contextNarrative": "Justin Holl (D, WSH). Age 34, 76\" / 194lb, shoots R. Drafted 2010 round 2 (#54 overall) by CHI. Team history: DET → STL (recent change affects linemates/usage). Team STL ranks #22 (52.4% pts), 2.82 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 9 NHL GP + 41 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2025-26): 9 GP, key stats {\"goals\":1,\"assists\":1,\"points\":2,\"shots\":7}",
       "collectedAt": "2026-07-30T23:53:04.747Z"
     },
     {
@@ -238977,7 +238977,7 @@
         "avgGamesPlayedLast3": 14,
         "durabilityScore": 0.26,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 20 NHL GP + 42 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 20 NHL GP + 42 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -239149,7 +239149,7 @@
         "evenStrengthGoalDiff": 1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Justin Kirkland (C, MIN). Age 29, 75\" / 183lb, shoots L. Drafted 2014 round 3 (#62 overall) by NSH. Team history: ARI → CGY (recent change affects linemates/usage). Team CGY ranks #29 (47.0% pts), 2.59 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 20 NHL GP + 42 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 20 GP, key stats {\"goals\":1,\"assists\":1,\"points\":2,\"shots\":11}",
+      "contextNarrative": "Justin Kirkland (C, MIN). Age 29, 75\" / 183lb, shoots L. Drafted 2014 round 3 (#62 overall) by NSH. Team history: ARI → CGY (recent change affects linemates/usage). Team CGY ranks #29 (47.0% pts), 2.59 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 20 NHL GP + 42 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 20 GP, key stats {\"goals\":1,\"assists\":1,\"points\":2,\"shots\":11}",
       "collectedAt": "2026-07-30T23:53:25.262Z"
     },
     {
@@ -240874,7 +240874,7 @@
         "avgGamesPlayedLast3": 37,
         "durabilityScore": 0.59,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 20 NHL GP + 15 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 20 NHL GP + 15 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1250000,
@@ -241046,7 +241046,7 @@
         "evenStrengthGoalDiff": 4,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Juuso Parssinen (C, NYR). Age 25, 75\" / 207lb, shoots L. Drafted 2019 round 7 (#210 overall) by NSH. Team history: NSH → NYR (recent change affects linemates/usage). Team NYR ranks #30 (47.0% pts), 2.90 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 20 NHL GP + 15 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 20 GP, key stats {\"goals\":2,\"assists\":1,\"points\":3,\"shots\":16}",
+      "contextNarrative": "Juuso Parssinen (C, NYR). Age 25, 75\" / 207lb, shoots L. Drafted 2019 round 7 (#210 overall) by NSH. Team history: NSH → NYR (recent change affects linemates/usage). Team NYR ranks #30 (47.0% pts), 2.90 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 20 NHL GP + 15 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 20 GP, key stats {\"goals\":2,\"assists\":1,\"points\":3,\"shots\":16}",
       "collectedAt": "2026-07-30T23:52:24.279Z"
     },
     {
@@ -245952,7 +245952,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 24 AHL/ECHL GP (games in another league, not absences)); platoon risk"
       },
@@ -249498,7 +249498,7 @@
         "avgGamesPlayedLast3": 35,
         "durabilityScore": 0.63,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 1 NHL GP + 44 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 1 NHL GP + 44 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -249598,7 +249598,7 @@
         "evenStrengthGoalDiff": 1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Kevin Rooney (C, UTA). Age 33, 74\" / 190lb, shoots L. Undrafted or draft data unavailable. Team history: CGY → UTA (recent change affects linemates/usage). Team UTA ranks #15 (56.1% pts), 3.27 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 1 NHL GP + 44 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":1}",
+      "contextNarrative": "Kevin Rooney (C, UTA). Age 33, 74\" / 190lb, shoots L. Undrafted or draft data unavailable. Team history: CGY → UTA (recent change affects linemates/usage). Team UTA ranks #15 (56.1% pts), 3.27 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 1 NHL GP + 44 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":1}",
       "collectedAt": "2026-07-30T23:53:24.288Z"
     },
     {
@@ -259219,7 +259219,7 @@
         "gamesPlayedLastSeason": 20,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 16,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.2,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 20 NHL GP + 19 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -266437,7 +266437,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 28 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -274929,7 +274929,7 @@
         "gamesPlayedLastSeason": 2,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 2 NHL GP + 27 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -275061,7 +275061,7 @@
         "gamesPlayedLastSeason": 9,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 9,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.11,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 9 NHL GP + 33 AHL/ECHL GP (games in another league, not absences)); platoon risk"
       },
@@ -275239,7 +275239,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 27 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -275604,7 +275604,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 35 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -279893,7 +279893,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 8,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.1,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 31 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -289829,7 +289829,7 @@
         "avgGamesPlayedLast3": 50,
         "durabilityScore": 0.85,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 3750000,
@@ -290003,7 +290003,7 @@
         "evenStrengthGoalDiff": -5,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Mathew Dumba (D, PIT). Age 32, 72\" / 191lb, shoots R. Drafted 2012 round 1 (#7 overall) by MIN. Team history: ARI → DAL → PIT (recent change affects linemates/usage). Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: moderate — Missed ~0 games last season; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences). Contract: $3.75M cap hit, 0 years remaining (UFA). Awards: King Clancy Memorial Trophy. Last season (2025-26): 11 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":7}",
+      "contextNarrative": "Mathew Dumba (D, PIT). Age 32, 72\" / 191lb, shoots R. Drafted 2012 round 1 (#7 overall) by MIN. Team history: ARI → DAL → PIT (recent change affects linemates/usage). Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 11 NHL GP + 27 AHL GP (games in another league, not absences). Contract: $3.75M cap hit, 0 years remaining (UFA). Awards: King Clancy Memorial Trophy. Last season (2025-26): 11 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":7}",
       "collectedAt": "2026-07-30T23:53:22.270Z"
     },
     {
@@ -291971,7 +291971,7 @@
         "avgGamesPlayedLast3": 7,
         "durabilityScore": 0.17,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 1 NHL GP + 34 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 1 NHL GP + 34 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1250000,
@@ -292070,7 +292070,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Matt Benning (D, TOR). Age 32, 73\" / 220lb, shoots R. Drafted 2012 round 6 (#175 overall) by BOS. Team history: SJS → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 1 NHL GP + 34 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
+      "contextNarrative": "Matt Benning (D, TOR). Age 32, 73\" / 220lb, shoots R. Drafted 2012 round 6 (#175 overall) by BOS. Team history: SJS → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 1 NHL GP + 34 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
       "collectedAt": "2026-07-30T23:52:22.760Z"
     },
     {
@@ -294859,7 +294859,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 31 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -295294,7 +295294,7 @@
         "avgGamesPlayedLast3": 27,
         "durabilityScore": 0.27,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 32 NHL GP + 15 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 32 NHL GP + 15 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 900000,
@@ -295466,7 +295466,7 @@
         "evenStrengthGoalDiff": -8,
         "ppGoalsFor": 1
       },
-      "contextNarrative": "Matt Nieto (LW, PIT). Age 33, 71\" / 189lb, shoots L. Drafted 2011 round 2 (#47 overall) by SJS. Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 32 NHL GP + 15 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2024-25): 32 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":31}",
+      "contextNarrative": "Matt Nieto (LW, PIT). Age 33, 71\" / 189lb, shoots L. Drafted 2011 round 2 (#47 overall) by SJS. Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 32 NHL GP + 15 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2024-25): 32 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":31}",
       "collectedAt": "2026-07-30T23:52:59.441Z"
     },
     {
@@ -296824,7 +296824,7 @@
         "gamesPlayedLastSeason": 6,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 6,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.07,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 6 NHL GP + 29 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -297022,7 +297022,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 43 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -298835,7 +298835,7 @@
         "avgGamesPlayedLast3": 23,
         "durabilityScore": 0.4,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 3 NHL GP + 69 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 3 NHL GP + 69 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 870000,
@@ -298971,7 +298971,7 @@
         "evenStrengthGoalDiff": 1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Matthew Poitras (C, BOS). Age 22, 72\" / 189lb, shoots R. Drafted 2022 round 2 (#54 overall) by BOS. Team BOS ranks #8 (61.0% pts), 3.32 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 3 NHL GP + 69 AHL GP (games in another league, not absences). Contract: $0.87M cap hit, 0 years remaining (RFA). Last season (2025-26): 3 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":8}",
+      "contextNarrative": "Matthew Poitras (C, BOS). Age 22, 72\" / 189lb, shoots R. Drafted 2022 round 2 (#54 overall) by BOS. Team BOS ranks #8 (61.0% pts), 3.32 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 3 NHL GP + 69 AHL GP (games in another league, not absences). Contract: $0.87M cap hit, 0 years remaining (RFA). Last season (2025-26): 3 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":8}",
       "collectedAt": "2026-07-30T23:53:22.527Z"
     },
     {
@@ -304987,7 +304987,7 @@
         "avgGamesPlayedLast3": 33,
         "durabilityScore": 0.63,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 21 NHL GP + 39 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 21 NHL GP + 39 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -305159,7 +305159,7 @@
         "evenStrengthGoalDiff": 3,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Max Jones (LW, EDM). Age 28, 75\" / 216lb, shoots L. Drafted 2016 round 1 (#24 overall) by ANA. Team history: ANA → BOS → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 21 NHL GP + 39 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 21 GP, key stats {\"goals\":3,\"assists\":2,\"points\":5,\"shots\":22}",
+      "contextNarrative": "Max Jones (LW, EDM). Age 28, 75\" / 216lb, shoots L. Drafted 2016 round 1 (#24 overall) by ANA. Team history: ANA → BOS → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 21 NHL GP + 39 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 21 GP, key stats {\"goals\":3,\"assists\":2,\"points\":5,\"shots\":22}",
       "collectedAt": "2026-07-30T23:53:17.977Z"
     },
     {
@@ -310091,7 +310091,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 45 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -310638,7 +310638,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 32 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -312608,7 +312608,7 @@
         "avgGamesPlayedLast3": 32,
         "durabilityScore": 0.52,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 9 NHL GP + 39 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 9 NHL GP + 39 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 812500,
@@ -312780,7 +312780,7 @@
         "evenStrengthGoalDiff": -4,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Michael Pezzetta (LW, TOR). Age 28, 73\" / 222lb, shoots L. Drafted 2016 round 6 (#160 overall) by MTL. Team history: MTL → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 9 NHL GP + 39 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2025-26): 9 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
+      "contextNarrative": "Michael Pezzetta (LW, TOR). Age 28, 73\" / 222lb, shoots L. Drafted 2016 round 6 (#160 overall) by MTL. Team history: MTL → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 9 NHL GP + 39 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2025-26): 9 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
       "collectedAt": "2026-07-30T23:53:27.733Z"
     },
     {
@@ -320590,7 +320590,7 @@
         "avgGamesPlayedLast3": 36,
         "durabilityScore": 0.8,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 11 NHL GP + 54 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 11 NHL GP + 54 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -320762,7 +320762,7 @@
         "evenStrengthGoalDiff": -2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Mitchell Chaffee (RW, NYI). Age 28, 73\" / 197lb, shoots R. Undrafted or draft data unavailable. Team TBL ranks #5 (64.6% pts), 3.54 GF/G. Durability: moderate — Missed ~0 games last season; split season: 11 NHL GP + 54 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 11 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":9}",
+      "contextNarrative": "Mitchell Chaffee (RW, NYI). Age 28, 73\" / 197lb, shoots R. Undrafted or draft data unavailable. Team TBL ranks #5 (64.6% pts), 3.54 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 11 NHL GP + 54 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 11 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":9}",
       "collectedAt": "2026-07-30T23:52:23.678Z"
     },
     {
@@ -334202,7 +334202,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 10,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.12,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 44 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -339610,7 +339610,7 @@
         "gamesPlayedLastSeason": 21,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 12,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.14,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 21 NHL GP + 19 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -340523,7 +340523,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 35 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -345246,7 +345246,7 @@
         "avgGamesPlayedLast3": 51,
         "durabilityScore": 0.7,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 37 NHL GP + 26 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 37 NHL GP + 26 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -345418,7 +345418,7 @@
         "evenStrengthGoalDiff": -9,
         "ppGoalsFor": 1
       },
-      "contextNarrative": "Noah Gregor (LW, WPG). Age 28, 72\" / 201lb, shoots L. Drafted 2016 round 4 (#111 overall) by SJS. Team history: TOR → OTT → FLA (recent change affects linemates/usage). Team FLA ranks #25 (51.2% pts), 3.06 GF/G. Durability: moderate — Missed ~0 games last season; split season: 37 NHL GP + 26 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 37 GP, key stats {\"goals\":4,\"assists\":5,\"points\":9,\"shots\":41}",
+      "contextNarrative": "Noah Gregor (LW, WPG). Age 28, 72\" / 201lb, shoots L. Drafted 2016 round 4 (#111 overall) by SJS. Team history: TOR → OTT → FLA (recent change affects linemates/usage). Team FLA ranks #25 (51.2% pts), 3.06 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 37 NHL GP + 26 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (UFA). Last season (2025-26): 37 GP, key stats {\"goals\":4,\"assists\":5,\"points\":9,\"shots\":41}",
       "collectedAt": "2026-07-30T23:52:30.559Z"
     },
     {
@@ -348323,7 +348323,7 @@
         "avgGamesPlayedLast3": 8,
         "durabilityScore": 0.05,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 12 NHL GP + 54 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 12 NHL GP + 54 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -348495,7 +348495,7 @@
         "evenStrengthGoalDiff": -4,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Nolan Foote (LW, PHI). Age 25, 75\" / 196lb, shoots L. Drafted 2019 round 1 (#27 overall) by TBL. Team history: NJD → FLA (recent change affects linemates/usage). Team FLA ranks #25 (51.2% pts), 3.06 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 12 NHL GP + 54 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 12 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":13}",
+      "contextNarrative": "Nolan Foote (LW, PHI). Age 25, 75\" / 196lb, shoots L. Drafted 2019 round 1 (#27 overall) by TBL. Team history: NJD → FLA (recent change affects linemates/usage). Team FLA ranks #25 (51.2% pts), 3.06 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 12 NHL GP + 54 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 12 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":13}",
       "collectedAt": "2026-07-30T23:52:20.232Z"
     },
     {
@@ -351294,7 +351294,7 @@
         "avgGamesPlayedLast3": 38,
         "durabilityScore": 0.39,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 43 NHL GP + 19 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 43 NHL GP + 19 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1000000,
@@ -351466,7 +351466,7 @@
         "evenStrengthGoalDiff": -5,
         "ppGoalsFor": 1
       },
-      "contextNarrative": "Oliver Wahlstrom (RW, NYI). Age 26, 74\" / 205lb, shoots R. Drafted 2018 round 1 (#11 overall) by NYI. Team NYI ranks #19 (55.5% pts), 2.84 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 43 NHL GP + 19 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 0 years remaining (UFA). Last season (2024-25): 43 GP, key stats {\"goals\":3,\"assists\":3,\"points\":6,\"shots\":54}",
+      "contextNarrative": "Oliver Wahlstrom (RW, NYI). Age 26, 74\" / 205lb, shoots R. Drafted 2018 round 1 (#11 overall) by NYI. Team NYI ranks #19 (55.5% pts), 2.84 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 43 NHL GP + 19 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 0 years remaining (UFA). Last season (2024-25): 43 GP, key stats {\"goals\":3,\"assists\":3,\"points\":6,\"shots\":54}",
       "collectedAt": "2026-07-30T23:51:59.822Z"
     },
     {
@@ -351535,7 +351535,7 @@
         "gamesPlayedLastSeason": 2,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 2,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.02,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 2 NHL GP + 41 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -365055,7 +365055,7 @@
         "avgGamesPlayedLast3": 37,
         "durabilityScore": 0.74,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 9 NHL GP + 14 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 9 NHL GP + 14 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 900000,
@@ -365227,7 +365227,7 @@
         "evenStrengthGoalDiff": -2,
         "ppGoalsFor": 1
       },
-      "contextNarrative": "Philip Tomasino (RW, OTT). Age 25, 72\" / 187lb, shoots R. Drafted 2019 round 1 (#24 overall) by NSH. Team history: NSH → PIT (recent change affects linemates/usage). Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: moderate — Missed ~0 games last season; split season: 9 NHL GP + 14 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 9 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":9}",
+      "contextNarrative": "Philip Tomasino (RW, OTT). Age 25, 72\" / 187lb, shoots R. Drafted 2019 round 1 (#24 overall) by NSH. Team history: NSH → PIT (recent change affects linemates/usage). Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 9 NHL GP + 14 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 9 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":9}",
       "collectedAt": "2026-07-30T23:52:58.330Z"
     },
     {
@@ -366919,7 +366919,7 @@
         "avgGamesPlayedLast3": 36,
         "durabilityScore": 0.62,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 20 NHL GP + 22 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 20 NHL GP + 22 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -367091,7 +367091,7 @@
         "evenStrengthGoalDiff": -2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Phillip Di Giuseppe (LW, VAN). Age 32, 72\" / 193lb, shoots L. Drafted 2012 round 2 (#38 overall) by CAR. Team VAN ranks #32 (35.4% pts), 2.63 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 20 NHL GP + 22 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 20 GP, key stats {\"goals\":1,\"assists\":5,\"points\":6,\"shots\":23}",
+      "contextNarrative": "Phillip Di Giuseppe (LW, VAN). Age 32, 72\" / 193lb, shoots L. Drafted 2012 round 2 (#38 overall) by CAR. Team VAN ranks #32 (35.4% pts), 2.63 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 20 NHL GP + 22 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 20 GP, key stats {\"goals\":1,\"assists\":5,\"points\":6,\"shots\":23}",
       "collectedAt": "2026-07-30T23:52:10.803Z"
     },
     {
@@ -372880,7 +372880,7 @@
         "avgGamesPlayedLast3": 16,
         "durabilityScore": 0.55,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -372980,7 +372980,7 @@
         "evenStrengthGoalDiff": 1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Rafael Harvey-Pinard (LW, PIT). Age 27, 69\" / 179lb, shoots L. Drafted 2019 round 7 (#201 overall) by MTL. Team history: MTL → PIT (recent change affects linemates/usage). Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
+      "contextNarrative": "Rafael Harvey-Pinard (LW, PIT). Age 27, 69\" / 179lb, shoots L. Drafted 2019 round 7 (#201 overall) by MTL. Team history: MTL → PIT (recent change affects linemates/usage). Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 1 NHL GP + 66 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2025-26): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
       "collectedAt": "2026-07-30T23:53:26.840Z"
     },
     {
@@ -375891,7 +375891,7 @@
         "avgGamesPlayedLast3": 23,
         "durabilityScore": 0.51,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 3 NHL GP + 55 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 3 NHL GP + 55 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -376027,7 +376027,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Reese Johnson (C, MIN). Age 28, 73\" / 193lb, shoots R. Undrafted or draft data unavailable. Team history: CHI → MIN (recent change affects linemates/usage). Team MIN ranks #7 (63.4% pts), 3.32 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 3 NHL GP + 55 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 1 year remaining (UFA (No QO)). Last season (2024-25): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":1}",
+      "contextNarrative": "Reese Johnson (C, MIN). Age 28, 73\" / 193lb, shoots R. Undrafted or draft data unavailable. Team history: CHI → MIN (recent change affects linemates/usage). Team MIN ranks #7 (63.4% pts), 3.32 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 3 NHL GP + 55 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 1 year remaining (UFA (No QO)). Last season (2024-25): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":1}",
       "collectedAt": "2026-07-30T23:52:04.342Z"
     },
     {
@@ -386173,7 +386173,7 @@
         "avgGamesPlayedLast3": 51,
         "durabilityScore": 0.8,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 22 NHL GP + 15 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 22 NHL GP + 15 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 4500000,
@@ -386344,7 +386344,7 @@
         "evenStrengthGoalDiff": -4,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Ryan Graves (D, PIT). Age 31, 77\" / 225lb, shoots L. Drafted 2013 round 4 (#110 overall) by NYR. Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: moderate — Missed ~0 games last season; split season: 22 NHL GP + 15 AHL GP (games in another league, not absences). Contract: $4.50M cap hit, 3 years remaining (UFA). Last season (2025-26): 22 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":21}",
+      "contextNarrative": "Ryan Graves (D, PIT). Age 31, 77\" / 225lb, shoots L. Drafted 2013 round 4 (#110 overall) by NYR. Team PIT ranks #10 (59.8% pts), 3.57 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 22 NHL GP + 15 AHL GP (games in another league, not absences). Contract: $4.50M cap hit, 3 years remaining (UFA). Last season (2025-26): 22 GP, key stats {\"goals\":1,\"assists\":0,\"points\":1,\"shots\":21}",
       "collectedAt": "2026-07-30T23:53:29.020Z"
     },
     {
@@ -399717,7 +399717,7 @@
         "avgGamesPlayedLast3": 37,
         "durabilityScore": 0.65,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 21 NHL GP + 35 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 21 NHL GP + 35 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 925000,
@@ -399891,7 +399891,7 @@
         "evenStrengthGoalDiff": 2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Sammy Blais (LW, OTT). Age 30, 74\" / 206lb, shoots L. Drafted 2014 round 6 (#176 overall) by STL. Team history: STL → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 21 NHL GP + 35 AHL GP (games in another league, not absences). Contract: $0.93M cap hit, 2 years remaining (UFA). Awards: Stanley Cup. Last season (2025-26): 21 GP, key stats {\"goals\":3,\"assists\":5,\"points\":8,\"shots\":18}",
+      "contextNarrative": "Sammy Blais (LW, OTT). Age 30, 74\" / 206lb, shoots L. Drafted 2014 round 6 (#176 overall) by STL. Team history: STL → TOR (recent change affects linemates/usage). Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 21 NHL GP + 35 AHL GP (games in another league, not absences). Contract: $0.93M cap hit, 2 years remaining (UFA). Awards: Stanley Cup. Last season (2025-26): 21 GP, key stats {\"goals\":3,\"assists\":5,\"points\":8,\"shots\":18}",
       "collectedAt": "2026-07-30T23:52:56.547Z"
     },
     {
@@ -400354,7 +400354,7 @@
         "avgGamesPlayedLast3": 18,
         "durabilityScore": 0.41,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 1 NHL GP + 69 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 1 NHL GP + 69 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -400453,7 +400453,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Samuel Bolduc (D, OTT). Age 25, 76\" / 224lb, shoots L. Drafted 2019 round 2 (#57 overall) by NYI. Team NYI ranks #19 (55.5% pts), 2.84 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 1 NHL GP + 69 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2024-25): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
+      "contextNarrative": "Samuel Bolduc (D, OTT). Age 25, 76\" / 224lb, shoots L. Drafted 2019 round 2 (#57 overall) by NYI. Team NYI ranks #19 (55.5% pts), 2.84 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 1 NHL GP + 69 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2024-25): 1 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
       "collectedAt": "2026-07-30T23:52:40.019Z"
     },
     {
@@ -409060,7 +409060,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 41 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -409591,7 +409591,7 @@
         "gamesPlayedLastSeason": 5,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 5,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.06,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 5 NHL GP + 38 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -416817,7 +416817,7 @@
         "avgGamesPlayedLast3": 28,
         "durabilityScore": 0.32,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 31 NHL GP + 16 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 31 NHL GP + 16 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1900000,
@@ -416989,7 +416989,7 @@
         "evenStrengthGoalDiff": 2,
         "ppGoalsFor": 2
       },
-      "contextNarrative": "Sonny Milano (LW, WSH). Age 30, 72\" / 205lb, shoots L. Drafted 2014 round 1 (#16 overall) by CBJ. Team WSH ranks #12 (57.9% pts), 3.21 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 31 NHL GP + 16 AHL GP (games in another league, not absences). Contract: $1.90M cap hit, 0 years remaining (UFA). Last season (2025-26): 31 GP, key stats {\"goals\":4,\"assists\":4,\"points\":8,\"shots\":34}",
+      "contextNarrative": "Sonny Milano (LW, WSH). Age 30, 72\" / 205lb, shoots L. Drafted 2014 round 1 (#16 overall) by CBJ. Team WSH ranks #12 (57.9% pts), 3.21 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 31 NHL GP + 16 AHL GP (games in another league, not absences). Contract: $1.90M cap hit, 0 years remaining (UFA). Last season (2025-26): 31 GP, key stats {\"goals\":4,\"assists\":4,\"points\":8,\"shots\":34}",
       "collectedAt": "2026-07-30T23:52:46.250Z"
     },
     {
@@ -426328,7 +426328,7 @@
         "gamesPlayedLastSeason": 3,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 3 NHL GP + 41 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -432350,7 +432350,7 @@
         "avgGamesPlayedLast3": 10,
         "durabilityScore": 0.2,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 3 NHL GP + 63 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 3 NHL GP + 63 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 775000,
@@ -432486,7 +432486,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Travis Boyd (C, MIN). Age 32, 72\" / 190lb, shoots R. Drafted 2011 round 6 (#177 overall) by WSH. Team history: ARI → MIN (recent change affects linemates/usage). Team MIN ranks #7 (63.4% pts), 3.32 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 3 NHL GP + 63 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
+      "contextNarrative": "Travis Boyd (C, MIN). Age 32, 72\" / 190lb, shoots R. Drafted 2011 round 6 (#177 overall) by WSH. Team history: ARI → MIN (recent change affects linemates/usage). Team MIN ranks #7 (63.4% pts), 3.32 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 3 NHL GP + 63 AHL GP (games in another league, not absences). Contract: $0.78M cap hit, 0 years remaining (UFA). Last season (2024-25): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":0}",
       "collectedAt": "2026-07-30T23:53:04.380Z"
     },
     {
@@ -434943,7 +434943,7 @@
         "gamesPlayedLastSeason": 4,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 3,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.04,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 4 NHL GP + 32 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -437761,7 +437761,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 6 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -445924,7 +445924,7 @@
         "avgGamesPlayedLast3": 27,
         "durabilityScore": 0.5,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 13 NHL GP + 11 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 13 NHL GP + 11 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 1250000,
@@ -446095,7 +446095,7 @@
         "evenStrengthGoalDiff": -6,
         "ppGoalsFor": 4
       },
-      "contextNarrative": "Tyson Barrie (D, CGY). Age 35, 71\" / 197lb, shoots R. Drafted 2009 round 3 (#64 overall) by COL. Team history: NSH → CGY (recent change affects linemates/usage). Team CGY ranks #29 (47.0% pts), 2.59 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 13 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, term unknown (UFA). Last season (2024-25): 13 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":19}",
+      "contextNarrative": "Tyson Barrie (D, CGY). Age 35, 71\" / 197lb, shoots R. Drafted 2009 round 3 (#64 overall) by COL. Team history: NSH → CGY (recent change affects linemates/usage). Team CGY ranks #29 (47.0% pts), 2.59 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 13 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $1.25M cap hit, term unknown (UFA). Last season (2024-25): 13 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":19}",
       "collectedAt": "2026-07-30T23:53:26.754Z"
     },
     {
@@ -452295,7 +452295,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 36 AHL GP (games in another league, not absences)); platoon risk"
       },
@@ -453553,7 +453553,7 @@
         "avgGamesPlayedLast3": 12,
         "durabilityScore": 0.22,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 5 NHL GP + 44 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 5 NHL GP + 44 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -453724,7 +453724,7 @@
         "evenStrengthGoalDiff": 0,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Ville Heinola (D, VGK). Age 25, 72\" / 181lb, shoots L. Drafted 2019 round 1 (#20 overall) by WPG. Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 5 NHL GP + 44 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 5 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":7}",
+      "contextNarrative": "Ville Heinola (D, VGK). Age 25, 72\" / 181lb, shoots L. Drafted 2019 round 1 (#20 overall) by WPG. Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 5 NHL GP + 44 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 5 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":7}",
       "collectedAt": "2026-07-30T23:53:52.119Z"
     },
     {
@@ -458294,7 +458294,7 @@
         "avgGamesPlayedLast3": 18,
         "durabilityScore": 0.43,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 13 NHL GP + 34 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 13 NHL GP + 34 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -458465,7 +458465,7 @@
         "evenStrengthGoalDiff": 2,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Vladislav Kolyachonok (D, NJD). Age 25, 74\" / 198lb, shoots L. Drafted 2019 round 2 (#52 overall) by FLA. Team history: ARI → UTA → DAL (recent change affects linemates/usage). Team DAL ranks #3 (68.3% pts), 3.40 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 13 NHL GP + 34 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 13 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":12}",
+      "contextNarrative": "Vladislav Kolyachonok (D, NJD). Age 25, 74\" / 198lb, shoots L. Drafted 2019 round 2 (#52 overall) by FLA. Team history: ARI → UTA → DAL (recent change affects linemates/usage). Team DAL ranks #3 (68.3% pts), 3.40 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 13 NHL GP + 34 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 13 GP, key stats {\"goals\":1,\"assists\":2,\"points\":3,\"shots\":12}",
       "collectedAt": "2026-07-30T23:52:55.483Z"
     },
     {
@@ -459030,7 +459030,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 48 AHL/ECHL GP (games in another league, not absences)); platoon risk"
       },
@@ -459330,7 +459330,7 @@
         "avgGamesPlayedLast3": 22,
         "durabilityScore": 0.49,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 3 NHL GP + 62 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 3 NHL GP + 62 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 850000,
@@ -459466,7 +459466,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "Walker Duehr (RW, WPG). Age 28, 74\" / 210lb, shoots R. Undrafted or draft data unavailable. Team history: CGY → WPG (recent change affects linemates/usage). Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 3 NHL GP + 62 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 2 years remaining (UFA). Last season (2025-26): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
+      "contextNarrative": "Walker Duehr (RW, WPG). Age 28, 74\" / 210lb, shoots R. Undrafted or draft data unavailable. Team history: CGY → WPG (recent change affects linemates/usage). Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 3 NHL GP + 62 AHL GP (games in another league, not absences). Contract: $0.85M cap hit, 2 years remaining (UFA). Last season (2025-26): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
       "collectedAt": "2026-07-30T23:52:16.712Z"
     },
     {
@@ -462888,7 +462888,7 @@
         "avgGamesPlayedLast3": 24,
         "durabilityScore": 0.49,
         "trend": "injury_prone",
-        "note": "Missed ~0 games last season; durability concern; split season: 7 NHL GP + 23 AHL GP (games in another league, not absences)"
+        "note": "Durability concern over NHL-only seasons; split season: 7 NHL GP + 23 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 812500,
@@ -463059,7 +463059,7 @@
         "evenStrengthGoalDiff": -1,
         "ppGoalsFor": 0
       },
-      "contextNarrative": "William Lagesson (D, DET). Age 30, 74\" / 211lb, shoots L. Drafted 2014 round 4 (#91 overall) by EDM. Team history: TOR → DET (recent change affects linemates/usage). Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: injury_prone — Missed ~0 games last season; durability concern; split season: 7 NHL GP + 23 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2024-25): 7 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":5}",
+      "contextNarrative": "William Lagesson (D, DET). Age 30, 74\" / 211lb, shoots L. Drafted 2014 round 4 (#91 overall) by EDM. Team history: TOR → DET (recent change affects linemates/usage). Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: injury_prone — Durability concern over NHL-only seasons; split season: 7 NHL GP + 23 AHL GP (games in another league, not absences). Contract: $0.81M cap hit, 1 year remaining (UFA). Last season (2024-25): 7 GP, key stats {\"goals\":0,\"assists\":1,\"points\":1,\"shots\":5}",
       "collectedAt": "2026-07-30T23:53:25.058Z"
     },
     {
@@ -467025,7 +467025,7 @@
         "gamesPlayedLastSeason": 1,
         "gamesMissedLastSeason": 0,
         "avgGamesPlayedLast3": 1,
-        "durabilityScore": 0.9,
+        "durabilityScore": 0.01,
         "trend": "moderate",
         "note": "Limited NHL starts last season (split season: 1 NHL GP + 31 AHL/ECHL GP (games in another league, not absences)); platoon risk"
       },
@@ -472565,7 +472565,7 @@
         "avgGamesPlayedLast3": 44,
         "durabilityScore": 0.76,
         "trend": "moderate",
-        "note": "Missed ~0 games last season; split season: 25 NHL GP + 30 AHL GP (games in another league, not absences)"
+        "note": "Below a regular's availability over NHL-only seasons; split season: 25 NHL GP + 30 AHL GP (games in another league, not absences)"
       },
       "contract": {
         "capHitUsd": 875000,
@@ -472737,7 +472737,7 @@
         "evenStrengthGoalDiff": 3,
         "ppGoalsFor": 1
       },
-      "contextNarrative": "Zachary L'Heureux (LW, COL). Age 23, 71\" / 197lb, shoots L. Drafted 2021 round 1 (#27 overall) by NSH. Team NSH ranks #23 (52.4% pts), 3.01 GF/G. Durability: moderate — Missed ~0 games last season; split season: 25 NHL GP + 30 AHL GP (games in another league, not absences). Contract: $0.88M cap hit, 2 years remaining (RFA). Last season (2025-26): 25 GP, key stats {\"goals\":4,\"assists\":1,\"points\":5,\"shots\":32}",
+      "contextNarrative": "Zachary L'Heureux (LW, COL). Age 23, 71\" / 197lb, shoots L. Drafted 2021 round 1 (#27 overall) by NSH. Team NSH ranks #23 (52.4% pts), 3.01 GF/G. Durability: moderate — Below a regular's availability over NHL-only seasons; split season: 25 NHL GP + 30 AHL GP (games in another league, not absences). Contract: $0.88M cap hit, 2 years remaining (RFA). Last season (2025-26): 25 GP, key stats {\"goals\":4,\"assists\":1,\"points\":5,\"shots\":32}",
       "collectedAt": "2026-07-30T23:53:50.534Z"
     },
     {
