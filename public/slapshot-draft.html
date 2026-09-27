@@ -114,6 +114,7 @@
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
+        <div id="more" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
       <p class="mut" style="margin:8px 0 0">
         Valeur dynastie : points Slapshot attendus au-dessus du remplaçant sur 12 saisons (vieillissement, progression des jeunes calibrée sur l'historique LNH, arrivée des espoirs), moins le coût de son salaire dans le plafond, qui grimpe chaque saison. Un joueur peut être caché dans les mineures (0 point, 0 salaire) ou libéré, donc un mauvais contrat coûte au plus une place.
@@ -185,6 +186,13 @@
   const SORT_FR = { d: "valeur dynastie", v: "VOR cette saison", p: "points cette saison", r: "valeur dynastie par M$", c: "salaire croissant" };
   const MODE_FR = { B: "équilibré", L: "long terme", W: "gagner maintenant" };
 
+  let limit = 300;
+  document.addEventListener("click", (ev) => {
+    const b = ev.target.closest && ev.target.closest("[data-more]");
+    if (!b) return;
+    limit = b.dataset.more === "all" ? Infinity : limit + 300;
+    render();
+  });
   function render() {
     const q = fold($("q").value.trim());
     const kind = $("kind").value;
@@ -201,7 +209,7 @@
       if (Number.isFinite(maxCap) && (p.c == null || p.c > maxCap)) continue;
       if (q && !fold(p.n + " " + p.t).includes(q)) continue;
       shown++;
-      if (rows.length >= 300) continue;
+      if (rows.length >= limit) continue;
       const who = gone ? (ownerOf.get(p.i) || "pris") : "";
       const next = p.c4 && p.c4.length > 1 ? p.c4[1] : null;
       const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.05;
@@ -213,7 +221,10 @@
         + `<td class="n">${money(p.c)}</td><td class="n ${changes ? "up" : ""}">${next == null ? "—" : money(next)}</td><td class="n">${p.x ?? "—"}</td></tr>`);
     }
     $("rows").innerHTML = rows.join("") || `<tr><td colspan="12" class="mut">Aucun joueur ne correspond.</td></tr>`;
-    $("cap").textContent = `${shown} joueurs${shown > 300 ? " (300 premiers affichés)" : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
+    $("more").innerHTML = shown > limit
+      ? `<button type="button" data-more="300">Afficher 300 de plus</button> <button type="button" data-more="all">Tout afficher (${shown})</button>`
+      : "";
+    $("cap").textContent = `${shown} joueurs${shown > limit ? ` (${limit} premiers affichés)` : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
 
     // best available per position, by dynasty value in the chosen horizon
     const best = {};
