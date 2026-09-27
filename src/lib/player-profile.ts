@@ -27,10 +27,18 @@ import {
   lookupDraftByName,
 } from "./draft-registry";
 import { loadDraftRegistrySync, resolveDraftForBio } from "./ml/player-context";
+import {
+  isSplitSeason,
+  otherLeaguesForProfile,
+  otherLeaguesFromLines,
+  UNMEASURED_DURABILITY,
+} from "./split-season";
+import { parseLeagueSeasonTotals } from "./league-seasons";
 import type {
   ContractInfo,
   DraftInfo,
   InjuryProfile,
+  OtherLeagueSeason,
   PlayerBio,
   PlayerProfile,
   SeasonHistory,
@@ -160,7 +168,8 @@ export function consolidateSeasonHistory(
 
 export function normalizeProfile(profile: PlayerProfile): PlayerProfile {
   const teamHistory = consolidateSeasonHistory(profile.teamHistory);
-  const injury = buildInjuryProfile(teamHistory, profile.isGoalie);
+  const otherLeagues = otherLeaguesForProfile({ ...profile, teamHistory });
+  const injury = buildInjuryProfile(teamHistory, profile.isGoalie, otherLeagues);
   const seasonStart = seasonStartDate();
   const birthDate = profile.bio.birthDate;
   const bio: PlayerBio = {
@@ -173,6 +182,7 @@ export function normalizeProfile(profile: PlayerProfile): PlayerProfile {
     ...profile,
     bio,
     teamHistory,
+    ...(otherLeagues ? { otherLeagues } : {}),
     injury,
     advancedSeasonLatest:
       teamHistory.length > 0
@@ -185,20 +195,46 @@ export function normalizeProfile(profile: PlayerProfile): PlayerProfile {
   };
 }
 
-function buildInjuryProfile(
+/**
+ * Availability from the last three NHL seasons. A split season (enough
+ * games in another league, src/lib/split-season.ts) is not an absence: its
+ * missing NHL games are neither counted as missed nor averaged into the
+ * durability, which only NHL-only seasons measure (a player with none gets
+ * a regular's typical share, UNMEASURED_DURABILITY). Without split seasons
+ * the profile is the plain NHL one.
+ */
+export function buildInjuryProfile(
   seasons: SeasonHistory[],
   isGoalie: boolean,
+  otherLeagues: OtherLeagueSeason[] = [],
 ): InjuryProfile {
-  const recent = seasons
-    .filter((s) => s.gamesPlayed > 0)
-    .slice(-3)
-    .map((s) => s.gamesPlayed);
+  const recentSeasons = seasons.filter((s) => s.gamesPlayed > 0).slice(-3);
+  const recent = recentSeasons.map((s) => s.gamesPlayed);
   const lastGp = recent[recent.length - 1] ?? 0;
   const avg = recent.length
     ? recent.reduce((a, b) => a + b, 0) / recent.length
     : 0;
-  const missed = Math.max(0, SEASON_SCHEDULED_GAMES - lastGp);
-  const durability = Math.min(1, avg / SEASON_SCHEDULED_GAMES);
+  const otherGames = (seasonId: number) =>
+    otherLeagues.find((o) => o.seasonId === seasonId);
+  const split = recentSeasons.filter((s) =>
+    isSplitSeason(otherGames(s.seasonId)?.gamesPlayed ?? 0),
+  );
+  const nhlOnly = recentSeasons.filter((s) => !split.includes(s));
+  const last = recentSeasons.at(-1);
+  const lastSplit = last && split.includes(last) ? otherGames(last.seasonId) : undefined;
+
+  const missed = lastSplit ? 0 : Math.max(0, SEASON_SCHEDULED_GAMES - lastGp);
+  const durability =
+    split.length === 0
+      ? Math.min(1, avg / SEASON_SCHEDULED_GAMES)
+      : nhlOnly.length > 0
+        ? Math.min(
+            1,
+            nhlOnly.reduce((a, s) => a + s.gamesPlayed, 0) /
+              nhlOnly.length /
+              SEASON_SCHEDULED_GAMES,
+          )
+        : UNMEASURED_DURABILITY;
 
   let trend: InjuryProfile["trend"] = "healthy";
   let note = "Consistent availability";
@@ -209,10 +245,18 @@ function buildInjuryProfile(
     trend = "moderate";
     note = `Missed ~${missed} games last season`;
   }
+  const splitNote = lastSplit
+    ? `split season: ${lastGp} NHL GP + ${lastSplit.gamesPlayed} ${lastSplit.leagues.join("/")} GP (games in another league, not absences)`
+    : null;
+  if (splitNote) {
+    note = trend === "healthy" ? `${splitNote[0].toUpperCase()}${splitNote.slice(1)}` : `${note}; ${splitNote}`;
+  }
 
   if (isGoalie && lastGp < 30) {
     trend = "moderate";
-    note = "Limited starts last season; platoon or injury risk";
+    note = lastSplit
+      ? `Limited NHL starts last season (${splitNote}); platoon risk`
+      : "Limited starts last season; platoon or injury risk";
   }
 
   return {
@@ -523,7 +567,15 @@ export async function collectAllProfiles(
     };
 
     const seasons = consolidateSeasonHistory(base.seasons);
-    const injury = buildInjuryProfile(seasons, base.isGoalie);
+    // Club games outside the NHL in the same seasons: a split season is
+    // not an injury (src/lib/split-season.ts).
+    const otherLeagues = landing
+      ? otherLeaguesFromLines(
+          parseLeagueSeasonTotals(landing.seasonTotals),
+          seasons.map((s) => s.seasonId),
+        )
+      : undefined;
+    const injury = buildInjuryProfile(seasons, base.isGoalie, otherLeagues);
     const contract = contractData.source === "capwages" ? contractData : EMPTY_CONTRACT;
 
     const latestAdvanced =
@@ -543,6 +595,7 @@ export async function collectAllProfiles(
       draft,
       teamContext,
       teamHistory: seasons,
+      ...(otherLeagues ? { otherLeagues } : {}),
       injury,
       contract,
       careerTotals: (landing?.careerTotals?.regularSeason as Record<string, number>) ?? {},

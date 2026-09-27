@@ -43,8 +43,25 @@ export interface SeasonHistory {
   advanced: Record<string, number>;
 }
 
+/**
+ * Club games a player dressed for outside the NHL in one season (AHL, NCAA,
+ * CHL, SHL, KHL…; regular season, international events left out), from the
+ * NHL landing `seasonTotals`. A season with enough of them is a split
+ * season: the NHL games he did not play were spent in that league, not on
+ * injured reserve (src/lib/split-season.ts).
+ */
+export interface OtherLeagueSeason {
+  seasonId: number;
+  gamesPlayed: number;
+  leagues: string[];
+}
+
 export interface InjuryProfile {
   gamesPlayedLastSeason: number;
+  /**
+   * NHL games missed last season. A split last season (games in another
+   * league) counts none: the rest of the season was not an absence.
+   */
   gamesMissedLastSeason: number;
   avgGamesPlayedLast3: number;
   durabilityScore: number;
@@ -82,6 +99,12 @@ export interface PlayerProfile {
   draft: DraftInfo | null;
   teamContext: TeamContext;
   teamHistory: SeasonHistory[];
+  /**
+   * Club games outside the NHL in the seasons of `teamHistory` (only seasons
+   * with any). Filled at collect time from the landing; older profiles are
+   * backfilled from src/data/league-seasons.json by `normalizeProfile`.
+   */
+  otherLeagues?: OtherLeagueSeason[];
   injury: InjuryProfile;
   contract: ContractInfo;
   careerTotals: Record<string, number>;
