@@ -37,6 +37,36 @@ export interface DraftBoardPlayer {
   posRank: Partial<Record<BoardPosition, number>>;
   /** Fantrax ADP (market proxy); null when unmatched or never drafted. */
   adp: number | null;
+  /**
+   * Set when a hand adjustment (`src/data/leagues/<slug>/rank-adjustments.json`)
+   * moved him: `rank`, `posRank` and `vor` then follow the adjusted order
+   * (`vor` bridged between his new neighbours) and the engine's figures
+   * stay here.
+   */
+  adjusted?: BoardRankAdjustment;
+}
+
+export interface BoardRankAdjustment {
+  /** Engine rank before the move. */
+  fromRank: number;
+  /** Engine VOR before the move. */
+  vorModel: number;
+  /** Why (French, shown on the site). */
+  reason: string;
+}
+
+/** The engine's VOR (before any hand adjustment). */
+export function modelVor(p: Pick<DraftBoardPlayer, "vor" | "adjusted">): number {
+  return p.adjusted ? p.adjusted.vorModel : p.vor;
+}
+
+/**
+ * Value on the published VOR's scale: `value` moved by the same amount as
+ * his VOR, so lineup maths (value − seat replacement) agree with the
+ * adjusted rank. `value` itself stays the engine's sum of z.
+ */
+export function effectiveValue(p: Pick<DraftBoardPlayer, "value" | "vor" | "adjusted">): number {
+  return p.adjusted ? p.value + (p.vor - p.adjusted.vorModel) : p.value;
 }
 
 export interface AverageSlotLine {

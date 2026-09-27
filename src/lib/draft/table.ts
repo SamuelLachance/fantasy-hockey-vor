@@ -302,6 +302,7 @@ export function categoryCell(board: DraftBoard, r: CategoryRow, c: LeagueCategor
 
 function columns(board: DraftBoard): Col[] {
   const cats = boardCategories(board);
+  const handMoved = board.players.some((p) => p.adjusted);
   const z: Col[] = cats.map((c) => ({
     key: categoryColumnKey(c),
     label: CATEGORY_SHORT[c],
@@ -316,7 +317,7 @@ function columns(board: DraftBoard): Col[] {
       label: (ctx) => (ctx.rankPos === "ALL" ? "Rang" : `Rang ${ctx.rankPos}`),
       title: (ctx) =>
         ctx.rankPos === "ALL"
-          ? "Rang dans la ligue selon la VOR"
+          ? `Rang dans la ligue selon la VOR${handMoved ? " (quelques joueurs déplacés à la main : badge « ajusté »)" : ""}`
           : `Rang parmi les joueurs admissibles au poste ${ctx.rankPos} (${POS_NAME[ctx.rankPos]}), selon la VOR à ce poste`,
       align: "right",
       group: GROUP.rank,
@@ -325,7 +326,9 @@ function columns(board: DraftBoard): Col[] {
     {
       key: "vor",
       label: "VOR",
-      title: "VOR : valeur au-dessus du remplaçant (sa valeur moins celle du meilleur joueur laissé au ballottage à son meilleur poste)",
+      title: `VOR : valeur au-dessus du remplaçant (sa valeur moins celle du meilleur joueur laissé au ballottage à son meilleur poste)${
+        handMoved ? ". « ajusté » : joueur déplacé à la main, sa VOR suit son nouveau rang (celle du modèle est dans l’infobulle)" : ""
+      }`,
       align: "right",
       group: GROUP.rank,
       sort: { value: (r) => r.vor, defaultDir: "desc" },

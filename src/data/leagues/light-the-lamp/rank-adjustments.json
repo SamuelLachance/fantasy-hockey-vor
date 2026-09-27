@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "league": "light-the-lamp",
+  "decidedAt": "2026-09-27",
+  "note": "Hand moves applied after the category engine ranks the Light the Lamp board (src/lib/leagues/rank-adjustments.ts). They correct two projection defects that live in the shared players.json, which the Fantrax league and the dynasty build also read, so the fix stays local to this board. Algorithm: remove every listed row from the engine order, then re-insert each at index insertAt - 1, deepest insertAt first; shallower re-inserts push deeper ones down, so a row can end a few ranks below its insertAt. engineRank is the engine rank the move was decided against: check:draft-board warns when the engine no longer agrees. reason is shown on the site (French).",
+  "adjustments": [
+    {
+      "id": 8476455,
+      "name": "Gabriel Landeskog",
+      "engineRank": 65,
+      "insertAt": 189,
+      "reason": "Projection trop optimiste : le modèle lui applique une courbe de progression malgré ses 33 ans, sur la foi d’une seule saison récente (60 PJ en 2025-2026)."
+    },
+    {
+      "id": 8478483,
+      "name": "Mitch Marner",
+      "engineRank": 138,
+      "insertAt": 62,
+      "reason": "Matchs sous-estimés : 64 PJ projetés après deux saisons de 81 PJ."
+    },
+    {
+      "id": 8478397,
+      "name": "Rasmus Andersson",
+      "engineRank": 150,
+      "insertAt": 84,
+      "reason": "Matchs sous-estimés : 64 PJ projetés après deux saisons de 81 PJ."
+    },
+    {
+      "id": 8476875,
+      "name": "Mike Matheson",
+      "engineRank": 214,
+      "insertAt": 144,
+      "reason": "Matchs sous-estimés : 66 PJ projetés après des saisons de 80 et 78 PJ."
+    },
+    {
+      "id": 8475753,
+      "name": "Justin Faulk",
+      "engineRank": 282,
+      "insertAt": 172,
+      "reason": "Matchs sous-estimés : 64 PJ projetés après deux saisons de 78 PJ."
+    },
+    {
+      "id": 8481604,
+      "name": "Pavel Dorofeyev",
+      "engineRank": 103,
+      "insertAt": 81,
+      "reason": "Matchs sous-estimés : 72 PJ projetés après deux saisons de 82 PJ."
+    },
+    {
+      "id": 8478550,
+      "name": "Artemi Panarin",
+      "engineRank": 80,
+      "insertAt": 61,
+      "reason": "Matchs sous-estimés : 72 PJ projetés après des saisons de 80 et 78 PJ."
+    },
+    {
+      "id": 8478427,
+      "name": "Sebastian Aho",
+      "engineRank": 74,
+      "insertAt": 58,
+      "reason": "Matchs sous-estimés : 72 PJ projetés après deux saisons de 79 PJ."
+    },
+    {
+      "id": 8475726,
+      "name": "Tyler Toffoli",
+      "engineRank": 266,
+      "insertAt": 212,
+      "reason": "Matchs sous-estimés : 70 PJ projetés après des saisons de 78 et 79 PJ."
+    }
+  ]
+}

@@ -173,3 +173,21 @@ export function pickOwnerMismatch(
   if (isMine === markedMine) return null;
   return markedMine ? "marked-mine-not-my-pick" : "my-pick-marked-other";
 }
+
+/** "1er", "15e" (French ordinal for ranks). */
+function rankOrdinal(rank: number): string {
+  return rank === 1 ? "1er" : `${rank}e`;
+}
+
+/** The engine's figures of a hand-adjusted row: « modèle : 138e, VOR 2,12 ». */
+export function rankAdjustmentModelText(a: { fromRank: number; vorModel: number }): string {
+  return `modèle : ${rankOrdinal(a.fromRank)}, VOR ${formatFr(a.vorModel, 2)}`;
+}
+
+/**
+ * Tooltip / details line of a hand-adjusted row: « Rang ajusté à la main
+ * (modèle : 138e, VOR 2,12). Matchs sous-estimés : … »
+ */
+export function rankAdjustmentText(a: { fromRank: number; vorModel: number; reason: string }): string {
+  return `Rang ajusté à la main (${rankAdjustmentModelText(a)}). ${a.reason}`;
+}

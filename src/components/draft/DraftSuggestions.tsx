@@ -13,6 +13,7 @@ import {
 import type { DraftTimeline, Suggestion } from "@/lib/draft/suggestions";
 import type { LeagueCategory } from "@/lib/leagues/types";
 import { DraftPositionBadges } from "./DraftPositionBadges";
+import { RankAdjustedBadge } from "./RankAdjustedBadge";
 
 interface DraftSuggestionsProps {
   suggestions: Suggestion[];
@@ -87,6 +88,7 @@ export function DraftSuggestions({
                     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                       <span className="truncate font-semibold text-white">{p.name}</span>
                       <DraftPositionBadges positions={p.pos} vorPos={p.vorPos} />
+                      <RankAdjustedBadge adjusted={p.adjusted} />
                       <span className="hidden text-xs text-slate-400 sm:inline">{p.team}</span>
                     </div>
                     <p className="mt-0.5 text-[11px] leading-snug text-slate-400">

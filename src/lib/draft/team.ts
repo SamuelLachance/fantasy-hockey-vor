@@ -1,7 +1,7 @@
 import { fillSlots, type SlotSpec } from "../leagues/slot-fill";
 import { STARTING_SLOTS, type LeagueCategory, type StartingSlot } from "../leagues/types";
 import type { Position } from "../types";
-import { isGoalieBoardPlayer, type DraftBoard, type DraftBoardPlayer } from "./board-types";
+import { effectiveValue, isGoalieBoardPlayer, type DraftBoard, type DraftBoardPlayer } from "./board-types";
 
 export interface MyLineup {
   starters: Record<StartingSlot, DraftBoardPlayer[]>;
@@ -32,10 +32,13 @@ const waiverToken = (slot: StartingSlot) => `waiver:${slot}` as unknown as Posit
  * compete for D + Util the better one keeps the D seat. With all seats filled
  * Σ(value − replacement) and Σ value differ by a constant, so maximising
  * value with placeholders maximises lineup VOR.
+ *
+ * A hand-adjusted player (`adjusted` on the board) counts at his adjusted
+ * worth (`effectiveValue`), so seats and suggestions follow the published rank.
  */
 export function buildLineup(board: DraftBoard, players: readonly DraftBoardPlayer[]): MyLineup {
   const activeSlots = STARTING_SLOTS.filter((s) => (board.league.roster[s] ?? 0) > 0);
-  const items: FillItem[] = players.map((p) => ({ id: p.id, positions: p.pos, value: p.value, player: p }));
+  const items: FillItem[] = players.map((p) => ({ id: p.id, positions: p.pos, value: effectiveValue(p), player: p }));
   let placeholderId = -1;
   for (const slot of activeSlots) {
     const value = board.replacement[slot] ?? 0;
@@ -63,7 +66,7 @@ export function buildLineup(board: DraftBoard, players: readonly DraftBoardPlaye
       (fill.bySlot.get(s) ?? [])
         .map((x) => x.player)
         .filter((p): p is DraftBoardPlayer => p != null)
-        .sort((a, b) => b.value - a.value || a.id - b.id),
+        .sort((a, b) => effectiveValue(b) - effectiveValue(a) || a.id - b.id),
     ]),
   ) as Record<StartingSlot, DraftBoardPlayer[]>;
   const benchSize = board.league.roster.BN ?? 0;
@@ -91,7 +94,7 @@ export const BENCH_SKATER_SHARE = 0.35;
 export const BENCH_GOALIE_SHARES = [0.5, 0.15] as const;
 
 export function slotVor(board: DraftBoard, player: DraftBoardPlayer, slot: StartingSlot): number {
-  return player.value - (board.replacement[slot] ?? 0);
+  return effectiveValue(player) - (board.replacement[slot] ?? 0);
 }
 
 /**

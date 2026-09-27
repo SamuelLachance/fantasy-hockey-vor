@@ -12,6 +12,7 @@ import {
 import type { LeagueCategory } from "@/lib/leagues/types";
 import { CategoryMiniBars } from "./CategoryMiniBars";
 import { DraftPositionBadges } from "./DraftPositionBadges";
+import { RankAdjustedBadge } from "./RankAdjustedBadge";
 
 export interface DraftPlayerRowProps {
   player: DraftBoardPlayer;
@@ -83,6 +84,7 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
             {p.name}
           </span>
           <DraftPositionBadges positions={p.pos} vorPos={p.vorPos} />
+          <RankAdjustedBadge adjusted={p.adjusted} />
           <SnakeNhlMini id={p.id} />
         </div>
         <div className="truncate text-xs text-slate-400">

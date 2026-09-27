@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { groupRelativeZ, type DraftBoard, type DraftBoardPlayer } from "../src/lib/draft/board-types";
+import { effectiveValue, groupRelativeZ, type DraftBoard, type DraftBoardPlayer } from "../src/lib/draft/board-types";
 import { myPickNumbers } from "../src/lib/draft/snake";
 import { EMPTY_DRAFT_STATE, markPick, setDraftSlot, type DraftState } from "../src/lib/draft/draft-state";
 import { draftTimeline, suggestPicks } from "../src/lib/draft/suggestions";
@@ -80,11 +80,12 @@ assert.equal(startingSeatCount(board), 14);
 
 // A seat is only filled when the player beats its waiver replacement: a
 // fifth D below the Util level sits on the bench (bench share), not at Util
-// with a negative slot VOR.
+// with a negative slot VOR. Values as the lineup reads them (a hand-moved
+// row counts at its adjusted worth: `effectiveValue`).
 {
   const util = board.replacement.Util!;
   const fourD = board.players.filter((p) => p.pos.includes("D")).slice(0, 4);
-  const weakD = board.players.find((p) => p.pos.includes("D") && p.vor > 0 && p.value < util)!;
+  const weakD = board.players.find((p) => p.pos.includes("D") && p.vor > 0 && effectiveValue(p) < util)!;
   assert.ok(weakD, "a positive-VOR D below the Util replacement exists");
   const roster = [...fourD, ...board.players.filter((p) => p.pos.includes("C")).slice(0, 2)];
   const before = lineupScore(board, buildLineup(board, roster));
@@ -97,9 +98,9 @@ assert.equal(startingSeatCount(board), 14);
   // seat, the other is benched (Util stays with waivers).
   // (Two D whose published values differ: board values are rounded to 0.01,
   // and a tie is broken by id, not by the unrounded VOR.)
-  const weakDs = board.players.filter((p) => p.pos.includes("D") && p.vor > 0 && p.value < util);
+  const weakDs = board.players.filter((p) => p.pos.includes("D") && p.vor > 0 && effectiveValue(p) < util);
   const hi = weakDs[0];
-  const lo = weakDs.find((p) => p.value < hi!.value);
+  const lo = weakDs.find((p) => effectiveValue(p) < effectiveValue(hi!));
   const strongD = board.players.filter((p) => p.pos.includes("D")).slice(0, 3);
   for (const order of [[lo!, hi!], [hi!, lo!]]) {
     const pair = buildLineup(board, [...strongD, ...order]);
@@ -109,7 +110,7 @@ assert.equal(startingSeatCount(board), 14);
   }
   for (const slot of ["C", "LW", "RW", "F", "D", "Util", "G"] as const) {
     for (const p of lineup.starters[slot]) {
-      assert.ok(p.value - (board.replacement[slot] ?? 0) >= 0, `${p.name} seated at ${slot} below replacement`);
+      assert.ok(effectiveValue(p) - (board.replacement[slot] ?? 0) >= 0, `${p.name} seated at ${slot} below replacement`);
     }
   }
 }

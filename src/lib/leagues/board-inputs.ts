@@ -1,9 +1,10 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import type { ProjectionsDataset } from "../types";
 import type { AdpRow } from "./adp-match";
 import type { BoardInputs } from "./league-board";
 import { parseLeagueProfile } from "./profile";
+import { parseRankAdjustments, type RankAdjustmentsFile } from "./rank-adjustments";
 
 /** Node-only: read every committed input of a league board. */
 
@@ -15,6 +16,17 @@ export function leagueProfilePath(slug: string, root = process.cwd()): string {
 
 export function leagueBoardPath(slug: string, root = process.cwd()): string {
   return join(root, "public", "leagues", slug, "board.json");
+}
+
+/** Hand rank moves of a league board (optional file, see `rank-adjustments.ts`). */
+export function rankAdjustmentsPath(slug: string, root = process.cwd()): string {
+  return join(root, "src", "data", "leagues", slug, "rank-adjustments.json");
+}
+
+export function loadRankAdjustments(slug: string, root = process.cwd()): RankAdjustmentsFile | null {
+  const path = rankAdjustmentsPath(slug, root);
+  if (!existsSync(path)) return null;
+  return parseRankAdjustments(JSON.parse(readFileSync(path, "utf8")), slug);
 }
 
 export function loadBoardInputs(slug: string, root = process.cwd()): BoardInputs {
@@ -52,5 +64,6 @@ export function loadBoardInputs(slug: string, root = process.cwd()): BoardInputs
     r2,
     birthDates,
     adp,
+    rankAdjustments: loadRankAdjustments(slug, root),
   };
 }

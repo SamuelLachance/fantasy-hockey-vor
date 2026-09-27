@@ -3,6 +3,7 @@ import {
   GOALIE_VOLUME_FIELDS,
   boardSkaterGroup,
   type AverageSlotLine,
+  type BoardPosition,
   type DraftBoard,
   type DraftBoardPlayer,
 } from "../draft/board-types";
@@ -14,6 +15,7 @@ import {
   type CategoryVorResult,
   type LeaguePoolPlayer,
 } from "./category-vor";
+import { applyRankAdjustments, bridgeValues, type RankAdjustmentsFile } from "./rank-adjustments";
 import type { CategoryLeagueProfile, LeagueCategory, StartingSlot } from "./types";
 
 export interface BoardInputs {
@@ -27,12 +29,16 @@ export interface BoardInputs {
   /** NHL id → birth date (YYYY-MM-DD) from `player-profiles.json`. */
   birthDates: Map<number, string>;
   adp: { source: string; fetchedAt: string; rows: AdpRow[] };
+  /** Hand rank moves of this league (`rank-adjustments.json`), null when none. */
+  rankAdjustments: RankAdjustmentsFile | null;
 }
 
 export interface BuiltBoard {
   board: DraftBoard;
   vor: CategoryVorResult;
   adp: AdpMatchReport;
+  /** Adjusted ids that are not on the board (skipped; check:draft-board fails on them). */
+  adjustmentsMissing: number[];
 }
 
 /**
@@ -84,12 +90,64 @@ export function leaguePool(players: PlayerProjection[]): LeaguePoolPlayer[] {
  */
 export const ADP_CEILING = 285;
 
-function goalieRankSummary(result: CategoryVorResult): { firstGoalieRank: number | null; goaliesInTop100: number } {
-  const ranks = result.players.filter((p) => p.isGoalie).map((p) => p.rank);
+/** Best goalie's rank and goalies inside the top 100 of an ordered list (rank = index + 1). */
+function goalieRankSummary(order: readonly { isGoalie: boolean }[]): { firstGoalieRank: number | null; goaliesInTop100: number } {
+  const ranks = order.flatMap((p, i) => (p.isGoalie ? [i + 1] : []));
   return {
     firstGoalieRank: ranks[0] ?? null,
     goaliesInTop100: ranks.filter((r) => r <= 100).length,
   };
+}
+
+const RANK_KEYS: readonly BoardPosition[] = ["C", "LW", "RW", "F", "D", "G"];
+
+/**
+ * The board in the hand-adjusted order (see `rank-adjustments.ts`): `rank`
+ * is the new place; an adjusted row's `vor` is bridged between its new
+ * neighbours (so every VOR sort agrees with the rank) and it carries
+ * `adjusted` with the engine's rank and VOR. Position ranks follow too:
+ * each position's own engine order with the adjusted rows taken out and put
+ * back in front of the first player the new overall order puts after them.
+ */
+export function adjustBoardPlayers(
+  players: readonly DraftBoardPlayer[],
+  file: RankAdjustmentsFile | null,
+): { players: DraftBoardPlayer[]; missing: number[] } {
+  if (!file || file.adjustments.length === 0) return { players: [...players], missing: [] };
+  const { order, missing } = applyRankAdjustments(players, file.adjustments, (p) => p.id);
+  const reasons = new Map(file.adjustments.map((a) => [a.id, a.reason]));
+  const isAdjusted = order.map((p) => reasons.has(p.id));
+  const vor = bridgeValues(
+    order.map((p) => p.vor),
+    isAdjusted,
+  );
+  const out: DraftBoardPlayer[] = order.map((p, i) => {
+    const reason = reasons.get(p.id);
+    const row: DraftBoardPlayer = { ...p, rank: i + 1, posRank: { ...p.posRank } };
+    if (reason === undefined) return row;
+    return {
+      ...row,
+      vor: round(vor[i]!, 2),
+      adjusted: { fromRank: p.rank, vorModel: p.vor, reason },
+    };
+  });
+
+  const newRank = new Map(out.map((p) => [p.id, p.rank]));
+  for (const key of RANK_KEYS) {
+    const list = out
+      .filter((p) => p.posRank[key] != null)
+      .sort((a, b) => a.posRank[key]! - b.posRank[key]!);
+    const stay = list.filter((p) => !reasons.has(p.id));
+    const moved = list.filter((p) => reasons.has(p.id)).sort((a, b) => newRank.get(a.id)! - newRank.get(b.id)!);
+    for (const m of moved) {
+      const at = stay.findIndex((p) => newRank.get(p.id)! > newRank.get(m.id)!);
+      stay.splice(at < 0 ? stay.length : at, 0, m);
+    }
+    stay.forEach((p, i) => {
+      p.posRank[key] = i + 1;
+    });
+  }
+  return { players: out, missing };
 }
 
 export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
@@ -126,7 +184,7 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
     return p.rank <= BOARD_DEPTH;
   });
 
-  const players: DraftBoardPlayer[] = kept.map((p) => {
+  const enginePlayers: DraftBoardPlayer[] = kept.map((p) => {
     const cats: LeagueCategory[] = p.isGoalie ? goalieCats : skaterCats;
     // The client derives F/D from eligibility (for the group-relative bars);
     // it must agree with the engine's primary-position grouping.
@@ -162,6 +220,14 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
       adp: m && m.adp < ADP_CEILING ? round(m.adp, 1) : null,
     };
   });
+  // Hand moves last: every reader of the board (tables, draft helper,
+  // suggestions, the Yahoo export) follows the adjusted rank.
+  const { players, missing: adjustmentsMissing } = adjustBoardPlayers(enginePlayers, inputs.rankAdjustments);
+  const goalieIds = new Set(vor.players.filter((p) => p.isGoalie).map((p) => p.id));
+  const adjustedOrder = (list: readonly { id: number; isGoalie: boolean }[]) =>
+    inputs.rankAdjustments
+      ? applyRankAdjustments(list, inputs.rankAdjustments.adjustments, (p) => p.id).order
+      : [...list];
 
   const slots: DraftBoard["averageTeam"]["slots"] = {};
   for (const [slot, zByCat] of Object.entries(vor.averageTeam.slotZ) as [
@@ -227,11 +293,12 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
       weight: round(vor.goalieWeight.weight, 4),
       leverageRatio: round(vor.goalieWeight.leverageRatio, 4),
       predictabilityRatio: round(vor.goalieWeight.predictabilityRatio, 4),
-      ...goalieRankSummary(vor),
+      ...goalieRankSummary(players.map((p) => ({ isGoalie: goalieIds.has(p.id) }))),
+      // The sensitivity run gets the same hand moves (apples to apples).
       alt: {
         weight: round(altWeight, 4),
         predictabilityRatio: round(vor.goalieWeight.predictabilityRatioShrunk, 4),
-        ...goalieRankSummary(alt),
+        ...goalieRankSummary(adjustedOrder(alt.players)),
       },
     },
     skaterGroupOffset: groupOffset,
@@ -239,7 +306,7 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
     averageTeam: { slots },
     players,
   };
-  return { board, vor, adp };
+  return { board, vor, adp, adjustmentsMissing };
 }
 
 /**

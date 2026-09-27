@@ -31,6 +31,7 @@ export function DraftMethodNote({
   const skaterIndex = (c: string) => (board.categories.skater as readonly string[]).indexOf(c);
   const dBlk = board.skaterGroupOffset.D[skaterIndex("blocks")] ?? 0;
   const dGoals = board.skaterGroupOffset.D[skaterIndex("goals")] ?? 0;
+  const moved = board.players.filter((p) => p.adjusted);
   return (
     <div className="space-y-3">
       {shortcuts ? (
@@ -99,6 +100,19 @@ export function DraftMethodNote({
             joueur admissible (perdre un centre, c’est faire glisser le centre du poste F et prendre le
             meilleur attaquant libre) ; VOR = valeur − remplaçant au meilleur poste.
           </p>
+          {moved.length > 0 ? (
+            <p>
+              <strong className="text-slate-200">Ajustements à la main</strong> : {moved.length} joueurs
+              déplacés après le calcul (badge « ajusté ») pour corriger des défauts connus des projections
+              (par exemple des matchs joués sous-estimés chez des joueurs durables) :{" "}
+              {moved
+                .map((p) => `${p.name} (${ordinal(p.adjusted!.fromRank)} → ${ordinal(p.rank)})`)
+                .join(", ")}
+              . Leur VOR suit leur nouveau rang (entre celles de leurs voisins) ; leurs catégories et leur valeur
+              restent celles du modèle. La raison de chacun est dans l’infobulle du badge et dans le détail du
+              joueur.
+            </p>
+          ) : null}
           <p>
             <strong className="text-slate-200">Suggestions</strong> : gain réel pour votre alignement (un poste
             n’est occupé que si le joueur bat le remplaçant ; sinon il va au banc, qui ne vaut qu’une part de

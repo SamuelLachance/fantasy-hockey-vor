@@ -9,9 +9,10 @@
  * categories league of the registry)
  */
 import { existsSync, readFileSync } from "fs";
-import { leagueBoardPath, loadBoardInputs } from "../src/lib/leagues/board-inputs";
+import { leagueBoardPath, loadBoardInputs, rankAdjustmentsPath } from "../src/lib/leagues/board-inputs";
 import { buildLeagueBoard, serializeBoard } from "../src/lib/leagues/league-board";
 import type { DraftBoard } from "../src/lib/draft/board-types";
+import { rankAdjustmentErrors } from "../src/lib/leagues/rank-adjustments";
 import { LEAGUES } from "../src/lib/leagues/registry";
 
 const slugs = process.argv[2]
@@ -24,7 +25,16 @@ const summaries: string[] = [];
 for (const slug of slugs) {
   const path = leagueBoardPath(slug);
 
-  const { board: fresh } = buildLeagueBoard(loadBoardInputs(slug));
+  // Hand rank moves: the file's shape first (loadBoardInputs throws on it).
+  const adjPath = rankAdjustmentsPath(slug);
+  if (existsSync(adjPath)) {
+    const shape = rankAdjustmentErrors(JSON.parse(readFileSync(adjPath, "utf8")), slug);
+    for (const e of shape) errors.push(`${adjPath}: ${e}`);
+    if (shape.length > 0) continue;
+  }
+
+  const inputs = loadBoardInputs(slug);
+  const { board: fresh, adjustmentsMissing } = buildLeagueBoard(inputs);
   if (!existsSync(path)) {
     // The page imports the file: typecheck and build need it.
     errors.push(`${path} missing — run npm run draft:board`);
@@ -87,6 +97,47 @@ for (const slug of slugs) {
       errors.push(`average ${slot} line ≠ average ${forwardOnly[0]} line (per-seat baseline is fill-order dependent)`);
     }
   }
+  // Hand rank moves: every listed id is on the board under that name and
+  // carries its reason; ranks stay a permutation of 1..N; the published VOR
+  // never rises down the board (a VOR sort agrees with the rank); each
+  // position's ranks stay a permutation of 1..n.
+  const adjustments = inputs.rankAdjustments?.adjustments ?? [];
+  for (const id of adjustmentsMissing) errors.push(`adjusted id ${id} is not on the board`);
+  const byId = new Map(board.players.map((p) => [p.id, p]));
+  for (const a of adjustments) {
+    const p = byId.get(a.id);
+    if (!p) continue;
+    if (p.name !== a.name) errors.push(`adjusted id ${a.id}: board name « ${p.name} » ≠ « ${a.name} »`);
+    if (!p.adjusted || p.adjusted.reason !== a.reason) errors.push(`${p.name}: adjusted row without its reason`);
+    if (p.adjusted && p.adjusted.fromRank !== a.engineRank) {
+      warnings.push(
+        `${p.name}: hand move decided at engine rank ${a.engineRank}, the engine now says ${p.adjusted.fromRank} — review ${adjPath}`,
+      );
+    }
+  }
+  const adjustedRows = board.players.filter((p) => p.adjusted);
+  if (adjustedRows.length !== adjustments.length - adjustmentsMissing.length) {
+    errors.push(`${adjustedRows.length} adjusted rows for ${adjustments.length} adjustments`);
+  }
+  for (const p of adjustedRows) {
+    if (!p.adjusted!.reason.trim()) errors.push(`${p.name}: empty adjustment reason`);
+    if (!Number.isFinite(p.adjusted!.vorModel) || !(p.adjusted!.fromRank >= 1)) errors.push(`${p.name}: adjustment figures`);
+  }
+  if (adjustments.length > 0) {
+    const ranks = board.players.map((p) => p.rank);
+    if (!ranks.every((r, i) => r === i + 1)) errors.push("ranks are not 1..N in board order");
+    board.players.forEach((p, i) => {
+      if (i > 0 && p.vor > board.players[i - 1]!.vor) errors.push(`VOR rises at ${p.name} (rank ${p.rank})`);
+    });
+    for (const key of ["C", "LW", "RW", "F", "D", "G"] as const) {
+      const seq = board.players
+        .map((p) => p.posRank[key])
+        .filter((r): r is number => r != null)
+        .sort((a, b) => a - b);
+      if (!seq.every((r, i) => r === i + 1)) errors.push(`position ranks ${key} are not a permutation of 1..n`);
+    }
+  }
+
   const top150 = board.players.slice(0, 150);
   const withAdp = top150.filter((p) => p.adp != null).length;
   if (withAdp < 120) errors.push(`only ${withAdp}/150 of the top 150 have an ADP`);
@@ -95,7 +146,9 @@ for (const slug of slugs) {
   if (slug === "light-the-lamp" && board.league.teams * rounds !== 216) {
     errors.push(`expected 216 picks, got ${board.league.teams * rounds}`);
   }
-  summaries.push(`${slug}: ${board.players.length} players, ${goalies} G, goalie weight ${w}, ADP ${withAdp}/150`);
+  summaries.push(
+    `${slug}: ${board.players.length} players, ${goalies} G, goalie weight ${w}, ADP ${withAdp}/150, ${adjustedRows.length} hand moves`,
+  );
 }
 
 for (const warning of warnings) console.warn(`WARN: ${warning}`);

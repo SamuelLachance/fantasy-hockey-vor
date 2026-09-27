@@ -45,6 +45,7 @@ import { snakePlayerHref } from "@/lib/snake/url";
 import { CategoryMiniBars } from "./CategoryMiniBars";
 import { CategoryTableFilters } from "./CategoryTableFilters";
 import { DraftPositionBadges } from "./DraftPositionBadges";
+import { RankAdjustedBadge } from "./RankAdjustedBadge";
 
 const MUTED = "text-slate-300";
 
@@ -82,7 +83,18 @@ function elsewhere(row: SnakeRow): Array<{ href: string; label: string }> {
 function cellsFor(board: DraftBoard): Record<string, (r: CategoryRow, ctx: CategoryCtx) => CellOut> {
   const out: Record<string, (r: CategoryRow, ctx: CategoryCtx) => CellOut> = {
     rang: (r, ctx) => ({ node: displayRank(r, ctx.rankPos), className: "text-slate-400" }),
-    vor: (r) => ({ node: formatFr(r.vor, 1), className: "font-semibold text-cyan-200" }),
+    // A hand-moved row: its VOR is bridged to the new rank; the badge gives the reason and the model's figures.
+    vor: (r) => ({
+      node: r.adjusted ? (
+        <span className="inline-flex items-center gap-1">
+          <RankAdjustedBadge adjusted={r.adjusted} />
+          {formatFr(r.vor, 1)}
+        </span>
+      ) : (
+        formatFr(r.vor, 1)
+      ),
+      className: "whitespace-nowrap font-semibold text-cyan-200",
+    }),
     valeur: (r) => ({ node: formatFr(r.value, 1), className: MUTED }),
     cats: (r, ctx) => ({
       node: (
@@ -178,6 +190,14 @@ function detailFor(board: DraftBoard) {
       ["Positions Yahoo", `${r.pos.join(", ")}${r.pos.length > 1 ? ` (VOR mesurée à ${r.vorPos})` : ""}`],
       ["Rang", `${ordinal(r.rank)} dans la ligue${posRanks ? ` · ${posRanks}` : ""}`],
       ["Valeur · VOR", `${formatFr(r.value, 2)} · ${formatFr(r.vor, 2)}`],
+      ...(r.adjusted
+        ? ([
+            [
+              "Rang ajusté à la main",
+              `modèle ${ordinal(r.adjusted.fromRank)}, VOR ${formatFr(r.adjusted.vorModel, 2)}. ${r.adjusted.reason}`,
+            ],
+          ] as Array<[string, string]>)
+        : []),
       ["ADP (Fantrax)", r.adp !== null ? formatFr(r.adp, 1) : "aucune (les chances utilisent son rang)"],
       ["Matchs projetés", String(r.gp)],
     ];
