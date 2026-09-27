@@ -27,6 +27,10 @@ for (const slug of slugs) {
   console.log(
     `goalie weight ${gw.weight.toFixed(3)} = leverage ${gw.leverageRatio.toFixed(3)} × predictability ${gw.predictabilityRatio.toFixed(3)}`,
   );
+  const gs = vor.goalieSavePctShrink;
+  console.log(
+    `goalie SV% spread ${gs.spread.toFixed(5)} ÷ ${gs.factor.toFixed(3)} toward ${gs.mean.toFixed(4)} (${gs.count} reference goalies)`,
+  );
   console.log(
     "replacement:",
     Object.entries(board.replacement)

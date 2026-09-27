@@ -7,6 +7,7 @@ import type {
   SkaterProjection,
 } from "../types";
 import { softCapCategoryZ } from "../vor";
+import { shrinkGoalieSavePct, type GoalieSavePctShrink } from "./goalie-shrink";
 import { startingSlotsInFillOrder } from "./profile";
 import { fillSlots, type SlotSpec } from "./slot-fill";
 import type {
@@ -29,7 +30,9 @@ import type {
  * - GAA as goals-against prevented,
  * - replacement from an optimal seat-by-seat fill of every team's lineup
  *   including F/Util flex and multi-eligibility, then bench depth,
- * - a goalie weight derived from matchup leverage instead of a hand anchor.
+ * - a goalie weight derived from matchup leverage instead of a hand anchor,
+ * - goalie SV% shrunk to the spread real goalie skill supports before
+ *   anything is valued (`goalie-shrink.ts`).
  */
 
 export type SkaterGroup = "F" | "D";
@@ -129,7 +132,11 @@ export interface ScoredLeaguePlayer {
 }
 
 export interface AverageTeam {
-  /** Mean per-category z of the players the fill seats in each starting slot. */
+  /**
+   * Per-category z of the average starter a seat holds. Skater seats take the
+   * forward / defenseman mixture of their occupants rather than the mean of
+   * the players the fill happened to seat there — see `averageTeam`.
+   */
   slotZ: Partial<Record<StartingSlot, Partial<Record<LeagueCategory, number>>>>;
   /**
    * Mean projected line per seat: skater categories for skater slots; goalie
@@ -151,6 +158,8 @@ export interface CategoryVorResult {
   averageTeam: AverageTeam;
   /** Ids the model drafts (starters + bench), in value order. */
   draftedIds: number[];
+  /** SV% over-dispersion removed before scoring (`goalie-shrink.ts`). */
+  goalieSavePctShrink: GoalieSavePctShrink;
 }
 
 export interface CategoryVorOptions {
@@ -165,12 +174,24 @@ export interface CategoryVorOptions {
    * Bench goalies per team. The 4-appearance weekly minimum is roughly two
    * starters' output (~2 starts each), so a third goalie is standard to cover
    * light weeks; a fourth rarely sees a G slot. Default 1.
+   *
+   * This is the single biggest lever on where goalies rank and it is a
+   * modelling choice, not something derived from the settings: on Light the
+   * Lamp, 0/1/2/3 bench goalies give goalie weights 0.39/0.62/0.71/0.76 and
+   * put the first goalie at overall 57/28/10/5, because the count sets both
+   * how deep the drafted goalie pool runs (`replacement.G`) and how much bench
+   * skater depth the league absorbs. It deserves a wider band than the
+   * published `goalieWeight.alt` sensitivity covers. `minGoalieAppearances-
+   * PerWeek` only reaches the engine through the leverage floor below, which
+   * moves the *other* way (a higher minimum ⇒ noisier goalie totals ⇒ smaller
+   * weight: 4/5/6 give 0.62/0.55/0.51), so raising one without the other is
+   * not a neutral change.
    */
   benchGoaliesPerTeam?: number;
 }
 
+/** Only for the "F" position *rank* (a board column), never for eligibility. */
 const FORWARDS: readonly Position[] = ["C", "LW", "RW"];
-const SKATER_POSITIONS: readonly Position[] = ["C", "LW", "RW", "D"];
 const ALL_POSITIONS: readonly Position[] = ["C", "LW", "RW", "D", "G"];
 
 /**
@@ -530,9 +551,10 @@ function fillLeague(
  * moves P(win) of that week's category: ∂P/∂x ∝ 1 / SD(weekly team total).
  * One z unit is `sd_c` season units, so its leverage is
  *   λ_c = sd_c / √Var(average team's season total_c)
- * (weeks cancel between categories). Noise model: every counting stat
- * (goals … blocks, wins, shutouts, goals against) Poisson; SV% binomial per
- * shot faced, in saves units.
+ * (weeks cancel between categories). Noise model: the per-game counting stats
+ * (goals … blocks, shutouts, goals against) Poisson; SV% binomial per shot
+ * faced, in saves units; wins binomial per goalie appearance, because there
+ * the per-trial outcome is a coin flip and the trial count is managed.
  * The average team's goalie volume is floored at the league's weekly
  * appearance minimum — teams stream to reach it.
  *
@@ -576,6 +598,12 @@ export function deriveGoalieWeight(
         (s, v) => s + ((v.player.projection as SkaterProjection)[cat] ?? 0),
         0,
       ) / teams;
+    // `sd` is the uncapped category SD, i.e. the real units one z unit buys
+    // *at the group mean* — where the soft cap's slope is exactly 1, so it is
+    // the right linearisation point even for hits and blocks. (Averaging the
+    // cap's slope over the whole pool instead would raise hits ~17 % and cut
+    // the goalie weight ~7 %; that convention would re-inflate in the exchange
+    // rate what the cap deliberately deflates in the tails.)
     const sd = scales.skater[cat]?.sd ?? 1;
     leverage[cat] = total > 0 ? sd / Math.sqrt(total) : 0;
   }
@@ -592,11 +620,22 @@ export function deriveGoalieWeight(
     ga: (vol.reduce((s, v) => s + v.goalsAgainst, 0) / teams) * scale,
   };
   const sv = scales.goalieBaseline.savePct;
+  const winRate = team.gp > 0 ? team.wins / team.gp : 0;
   const variance: Record<LeagueGoalieCategory, number> = {
-    // Poisson, not binomial-per-start: the number of starts in a week
-    // varies too (2–6), and Bernoulli wins over a Poisson start count
-    // compound to exactly Poisson — same treatment as skater counts.
-    wins: team.wins,
+    // Binomial over the appearances the team gives its goalies, with that
+    // count taken as managed rather than random — the same treatment SV%
+    // already gets (shots faced carry no variance of their own either).
+    // Wins is the one category here whose per-trial outcome is a coin flip
+    // (p ≈ 0.49) instead of a rare event, so the trial count matters:
+    // Var(W) = N·p(1−p) + p²·Var(N) runs from 26 (managed N) to 51 (Poisson
+    // N, i.e. Var = E[W]) for this league. Poisson would mean an SD of two
+    // appearances a week around a mean the league *mandates* to be at least
+    // four — the floor just above exists precisely because a team's two or
+    // three goalies reliably start four to six games a week — so the managed
+    // end is the consistent choice, and it roughly doubles wins' leverage.
+    wins: team.gp * winRate * (1 - winRate),
+    // Rare event (p ≈ 0.05 per appearance): Poisson is a good approximation
+    // whatever the trial count.
     shutouts: team.shutouts,
     savePct: team.shots * sv * (1 - sv),
     goalsAgainstAverage: team.ga,
@@ -655,6 +694,17 @@ export function deriveGoalieWeight(
  * F and Util, so C is replaced at the F level; no D sits in Util, so D keeps
  * its own level.) Player VOR, slot VOR and the published board all use the
  * effective levels.
+ *
+ * Caveat: "seats at least one" is read off the assignment `fillSlots`
+ * produced, and for the forward/flex pairs several maximum assignments exist,
+ * so that test is a tie-break rather than a property of the drafted set. It
+ * only bites when the raw per-position levels are far apart — here they are
+ * within 0.05 (C −4.10, LW −4.06, RW −4.05), and the D answer is determinate
+ * (no maximum assignment seats a defenseman at Util), so the effective levels
+ * are safe. A thinner pool at one forward position, or a league where one
+ * defenseman does reach Util, would need the real marginal instead (refill the
+ * league with one starter of that position removed and read what the fill
+ * loses).
  */
 function replacementLevels(
   profile: CategoryLeagueProfile,
@@ -693,33 +743,70 @@ function replacementLevels(
     }
     levels[pos] = level;
   }
-  levels.F = bestOf(FORWARDS);
-  levels.Util = bestOf(SKATER_POSITIONS);
+  // The flex seats' own levels come from the profile's eligibility, never from
+  // a hard-coded forward / skater list: a league whose Util does not accept D
+  // would otherwise be handed the best undrafted defenseman as the value of a
+  // seat that cannot hold one.
+  for (const slot of ["F", "Util"] as const) {
+    const accepts = profile.slotEligibility[slot];
+    if (accepts && accepts.length > 0) levels[slot] = bestOf(accepts);
+  }
   return levels;
 }
 
+/**
+ * League-average team, seat by seat.
+ *
+ * The *set* of skaters a 12-team league seats is determined, but which of
+ * C/LW/RW/F/Util each one occupies is not: `fillSlots` reaches a
+ * maximum-value set, and among the many assignments of that set it takes the
+ * first one its slot order happens to produce. Averaging z per slot type off
+ * that single assignment therefore measures the slot order, not the league —
+ * with C tried first, every multi-eligible forward lands at C and the RW line
+ * is left holding whoever is pure RW (a ~3.8 z gap between "average C" and
+ * "average RW" of the same league).
+ *
+ * So average forwards and defensemen separately — that split *is* determined
+ * (it comes from the primary position, not the seat) — and give each seat the
+ * F/D mixture its occupants have. Only Util is ever mixed here. The
+ * seats-weighted sum is unchanged, so `zTotals` still equals the
+ * league-average team's line exactly.
+ */
 function averageTeam(
   profile: CategoryLeagueProfile,
   starters: Map<StartingSlot, Valued[]>,
   base: GoalieBaseline,
 ): AverageTeam {
-  const cats: LeagueCategory[] = [
-    ...profile.categories.skater,
-    ...profile.categories.goalie,
-  ];
   const slotZ: AverageTeam["slotZ"] = {};
   const slotStats: AverageTeam["slotStats"] = {};
   const zTotals: AverageTeam["zTotals"] = {};
+
+  const groups: SkaterGroup[] = ["F", "D"];
+  const pool: Record<SkaterGroup, Valued[]> = { F: [], D: [] };
+  for (const [slot, list] of starters) {
+    if (slot === "G") continue;
+    for (const v of list) pool[skaterGroup(v.player)].push(v);
+  }
+  const groupZ: Record<SkaterGroup, Partial<Record<SkaterCategory, number>>> = { F: {}, D: {} };
+  const groupLine: Record<SkaterGroup, Partial<Record<SkaterCategory, number>>> = { F: {}, D: {} };
+  for (const g of groups) {
+    for (const cat of profile.categories.skater) {
+      groupZ[g][cat] = mean(pool[g].map((v) => v.z[cat] ?? 0));
+      groupLine[g][cat] = mean(
+        pool[g].map((v) => (v.player.projection as SkaterProjection)[cat] ?? 0),
+      );
+    }
+  }
+
   for (const [slot, list] of starters) {
     const perCat: Partial<Record<LeagueCategory, number>> = {};
-    for (const cat of cats) {
-      const vals = list.map((v) => v.z[cat]).filter((x): x is number => x != null);
-      if (vals.length === 0) continue;
-      perCat[cat] = mean(vals);
-      zTotals[cat] = (zTotals[cat] ?? 0) + perCat[cat]! * (profile.roster[slot] ?? 0);
-    }
-    slotZ[slot] = perCat;
     if (slot === "G") {
+      for (const cat of profile.categories.goalie) {
+        const vals = list.map((v) => v.z[cat]).filter((x): x is number => x != null);
+        if (vals.length === 0) continue;
+        perCat[cat] = mean(vals);
+        zTotals[cat] = (zTotals[cat] ?? 0) + perCat[cat]! * (profile.roster[slot] ?? 0);
+      }
       const vol = list.map((v) => goalieVolumes(v.player, base));
       slotStats[slot] = {
         wins: mean(vol.map((v) => v.wins)),
@@ -728,15 +815,22 @@ function averageTeam(
         goalsAgainst: mean(vol.map((v) => v.goalsAgainst)),
         gamesPlayed: mean(vol.map((v) => v.gp)),
       };
-    } else {
-      const line: Record<string, number> = {};
-      for (const cat of profile.categories.skater) {
-        line[cat] = mean(
-          list.map((v) => (v.player.projection as SkaterProjection)[cat] ?? 0),
-        );
-      }
-      slotStats[slot] = line;
+      slotZ[slot] = perCat;
+      continue;
     }
+    const seated: Record<SkaterGroup, number> = { F: 0, D: 0 };
+    for (const v of list) seated[skaterGroup(v.player)]++;
+    const n = seated.F + seated.D;
+    const blend = (per: Record<SkaterGroup, Partial<Record<SkaterCategory, number>>>, cat: SkaterCategory) =>
+      n > 0 ? groups.reduce((s, g) => s + seated[g] * (per[g][cat] ?? 0), 0) / n : 0;
+    const line: Record<string, number> = {};
+    for (const cat of profile.categories.skater) {
+      perCat[cat] = blend(groupZ, cat);
+      zTotals[cat] = (zTotals[cat] ?? 0) + perCat[cat]! * (profile.roster[slot] ?? 0);
+      line[cat] = blend(groupLine, cat);
+    }
+    slotZ[slot] = perCat;
+    slotStats[slot] = line;
   }
 
   const totals: AverageTeam["totals"] = {};
@@ -776,10 +870,13 @@ function averageTeam(
  */
 export function applyCategoryVor(
   profile: CategoryLeagueProfile,
-  players: LeaguePoolPlayer[],
+  rawPlayers: LeaguePoolPlayer[],
   options: CategoryVorOptions = {},
 ): CategoryVorResult {
   const benchGoalies = options.benchGoaliesPerTeam ?? 1;
+  // Before anything is valued: goalie SV% only gets the spread real goalie
+  // skill supports, with shots against and GP untouched so GA and GAA follow.
+  const { players, shrink } = shrinkGoalieSavePct(rawPlayers);
 
   // Pass 1. The goalie weight cannot change who is drafted — goalie and
   // skater seats never overlap, bench composition is fixed — so 1 is fine.
@@ -887,5 +984,6 @@ export function applyCategoryVor(
     replacementLevels: replacement,
     averageTeam: averageTeam(profile, league.starters, scales.goalieBaseline),
     draftedIds: league.drafted.map((v) => v.id),
+    goalieSavePctShrink: shrink,
   };
 }

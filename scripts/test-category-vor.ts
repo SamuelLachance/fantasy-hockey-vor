@@ -15,7 +15,7 @@ import {
   type LeaguePoolPlayer,
 } from "../src/lib/leagues/category-vor";
 import { draftRounds, parseLeagueProfile } from "../src/lib/leagues/profile";
-import type { CategoryLeagueProfile } from "../src/lib/leagues/types";
+import type { CategoryLeagueProfile, StartingSlot } from "../src/lib/leagues/types";
 import type { Position, SkaterProjection } from "../src/lib/types";
 
 const profile: CategoryLeagueProfile = parseLeagueProfile(
@@ -168,8 +168,73 @@ for (const pos of ["C", "LW", "RW", "D"] as const) {
   assert.ok(rl[pos]! <= rl.Util! + 1e-12, `${pos} effective ≤ Util level`);
 }
 
+// Flex seats read their own eligibility, never a hard-coded forward list: a
+// profile whose Util does not accept D must not be priced at the best
+// undrafted defenseman.
+const noDUtil: CategoryLeagueProfile = {
+  ...profile,
+  slotEligibility: { ...profile.slotEligibility, Util: ["C", "LW", "RW"] },
+};
+const forwardUtil = applyCategoryVor(noDUtil, pool, { r2 });
+const undraftedOf = (r: typeof forwardUtil, ok: (p: (typeof r.players)[number]) => boolean) =>
+  Math.max(...r.players.filter((p) => p.modelSlot == null && ok(p)).map((p) => p.value));
+assert.equal(
+  forwardUtil.replacementLevels.Util,
+  undraftedOf(forwardUtil, (p) => p.positions.some((x) => x !== "D" && x !== "G")),
+  "Util level = best undrafted player the seat accepts",
+);
+assert.ok(
+  forwardUtil.replacementLevels.Util !== undraftedOf(forwardUtil, (p) => p.positions.includes("D")),
+  "a forward-only Util is not priced at the best undrafted D",
+);
+
+// Per-seat baselines must not depend on which slot the fill happens to pick
+// for a multi-eligible player: seats that draw on the same group share a line,
+// and the seats-weighted sum still equals the league-average team's total.
+const avg = res.averageTeam;
+const sumZ = (slot: StartingSlot) =>
+  profile.categories.skater.reduce((s, c) => s + (avg.slotZ[slot]?.[c] ?? 0), 0);
+const forwardSeatSlots: StartingSlot[] = ["C", "LW", "RW", "F"];
+for (const slot of forwardSeatSlots) {
+  assert.ok(
+    Math.abs(sumZ(slot) - sumZ("C")) < 1e-9,
+    `${slot} shares the forward-seat baseline (${sumZ(slot)} vs ${sumZ("C")})`,
+  );
+}
+assert.ok(sumZ("D") < sumZ("C") - 0.5, "D keeps its own baseline");
+for (const cat of profile.categories.skater) {
+  const seatSum = (["C", "LW", "RW", "F", "D", "Util"] as StartingSlot[]).reduce(
+    (s, slot) => s + (profile.roster[slot] ?? 0) * (avg.slotZ[slot]?.[cat] ?? 0),
+    0,
+  );
+  assert.ok(
+    Math.abs(seatSum - (avg.zTotals[cat] ?? 0)) < 1e-9,
+    `${cat}: seats × baseline = league-average team total`,
+  );
+}
+
 // Goalie weight = leverage × predictability, within a sane band.
 const gw = res.goalieWeight;
+// Wins is binomial over the team's goalie appearances, not Poisson: the trial
+// is a coin flip and the appearance count is managed to the league minimum.
+const gStarters = res.players.filter((p) => p.modelSlot === "G");
+const teamGp = gStarters.reduce((s, p) => s + p.gamesPlayed, 0) / profile.teams;
+const floorGp = profile.minGoalieAppearancesPerWeek * profile.matchupWeeks;
+const appearances = Math.max(teamGp, floorGp);
+const teamWins =
+  (gStarters.reduce((s, p) => s + (p.stats.wins ?? 0), 0) / profile.teams) *
+  Math.max(1, floorGp / teamGp);
+const winRate = teamWins / appearances;
+const winSd = computeCategoryScales(profile, pool.filter((p) => res.draftedIds.includes(p.id))).goalie
+  .wins!.sd;
+assert.ok(
+  Math.abs(gw.leverage.wins! - winSd / Math.sqrt(appearances * winRate * (1 - winRate))) < 1e-9,
+  "wins leverage uses a binomial appearance count",
+);
+assert.ok(
+  gw.leverage.wins! > winSd / Math.sqrt(teamWins),
+  "…which is above what a Poisson count would give",
+);
 assert.ok(Math.abs(gw.weight - gw.leverageRatio * gw.predictabilityRatio) < 1e-12);
 assert.ok(gw.weight > 0.2 && gw.weight < 2, `goalie weight ${gw.weight}`);
 assert.ok(gw.predictabilityRatio < 1, "goalie projections trusted less than skater ones");

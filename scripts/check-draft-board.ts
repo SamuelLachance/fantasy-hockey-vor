@@ -75,6 +75,18 @@ for (const slug of slugs) {
     if (!line) errors.push(`average team missing ${slot}`);
     if (board.replacement[slot] == null) errors.push(`replacement missing ${slot}`);
   }
+  // Seats that can only hold forwards must share one baseline: which of
+  // C/LW/RW/F a multi-eligible forward is seated in is decided by the fill
+  // order, so a per-slot line read off one assignment would be an artifact.
+  const forwardOnly = (["C", "LW", "RW", "F", "Util"] as const).filter(
+    (s) => (board.league.roster[s] ?? 0) > 0 && !board.league.slotEligibility[s].includes("D"),
+  );
+  const lineOf = (slot: (typeof forwardOnly)[number]) => (board.averageTeam.slots[slot]?.z ?? []).join(",");
+  for (const slot of forwardOnly) {
+    if (lineOf(slot) !== lineOf(forwardOnly[0]!)) {
+      errors.push(`average ${slot} line ≠ average ${forwardOnly[0]} line (per-seat baseline is fill-order dependent)`);
+    }
+  }
   const top150 = board.players.slice(0, 150);
   const withAdp = top150.filter((p) => p.adp != null).length;
   if (withAdp < 120) errors.push(`only ${withAdp}/150 of the top 150 have an ADP`);

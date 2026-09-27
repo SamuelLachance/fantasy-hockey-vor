@@ -35,9 +35,11 @@ export interface FillResult<P extends FillablePlayer, S extends string> {
  * so the whole fill stays cheap on 1,300 players.
  *
  * Slot order in `slots` is the preference for direct seating (dedicated slots
- * before F before Util), so a flex seat is only used when no dedicated seat
- * is free — that keeps the per-slot averages ("average C", "average Util")
- * meaningful for the team-strength baseline.
+ * before F before Util), so a flex seat is only used when no dedicated seat is
+ * free. Which *dedicated* slot a multi-eligible player lands in is still
+ * arbitrary — the order decides it, not the data — so nothing may read a
+ * per-slot average off one fill and treat it as a property of the league (see
+ * `averageTeam` in `category-vor.ts`).
  */
 export function fillSlots<P extends FillablePlayer, S extends string>(
   orderedPlayers: readonly P[],
