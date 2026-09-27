@@ -28,6 +28,7 @@ import {
   RATE_CALIBRATION_MIN_GP,
   RATE_KEYS,
   RATE_SEGMENTS,
+  rateFitGamesPlayed,
   rateGroup,
   rateSegment,
   segmentFromReasoning,
@@ -417,10 +418,13 @@ assert(SKATER_RATE_LIMITS.D.goals >= 0.4, "D goals limit sits above the realized
   assert(perGame("shots") > 1.35 && perGame("shots") < 1.8, `shots per skater-game ${perGame("shots").toFixed(2)} in (1.35, 1.8)`);
 
   // Per segment the calibrated edge sits on the target (the healthy
-  // reference), not on a pooled F / D mean.
+  // reference), not on a pooled F / D mean — over the calibration's own pool
+  // (regulars on the curve's GP: a split-season rule player joins it on
+  // his curve GP, not his published one).
+  const pool = v2.filter((p) => rateFitGamesPlayed(p) >= RATE_CALIBRATION_MIN_GP && p.projectionMethod === "ml");
   if (meta) {
     for (const seg of RATE_SEGMENTS) {
-      const sub = regulars.filter((p) => rateSegment(p) === seg);
+      const sub = pool.filter((p) => rateSegment(p) === seg);
       for (const cat of ["goals", "assists", "powerplayPoints", "shots", "hits", "blocks"] as const) {
         const withEdge = sub.filter((p) => typeof p.modelMarketEdge?.[cat] === "number");
         const got = mean(withEdge.map((p) => details[String(p.id)]?.marketEdge?.[cat] ?? 0));

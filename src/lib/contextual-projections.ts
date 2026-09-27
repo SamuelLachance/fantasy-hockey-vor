@@ -196,13 +196,19 @@ function projectedSkaterGames(profile: PlayerProfile): number {
   return projectedGamesFromProfile(profile);
 }
 
+/**
+ * `gamesPlayed` projects the same rates over a games count decided
+ * elsewhere (the split-season rule, gp-calibration.ts): scaling the totals
+ * of a 10-game projection rounded per stat would multiply its rounding.
+ */
 export function projectSkaterFromProfile(
   profile: PlayerProfile,
+  gamesPlayedOverride?: number,
 ): { projection: SkaterProjection; gamesPlayed: number; reasoning: string } {
   const seasons = profile.teamHistory.filter((s) => !s.isGoalie);
   const last = seasons[seasons.length - 1];
   const prev = seasons[seasons.length - 2];
-  const gamesPlayed = projectedSkaterGames(profile);
+  const gamesPlayed = gamesPlayedOverride ?? projectedSkaterGames(profile);
 
   const teamMult = teamOffenseMultiplier(profile);
   const ageMult = ageCurve(profile.position, profile.bio.age);

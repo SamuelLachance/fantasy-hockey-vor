@@ -20,7 +20,7 @@ import {
   projectSkaterFromProfile,
 } from "../src/lib/contextual-projections";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
-import { PROJECTION_SEASON } from "../src/lib/nhl-api";
+import { PROJECTION_SEASON, PROJECTION_SEASON_ID } from "../src/lib/nhl-api";
 import { collectAllProfiles, normalizeProfile } from "../src/lib/player-profile";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { applyVor } from "../src/lib/vor";
@@ -36,9 +36,10 @@ import {
   clampSkaterProjection,
 } from "../src/lib/projection-sanity";
 import {
-  calibratedSkaterGp,
+  decideSkaterGp,
   fitSkaterGpCurve,
   scaleSkaterProjection,
+  splitSeasonRuleFromFiles,
 } from "../src/lib/gp-calibration";
 import {
   buildGoalieRoleMap,
@@ -390,20 +391,40 @@ async function main() {
   console.log(
     `GP calibration: ${gpCurve.curve.length} isotonic blocks from ${gpCurve.pairCount} pairs`,
   );
+  // Split / away last seasons (games in another league) take the calibrated
+  // split-season rule instead of the curve (src/lib/split-season-gp.ts).
+  const splitRule = splitSeasonRuleFromFiles(PROJECTION_SEASON_ID);
+  if (!splitRule) {
+    console.warn(
+      "WARN: no split-season rule (src/data/ml/split-season-gp.json or src/data/league-seasons.json missing): every skater gets the curve",
+    );
+  }
   const gpCalibrated = tandemAdjusted.map((p) => {
     if (p.isGoalie) return { ...p, modelGamesPlayed: p.gamesPlayed };
-    const newGp = calibratedSkaterGp(p, profilesById.get(p.id), gpCurve.curve);
+    const decision = decideSkaterGp(p, profilesById.get(p.id), gpCurve.curve, splitRule);
+    const newGp = decision.gamesPlayed;
+    const availability = decision.availability ? { availability: decision.availability } : {};
     if (p.gamesPlayed <= 0 || newGp === p.gamesPlayed) {
-      return { ...p, modelGamesPlayed: p.gamesPlayed };
+      return { ...p, modelGamesPlayed: p.gamesPlayed, ...availability };
     }
     const ratio = newGp / p.gamesPlayed;
+    const profile = profilesById.get(p.id);
     return {
       ...p,
       modelGamesPlayed: p.gamesPlayed,
       gamesPlayed: newGp,
-      projection: scaleSkaterProjection(p.projection as never, ratio),
+      // A contextual projection is re-projected at the rule's games rather
+      // than scaling totals rounded at 3-10 games (see recalibrate-gp.ts).
+      projection:
+        decision.availability && p.projectionMethod === "contextual" && profile
+          ? projectSkaterFromProfile(profile, newGp).projection
+          : scaleSkaterProjection(p.projection as never, ratio),
+      ...availability,
     };
   });
+  console.log(
+    `Split-season rule: ${gpCalibrated.filter((p) => "availability" in p && p.availability).length} skaters`,
+  );
 
   // Post-hoc rate calibration: the edge of the residual models should rank
   // players against the synthetic market, not move the league's level. Per

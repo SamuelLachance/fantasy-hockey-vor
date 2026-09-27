@@ -136,6 +136,11 @@ export interface RateCalibratable {
   position: Position;
   primaryPosition?: Position;
   gamesPlayed: number;
+  /**
+   * Set when the published GP comes from the split-season rule: the pool
+   * keeps the curve's GP, so the rule never moves the other players' fit.
+   */
+  availability?: { curveGamesPlayed: number };
   projectionMethod?: string;
   projection: unknown;
   /** Raw model per-game rates, before any rate cap (idempotence anchor). */
@@ -278,10 +283,23 @@ export function edgeSample(p: RateCalibratable): EdgeSample {
   return { group: rateGroup(p), segment: rateSegment(p), center: isCenter(p), market, edge };
 }
 
+/**
+ * GP that decides pool membership: the isotonic curve's, also for a skater
+ * whose published GP comes from the split-season rule (gp-calibration.ts).
+ * The reference board pooled its regulars on the curve; a late signing
+ * joining the regulars would move every young skater's calibration.
+ */
+export function rateFitGamesPlayed(p: Pick<RateCalibratable, "gamesPlayed" | "availability">): number {
+  return p.availability?.curveGamesPlayed ?? p.gamesPlayed;
+}
+
 /** v2 skaters that fit the calibration. */
 function fitPool<T extends RateCalibratable>(players: T[]): T[] {
   return players.filter(
-    (p) => hasModelState(p) && p.projectionMethod === "ml" && p.gamesPlayed >= RATE_CALIBRATION_MIN_GP,
+    (p) =>
+      hasModelState(p) &&
+      p.projectionMethod === "ml" &&
+      rateFitGamesPlayed(p) >= RATE_CALIBRATION_MIN_GP,
   );
 }
 

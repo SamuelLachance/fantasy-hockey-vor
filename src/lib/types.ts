@@ -90,6 +90,18 @@ export interface ProjectionUncertainty {
   aleatoricShare: number;
 }
 
+/** Why a skater's published GP left the isotonic curve (gp-calibration.ts). */
+export interface PlayerAvailability {
+  /** split: NHL games plus games in another league; away: the season spent in another league. */
+  kind: "split" | "away";
+  seasonId: number;
+  /** Club games outside the NHL that season. */
+  otherGames: number;
+  league: "ahl" | "college" | "chl" | "europe";
+  /** The curve's GP: the rate calibration pools players on it, as its reference did. */
+  curveGamesPlayed: number;
+}
+
 export interface PlayerProjection {
   id: number;
   name: string;
@@ -114,6 +126,12 @@ export interface PlayerProjection {
   gamesPlayed: number;
   /** Raw model GP before post-hoc calibration (idempotence anchor). */
   modelGamesPlayed?: number;
+  /**
+   * Set when the published GP comes from the split-season rule (last season
+   * shared with, or spent in, another league: src/lib/split-season-gp.ts)
+   * instead of the isotonic curve.
+   */
+  availability?: PlayerAvailability;
   projection: SkaterProjection | GoalieProjection;
   categoryZScores: Partial<Record<Category, number>>;
   fantasyValue: number;

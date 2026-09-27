@@ -1,6 +1,17 @@
+import { loadLeagueSeasonsSync } from "./league-seasons";
+import { durabilityKey, loadDurabilityRegistrySync } from "./ml/gamelog-durability";
+import { loadMoneyPuckSkaterRegistrySync, skaterSeasonKey } from "./moneypuck-skaters";
 import type { PlayerProfile } from "./profile-types";
+import {
+  loadSplitSeasonGpParams,
+  predictSplitSeasonGp,
+  splitSeasonInput,
+  type SplitSeasonGpParams,
+  type SplitSeasonSources,
+} from "./split-season-gp";
 import type {
   GoalieProjection,
+  PlayerAvailability,
   PlayerProjection,
   SkaterProjection,
 } from "./types";
@@ -116,6 +127,12 @@ export function priorSeasonIdsFor(season: string): [number, number] {
   return [id(startYear - 1), id(startYear - 2)];
 }
 
+/** 20262027 for "2026-27". */
+export function projectionSeasonIdOf(season: string): number {
+  const startYear = Number.parseInt(season.slice(0, 4), 10);
+  return startYear * 10000 + startYear + 1;
+}
+
 function realizedGp(
   profile: PlayerProfile | undefined,
   seasonId: number,
@@ -180,6 +197,83 @@ export function calibratedSkaterGp(
   if (!hasHistory || curve.length === 0) return base;
   const mapped = predictIsotonic(curve, base);
   return Math.max(1, Math.min(CALIBRATED_GP_CEILING, Math.round(mapped)));
+}
+
+/** The split-season rule and where its inputs come from (see split-season-gp.ts). */
+export interface SplitSeasonRule {
+  params: SplitSeasonGpParams;
+  sources: SplitSeasonSources;
+  projectionSeasonId: number;
+}
+
+export interface SkaterGpDecision {
+  /** Published GP. */
+  gamesPlayed: number;
+  /** What the isotonic curve says (the published GP when no rule applies). */
+  curveGamesPlayed: number;
+  /** Set when the split-season rule replaced the curve. */
+  availability: PlayerAvailability | null;
+}
+
+/**
+ * Published GP for one skater. The isotonic curve, except when his last
+ * season was a split or an away season (src/lib/split-season-gp.ts): the
+ * curve maps model GP onto realized prior-season GP, which for a call-up or
+ * a late signing measures the games he spent in another league, so the
+ * calibrated split-season rule answers instead. Every other skater, full
+ * season or injured, gets exactly the curve.
+ */
+export function decideSkaterGp(
+  player: CalibratablePlayer,
+  profile: PlayerProfile | undefined,
+  curve: IsotonicPoint[],
+  rule?: SplitSeasonRule | null,
+): SkaterGpDecision {
+  const curveGp = calibratedSkaterGp(player, profile, curve);
+  const hasHistory =
+    profile?.teamHistory.some((h) => !h.isGoalie && h.gamesPlayed > 0) ?? false;
+  const input =
+    rule && hasHistory && !player.isGoalie
+      ? splitSeasonInput(player.id, rule.projectionSeasonId, rule.sources)
+      : null;
+  if (!rule || !input) {
+    return { gamesPlayed: curveGp, curveGamesPlayed: curveGp, availability: null };
+  }
+  const gp = Math.max(
+    1,
+    Math.min(CALIBRATED_GP_CEILING, Math.round(predictSplitSeasonGp(rule.params, input))),
+  );
+  return {
+    gamesPlayed: gp,
+    curveGamesPlayed: curveGp,
+    availability: {
+      kind: input.kind,
+      seasonId: input.seasonId,
+      otherGames: input.otherGames,
+      league: input.league,
+      curveGamesPlayed: curveGp,
+    },
+  };
+}
+
+/** Rule inputs from the committed game logs and league-seasons cache. */
+export function splitSeasonRuleFromFiles(
+  projectionSeasonId: number,
+): SplitSeasonRule | null {
+  const params = loadSplitSeasonGpParams();
+  const leagues = loadLeagueSeasonsSync();
+  const durability = loadDurabilityRegistrySync();
+  const moneypuck = loadMoneyPuckSkaterRegistrySync();
+  if (!params || !leagues) return null;
+  return {
+    params,
+    projectionSeasonId,
+    sources: {
+      durability: (id, seasonId) => durability?.byKey[durabilityKey(id, seasonId)],
+      leagues: (id) => leagues.players[String(id)],
+      moneypuck: (id, seasonId) => moneypuck?.byKey[skaterSeasonKey(id, seasonId)],
+    },
+  };
 }
 
 /** Tandem season budget shared by a team's goalies (starts, ≈82 games). */

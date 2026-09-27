@@ -11,11 +11,15 @@ import { writeFileAtomic } from "../src/lib/atomic-write";
 import { attachDraftEdge } from "../src/lib/draft-edge";
 import {
   calibratedGoalieGp,
-  calibratedSkaterGp,
+  decideSkaterGp,
   fitSkaterGpCurve,
   modelGp,
+  projectionSeasonIdOf,
+  splitSeasonRuleFromFiles,
 } from "../src/lib/gp-calibration";
+import { projectSkaterFromProfile } from "../src/lib/contextual-projections";
 import { filterActivePlayers } from "../src/lib/inactive-players";
+import { normalizeProfile } from "../src/lib/player-profile";
 import { DEFAULT_LEAGUE } from "../src/lib/league";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { loadRateReference } from "../src/lib/ml/rate-reference";
@@ -69,6 +73,16 @@ console.log(`Skater isotonic curve: ${curve.length} blocks from ${pairCount} pai
 
 const goalieGp = calibratedGoalieGp(data.players, profilesById, season);
 
+// Split / away last seasons (games in another league): the calibrated
+// split-season rule replaces the curve (src/lib/split-season-gp.ts).
+const splitRule = splitSeasonRuleFromFiles(projectionSeasonIdOf(season));
+if (!splitRule) {
+  console.warn(
+    "WARN: no split-season rule (src/data/ml/split-season-gp.json or src/data/league-seasons.json missing): every skater gets the curve",
+  );
+}
+let splitCount = 0;
+
 const calibrated = data.players.map((p) => {
   const rawModelGp = modelGp(p);
   // Board `position` is the VOR slot; the projection was built and clamped at
@@ -76,17 +90,29 @@ const calibrated = data.players.map((p) => {
   // the same rate limits generate used.
   const primaryPosition =
     p.primaryPosition ?? profilesById.get(p.id)?.position ?? p.position;
-  const newGp = p.isGoalie
-    ? (goalieGp.get(p.id) ?? p.gamesPlayed)
-    : calibratedSkaterGp(p, profilesById.get(p.id), curve);
+  const decision = p.isGoalie
+    ? null
+    : decideSkaterGp(p, profilesById.get(p.id), curve, splitRule);
+  const newGp = decision ? decision.gamesPlayed : (goalieGp.get(p.id) ?? p.gamesPlayed);
+  // A previous run's rule marker is recomputed, never carried over.
+  const { availability: _previous, ...rest } = p;
+  const availability = decision?.availability ? { availability: decision.availability } : {};
+  if (decision?.availability) splitCount++;
   const prevGp = p.gamesPlayed;
   if (prevGp <= 0 || newGp === prevGp) {
-    return { ...p, primaryPosition, modelGamesPlayed: rawModelGp };
+    return { ...rest, primaryPosition, modelGamesPlayed: rawModelGp, ...availability };
   }
   const ratio = newGp / prevGp;
+  const profile = profilesById.get(p.id);
+  // A contextual projection (no NHL season of 10 games) is re-projected at
+  // the rule's games: its totals were rounded per stat at 3-10 games, and
+  // scaling them to 40 would multiply the rounding (1 goal in 3 → 16 in 48).
   const projection = p.isGoalie
     ? scaleGoalieProjection(p.projection as GoalieProjection, ratio)
-    : scaleSkaterProjection(p.projection as SkaterProjection, ratio);
+    : decision?.availability && p.projectionMethod === "contextual" && profile
+      ? projectSkaterFromProfile({ ...normalizeProfile(profile), position: primaryPosition }, newGp)
+          .projection
+      : scaleSkaterProjection(p.projection as SkaterProjection, ratio);
   const uncertainty = p.uncertainty
     ? {
         ...p.uncertainty,
@@ -99,14 +125,18 @@ const calibrated = data.players.map((p) => {
       }
     : undefined;
   return {
-    ...p,
+    ...rest,
     primaryPosition,
     modelGamesPlayed: rawModelGp,
     gamesPlayed: newGp,
     projection,
     ...(uncertainty ? { uncertainty } : {}),
+    ...availability,
   };
 });
+console.log(
+  `Split-season rule: ${splitCount} skaters (last season split with, or spent in, another league)`,
+);
 
 // σ per-stat des détails suit le même ratio que les totaux.
 const sigmaRatio = new Map<number, number>();
@@ -134,7 +164,9 @@ const hydrated = filterActivePlayers(
     return {
       ...rest,
       reasoning: d?.reasoning,
-      profileSummary: d?.profileSummary,
+      // generate publishes the profile's narrative: follow it when a profile
+      // was re-read since (e.g. its injury profile, npm run collect:leagues).
+      profileSummary: profilesById.get(p.id)?.contextNarrative ?? d?.profileSummary,
       ...detailCarryFields(d),
     };
   }),

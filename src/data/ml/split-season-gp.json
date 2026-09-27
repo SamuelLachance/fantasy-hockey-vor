@@ -1,0 +1,587 @@
+{
+  "version": 1,
+  "fittedAt": "2026-09-27T20:18:42.805Z",
+  "source": "durability.json (2026-07-10T16:47:49.182Z) + league-seasons.json (2026-09-27T20:03:44.792Z); 7830 skater seasons 20082009→20242025",
+  "minOtherGames": 6,
+  "split": {
+    "features": [
+      "nhlShare",
+      "toi",
+      "isD",
+      "toiD",
+      "finished",
+      "finishedToi",
+      "finishedShare",
+      "age",
+      "ageOver24",
+      "draftLog",
+      "undrafted",
+      "college",
+      "chl",
+      "europe",
+      "career",
+      "debut",
+      "gameScorePg",
+      "prospectFinished",
+      "prospectAge",
+      "prospectDraftLog",
+      "prospectToi",
+      "finishedYouth",
+      "youthDraftLog"
+    ],
+    "intercept": 205.4787,
+    "coef": [
+      29.5114,
+      0.8954,
+      -3.5345,
+      -0.0147,
+      0.1641,
+      -0.0375,
+      16.9452,
+      -8.6845,
+      7.3116,
+      -0.6105,
+      1.2561,
+      -13.7442,
+      3.1257,
+      -1.2892,
+      -0.5777,
+      -1.6108,
+      51.2558,
+      32.0987,
+      0.5618,
+      -6.379,
+      0.3083,
+      -0.1458,
+      -2.7556
+    ],
+    "finishedMean": 0.4548,
+    "gameScorePrior": 0.2238,
+    "floor": 0,
+    "ceiling": 69
+  },
+  "away": {
+    "features": [
+      "nhlShare",
+      "toi",
+      "isD",
+      "age",
+      "ageOver24",
+      "draftLog",
+      "undrafted",
+      "europe",
+      "career",
+      "twoAway",
+      "gameScorePg"
+    ],
+    "intercept": 167.2517,
+    "coef": [
+      3.2547,
+      -0.0173,
+      0.03,
+      -6.6969,
+      6.3786,
+      -0.8194,
+      0.5592,
+      -1.9371,
+      0.0141,
+      -0.9438,
+      7.3759
+    ],
+    "finishedMean": 0.5,
+    "gameScorePrior": 0.1727,
+    "floor": 0,
+    "ceiling": 80
+  },
+  "backtest": {
+    "method": "walk-forward, test seasons 20152016 → 20252026 (trained on earlier seasons); target = next-season NHL games scaled to 82",
+    "pipelineEmulator": {
+      "note": "v2 model GP emulated by a ridge on its GP signals, fitted on the committed board's modelGamesPlayed, then the committed isotonic curve",
+      "boardFit": {
+        "n": 986,
+        "meanActual": 50.87,
+        "rmse": 3.47,
+        "mae": 2.76,
+        "bias": 0
+      },
+      "splitSkatersFit": {
+        "n": 328,
+        "meanActual": 40.56,
+        "rmse": 3.31,
+        "mae": 2.68,
+        "bias": 0.48
+      }
+    },
+    "split": {
+      "segments": {
+        "all": {
+          "rule": {
+            "n": 3015,
+            "meanActual": 22.25,
+            "rmse": 22.3,
+            "mae": 17.52,
+            "bias": -0.17
+          },
+          "pipeline": {
+            "n": 3015,
+            "meanActual": 22.25,
+            "rmse": 26.7,
+            "mae": 20.72,
+            "bias": 0.18
+          },
+          "lag1": {
+            "n": 3015,
+            "meanActual": 22.25,
+            "rmse": 26.31,
+            "mae": 18.59,
+            "bias": -6.05
+          }
+        },
+        "finished the season in the NHL": {
+          "rule": {
+            "n": 1394,
+            "meanActual": 30.48,
+            "rmse": 24.08,
+            "mae": 19.9,
+            "bias": -0.53
+          },
+          "pipeline": {
+            "n": 1394,
+            "meanActual": 30.48,
+            "rmse": 28.28,
+            "mae": 22.16,
+            "bias": -3.36
+          },
+          "lag1": {
+            "n": 1394,
+            "meanActual": 30.48,
+            "rmse": 29.1,
+            "mae": 22.02,
+            "bias": -7.44
+          }
+        },
+        "sent down / out before the end": {
+          "rule": {
+            "n": 1619,
+            "meanActual": 15.2,
+            "rmse": 20.66,
+            "mae": 15.49,
+            "bias": 0.14
+          },
+          "pipeline": {
+            "n": 1619,
+            "meanActual": 15.2,
+            "rmse": 25.28,
+            "mae": 19.49,
+            "bias": 3.23
+          },
+          "lag1": {
+            "n": 1619,
+            "meanActual": 15.2,
+            "rmse": 23.66,
+            "mae": 15.66,
+            "bias": -4.85
+          }
+        },
+        "debut after NCAA / CHL / Europe": {
+          "rule": {
+            "n": 131,
+            "meanActual": 32.79,
+            "rmse": 26.76,
+            "mae": 21.93,
+            "bias": -1.67
+          },
+          "pipeline": {
+            "n": 131,
+            "meanActual": 32.79,
+            "rmse": 41.12,
+            "mae": 30.15,
+            "bias": -24.96
+          },
+          "lag1": {
+            "n": 131,
+            "meanActual": 32.79,
+            "rmse": 41.66,
+            "mae": 30.26,
+            "bias": -26.77
+          }
+        },
+        "…and finished in the NHL at 16+ min (Hutson-like)": {
+          "rule": {
+            "n": 26,
+            "meanActual": 43.95,
+            "rmse": 25.86,
+            "mae": 21.8,
+            "bias": -2.91
+          },
+          "pipeline": {
+            "n": 26,
+            "meanActual": 43.95,
+            "rmse": 48.86,
+            "mae": 40.22,
+            "bias": -37.6
+          },
+          "lag1": {
+            "n": 26,
+            "meanActual": 43.95,
+            "rmse": 49.61,
+            "mae": 40.56,
+            "bias": -38.41
+          }
+        },
+        "AHL / ECHL call-up": {
+          "rule": {
+            "n": 2868,
+            "meanActual": 21.84,
+            "rmse": 22.07,
+            "mae": 17.33,
+            "bias": -0.11
+          },
+          "pipeline": {
+            "n": 2868,
+            "meanActual": 21.84,
+            "rmse": 25.83,
+            "mae": 20.25,
+            "bias": 1.23
+          },
+          "lag1": {
+            "n": 2868,
+            "meanActual": 21.84,
+            "rmse": 25.39,
+            "mae": 18.06,
+            "bias": -5.15
+          }
+        },
+        "NHL games < 10": {
+          "rule": {
+            "n": 1487,
+            "meanActual": 14.59,
+            "rmse": 20.56,
+            "mae": 15.16,
+            "bias": 0.47
+          },
+          "pipeline": {
+            "n": 1487,
+            "meanActual": 14.59,
+            "rmse": 27.22,
+            "mae": 18.97,
+            "bias": -2.66
+          },
+          "lag1": {
+            "n": 1487,
+            "meanActual": 14.59,
+            "rmse": 25.1,
+            "mae": 14.35,
+            "bias": -10.56
+          }
+        },
+        "NHL games 40+": {
+          "rule": {
+            "n": 343,
+            "meanActual": 46.71,
+            "rmse": 24.57,
+            "mae": 20.97,
+            "bias": -0.56
+          },
+          "pipeline": {
+            "n": 343,
+            "meanActual": 46.71,
+            "rmse": 28.29,
+            "mae": 23.06,
+            "bias": 5.96
+          },
+          "lag1": {
+            "n": 343,
+            "meanActual": 46.71,
+            "rmse": 29.29,
+            "mae": 24.81,
+            "bias": 4.78
+          }
+        },
+        "age ≤ 22": {
+          "rule": {
+            "n": 797,
+            "meanActual": 34.34,
+            "rmse": 25.73,
+            "mae": 21.78,
+            "bias": -1.12
+          },
+          "pipeline": {
+            "n": 797,
+            "meanActual": 34.34,
+            "rmse": 31.91,
+            "mae": 23.5,
+            "bias": -11.96
+          },
+          "lag1": {
+            "n": 797,
+            "meanActual": 34.34,
+            "rmse": 33.45,
+            "mae": 24.49,
+            "bias": -17.61
+          }
+        },
+        "age 28+": {
+          "rule": {
+            "n": 619,
+            "meanActual": 10.34,
+            "rmse": 18.37,
+            "mae": 12.18,
+            "bias": -0.01
+          },
+          "pipeline": {
+            "n": 619,
+            "meanActual": 10.34,
+            "rmse": 24.25,
+            "mae": 20.99,
+            "bias": 12.7
+          },
+          "lag1": {
+            "n": 619,
+            "meanActual": 10.34,
+            "rmse": 21.5,
+            "mae": 15.28,
+            "bias": 4.43
+          }
+        }
+      },
+      "calibration": [
+        {
+          "band": "0-10",
+          "n": 667,
+          "predicted": 5.2,
+          "actual": 6.4
+        },
+        {
+          "band": "10-20",
+          "n": 920,
+          "predicted": 15.1,
+          "actual": 13
+        },
+        {
+          "band": "20-30",
+          "n": 686,
+          "predicted": 24.6,
+          "actual": 25.3
+        },
+        {
+          "band": "30-40",
+          "n": 353,
+          "predicted": 34.5,
+          "actual": 34.9
+        },
+        {
+          "band": "40-50",
+          "n": 198,
+          "predicted": 44.7,
+          "actual": 46.1
+        },
+        {
+          "band": "50-60",
+          "n": 111,
+          "predicted": 54.7,
+          "actual": 59.1
+        },
+        {
+          "band": "60-70",
+          "n": 52,
+          "predicted": 64.7,
+          "actual": 69.4
+        },
+        {
+          "band": "70-80",
+          "n": 28,
+          "predicted": 77,
+          "actual": 69.4
+        }
+      ],
+      "ceiling": 69
+    },
+    "away": {
+      "segments": {
+        "all": {
+          "rule": {
+            "n": 2187,
+            "meanActual": 2.4,
+            "rmse": 9.15,
+            "mae": 4.02,
+            "bias": 0.32
+          },
+          "pipeline": {
+            "n": 2187,
+            "meanActual": 2.4,
+            "rmse": 28.64,
+            "mae": 22.46,
+            "bias": 20.39
+          },
+          "lag1": {
+            "n": 2187,
+            "meanActual": 2.4,
+            "rmse": 28.41,
+            "mae": 19.05,
+            "bias": 16.54
+          }
+        },
+        "debut after NCAA / CHL / Europe": {
+          "rule": {
+            "n": 166,
+            "meanActual": 0.82,
+            "rmse": 5.84,
+            "mae": 1.83,
+            "bias": 0.65
+          },
+          "pipeline": {
+            "n": 166,
+            "meanActual": 0.82,
+            "rmse": 22.45,
+            "mae": 13.65,
+            "bias": 13.33
+          },
+          "lag1": {
+            "n": 166,
+            "meanActual": 0.82,
+            "rmse": 21.14,
+            "mae": 13.08,
+            "bias": 12.48
+          }
+        },
+        "AHL / ECHL call-up": {
+          "rule": {
+            "n": 1223,
+            "meanActual": 3.54,
+            "rmse": 10.41,
+            "mae": 5.49,
+            "bias": 0.2
+          },
+          "pipeline": {
+            "n": 1223,
+            "meanActual": 3.54,
+            "rmse": 22.74,
+            "mae": 17.39,
+            "bias": 14.01
+          },
+          "lag1": {
+            "n": 1223,
+            "meanActual": 3.54,
+            "rmse": 22.22,
+            "mae": 14.29,
+            "bias": 10.25
+          }
+        },
+        "NHL games < 10": {
+          "rule": {
+            "n": 1129,
+            "meanActual": 2.05,
+            "rmse": 7.85,
+            "mae": 3.57,
+            "bias": 0.53
+          },
+          "pipeline": {
+            "n": 1129,
+            "meanActual": 2.05,
+            "rmse": 18.95,
+            "mae": 13.39,
+            "bias": 10.65
+          },
+          "lag1": {
+            "n": 1129,
+            "meanActual": 2.05,
+            "rmse": 8.92,
+            "mae": 4.88,
+            "bias": 1.56
+          }
+        },
+        "NHL games 40+": {
+          "rule": {
+            "n": 418,
+            "meanActual": 2.57,
+            "rmse": 10.77,
+            "mae": 4.98,
+            "bias": 0.79
+          },
+          "pipeline": {
+            "n": 418,
+            "meanActual": 2.57,
+            "rmse": 49.59,
+            "mae": 47,
+            "bias": 46.42
+          },
+          "lag1": {
+            "n": 418,
+            "meanActual": 2.57,
+            "rmse": 56.74,
+            "mae": 54.94,
+            "bias": 54.42
+          }
+        },
+        "age ≤ 22": {
+          "rule": {
+            "n": 68,
+            "meanActual": 17.08,
+            "rmse": 23.58,
+            "mae": 17.96,
+            "bias": -3.4
+          },
+          "pipeline": {
+            "n": 68,
+            "meanActual": 17.08,
+            "rmse": 26.09,
+            "mae": 16.92,
+            "bias": -6.26
+          },
+          "lag1": {
+            "n": 68,
+            "meanActual": 17.08,
+            "rmse": 26.15,
+            "mae": 16.23,
+            "bias": -8.25
+          }
+        },
+        "age 28+": {
+          "rule": {
+            "n": 1140,
+            "meanActual": 0.99,
+            "rmse": 5.81,
+            "mae": 2.14,
+            "bias": 0.47
+          },
+          "pipeline": {
+            "n": 1140,
+            "meanActual": 0.99,
+            "rmse": 32.53,
+            "mae": 27.34,
+            "bias": 26.87
+          },
+          "lag1": {
+            "n": 1140,
+            "meanActual": 0.99,
+            "rmse": 33.16,
+            "mae": 23.72,
+            "bias": 22.89
+          }
+        }
+      },
+      "calibration": [
+        {
+          "band": "0-10",
+          "n": 2123,
+          "predicted": 2.4,
+          "actual": 1.9
+        },
+        {
+          "band": "10-20",
+          "n": 59,
+          "predicted": 13.5,
+          "actual": 16.6
+        },
+        {
+          "band": "20-30",
+          "n": 5,
+          "predicted": 24,
+          "actual": 39.2
+        }
+      ],
+      "ceiling": 80
+    }
+  }
+}
