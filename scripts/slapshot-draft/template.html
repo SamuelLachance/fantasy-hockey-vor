@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Repêchage Slapshot en direct | Fantasy Hockey VOR</title>
+<style>
+  :root { color-scheme: dark; --bg:#020617; --card:#0f172a; --line:rgba(255,255,255,.08); --txt:#e2e8f0; --mut:#94a3b8; --acc:#22d3ee; --warn:#fbbf24; --ok:#34d399; --bad:#fb7185; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  a { color:var(--acc); }
+  header { border-bottom:1px solid var(--line); background:#0b1220; }
+  .wrap { max-width:120rem; margin:0 auto; padding:12px 16px; }
+  .top { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:baseline; }
+  h1 { font-size:20px; margin:4px 0; }
+  .mut { color:var(--mut); }
+  .grid { display:grid; gap:16px; grid-template-columns:minmax(0,1fr); }
+  @media (min-width:1100px) { .grid.main { grid-template-columns:minmax(0,1fr) 24rem; align-items:start; } }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .card h2 { font-size:15px; margin:0 0 8px; }
+  .status { display:flex; flex-wrap:wrap; gap:8px 20px; }
+  .big { font-size:18px; font-weight:700; }
+  .clock { color:var(--warn); }
+  .mine { color:var(--ok); }
+  .tools { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:8px; }
+  button, input, select { font:inherit; color:var(--txt); background:#111c33; border:1px solid var(--line); border-radius:8px; padding:6px 10px; min-height:36px; }
+  button[aria-pressed="true"] { border-color:var(--acc); color:var(--acc); }
+  input[type=search] { min-width:14rem; flex:1 1 14rem; }
+  .scroll { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; }
+  th, td { padding:6px 8px; border-top:1px solid var(--line); text-align:left; white-space:nowrap; }
+  th { color:var(--mut); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; position:sticky; top:0; background:var(--card); }
+  td.n, th.n { text-align:right; font-variant-numeric:tabular-nums; }
+  tr.gone td { color:#64748b; text-decoration:line-through; }
+  .pos { display:inline-block; min-width:2.2em; text-align:center; border-radius:6px; padding:0 4px; font-size:12px; font-weight:700; background:#1e293b; }
+  .pos-G { color:#f0abfc; } .pos-D { color:#fbbf24; } .pos-C { color:#67e8f9; } .pos-LW { color:#86efac; } .pos-RW { color:#a5b4fc; }
+  .need { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; text-align:center; }
+  .need div { background:#111c33; border-radius:8px; padding:6px 2px; }
+  .need b { display:block; font-size:16px; }
+  ul { margin:0; padding-left:18px; }
+  li { margin:2px 0; }
+  .err { color:var(--bad); }
+  .tag { font-size:11px; color:var(--warn); margin-left:4px; }
+  .ph { font-size:12px; }
+  .ph-prospect { color:#c4b5fd; } .ph-rising, .ph-entering_prime { color:#86efac; } .ph-prime { color:#67e8f9; } .ph-plateau { color:#cbd5e1; } .ph-declining { color:#fbbf24; } .ph-late_career { color:#fb7185; }
+  .up { color:var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap top">
+    <a href="./">← Mes ligues</a>
+    <a href="./ligues/slapshot/repechage">Onglet Repêchage du site (tableau complet, masse salariale par saison, méthode)</a>
+    <span class="mut">Slapshot Fantasy League · Fantrax · dynastie · 32 équipes · points · plafond __CAP__ M$</span>
+  </div>
+</header>
+<main class="wrap">
+  <h1>Repêchage en direct : Vegas Golden Knights</h1>
+  <p class="mut" id="sync">Lecture du repêchage sur Fantrax…</p>
+
+  <section class="card" aria-labelledby="st-h" style="margin-bottom:16px">
+    <h2 id="st-h">Où en est le repêchage</h2>
+    <div class="status" aria-live="polite">
+      <div><span class="mut">Choix faits</span><div class="big" id="made">—</div></div>
+      <div><span class="mut">Au tour de</span><div class="big clock" id="clock">—</div></div>
+      <div><span class="mut">Mon prochain choix</span><div class="big mine" id="next">—</div></div>
+      <div><span class="mut">Mes choix suivants</span><div id="later">—</div></div>
+    </div>
+  </section>
+
+  <div class="grid main">
+    <section class="card" aria-labelledby="av-h">
+      <h2 id="av-h">Meilleurs disponibles</h2>
+      <div class="tools">
+        <input type="search" id="q" placeholder="Chercher un joueur ou une équipe LNH" aria-label="Chercher un joueur ou une équipe LNH">
+        <span role="group" aria-label="Position" id="posf"></span>
+      </div>
+      <div class="tools">
+        <label class="mut">Horizon
+          <select id="mode">
+            <option value="B">Équilibré</option>
+            <option value="L">Long terme</option>
+            <option value="W">Gagner maintenant</option>
+          </select>
+        </label>
+        <label class="mut">Trier par
+          <select id="sort">
+            <option value="d">Valeur dynastie</option>
+            <option value="v">VOR cette saison</option>
+            <option value="p">Points cette saison</option>
+            <option value="r">Valeur dynastie par M$</option>
+            <option value="c">Salaire (le moins cher)</option>
+          </select>
+        </label>
+        <label class="mut">Type
+          <select id="kind">
+            <option value="">Tous</option>
+            <option value="nhl">Joueurs LNH</option>
+            <option value="prospect">Espoirs</option>
+          </select>
+        </label>
+        <label class="mut">Salaire 26-27 max (M$) <input type="number" id="maxcap" min="0" step="0.5" style="width:6rem"></label>
+        <button type="button" id="showgone" aria-pressed="false">Voir les pris</button>
+        <button type="button" id="refresh">Actualiser</button>
+      </div>
+      <div class="scroll">
+        <table>
+          <caption class="mut" style="text-align:left;padding-bottom:6px" id="cap"></caption>
+          <thead><tr>
+            <th scope="col">#</th><th scope="col">Joueur</th><th scope="col">Éq.</th><th scope="col">Pos</th>
+            <th scope="col" class="n">Valeur dyn.</th><th scope="col" class="n">Rang dyn.</th><th scope="col">Phase</th>
+            <th scope="col" class="n">Pts saison</th><th scope="col" class="n">VOR</th>
+            <th scope="col" class="n">Salaire 26-27</th><th scope="col" class="n">27-28</th><th scope="col" class="n">Fin</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="mut" style="margin:8px 0 0">
+        Valeur dynastie : points Slapshot attendus au-dessus du remplaçant sur 12 saisons (vieillissement, progression des jeunes calibrée sur l'historique LNH, arrivée des espoirs), moins le coût de son salaire dans le plafond, qui grimpe chaque saison. Un joueur peut être caché dans les mineures (0 point, 0 salaire) ou libéré, donc un mauvais contrat coûte au plus une place.
+        Pts saison : barème de la ligue (B 3,5 · P 2,5 · PPP 0,5 · BCN 1 · Tirs 0,25 ; gardiens V 3 · Arrêts 0,25 · BC −1 · Blanchissage 5 · P 3). Mises en échec et tirs bloqués : 0 (mis à 0 à chaque position).
+        Salaire : impact réel sur le plafond LNH, saison par saison (une prolongation compte à partir de sa première saison ; après la fin du contrat, le prochain contrat projeté) ; en jaune, un salaire qui change en 27-28. Mêmes données que l’onglet Repêchage du site (__BUILT__).
+      </p>
+    </section>
+
+    <aside class="grid" style="grid-template-columns:minmax(0,1fr)">
+      <section class="card" aria-labelledby="me-h">
+        <h2 id="me-h">Mon équipe</h2>
+        <p id="capline" style="margin:0 0 8px"></p>
+        <div class="need" id="need"></div>
+        <ul id="mine" style="margin-top:10px"></ul>
+      </section>
+      <section class="card" aria-labelledby="best-h">
+        <h2 id="best-h">Meilleur disponible par position</h2>
+        <ul id="best"></ul>
+      </section>
+    </aside>
+  </div>
+</main>
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(() => {
+  "use strict";
+  const LEAGUE = "glxjunc7mtxdqi8x";
+  const MY = "lz1ka65mmuh16mtf";
+  const SLOTS = { C: 4, LW: 4, RW: 4, D: 6, G: 2 };
+  const PHASE_FR = { prospect: "espoir", rising: "en progression", entering_prime: "entre dans son prime", prime: "dans son prime", plateau: "plateau", declining: "en déclin", late_career: "fin de carrière" };
+  const D = JSON.parse(document.getElementById("data").textContent);
+  const byId = new Map(D.board.map((p) => [p.i, p]));
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const posTags = (e) => e.split("/").map((x) => `<span class="pos pos-${x}">${x}</span>`).join(" ");
+  const num = (x, d = 0) => (x == null ? "—" : Number(x).toFixed(d).replace(".", ","));
+  const money = (m) => (m == null ? "—" : `${Number(m).toFixed(2).replace(".", ",")} M$`);
+  const dyn = (p) => p["d" + $("mode").value];
+  const rank = (p) => ($("mode").value === "L" ? p.rL : p.rB);
+  const fold = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+  let unavailable = new Set();
+  let ownerOf = new Map();
+  let mineStatus = new Map(); // my players -> Fantrax status (ACTIVE, RESERVE, MINORS, INJURED_RESERVE, "PICK")
+  let pos = "ALL";
+  let showGone = false;
+
+  const posf = $("posf");
+  for (const p of ["ALL", "C", "LW", "RW", "D", "G"]) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = p === "ALL" ? "Tous" : p;
+    b.setAttribute("aria-pressed", String(p === pos));
+    b.addEventListener("click", () => { pos = p; for (const x of posf.children) x.setAttribute("aria-pressed", String(x === b)); render(); });
+    posf.appendChild(b);
+  }
+  for (const id of ["q", "mode", "sort", "kind", "maxcap"]) $(id).addEventListener(id === "q" || id === "maxcap" ? "input" : "change", render);
+  $("showgone").addEventListener("click", (e) => { showGone = !showGone; e.currentTarget.setAttribute("aria-pressed", String(showGone)); render(); });
+  $("refresh").addEventListener("click", () => load());
+
+  const perM = (p) => (dyn(p) == null || p.c == null ? null : dyn(p) / Math.max(p.c, 0.85));
+  const SORTS = {
+    d: (a, b) => (dyn(b) ?? -1e9) - (dyn(a) ?? -1e9),
+    v: (a, b) => (b.v ?? -1e9) - (a.v ?? -1e9),
+    p: (a, b) => (b.p ?? -1e9) - (a.p ?? -1e9),
+    r: (a, b) => (perM(b) ?? -1e9) - (perM(a) ?? -1e9),
+    c: (a, b) => (a.c ?? 1e9) - (b.c ?? 1e9) || (dyn(b) ?? -1e9) - (dyn(a) ?? -1e9),
+  };
+  const SORT_FR = { d: "valeur dynastie", v: "VOR cette saison", p: "points cette saison", r: "valeur dynastie par M$", c: "salaire croissant" };
+  const MODE_FR = { B: "équilibré", L: "long terme", W: "gagner maintenant" };
+
+  function render() {
+    const q = fold($("q").value.trim());
+    const kind = $("kind").value;
+    const maxCap = parseFloat($("maxcap").value);
+    const list = D.board.slice().sort(SORTS[$("sort").value] || SORTS.d);
+    const rows = [];
+    let shown = 0;
+    for (const p of list) {
+      const gone = unavailable.has(p.i);
+      if (gone && !showGone) continue;
+      if (pos !== "ALL" && !p.e.split("/").includes(pos)) continue;
+      if (kind === "prospect" && p.ph !== "prospect") continue;
+      if (kind === "nhl" && p.ph === "prospect") continue;
+      if (Number.isFinite(maxCap) && (p.c == null || p.c > maxCap)) continue;
+      if (q && !fold(p.n + " " + p.t).includes(q)) continue;
+      shown++;
+      if (rows.length >= 300) continue;
+      const who = gone ? (ownerOf.get(p.i) || "pris") : "";
+      const next = p.c4 && p.c4.length > 1 ? p.c4[1] : null;
+      const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.05;
+      rows.push(`<tr class="${gone ? "gone" : ""}"><td class="n">${shown}</td>`
+        + `<td>${esc(p.n)}${who ? `<span class="tag">${esc(who)}</span>` : ""}</td><td>${esc(p.t)}</td><td>${posTags(p.e)}</td>`
+        + `<td class="n"><b>${num(dyn(p))}</b></td><td class="n">${rank(p) ?? "—"}</td>`
+        + `<td class="ph ph-${esc(p.ph || "")}">${esc(PHASE_FR[p.ph] || "—")}</td>`
+        + `<td class="n">${num(p.p)}</td><td class="n">${num(p.v)}</td>`
+        + `<td class="n">${money(p.c)}</td><td class="n ${changes ? "up" : ""}">${next == null ? "—" : money(next)}</td><td class="n">${p.x ?? "—"}</td></tr>`);
+    }
+    $("rows").innerHTML = rows.join("") || `<tr><td colspan="12" class="mut">Aucun joueur ne correspond.</td></tr>`;
+    $("cap").textContent = `${shown} joueurs${shown > 300 ? " (300 premiers affichés)" : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
+
+    // best available per position, by dynasty value in the chosen horizon
+    const best = {};
+    for (const p of D.board.slice().sort(SORTS.d)) {
+      if (unavailable.has(p.i) || dyn(p) == null) continue;
+      for (const e of p.e.split("/")) if (!best[e]) best[e] = p;
+    }
+    $("best").innerHTML = Object.keys(SLOTS).map((k) => best[k]
+      ? `<li>${posTags(k)} ${esc(best[k].n)} <span class="mut">(${esc(best[k].t)}) · ${esc(PHASE_FR[best[k].ph] || "")}</span> · dyn. <b>${num(dyn(best[k]))}</b> · ${money(best[k].c)}</li>`
+      : `<li>${posTags(k)} <span class="mut">aucun</span></li>`).join("");
+
+    // my team
+    const mine = [...mineStatus.keys()].map((id) => byId.get(id) || { i: id, n: "Joueur " + id, t: "", e: "", c: null, ph: "" });
+    const active = mine.filter((p) => { const s = mineStatus.get(p.i); return s !== "MINORS" && s !== "INJURED_RESERVE"; });
+    const count = Object.fromEntries(Object.keys(SLOTS).map((k) => [k, 0]));
+    for (const p of active) {
+      const opts = p.e.split("/").filter((e) => SLOTS[e]);
+      opts.sort((a, b) => count[a] / SLOTS[a] - count[b] / SLOTS[b]);
+      if (opts[0]) count[opts[0]]++;
+    }
+    $("need").innerHTML = Object.keys(SLOTS).map((k) => {
+      const miss = SLOTS[k] - count[k];
+      return `<div><span class="pos pos-${k}">${k}</span><b class="${miss > 0 ? "clock" : "mine"}">${count[k]}/${SLOTS[k]}</b></div>`;
+    }).join("");
+    const used = active.reduce((s, p) => s + (p.c || 0), 0);
+    const left = D.cap - used;
+    const spots = Math.max(0, 23 - active.length);
+    $("capline").innerHTML = `Plafond (actifs + réserve) : <b>${money(used)}</b> / ${D.cap} M$ · reste <b class="${left < 0 ? "err" : "mine"}">${money(left)}</b>`
+      + (spots ? ` <span class="mut">(≈ ${money(left / spots)} par poste pour ${spots} postes libres sur 23)</span>` : "")
+      + `<br><span class="mut">Les mineures et la liste des blessés ne comptent pas dans le plafond.</span>`;
+    const STATUS_FR = { MINORS: "mineures", INJURED_RESERVE: "blessé", RESERVE: "réserve", ACTIVE: "actif", PICK: "repêché" };
+    $("mine").innerHTML = mine.sort((a, b) => (dyn(b) ?? -1e9) - (dyn(a) ?? -1e9)).map((p) =>
+      `<li>${posTags(p.e)} ${esc(p.n)} <span class="mut">· ${esc(STATUS_FR[mineStatus.get(p.i)] || "")} · dyn. ${num(dyn(p))} · ${money(p.c)}</span></li>`).join("")
+      || `<li class="mut">Aucun joueur pour l'instant.</li>`;
+  }
+
+  async function getJson(url) {
+    const r = await fetch(url, { credentials: "omit", cache: "no-store" });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  async function load() {
+    try {
+      const base = "https://www.fantrax.com/fxea/general/";
+      const [draft, rosters] = await Promise.all([
+        getJson(`${base}getDraftResults?leagueId=${LEAGUE}`),
+        getJson(`${base}getTeamRosters?leagueId=${LEAGUE}`),
+      ]);
+      const picks = (draft.draftPicks || []).slice().sort((a, b) => a.pick - b.pick);
+      const un = new Set();
+      const owner = new Map();
+      const mine = new Map();
+      for (const [tid, t] of Object.entries(rosters.rosters || {})) {
+        for (const it of t.rosterItems || []) {
+          un.add(it.id);
+          owner.set(it.id, D.teams[tid] || t.teamName || "pris");
+          if (tid === MY) mine.set(it.id, it.status || "ACTIVE");
+        }
+      }
+      for (const p of picks) {
+        if (!p.playerId) continue;
+        un.add(p.playerId);
+        owner.set(p.playerId, `n° ${p.pick} · ${D.teams[p.teamId] || "pris"}`);
+        if (p.teamId === MY && !mine.has(p.playerId)) mine.set(p.playerId, "PICK");
+      }
+      unavailable = un; ownerOf = owner; mineStatus = mine;
+
+      const made = picks.filter((p) => p.playerId).length;
+      const open = picks.filter((p) => !p.playerId);
+      const cur = open[0];
+      const minePicks = open.filter((p) => p.teamId === MY);
+      $("made").textContent = `${made} / ${picks.length}`;
+      $("clock").textContent = cur ? `${D.teams[cur.teamId] || "?"} (n° ${cur.pick}, ronde ${cur.round})` : "Repêchage terminé";
+      const onClock = cur && minePicks[0] && minePicks[0].pick === cur.pick;
+      if (minePicks[0]) {
+        const away = cur ? minePicks[0].pick - cur.pick : 0;
+        $("next").textContent = onClock ? `n° ${minePicks[0].pick} : C'EST À TOI` : `n° ${minePicks[0].pick} (dans ${away} choix)`;
+      } else $("next").textContent = "aucun";
+      $("later").textContent = minePicks.slice(1, 7).map((p) => `n° ${p.pick}`).join(" · ") || "—";
+      document.title = onClock ? "À TOI ! Repêchage Slapshot | Fantasy Hockey VOR" : "Repêchage Slapshot en direct | Fantasy Hockey VOR";
+      $("sync").textContent = `Lu en direct sur Fantrax à ${new Date().toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · actualisation automatique toutes les 20 s · valeurs dynastie calculées le ${new Date(D.dynastyBuiltAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}.`;
+      $("sync").classList.remove("err");
+    } catch (e) {
+      $("sync").textContent = `Lecture Fantrax impossible (${e.message}). Nouvel essai dans 20 s.`;
+      $("sync").classList.add("err");
+    }
+    render();
+  }
+
+  render();
+  load();
+  setInterval(() => { if (!document.hidden) load(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+})();
+</script>
+</body>
+</html>
