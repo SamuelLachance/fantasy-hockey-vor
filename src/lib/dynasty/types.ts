@@ -257,6 +257,11 @@ export interface DynastyRecord {
     leaguePick?: number;
     rank?: number;
     dvMkt?: number;
+    /**
+     * Market weight, 3 dp: the segment's, or for a blended route the two
+     * sides' mixed by their shares ((1 − nhlShare) × the prospect segment's
+     * for a skater, whose NHL side takes none).
+     */
     w: number;
     gap?: number;
   };

@@ -301,6 +301,30 @@ const gamesOf = (projGp: number) => (params.games.seasonGames * projGp) / params
   const t = applyMarket(params, tilted).get("p1")!;
   const k = t.dv.balanced / 10;
   assert(k > 1 && near(t.dv.winNow, 6 * k, 1e-9) && near(t.dv.longTerm, 20 * k, 1e-9), "every mode moves by the balanced factor");
+  // blended route: the two sides' weights mixed by their shares (the NHL
+  // side of a skater takes none), on the prospect side's ladder with his
+  // whole value, whichever side is likelier
+  const wPn = params.market.weights.prospect_nhl!;
+  const blended = (share: number): MarketMember => ({
+    id: "q1",
+    pool: "P",
+    seg: "prospect_nhl",
+    ros: 50,
+    dvModel: dv(40),
+    nhl: { share, seg: "young_nhl", pool: "S" },
+  });
+  const q2: MarketMember = { id: "q2", pool: "P", seg: "prospect_nhl", ros: 99, dvModel: dv(30) };
+  // ladder: Ros q2 99, q1 50; values 40 (q1's whole value), 30 → q1 anchored on 30, q2 on 40
+  for (const share of [0.3, 0.7]) {
+    const q = applyMarket(params, [blended(share), q2]);
+    assert(near(q.get("q1")!.w, (1 - share) * wPn, 1e-12), `blended: weight (1 − P) × prospect segment at P ${share} (${q.get("q1")!.w})`);
+    assert(near(q.get("q1")!.dv.balanced, blend(params, 40, 30, (1 - share) * wPn), 1e-9), `blended: on the prospect ladder at P ${share}`);
+    assert(near(q.get("q2")!.dv.balanced, blend(params, 30, 40, wPn), 1e-9), `the ladder carries the blended player's value at P ${share}`);
+  }
+  const [lo, hi] = [0.49, 0.51].map((share) => applyMarket(params, [blended(share), q2]).get("q1")!.dv.balanced);
+  assert(Math.abs(hi! - lo!) < 0.005 * lo!, `the weight moves with P, no step at 0.5 (${lo!.toFixed(3)} → ${hi!.toFixed(3)})`);
+  const allNhl = applyMarket(params, [blended(1), q2]).get("q1")!;
+  assert(allNhl.dv.balanced === 40 && allNhl.w === 0, "P = 1 (all NHL): the model value");
 }
 
 // ---- end to end on a small league + 12. explanation

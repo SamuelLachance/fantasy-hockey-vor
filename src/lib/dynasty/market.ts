@@ -22,6 +22,16 @@
  * (P: prospect path or minors-eligible now, by Ros%; G: other goalies, by
  * ADP; S: everyone else, by ADP): they are information for the board and the
  * sentence ("le marché le paie plus cher"), never an anchor.
+ *
+ * Blended route (segment.ts, a late signing or call-up valued on both sides
+ * of the 40-game cut): the weight mixes the two sides' weights by their
+ * shares, (1 − P(40+ games)) · w(prospect segment) + P(40+ games) ·
+ * w(NHL segment) — 0.25 · (1 − P) for a skater, whose NHL side takes none.
+ * He sits on his prospect side's ladder (and pool) whatever the likelier
+ * side, with his whole value: Ros% prices the whole player. Taking the
+ * likelier side's segment flipped the weight 0.25 → 0 when the projection
+ * crossed 40 games, and the published value jumped (Isaac Howard 4.7 → 1.3
+ * for two more projected games) while the model barely moved.
  */
 import type { DynastyParams } from "./params";
 import { MODES, type Group, type MarketSeg, type Mode } from "./types";
@@ -37,6 +47,11 @@ export interface MarketMember {
   ros?: number;
   adp?: number;
   dvModel: Record<Mode, number>;
+  /**
+   * Blended route: the NHL side's share of the value (P(40+ games)) and its
+   * segment and pool; `seg` and `pool` are the prospect side's.
+   */
+  nhl?: { share: number; seg: MarketSeg; pool: MarketPool };
 }
 
 export interface MarketOutcome {
@@ -45,6 +60,7 @@ export interface MarketOutcome {
   rank?: number;
   /** Model DV at the anchor (balanced); pool-wide quantile when not anchored (information). */
   dvMkt?: number;
+  /** Market weight (a blended player: the two sides' weights mixed by their shares). */
   w: number;
   /** Market rank − model rank within the pool (negative: the market pays more). */
   gap?: number;
@@ -89,10 +105,15 @@ function ladderOf(m: Pick<MarketMember, "pool" | "seg" | "g">): { segs: readonly
   return null;
 }
 
-/** Weight of the market for a segment (0 for pool S and when disabled). */
-export function marketWeight(p: DynastyParams, m: Pick<MarketMember, "pool" | "seg">, enabled = p.market.enabled): number {
-  if (!enabled || m.pool === "S") return 0;
-  return p.market.weights[m.seg] ?? 0;
+/**
+ * Weight of the market for a segment (0 for pool S and when disabled); a
+ * blended player's mixes his two sides' by their shares.
+ */
+export function marketWeight(p: DynastyParams, m: Pick<MarketMember, "pool" | "seg" | "nhl">, enabled = p.market.enabled): number {
+  const one = (pool: MarketPool, seg: MarketSeg) => (!enabled || pool === "S" ? 0 : (p.market.weights[seg] ?? 0));
+  if (!m.nhl) return one(m.pool, m.seg);
+  const s = Math.max(0, Math.min(1, m.nhl.share));
+  return (1 - s) * one(m.pool, m.seg) + s * one(m.nhl.pool, m.nhl.seg);
 }
 
 /** Posterior of one value: u = ln(DV + off), capped move when w < 0.5. */

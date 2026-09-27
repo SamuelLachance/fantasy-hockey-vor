@@ -19,7 +19,8 @@
  * P(40+ games) = Φ((GP − 40) / gpSd) (≈ 22 GP, the rule's walk-forward
  * spread). A hard cut on that point estimate moved values 4–6× on a game
  * or two (Konsta Helenius, 40.5 raw games: NHL route 123, prospect 30).
- * The route shown (path, phase, segment) is the likelier one.
+ * The route shown (path, phase, segment) is the likelier one; the market
+ * layer mixes the two sides' weights by the same shares (market.ts).
  *
  * Year 0 (audit 2026-09-25): a current injury, IR stint or suspension trims
  * season 0 only (`avail0`); the goalie start share is his depth-chart share

@@ -8,8 +8,9 @@
  * simulates both sides and mixes the paths, segment.ts) → an ungated pass
  * sets the keeper-slot cost K and the keep-index gate → one gated
  * simulation per player (4,000 paths × 12 seasons) → values for every mode
- * → the market layer on thin segments → ranks, keeper status, eligibility
- * summary, expected keepers per cutdown.
+ * → the market layer on thin segments (a blended player: the two sides'
+ * weights mixed, market.ts) → ranks, keeper status, eligibility summary,
+ * expected keepers per cutdown.
  */
 import { makeLevel } from "./aging";
 import { birthdayInWindow, cutdownAge, isEligible } from "./eligibility";
@@ -159,12 +160,30 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
   }
 
   // ---- market layer
-  const poolOf = (r: Routed): MarketPool => (r.path === "prospect" || r.eligNow ? "P" : r.g === "G" ? "G" : "S");
+  // A blended player sits on his prospect side's segment and pool, whatever
+  // the likelier side, and his weight mixes both sides' (market.ts): the
+  // likelier side's segment flipped the weight at 40 games.
+  const sidePool = (r: Routed): MarketPool => (r.path === "prospect" || r.eligNow ? "P" : r.g === "G" ? "G" : "S");
+  const sides = (r: Routed): { prospect: Routed; nhl: Routed } | null => {
+    const alt = otherSide.get(r.input.id);
+    return alt ? (r.route === "nhl" ? { prospect: alt, nhl: r } : { prospect: r, nhl: alt }) : null;
+  };
+  const poolOf = (r: Routed): MarketPool => sidePool(sides(r)?.prospect ?? r);
   const members: MarketMember[] = routed.map((r) => {
     const v = values.get(r.input.id);
     const dvModel = {} as Record<Mode, number>;
     for (const m of MODES) dvModel[m] = v ? v.dv[m] : 0;
-    return { id: r.input.id, pool: poolOf(r), seg: r.seg, g: r.g, ros: r.input.ros, adp: r.input.adp, dvModel };
+    const both = sides(r);
+    return {
+      id: r.input.id,
+      pool: poolOf(r),
+      seg: (both?.prospect ?? r).seg,
+      g: r.g,
+      ros: r.input.ros,
+      adp: r.input.adp,
+      dvModel,
+      ...(both ? { nhl: { share: r.nhlShare!, seg: both.nhl.seg, pool: sidePool(both.nhl) } } : {}),
+    };
   });
   const market = applyMarket(p, members, opts.market ?? p.market.enabled);
 
@@ -302,7 +321,7 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
         ...(r.input.leaguePick != null ? { leaguePick: r.input.leaguePick } : {}),
         ...(mk.rank != null ? { rank: mk.rank } : {}),
         ...(mk.dvMkt != null ? { dvMkt: r1(mk.dvMkt) } : {}),
-        w: mk.w,
+        w: r3(mk.w),
         ...(mk.gap != null && r.path !== "fringe" ? { gap: mk.gap } : {}),
       },
       ...(flags.size ? { flags: [...flags].sort() } : {}),

@@ -338,6 +338,33 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(c41 > 1.5 * c39, `hard cut: 39 → 41 games jumps (${c39.toFixed(1)} → ${c41.toFixed(1)})`);
   assert(b41 > b39 && b41 < 1.15 * b39, `blended: 39 → 41 games moves a little (${b39.toFixed(1)} → ${b41.toFixed(1)})`);
   assert(b39 > c39 && b41 < c41, "the blend sits between the two routes");
+
+  // The market layer too: the weight mixes the two sides' by their shares
+  // (0.25 × P(prospect) for a skater), on the prospect ladder on both sides
+  // of 40 (the shown side's segment flipped the weight 0.25 → 0 at 40 games
+  // and the published value jumped while the model barely moved).
+  const ladder = (id: string, ros: number, mu: number): DynastyInput =>
+    input({ id, e: "D,Skt", birthDate: "2006-01-01", careerGp: 5, ros, prospect: rec({ pos: "D", nhlGP: 5, pMake: 0.9, fpgIfMake: { mu, sd: 0.6 } }) });
+  const priced = (gp: number) =>
+    buildDynasty(
+      {
+        // the crowd's last pick of the segment: anchored at the bottom of the prospect ladder
+        players: [{ ...signing(gp, 22), ros: 5 }, ladder("l1", 60, 3.6), ladder("l2", 30, 3), ladder("l3", 10, 2.4)],
+        meta: { valuesFetchedAt: "", stateFetchedAt: "", projectionsAt: "", prospectsBuiltAt: "" },
+      },
+      params,
+      { paths: 2000, K: 40, market: true },
+    ).all.signing!;
+  const [m39, m41] = [priced(39), priced(41)];
+  const wSeg = params.market.weights.prospect_nhl!;
+  for (const r of [m39, m41]) {
+    assert(near(r.market.w, wSeg * (1 - r.nhlShare!), 0.001), `market weight = prospect segment × prospect share on the ${r.path} side (${r.market.w})`);
+    assert(r.dvModel != null && r.dv.balanced < r.dvModel.balanced, `the market pulls the value down on the ${r.path} side (${r.dvModel?.balanced} → ${r.dv.balanced})`);
+  }
+  assert(m39.path === "prospect" && m41.path === "nhl", "the shown side flips at 40");
+  const factor = (r: typeof m39) => r.dv.balanced / (r.dvModel ?? r.dv).balanced;
+  assert(Math.abs(Math.log(factor(m41) / factor(m39))) < 0.03, `market factor continuous across 40 (${factor(m39).toFixed(3)} → ${factor(m41).toFixed(3)})`);
+  assert(m41.dv.balanced > m39.dv.balanced && m41.dv.balanced < 1.15 * m39.dv.balanced, `published: 39 → 41 games moves a little (${m39.dv.balanced} → ${m41.dv.balanced})`);
 }
 
 // ---- 6. Draft-slot prior
