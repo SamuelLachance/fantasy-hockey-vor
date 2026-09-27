@@ -56,6 +56,23 @@ export interface BuiltBoard {
 export const BOARD_DEPTH = 400;
 export const BOARD_MIN_GOALIES = 50;
 
+/**
+ * Picks a draft of this league makes: teams × rounds (216 for Light the Lamp).
+ * A player the market takes inside that range (Fantrax ADP) is a plausible
+ * pick whatever the engine thinks of him in this league's categories, so
+ * he stays on the board past BOARD_DEPTH at his engine rank, like the
+ * goalie floor: the Joueurs tab lists him and the draft helper can mark him
+ * when someone takes him (Cole Hutson, ADP 113, engine rank past 400 on 46
+ * projected games; Victor Hedman, ADP 108).
+ */
+export function marketPickLimit(profile: { teams: number; draft: { rounds: number } }): number {
+  return profile.teams * profile.draft.rounds;
+}
+
+export function isMarketPick(adp: number | undefined, limit: number): boolean {
+  return adp !== undefined && Number.isFinite(adp) && adp <= limit;
+}
+
 function round(x: number, digits: number): number {
   if (!Number.isFinite(x)) return 0;
   const f = 10 ** digits;
@@ -117,9 +134,9 @@ const RANK_KEYS: readonly BoardPosition[] = ["C", "LW", "RW", "F", "D", "G"];
  *
  * Ranks are slots, not indexes: the k-th row of the new order takes the
  * k-th smallest engine rank (likewise per position). The board is 1..400
- * with no gap today, so that is `i + 1`; but the goalie floor can keep a
- * goalie ranked beyond `BOARD_DEPTH` (437), and he must keep 437 — the
- * pick-availability odds read the rank of a player without ADP.
+ * with no gap, then the goalie floor and the market picks past
+ * `BOARD_DEPTH` at their own engine ranks (a goalie at 437 must keep 437 —
+ * the pick-availability odds read the rank of a player without ADP).
  */
 export function adjustBoardPlayers(
   players: readonly DraftBoardPlayer[],
@@ -189,13 +206,14 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
   const goalieCats = profile.categories.goalie;
 
   let goalies = 0;
+  const pickLimit = marketPickLimit(profile);
   const kept = vor.players.filter((p) => {
     if (p.isGoalie && goalies < BOARD_MIN_GOALIES) {
       goalies++;
       return true;
     }
     if (p.isGoalie) goalies++;
-    return p.rank <= BOARD_DEPTH;
+    return p.rank <= BOARD_DEPTH || isMarketPick(adp.matches.get(p.id)?.adp, pickLimit);
   });
 
   const enginePlayers: DraftBoardPlayer[] = kept.map((p) => {

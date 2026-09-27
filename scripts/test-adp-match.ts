@@ -12,6 +12,7 @@ import {
   positionGroupOf,
   type AdpRow,
 } from "../src/lib/leagues/adp-match";
+import { isMarketPick, marketPickLimit } from "../src/lib/leagues/league-board";
 
 // Name keys: Fantrax spellings meet NHL spellings.
 assert.equal(personNameKey(fantraxToFirstLast("OReilly, Ryan")), personNameKey("Ryan O'Reilly"));
@@ -76,5 +77,13 @@ const missed = top150.filter((r) => real.unmatchedRows.includes(r));
 assert.ok(missed.length <= 3, `ADP top 150 unmatched: ${missed.map((r) => r.name).join(", ")}`);
 const ids = [...real.matches.values()].map((m) => m.fantraxId);
 assert.equal(new Set(ids).size, ids.length, "each ADP row claimed at most once");
+
+// Market picks stay on the board past its depth: ADP inside teams × rounds.
+const limit = marketPickLimit({ teams: 12, draft: { rounds: 18 } });
+assert.equal(limit, 216, "Light the Lamp drafts 216 players");
+assert.ok(isMarketPick(112.7, limit), "an ADP-113 player is a plausible pick (Cole Hutson)");
+assert.ok(isMarketPick(216, limit), "the last pick of the draft counts");
+assert.ok(!isMarketPick(225.5, limit), "past the draft: not a market pick");
+assert.ok(!isMarketPick(undefined, limit), "no ADP: not a market pick");
 
 console.log(`OK: adp-match (${real.matches.size} matched, top-150 misses: ${missed.length})`);
