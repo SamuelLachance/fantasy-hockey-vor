@@ -9,8 +9,8 @@
  *
  * Reads, besides the league-1 inputs: src/data/dynasty/slapshot/league.json
  * (profile), pool.json (Fantrax positions, rosters, picks: scripts/slapshot-sync.ts),
- * contract-seasons.json (capwages per-season cap hits: scripts/fetch-contract-seasons.ts;
- * player-profiles.json `contract` as the fallback), src/data/players.json
+ * contract-seasons.json (capwages per-season cap hits: scripts/fetch-contract-seasons.ts),
+ * src/data/players.json
  * (projected stats → Slapshot points).
  * Writes public/fantrax/slapshot/dynasty.json and, with --lite PATH, the
  * compact board file for the live draft page.
@@ -124,13 +124,14 @@ export interface SlapshotSnapshot {
   zero: string[];
 }
 
-/** Known contract seasons of one NHL player: capwages rows (newest contract wins), else the profile. */
-export function knownContract(
-  prof: SlapshotProfile,
-  cw: ContractSeasonsFile["players"][string] | undefined,
-  pr: PlayerProfile | undefined,
-  y0: number,
-): KnownContract {
+/**
+ * Known contract seasons of one NHL player: capwages rows (newest contract
+ * wins). Nothing else sets a season: player-profiles.json `contract` shows a
+ * signed extension as the current cap hit (and disagrees with capwages'
+ * 2026-27 hit for 1 in 6 standard deals), so a player capwages lacks is
+ * projected like any unsigned one.
+ */
+export function knownContract(cw: ContractSeasonsFile["players"][string] | undefined, y0: number): KnownContract {
   if (cw && !cw.err && cw.segs.length) {
     const seasons: Record<string, number> = {};
     let exp: KnownContract["exp"] = null;
@@ -159,16 +160,6 @@ export function knownContract(
     if (Object.keys(seasons).length) return { seasons, exp, elc, source: "capwages" };
     // capwages has him but nothing from 2026-27 on: unsigned now
     return { seasons: {}, exp: null, elc: false, source: "capwages" };
-  }
-  const c = pr?.contract;
-  if (c?.capHitUsd && c.yearsRemaining != null && c.yearsRemaining > 0) {
-    const seasons: Record<string, number> = {};
-    const yr = c.yearsRemaining;
-    // more than 8 seasons = the current contract + an extension listed at the extension's cap hit
-    const pre = Math.max(0, yr - 8);
-    for (let i = 0; i < yr; i++) seasons[String(y0 + i)] = i < pre ? prof.cap.elcCapHit : c.capHitUsd / 1e6;
-    const exp = /RFA/i.test(c.expiryStatus ?? "") ? "RFA" : /UFA/i.test(c.expiryStatus ?? "") ? "UFA" : null;
-    return { seasons, exp, elc: /entry/i.test(c.contractType ?? "") && pre === 0, source: "profile" };
   }
   return { seasons: {}, exp: null, elc: false, source: "none" };
 }
@@ -292,7 +283,7 @@ export function runSlapshotBuild(
       .split(",")
       .map((s) => s.trim())
       .filter((s): s is SlapPos => s === "C" || s === "LW" || s === "RW" || s === "D" || s === "G");
-    const known = knownContract(profile, inp.nhlId ? cw?.players[inp.nhlId] : undefined, inp.nhlId ? profiles.get(inp.nhlId) : undefined, y0);
+    const known = knownContract(inp.nhlId ? cw?.players[inp.nhlId] : undefined, y0);
     data.set(inp.id, { k, pos, known });
   }
 
@@ -424,6 +415,7 @@ export function runSlapshotBuild(
       },
       rosterSpot: { cost: r3(spot), rank: rosterRank },
       salaryModel: {
+        fit: md.fit,
         skater: { ...md.skater, beta: md.skater.beta.map(r3), r2: r3(md.skater.r2), rmse: r3(md.skater.rmse) },
         goalie: { ...md.goalie, beta: md.goalie.beta.map(r3), r2: r3(md.goalie.r2), rmse: r3(md.goalie.rmse) },
       },

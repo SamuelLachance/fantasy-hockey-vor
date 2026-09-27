@@ -80,6 +80,15 @@ const T = params.T;
   assert(near(cs.league[2]! / cs.league[1]!, 1 + prof.cap.growthAfter, 1e-4), "then grows by growthAfter");
   assert(cs.min[0] === prof.cap.minSalary && cs.min[3]! > cs.min[0]!, "league minimum grows with the cap");
   assert(near(nhlCapOf(prof, 2029), 113.5 * (1 + prof.cap.growthAfter) ** 2, 1e-9), "NHL cap extrapolated after 2027-28");
+  // the training contracts' own first-season caps (2023-24 83.5, 2024-25 88.0), never the earliest listed one
+  assert(nhlCapOf(prof, 2023) === 83.5 && nhlCapOf(prof, 2024) === 88, "real 2023-24 and 2024-25 NHL caps");
+  let threw = false;
+  try {
+    nhlCapOf(prof, 2022);
+  } catch {
+    threw = true;
+  }
+  assert(threw, "a year before the cap table throws instead of borrowing the earliest cap");
   const lam = lambdaPath(2, cs);
   assert(near(lam[0]!, 2, 1e-12) && near(lam[5]! * cs.league[5]!, 2 * 105, 1e-9), "λ held per share of the cap");
 }
@@ -95,13 +104,12 @@ const T = params.T;
       { type: "Entry-Level Contract", exp: "RFA", signed: "Jul. 6, 2024", seasons: [[2024, 975e3], [2025, 975e3], [2026, 975e3]] as Array<[number, number]> },
     ],
   };
-  const k = knownContract(prof, cw, undefined, Y0);
+  const k = knownContract(cw, Y0);
   assert(k.source === "capwages" && k.elc, "capwages rows, current ELC flagged");
   assert(k.seasons["2026"] === 0.975 && k.seasons["2027"] === 18.8 && k.seasons["2029"] === 18.8, "2026-27 is the ELC, the extension from 2027-28");
   assert(k.exp === "UFA", "status at the end of the last signed season");
   // a newer contract ends an older one: a bought-out deal's later seasons do not count
   const bo = knownContract(
-    prof,
     {
       n: "Y",
       slug: "y",
@@ -110,17 +118,13 @@ const T = params.T;
         { type: "Standard Contract", exp: "UFA", signed: "Jul. 1, 2019", seasons: [[2019, 9e6], [2025, 9e6], [2026, 9e6]] },
       ],
     },
-    undefined,
     Y0,
   );
   assert(bo.seasons["2026"] == null, "a bought-out contract's 2026-27 row is ignored");
-  // profile fallback: 9 years remaining = the current deal + an 8-year extension listed at its cap hit
-  const pk = knownContract(prof, undefined, {
-    contract: { capHitUsd: 9.15e6, aavUsd: 9.15e6, yearsRemaining: 9, expiryStatus: "UFA", contractType: "Standard Contract (Extension)", source: "capwages", summary: "" },
-  } as never, Y0);
-  assert(pk.source === "profile" && pk.seasons["2026"] === prof.cap.elcCapHit && pk.seasons["2027"] === 9.15 && pk.seasons["2034"] === 9.15, "profile fallback splits a > 8-year listing");
-  const none = knownContract(prof, undefined, undefined, Y0);
-  assert(none.source === "none" && !Object.keys(none.seasons).length, "no data: nothing signed");
+  // no capwages row: nothing signed (the profiles' `contract` field shows an
+  // extension as the current cap hit, so it never sets a season)
+  const none = knownContract(undefined, Y0);
+  assert(none.source === "none" && !Object.keys(none.seasons).length, "no capwages row: nothing signed");
   assert(parseSigned("Sept. 1, 2024") === Date.UTC(2024, 8, 1) && parseSigned("Jul. 29, 2026") === Date.UTC(2026, 6, 29), "signing dates parse");
 }
 
@@ -156,6 +160,11 @@ const model = fitSalaryModel(rows);
   assert(predictCapPct(prof, model, { g: "F", age: 28, theta: 40, share: 1, rfa: false }) === prof.contracts.maxPct, "clamped at maxPct");
   assert(predictCapPct(prof, model, { g: "F", age: 34, theta: 40, share: 1, rfa: false }) === prof.contracts.oldMaxPct, "lower ceiling when signing at 30+");
 
+  // PPML: exp(x·β) is the mean share, so the fitted shares add up to the actual ones
+  const sumPct = rows.reduce((s, r) => s + r.pct, 0);
+  const sumPred = rows.reduce((s, r) => s + predictCapPct(prof, model, r), 0);
+  assert(near(sumPred / sumPct, 1, 0.02), `PPML predictions sum to the actual shares (${(sumPred / sumPct).toFixed(4)})`);
+
   const theta = new Array<number>(T).fill(4);
   const signed: KnownContract = { seasons: { "2026": 12.5, "2027": 12.5 }, exp: "UFA", elc: false, source: "capwages" };
   const c = contractPath(prof, model, Y0, T, { g: "F", age0: 29.5, known: signed, theta, share: 0.9, arrival: Y0 });
@@ -176,6 +185,7 @@ const model = fitSalaryModel(rows);
     rookie: true,
   });
   assert(pr.cap.slice(2, 5).every((x) => x === prof.cap.elcCapHit) && pr.expiry === 2031 && pr.status === "RFA", "prospect: ELC from arrival, then RFA");
+  assert(pr.cap[0] === 0 && pr.cap[1] === 0 && !pr.elc, "no cap hit before his arrival (no NHL contract yet)");
   const rk = contractPath(prof, model, Y0, T, { g: "F", age0: 18.8, known: { seasons: {}, exp: null, elc: false, source: "none" }, theta, share: 0.87, arrival: Y0, rookie: true });
   assert(rk.cap[0] === prof.cap.elcCapHit && rk.elc, "a 2026 draftee in the NHL now plays on an ELC");
 }

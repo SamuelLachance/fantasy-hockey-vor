@@ -148,11 +148,16 @@ export function capSeries(prof: SlapshotProfile, y0: number, T: number): CapSeri
   };
 }
 
-/** NHL cap of a start year (announced, or grown from the last announced). */
+/**
+ * NHL cap of a start year (announced, or grown from the last announced). A
+ * year before the table throws: the earliest listed cap once stood in for
+ * 2023-24 and 2024-25 (95.5 for 83.5 and 88.0), understating those
+ * contracts' share of the cap by 13 % and 8 %.
+ */
 export function nhlCapOf(prof: SlapshotProfile, year: number): number {
   const years = Object.keys(prof.cap.nhl).map(Number).sort((a, b) => a - b);
   if (prof.cap.nhl[String(year)] != null) return prof.cap.nhl[String(year)]!;
-  if (year < years[0]!) return prof.cap.nhl[String(years[0])]!;
+  if (year < years[0]!) throw new Error(`slapshot league.json cap.nhl has no ${year} (earliest ${years[0]})`);
   const last = years[years.length - 1]!;
   return prof.cap.nhl[String(last)]! * Math.pow(1 + prof.cap.growthAfter, year - last);
 }
@@ -175,9 +180,24 @@ export interface SalaryRow {
 }
 
 export interface SalaryModel {
+  /**
+   * Poisson pseudo-maximum likelihood on the AAV share (log link): exp(x·β)
+   * is the conditional MEAN share, so r2 / rmse are on the share scale.
+   */
+  fit: "ppml";
   skater: { beta: number[]; features: string[]; n: number; r2: number; rmse: number };
   goalie: { beta: number[]; features: string[]; n: number; r2: number; rmse: number };
 }
+
+/**
+ * Hinge knots in the level θ (league-1 realized scale): the market pays the
+ * top of the league convexly (a log-linear fit ran half the real deals in
+ * the top decile: MacKinnon 13.2 % of the cap against 6.0 % predicted). F
+ * 2.3 / 3.2 ≈ the 80th / 93rd percentile of the forwards' contract rows, D
+ * 1.8 / 2.4 ≈ the 70th / 90th of the defensemen's, G 2.5 ≈ the 90th of
+ * θ × share.
+ */
+const KNOTS = { F: [2.3, 3.2], D: [1.8, 2.4], G: 2.5 } as const;
 
 const SK_FEATURES = [
   "1",
@@ -189,11 +209,26 @@ const SK_FEATURES = [
   "max(0, age - 30)",
   "max(0, age - 34)",
   "ln share",
+  "F x max(0, ln theta - ln 2.3)",
+  "F x max(0, ln theta - ln 3.2)",
+  "D x max(0, ln theta - ln 1.8)",
+  "D x max(0, ln theta - ln 2.4)",
 ];
-const G_FEATURES = ["1", "ln(theta x share)", "RFA", "max(0, 26 - age)", "max(0, age - 30)", "max(0, age - 34)"];
+const G_FEATURES = [
+  "1",
+  "ln(theta x share)",
+  "RFA",
+  "max(0, 26 - age)",
+  "max(0, age - 30)",
+  "max(0, age - 34)",
+  "max(0, ln(theta x share) - ln 2.5)",
+];
+
+const hinge = (x: number, knot: number) => Math.max(0, x - Math.log(knot));
 
 function skaterX(r: Omit<SalaryRow, "pct">): number[] {
   const d = r.g === "D" ? 1 : 0;
+  const f = 1 - d;
   const lt = Math.log(Math.max(0.3, r.theta));
   return [
     1,
@@ -205,31 +240,32 @@ function skaterX(r: Omit<SalaryRow, "pct">): number[] {
     Math.max(0, r.age - 30),
     Math.max(0, r.age - 34),
     Math.log(Math.max(0.1, Math.min(1, r.share))),
+    f * hinge(lt, KNOTS.F[0]),
+    f * hinge(lt, KNOTS.F[1]),
+    d * hinge(lt, KNOTS.D[0]),
+    d * hinge(lt, KNOTS.D[1]),
   ];
 }
 function goalieX(r: Omit<SalaryRow, "pct">): number[] {
-  return [
-    1,
-    Math.log(Math.max(0.2, r.theta * Math.max(0.05, Math.min(1, r.share)))),
-    r.rfa ? 1 : 0,
-    Math.max(0, 26 - r.age),
-    Math.max(0, r.age - 30),
-    Math.max(0, r.age - 34),
-  ];
+  const lx = Math.log(Math.max(0.2, r.theta * Math.max(0.05, Math.min(1, r.share))));
+  return [1, lx, r.rfa ? 1 : 0, Math.max(0, 26 - r.age), Math.max(0, r.age - 30), Math.max(0, r.age - 34), hinge(lx, KNOTS.G)];
 }
 
-/** Ridge-stabilized OLS by normal equations (Gauss–Jordan). */
-function ols(X: number[][], y: number[], ridge = 1e-4): { beta: number[]; r2: number; rmse: number } {
+/** Ridge-stabilized weighted least squares by normal equations (Gauss–Jordan); no weights = OLS. */
+function wls(X: number[][], y: number[], w: number[] | null, ridge = 1e-4): number[] {
   const k = X[0]!.length;
   const A = Array.from({ length: k }, () => new Array<number>(k + 1).fill(0));
+  let W = 0;
   for (let i = 0; i < X.length; i++) {
     const x = X[i]!;
+    const wi = w ? w[i]! : 1;
+    W += wi;
     for (let a = 0; a < k; a++) {
-      for (let b = 0; b < k; b++) A[a]![b]! += x[a]! * x[b]!;
-      A[a]![k]! += x[a]! * y[i]!;
+      for (let b = 0; b < k; b++) A[a]![b]! += wi * x[a]! * x[b]!;
+      A[a]![k]! += wi * x[a]! * y[i]!;
     }
   }
-  for (let a = 1; a < k; a++) A[a]![a]! += ridge * X.length;
+  for (let a = 1; a < k; a++) A[a]![a]! += ridge * W;
   for (let c = 0; c < k; c++) {
     let piv = c;
     for (let r = c + 1; r < k; r++) if (Math.abs(A[r]![c]!) > Math.abs(A[piv]![c]!)) piv = r;
@@ -242,34 +278,56 @@ function ols(X: number[][], y: number[], ridge = 1e-4): { beta: number[]; r2: nu
       if (f) for (let j = c; j <= k; j++) A[r]![j]! -= f * A[c]![j]!;
     }
   }
-  const beta = A.map((row) => row[k]!);
-  const mean = y.reduce((s, v) => s + v, 0) / y.length;
+  return A.map((row) => row[k]!);
+}
+
+/**
+ * Poisson pseudo-maximum likelihood (log link) by iteratively reweighted
+ * least squares from the log-OLS start: E[pct | x] = exp(x·β) directly, so
+ * nothing needs retransforming (the log fit's exp(x·β) is a median, and a
+ * lognormal correction assumes one spread at every level).
+ */
+function ppml(X: number[][], pct: number[]): { beta: number[]; r2: number; rmse: number } {
+  let beta = wls(X, pct.map(Math.log), null);
+  for (let it = 0; it < 100; it++) {
+    const eta = X.map((x) => x.reduce((s, v, j) => s + v * beta[j]!, 0));
+    const mu = eta.map(Math.exp);
+    const z = eta.map((e, i) => e + (pct[i]! - mu[i]!) / mu[i]!);
+    const next = wls(X, z, mu);
+    const step = Math.max(...next.map((b, j) => Math.abs(b - beta[j]!)));
+    beta = next;
+    if (step < 1e-10) break;
+  }
+  const mean = pct.reduce((s, v) => s + v, 0) / pct.length;
   let ssr = 0;
   let sst = 0;
   for (let i = 0; i < X.length; i++) {
-    const f = X[i]!.reduce((s, v, j) => s + v * beta[j]!, 0);
-    ssr += (y[i]! - f) ** 2;
-    sst += (y[i]! - mean) ** 2;
+    const f = Math.exp(X[i]!.reduce((s, v, j) => s + v * beta[j]!, 0));
+    ssr += (pct[i]! - f) ** 2;
+    sst += (pct[i]! - mean) ** 2;
   }
   return { beta, r2: sst > 0 ? 1 - ssr / sst : 0, rmse: Math.sqrt(ssr / Math.max(1, X.length)) };
 }
 
-/** ln(AAV / NHL cap) on level, role, age and RFA status, skaters and goalies apart. */
+/** AAV share of the NHL cap on level, role, age and RFA status (PPML), skaters and goalies apart. */
 export function fitSalaryModel(rows: readonly SalaryRow[]): SalaryModel {
   const sk = rows.filter((r) => r.g !== "G");
   const go = rows.filter((r) => r.g === "G");
-  const fs = ols(sk.map(skaterX), sk.map((r) => Math.log(r.pct)));
-  const fg = ols(go.map(goalieX), go.map((r) => Math.log(r.pct)));
+  const fs = ppml(sk.map(skaterX), sk.map((r) => r.pct));
+  const fg = ppml(go.map(goalieX), go.map((r) => r.pct));
   return {
+    fit: "ppml",
     skater: { beta: fs.beta, features: SK_FEATURES, n: sk.length, r2: fs.r2, rmse: fs.rmse },
     goalie: { beta: fg.beta, features: G_FEATURES, n: go.length, r2: fg.r2, rmse: fg.rmse },
   };
 }
 
 /**
- * Predicted AAV as a share of the NHL cap of the signing season (the
- * log-space fit's median, exp(x·β): with the lognormal mean correction the
- * residuals by level × age cell ran ~0.15 log below it), clamped.
+ * Expected AAV as a share of the NHL cap of the signing season (the PPML
+ * fit's conditional mean, exp(x·β)), clamped to the market's bounds. In
+ * sample, actual / predicted (ratio of means) in the top level decile is
+ * 0.99 for forwards and 1.00 for defensemen; the old log-OLS median ran
+ * 2.08 and 1.77 there (every star's next deal projected at about half).
  */
 export function predictCapPct(prof: SlapshotProfile, m: SalaryModel, x: Omit<SalaryRow, "pct">): number {
   const f = x.g === "G" ? m.goalie : m.skater;
@@ -287,7 +345,11 @@ export function termAtAge(prof: SlapshotProfile, age: number): number {
 
 // ---------------------------------------------------------------- contract path
 
-/** A player's known NHL contract seasons (from capwages; profiles as the fallback). */
+/**
+ * A player's known NHL contract seasons, from capwages only: the profiles'
+ * `contract` field lists a signed extension as the current cap hit, so it
+ * never sets a season.
+ */
 export interface KnownContract {
   /** Cap hit by start year, M$. */
   seasons: Record<string, number>;
@@ -295,7 +357,7 @@ export interface KnownContract {
   exp: "UFA" | "RFA" | null;
   /** The current (2026-27) contract is an entry-level deal. */
   elc: boolean;
-  source: "capwages" | "profile" | "none";
+  source: "capwages" | "none";
 }
 
 export interface ContractPath {
@@ -316,8 +378,8 @@ export interface ContractPath {
  * Cap hits over the horizon: the signed seasons as they are; then projected
  * contracts (AAV = predicted share of that season's NHL cap, from the
  * expected level at signing), each for termAtAge years. A prospect without
- * a contract gets an entry-level deal from his expected arrival (he sits in
- * the minors, cap-free, before it).
+ * a contract has no cap hit before his expected arrival (no NHL contract; he
+ * sits in the minors) and an entry-level deal from it.
  */
 export function contractPath(
   prof: SlapshotProfile,
@@ -351,10 +413,11 @@ export function contractPath(
   let nextStatus: "UFA" | "RFA" | null = null;
   let elc = pl.known.elc;
   if (known === 0 && pl.rookie) {
-    // unsigned prospect: minors until arrival, then an entry-level deal
+    // unsigned prospect: no NHL contract, so no cap hit, before his
+    // expected arrival (he sits in the minors); an entry-level deal from it
     elc = pl.arrival <= y0;
     const a = Math.min(T, Math.max(0, pl.arrival - y0));
-    for (; t < a; t++) cap[t] = prof.cap.elcCapHit;
+    for (; t < a; t++) cap[t] = 0;
     for (let j = 0; j < prof.cap.elcYears && t < T; j++, t++) cap[t] = prof.cap.elcCapHit;
     status = "RFA";
     expiry = t < T ? y0 + t : null;

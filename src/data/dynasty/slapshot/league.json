@@ -1,5 +1,5 @@
 {
- "version": "slap-v1-2026-09-27",
+ "version": "slap-v2-2026-09-27",
  "source": "Slapshot Fantasy League (Fantrax glxjunc7mtxdqi8x): rules summary pasted by the user and the public fxea getLeagueInfo (2026-09-27); owner answers: every player carries over (no cutdown), any player may sit in the minors, salary cap 105 M$ in 2026-27 on the 20 active + 3 reserve (minors and IR free), real NHL cap hits, growth unknown -> NHL trajectory.",
  "league": {
   "id": "glxjunc7mtxdqi8x",
@@ -50,9 +50,11 @@
   "fantasyShare": 0.746
  },
  "cap": {
-  "source": "League cap 105 M$ in 2026-27 (commissioner rule). Growth unknown (owner): the NHL trajectory scaled to the league base, league_t = 105 x NHL_t / NHL_2026. NHL upper limit: 2025-26 95.5, 2026-27 104.0, 2027-28 113.5 (announced, NHL/NHLPA MOU 2025); after 2027-28 +5 %/season (assumption: the long-run HRR growth the escrow-free era would allow; the announced steps average +9 %). NHL minimum salary 2026-27: 0.85 M$ (the 5th percentile and the common floor of the 957 2026-27 cap hits in the capwages seasons; a few older two-way deals sit at 0.80-0.81), grown with the cap. A prospect without a contract signs an entry-level deal at 0.975 M$ (2024+ ELC maximum) for 3 seasons from his expected arrival.",
+  "source": "League cap 105 M$ in 2026-27 (commissioner rule). Growth unknown (owner): the NHL trajectory scaled to the league base, league_t = 105 x NHL_t / NHL_2026. NHL upper limit: 2023-24 83.5, 2024-25 88.0, 2025-26 95.5 (the training contracts' share of the cap of their first season), 2026-27 104.0, 2027-28 113.5 (announced, NHL/NHLPA MOU 2025); after 2027-28 +5 %/season (assumption: the long-run HRR growth the escrow-free era would allow; the announced steps average +9 %). NHL minimum salary 2026-27: 0.85 M$ (the 5th percentile and the common floor of the 957 2026-27 cap hits in the capwages seasons; a few older two-way deals sit at 0.80-0.81), grown with the cap. A prospect without a contract signs an entry-level deal at 0.975 M$ (2024+ ELC maximum) for 3 seasons from his expected arrival.",
   "base": 105,
   "nhl": {
+   "2023": 83.5,
+   "2024": 88,
    "2025": 95.5,
    "2026": 104,
    "2027": 113.5
@@ -74,7 +76,7 @@
   "goalieUnseatedAvg": 3
  },
  "contracts": {
-  "source": "Projected contracts after the signed seasons: AAV = predicted share of that season's NHL cap (fitSalaryModel, OLS in log share on non-ELC contracts whose first season is 2023-24 .. 2027-28 from the capwages seasons, against today's level, role, age at signing and RFA status; median prediction), term by age at signing; UFA from 27. Ceiling: 17 % of the cap (the largest current deals: Celebrini 18.8 / 113.5 = 16.6 %, Carlsson 18 / 104 = 17.3 %, Kaprizov 17 / 104 = 16.3 %), 12 % when signing at 30+ (largest 2019-2026 deals signed at 30-45: 8.6-12.3 % of that season's cap). An unsigned prospect's entry-level deal: cap.elcCapHit for cap.elcYears from his expected arrival.",
+  "source": "Projected contracts after the signed seasons: AAV = expected share of that season's NHL cap (fitSalaryModel: Poisson pseudo-maximum likelihood, log link, on the non-ELC contracts whose first season is 2023-24 .. 2027-28 from the capwages seasons, each as a share of its own first season's cap, against today's level, role, age at signing and RFA status, with hinges in the level so the top of the market is paid convexly; exp(x b) is the conditional mean, calibrated in the top level decile), term by age at signing; UFA from 27. Ceiling: 17 % of the cap (the largest current deals: Celebrini 18.8 / 113.5 = 16.6 %, Carlsson 18 / 104 = 17.3 %, Kaprizov 17 / 104 = 16.3 %), 12 % when signing at 30+ (largest 2019-2026 deals signed at 30-45: 8.6-12.3 % of that season's cap). A prospect without a contract has no cap hit before his expected arrival, then cap.elcCapHit for cap.elcYears. Seasons come from capwages only (player-profiles.json `contract` lists extensions as the current cap hit).",
   "termByAge": [
    [25, 5],
    [29, 4],
