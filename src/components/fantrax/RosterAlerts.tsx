@@ -10,7 +10,7 @@ import {
 } from "@/lib/fantrax/league-copy";
 import type { RosterLimits } from "@/lib/fantrax/config";
 import { deadReason } from "@/lib/fantrax/roster-rules";
-import { salaryLine } from "@/lib/fantrax/salary-cap";
+import { salaryLine } from "@/lib/fantrax/salary-copy";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface RosterAlertsProps {

@@ -322,7 +322,8 @@ const contracts: Record<string, string[]> = {
   ],
   // Each tab's table starts from its own view; best available never waits for pool.json.
   "src/components/fantrax/FantraxPlayersTab.tsx": ['base="tous"', "perPage={50}"],
-  "src/components/fantrax/FantraxDraftTab.tsx": ["<DraftPanel", 'base="repechage"', 'fallback="draft"', "perPage={25}", "draftBoardNote", "compactFilters"],
+  // A dynasty startup draft with a salary cap (Slapshot) opens on the dynasty view.
+  "src/components/fantrax/FantraxDraftTab.tsx": ["<DraftPanel", 'base={cap ? "dynastie" : "repechage"}', 'fallback="draft"', "perPage={25}", "draftBoardNote", "compactFilters"],
   "src/components/fantrax/FantraxWaiversTab.tsx": ["<WaiverTargets", 'base="autonomes"', '"ballottage-ww"'],
   "src/components/fantrax/FantraxTeamTab.tsx": ['base="equipe"', 'fallback="team"', "legalitySummary"],
   // A `relative` scroller clips its absolutely positioned sr-only labels;
@@ -344,7 +345,7 @@ const contracts: Record<string, string[]> = {
   // The player table's pool, once per page view; dynasty only when the build saw it.
   "src/lib/fantrax/pool-client.ts": [
     'fetchSnapshotFile<unknown>(fantraxPublicFile(cfg, "pool.json"))',
-    'fantraxDataHref("dynasty-table.json")',
+    'fantraxDataHref(fantraxPublicFile(cfg, "dynasty-table.json"))',
     "peekFantraxPool",
   ],
   // The tabs read the league through this context, never the provider's module.

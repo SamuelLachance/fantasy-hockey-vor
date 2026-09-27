@@ -9,6 +9,7 @@ import { bestFpg, buildDailyPlan, seasonFp, type DailyPlan } from "@/lib/fantrax
 import { leagueVor } from "@/lib/fantrax/points-vor";
 import { targetRosterPeriod } from "@/lib/fantrax/dates";
 import {
+  draftPollMs,
   fetchLiveOverlay,
   LIVE_DRAFT_POLL_MS,
   loadLeagueSnapshot,
@@ -84,7 +85,7 @@ const CLOCK_TICK_MS = 30_000;
  * Everything one Fantrax points league's tabs share, held in the league layout
  * so it survives tab changes: the chosen team, the baked snapshot, the live
  * rosters and draft picks from Fantrax (polled every 90 s while the draft runs
- * and the page is visible), the clock, and the same pure planner re-run in the
+ * and the page is visible; 20 s in a league whose config asks for it), the clock, and the same pure planner re-run in the
  * browser for whichever team is picked. First paint is the default team's
  * baked plan; "now" only exists in effects (React purity).
  *
@@ -192,7 +193,7 @@ export function FantraxLeagueProvider({
   // ---- plan (browser re-run once the snapshot is in; baked plan until then)
   const computed = useMemo(() => {
     if (!bundle || !state || planNowMs === null) return null;
-    return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs, config, vor });
+    return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs, config, vor, contracts: bundle.contracts });
   }, [bundle, state, teamId, planNowMs, config, vor]);
   const plan = computed ?? (teamId === initialPlan.teamId ? initialPlan : null);
   const lockMs = plan?.target ? Date.parse(plan.target.start) : null;
@@ -255,7 +256,7 @@ export function FantraxLeagueProvider({
         },
         () => setLiveState("error"),
       );
-    }, LIVE_DRAFT_POLL_MS);
+    }, draftPollMs(config) || LIVE_DRAFT_POLL_MS);
     return () => window.clearInterval(id);
   }, [draftOpen, livePeriod, config]);
 

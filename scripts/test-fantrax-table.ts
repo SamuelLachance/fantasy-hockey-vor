@@ -124,6 +124,9 @@ const NO_CAPS: FantraxCaps = {
   vor: false,
   keeper: true,
   dynasty: false,
+  // Captains: the cutdown, no salary cap.
+  cutdown: true,
+  salary: false,
   dynastyPublished: false,
   snake: false,
   snakeOpinions: false,

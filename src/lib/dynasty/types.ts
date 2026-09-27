@@ -266,6 +266,24 @@ export interface DynastyRecord {
     gap?: number;
   };
   flags?: DynastyFlag[];
+  /**
+   * League-profile records only (Slapshot, `src/lib/dynasty/slapshot-client.ts`):
+   * the league's positions, the 2026-27 season points in its scoring, the
+   * contract (cap hits per season, signed then projected) and the model's
+   * French sentence. Absent from Captains records.
+   */
+  pos?: string[];
+  fp0?: number | null;
+  contract?: {
+    cap: number[];
+    signed: number;
+    expiry: number | null;
+    status: "UFA" | "RFA" | null;
+    nextAav: number | null;
+    elc: boolean;
+    capFP: number[];
+  };
+  explanation?: string;
 }
 
 export interface DynastySnapshot {

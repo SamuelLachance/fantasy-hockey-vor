@@ -12,7 +12,8 @@ import { join } from "path";
 import { SLAPSHOT } from "../src/lib/fantrax/config";
 import { legalitySummary } from "../src/lib/fantrax/league-copy";
 import { evaluateRoster } from "../src/lib/fantrax/roster-rules";
-import { capGrowthText, fmtMoney, isContractsFile, salaryLine, salaryUsage, type ContractsFile } from "../src/lib/fantrax/salary-cap";
+import { isContractsFile, salaryUsage, type ContractsFile } from "../src/lib/fantrax/salary-cap";
+import { capGrowthText, fmtMoney, salaryLine } from "../src/lib/fantrax/salary-copy";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {

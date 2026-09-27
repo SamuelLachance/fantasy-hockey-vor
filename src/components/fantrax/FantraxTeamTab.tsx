@@ -21,6 +21,10 @@ const DynastyTeamCard = dynamic(() => import("./DynastyTeamCard").then((m) => m.
   ),
 });
 
+// A salary-cap league's cap card and method note: their own chunk.
+const SlapshotTeamCap = dynamic(() => import("./SlapshotTeamCap").then((m) => m.SlapshotTeamCap), { ssr: false });
+const SlapshotMethodNote = dynamic(() => import("./SlapshotMethodNote").then((m) => m.SlapshotMethodNote));
+
 /**
  * Mon équipe: roster counts against the league limits, then — only in a league
  * whose config has the keeper model — the 2027 cutdown outlook against the
@@ -49,6 +53,10 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
         {(plan) => {
           const c = plan.legality.counts;
           const tiles: Array<{ label: string; n: number; max: number | null; hint?: string }> = [
+            // A league that publishes its total (Slapshot: 40, IR apart) shows it first.
+            ...(limits.maxTotal !== undefined
+              ? [{ label: "Total hors IR", n: c.counted + c.minors, max: limits.maxTotal, hint: "Actifs + Réserve + Mineures" }]
+              : []),
             { label: "Actifs", n: c.active, max: limits.maxActive },
             { label: "Réserve", n: c.reserve, max: limits.maxReserve },
             // fxea publishes neither an IR cap nor a Minors cap. Where the
@@ -66,9 +74,9 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
               id="effectif"
               icon={<Users className="h-5 w-5" />}
               title={heading}
-              description={legalitySummary(plan.legality, config.features.minors)}
+              description={legalitySummary(plan.legality, config.features.minors, limits)}
             >
-              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <dl className={`grid grid-cols-2 gap-3 ${tiles.length > 4 ? "sm:grid-cols-5" : "sm:grid-cols-4"}`}>
                 {tiles.map((t) => (
                   <div
                     key={t.label}
@@ -96,12 +104,15 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
           );
         }}
       </FantraxPlanGate>
-      {hasDynasty ? <DynastyTeamCard /> : null}
+      {hasDynasty && config.features.keeperCutdown ? <DynastyTeamCard /> : null}
+      {config.salaryCap ? <SlapshotTeamCap /> : null}
       <FantraxPlayerTable
         id="effectif-joueurs"
         title={`Joueurs de ${teamName(teamId)}`}
         description={
-          hasDynasty
+          hasDynasty && config.salaryCap
+            ? "Tout l’effectif par statut (actifs, réserve, blessés, mineures), classé par valeur dynastie : phase, salaire cette saison et la suivante, fin de contrat, avec la valeur de la saison et l’avis de Snake."
+            : hasDynasty
             ? "Tout l’effectif, mineures comprises, classé par valeur dynastie : phase, écrémage 2027, conseil, avec la valeur de la saison et l’avis de Snake."
             : config.features.minors
               ? "Tout l’effectif, mineures comprises, avec les valeurs projetées et l’avis de Snake."
@@ -114,6 +125,7 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
         modeSwitch={false}
         key={slug}
       />
+      {config.salaryCap ? <SlapshotMethodNote /> : null}
     </div>
   );
 }

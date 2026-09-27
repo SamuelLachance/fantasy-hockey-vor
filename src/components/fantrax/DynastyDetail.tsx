@@ -8,7 +8,7 @@ import { bandOf, keeperOutlook, phaseLabel } from "@/lib/fantrax/dynasty-hints";
 import type { DynastyHintText } from "@/lib/fantrax/dynasty-hint-text";
 import { DYNASTY_MODE_LABEL, DYNASTY_MODES, type DynastyMode } from "@/lib/fantrax/dynasty-mode";
 import { fmtNum, pickLabel } from "@/lib/fantrax/league-copy";
-import { pctCell, seasonLabel, trendCell } from "@/lib/fantrax/table-copy";
+import { contractEndLabel, pctCell, seasonLabel, trendCell } from "@/lib/fantrax/table-copy";
 import { fmtInt } from "@/lib/player-table/copy";
 
 const FIRST_SEASON = 2026;
@@ -95,12 +95,18 @@ export function DynastyDetail({
   hint,
   mode,
   idPrefix,
+  cutdown = true,
+  capSeason = null,
 }: {
   d: DynastyRecord | null;
   zero: boolean;
   hint: DynastyHintText | null;
   mode: DynastyMode;
   idPrefix: string;
+  /** The league has the Captains cutdown (écrémage and minors eligibility lines). */
+  cutdown?: boolean;
+  /** Salary-cap league: first season of the contract lines. */
+  capSeason?: number | null;
 }) {
   if (!d) {
     if (!zero) return null;
@@ -126,22 +132,40 @@ export function DynastyDetail({
   if (d.path !== "nhl") {
     items.push(["Chances LNH", `${pctCell(d.pNhl)}${d.eta != null ? ` · arrivée ${seasonLabel(d.eta)}` : ""}`]);
   }
-  const bar = k.team ? "parmi les 10 protégés de son équipe" : "parmi les 160 protégés de la ligue";
-  const free = k.status === "free" ? freeStashFr(d) : null;
-  items.push([
-    "Écrémage 2027",
-    free
-      ? `${free.charAt(0).toUpperCase()}${free.slice(1)}`
-      : `${k.label}${k.p != null ? ` · ${pctCell(k.p)} de chances d’être ${bar}` : ""}`,
-  ]);
-  items.push([
-    "Mineures",
-    d.elig.now
-      ? d.elig.freeThrough != null
-        ? `admissible jusqu’à la saison ${seasonLabel(d.elig.freeThrough)}${d.elig.uncertain ? " (incertain)" : ""}`
-        : "admissible cette saison"
-      : "non admissible",
-  ]);
+  if (cutdown) {
+    const bar = k.team ? "parmi les 10 protégés de son équipe" : "parmi les 160 protégés de la ligue";
+    const free = k.status === "free" ? freeStashFr(d) : null;
+    items.push([
+      "Écrémage 2027",
+      free
+        ? `${free.charAt(0).toUpperCase()}${free.slice(1)}`
+        : `${k.label}${k.p != null ? ` · ${pctCell(k.p)} de chances d’être ${bar}` : ""}`,
+    ]);
+    items.push([
+      "Mineures",
+      d.elig.now
+        ? d.elig.freeThrough != null
+          ? `admissible jusqu’à la saison ${seasonLabel(d.elig.freeThrough)}${d.elig.uncertain ? " (incertain)" : ""}`
+          : "admissible cette saison"
+        : "non admissible",
+    ]);
+  }
+  const c = d.contract;
+  if (c && capSeason !== null) {
+    // Salary-cap league: the contract season by season, what the cap costs him, its end.
+    const seasons = c.cap
+      .slice(0, 4)
+      .map((m, t) => `${seasonLabel(capSeason + t)}${NBSP}: ${fmtNum(m, m >= 10 ? 1 : 2)}${NBSP}M${t >= c.signed ? " (projeté)" : ""}`);
+    items.push(["Salaire", seasons.join(" · ")]);
+    items.push(["Fin de contrat", contractEndLabel(c, capSeason)]);
+    const charge = c.capFP.slice(0, 2);
+    if (charge.some((x) => x >= 1)) {
+      items.push([
+        "Coût du plafond",
+        `environ ${charge.map((x, t) => `${fmtInt(x)} pts en ${seasonLabel(capSeason + t)}`).join(", ")} (déjà retirés de sa valeur)`,
+      ]);
+    }
+  }
   const market: string[] = [];
   if (d.market.ros != null) market.push(`pris dans ${pctCell(d.market.ros / 100)} des ligues Fantrax`);
   if (d.market.adp != null) market.push(`ADP ${fmtNum(d.market.adp, 1)}`);
@@ -153,7 +177,7 @@ export function DynastyDetail({
       <h3 id={`${idPrefix}-dyn`} className="text-sm font-semibold text-white">
         Dynastie <span className="font-normal text-slate-400">· mode {DYNASTY_MODE_LABEL[mode]}</span>
       </h3>
-      <p className="mt-1 text-slate-200">{sentence(explainFr(d))}</p>
+      <p className="mt-1 text-slate-200">{sentence(d.explanation ?? explainFr(d))}</p>
       <div className="mt-3 grid gap-4 sm:grid-cols-[auto_minmax(0,1fr)]">
         <SeasonGains eG={d.eG} idPrefix={idPrefix} />
         <dl className="grid gap-y-1">

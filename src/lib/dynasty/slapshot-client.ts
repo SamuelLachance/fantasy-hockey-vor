@@ -28,8 +28,9 @@ export interface SlapshotSnapshotLike {
   version: 1;
   inputs: { poolFetchedAt: string; projectionsAt: string };
   params: {
-    cap: { league: number[]; nhl: number[]; min: number[]; growthAfter: number; announced?: number[] };
+    cap: { league: number[]; nhl: number[]; min: number[]; growthAfter: number; announced?: number[]; elcCapHit?: number; elcYears?: number };
     lambda: number[];
+    rosterSpot?: { cost: number };
   };
   players: Record<string, SlapshotRecord>;
   zero: string[];
@@ -150,6 +151,8 @@ export function slapshotContracts(full: SlapshotSnapshotLike, firstSeason: numbe
     growthAfter: cap.growthAfter,
     announced: announced.filter((y) => y >= firstSeason),
     lambda: full.params.lambda.slice(0, CONTRACT_SEASONS),
+    ...(full.params.rosterSpot ? { rosterSpot: full.params.rosterSpot.cost } : {}),
+    ...(cap.elcCapHit != null && cap.elcYears != null ? { elc: { capHit: cap.elcCapHit, years: cap.elcYears } } : {}),
     players,
   };
 }

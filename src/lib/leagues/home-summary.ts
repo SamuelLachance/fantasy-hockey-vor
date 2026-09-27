@@ -5,7 +5,7 @@
  */
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import type { TeamDynastySummary } from "@/lib/fantrax/dynasty-hints";
-import { salaryLine } from "@/lib/fantrax/salary-cap";
+import { salaryLine } from "@/lib/fantrax/salary-copy";
 import type { RosterLimits } from "@/lib/fantrax/config";
 import {
   alertText,

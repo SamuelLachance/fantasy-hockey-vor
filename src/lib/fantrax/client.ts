@@ -111,7 +111,14 @@ export async function fxeaGet<T>(
   const url = `${FXEA_BASE}${method}${qs ? `?${qs}` : ""}`;
   const text = await requestText(
     url,
-    { method: "GET", credentials: "omit", headers: headers(opts) },
+    {
+      method: "GET",
+      credentials: "omit",
+      headers: headers(opts),
+      // Live reads in the browser (rosters, draft picks) must never come from
+      // the HTTP cache: a pick made a minute ago would stay invisible.
+      ...(typeof window !== "undefined" ? { cache: "no-store" as const } : {}),
+    },
     opts,
   );
   const body = parseJson<T>(text, method);

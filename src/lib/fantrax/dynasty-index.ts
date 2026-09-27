@@ -24,8 +24,8 @@ type Json = Record<string, unknown>;
 const isObj = (x: unknown): x is Json => !!x && typeof x === "object" && !Array.isArray(x);
 const finite = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
 
-/** The fields the tables read, with their types (the rest of a record is passed through). */
-function usableRecord(r: unknown): r is DynastyRecord {
+/** The fields every profile's tables read, with their types (the rest of a record is passed through). */
+function usableCommon(r: unknown): r is Json {
   if (!isObj(r) || typeof r.n !== "string") return false;
   const dv = r.dv;
   const rank = r.rank;
@@ -35,24 +35,47 @@ function usableRecord(r: unknown): r is DynastyRecord {
   const band = r.band;
   if (!isObj(band) || !Array.isArray(band.balanced) || !Array.isArray(band.longTerm)) return false;
   if (!finite(r.pNhl) || !finite(r.age)) return false;
+  return isObj(r.market);
+}
+
+/** A Captains record: the cutdown fields too. */
+function usableRecord(r: unknown): r is DynastyRecord {
+  if (!usableCommon(r)) return false;
   if (!isObj(r.elig) || typeof r.elig.now !== "boolean") return false;
   const k = r.keeper;
   if (!isObj(k) || !KEEPER_STATUSES.includes(String(k.status))) return false;
   if (k.team !== undefined && (!isObj(k.team) || !KEEPER_STATUSES.includes(String(k.team.status)))) return false;
-  return isObj(r.market);
+  return true;
+}
+
+/**
+ * The Slapshot profile's copy (`profile: "slapshot"`): no cutdown, no minors
+ * eligibility, and a contract. The neutral `elig` / `keeper` below keep the
+ * shared record type; no Slapshot view reads them (the tables gate every
+ * cutdown column, filter and sentence on `features.keeperCutdown`).
+ */
+const NO_ELIG: DynastyRecord["elig"] = { now: false, next: 0, freeThrough: null, binding: null, uncertain: false };
+function slapshotRecord(r: unknown): DynastyRecord | null {
+  if (!usableCommon(r)) return null;
+  const c = r.contract;
+  if (!isObj(c) || !Array.isArray(c.cap) || !c.cap.every(finite) || !finite(c.signed)) return null;
+  return { ...(r as unknown as DynastyRecord), elig: NO_ELIG, keeper: { status: "core", pKept27: null } };
 }
 
 /**
  * Reads dynasty.json (`version: 1`, `players: { fantraxId: record }`,
- * `zero: [fantraxId]`). Null when the file is not a dynasty snapshot or
- * holds no usable record.
+ * `zero: [fantraxId]`), or a league profile's copy of it. Null when the file
+ * is not a dynasty snapshot or holds no usable record.
  */
 export function parseDynasty(json: unknown): DynastyIndex | null {
   if (!isObj(json) || json.version !== 1 || !isObj(json.players)) return null;
+  // The browser copy says so; the full file (a dev server before any build) has the cap block.
+  const slapshot = json.profile === "slapshot" || (isObj(json.params) && isObj(json.params.cap) && isObj(json.league));
   const byFantrax = new Map<string, DynastyRecord>();
   const seen = new Set<Phase>();
-  for (const [id, rec] of Object.entries(json.players)) {
-    if (!usableRecord(rec)) continue;
+  for (const [id, raw] of Object.entries(json.players)) {
+    const rec = slapshot ? slapshotRecord(raw) : usableRecord(raw) ? raw : null;
+    if (!rec) continue;
     byFantrax.set(id, rec);
     seen.add(rec.phase);
   }

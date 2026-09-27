@@ -114,8 +114,12 @@ export interface PresetDef<F, Caps> {
    */
   filters: Partial<F> | ((caps: Caps) => Partial<F>);
   sort: SortState | ((caps: Caps) => SortState);
-  /** Its default columns. */
-  cols: readonly string[];
+  /**
+   * Its default columns. A function when a league has columns another has
+   * not (a salary-cap league's contract columns): the view names them only
+   * there, so the other leagues' views stay exactly as they were.
+   */
+  cols: readonly string[] | ((caps: Caps) => readonly string[]);
   /**
    * Unavailable with this data: no chip, and `?vue=` ignored. A view whose
    * whole point is a kind of data the league has not got (a dynasty view in a

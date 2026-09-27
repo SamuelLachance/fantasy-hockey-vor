@@ -77,7 +77,7 @@ export function resolvePreset<R, F, Caps, Ctx>(
     description: typeof preset.description === "function" ? preset.description(caps) : preset.description,
     filters: { ...spec.defaults.filters, ...(typeof preset.filters === "function" ? preset.filters(caps) : preset.filters) },
     sort: typeof preset.sort === "function" ? preset.sort(caps) : { ...preset.sort },
-    cols: preset.cols,
+    cols: typeof preset.cols === "function" ? preset.cols(caps) : preset.cols,
   };
 }
 

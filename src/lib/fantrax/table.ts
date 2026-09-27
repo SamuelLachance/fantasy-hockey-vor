@@ -389,6 +389,8 @@ export interface FantraxFilters {
   keeper: KeeperStatus | "";
   /** Still minors-eligible (free) at the cutdown of this year or later. */
   freeAt: number | null;
+  /** Salary-cap league: cap hit this season, M$ (the « salaire max » bound). */
+  sal: Range;
 }
 
 export const DEFAULT_FILTERS: FantraxFilters = {
@@ -413,6 +415,7 @@ export const DEFAULT_FILTERS: FantraxFilters = {
   dyn: ANY,
   keeper: "",
   freeAt: null,
+  sal: ANY,
 };
 
 /** Cutdowns the « Gratuit (mineures) » filter offers. */
@@ -456,6 +459,18 @@ export interface FantraxCaps {
   /** dynasty.json is in: its columns, filters and sorts show. */
   dynasty: boolean;
   /**
+   * The league has the Captains cutdown (`features.keeperCutdown`): the
+   * « écrémage » column, the keep / trade hint and the minors-eligibility
+   * filter mean something only there.
+   */
+  cutdown: boolean;
+  /**
+   * The league has a salary cap and its contracts are in (the dynasty copy
+   * carries them): the salary and contract columns, sorts and the salary
+   * bound show.
+   */
+  salary: boolean;
+  /**
    * The build published dynasty.json: presets sort by dynasty value from the
    * first paint (their rows wait for the file rather than jump once it lands).
    */
@@ -480,6 +495,16 @@ export interface FantraxCtx {
   vor?: boolean;
   /** dynasty.json is in (a row without a record then reads « non évalué »). */
   dynastyIn?: boolean;
+  /** The league has the Captains cutdown (details row: écrémage, minors eligibility, hint). */
+  cutdown?: boolean;
+  /** First season of the contract columns (start year), for their labels. */
+  capSeason?: number;
+}
+
+/** Cap hit of season t (0 = this season) from his contract, M$; null without one. */
+export function rowSalary(r: Pick<FantraxRow, "dynasty">, t = 0): number | null {
+  const c = r.dynasty?.contract;
+  return c && c.cap[t] !== undefined ? c.cap[t]! : null;
 }
 
 /** The mode a sort or filter reads (sorts may run without a context in tests). */
@@ -540,6 +565,7 @@ export function matchesFilters(r: FantraxRow, f: FantraxFilters, ctx: Pick<Fantr
   if (!inRange(d?.eta ?? null, f.eta) || !inRange(rowDynastyValue(r, modeOf(ctx)), f.dyn)) return false;
   if (f.keeper && (!d || keeperView(d).status !== f.keeper)) return false;
   if (f.freeAt !== null && !(d?.elig.now && d.elig.freeThrough !== null && d.elig.freeThrough >= f.freeAt)) return false;
+  if (!inRange(rowSalary(r), f.sal)) return false;
   return true;
 }
 
@@ -560,6 +586,7 @@ const RANGE_PARAMS = {
   pnhl: "pNhl",
   eta: "eta",
   dyn: "dyn",
+  sal: "sal",
 } as const satisfies Record<string, keyof FantraxFilters>;
 const RANGE_KEYS = Object.values(RANGE_PARAMS);
 
@@ -619,6 +646,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     "dyn",
     "conservation",
     "gratuit",
+    "sal",
   ],
   parse(params, base) {
     const f: FantraxFilters = { ...base };
@@ -680,7 +708,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
       // A bookmark from another league (or a hand-typed ?pos=RW on Captains)
       // must not filter on a group this league does not rank.
       pos: f.pos.filter((g) => caps.groups.includes(g)),
-      minors: caps.minors ? f.minors : false,
+      minors: caps.minors && caps.cutdown ? f.minors : false,
       ros: caps.fxpa ? f.ros : ANY,
       healthy: caps.fxpa ? f.healthy : false,
       verdict: caps.snake && (f.verdict === VERDICT_POSITIVE || verdicts.includes(f.verdict)) ? f.verdict : "",
@@ -689,8 +717,9 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
       pNhl: caps.dynasty ? f.pNhl : ANY,
       eta: caps.dynasty ? f.eta : ANY,
       dyn: caps.dynasty ? f.dyn : ANY,
-      keeper: caps.dynasty ? f.keeper : "",
-      freeAt: caps.dynasty ? f.freeAt : null,
+      keeper: caps.dynasty && caps.cutdown ? f.keeper : "",
+      freeAt: caps.dynasty && caps.cutdown ? f.freeAt : null,
+      sal: caps.salary ? f.sal : ANY,
     };
   },
   test: matchesFilters,
@@ -699,7 +728,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     const set = (r: Range) => r.min !== null || r.max !== null;
     const out: ExtraKind[] = [];
     if (f.verdict || f.trend) out.push("snake");
-    if (f.phase || set(f.pNhl) || set(f.eta) || set(f.dyn) || f.keeper || f.freeAt !== null) out.push("dynasty");
+    if (f.phase || set(f.pNhl) || set(f.eta) || set(f.dyn) || f.keeper || f.freeAt !== null || set(f.sal)) out.push("dynasty");
     return out;
   },
   query: (f) => f.q,
@@ -720,6 +749,9 @@ export const COLUMN_KEYS = [
   "dyn",
   "fp",
   "fpm",
+  "sal",
+  "sal2",
+  "contrat",
   "age",
   "ros",
   "adp",
@@ -757,6 +789,9 @@ export const SORT_KEYS = [
   "fourchette",
   "verdict",
   "opinions",
+  "sal",
+  "sal2",
+  "contrat",
 ] as const;
 export type SortKey = (typeof SORT_KEYS)[number];
 
@@ -785,6 +820,7 @@ const GROUP = {
   draft: "Repêchage",
   profile: "Profil",
   dynasty: "Dynastie",
+  contract: "Contrat",
   snake: "Snake",
 } as const;
 
@@ -796,6 +832,9 @@ const COLUMN_GROUP: Record<ColumnKey, string> = {
   dyn: GROUP.dynasty,
   fp: GROUP.projection,
   fpm: GROUP.projection,
+  sal: GROUP.contract,
+  sal2: GROUP.contract,
+  contrat: GROUP.contract,
   age: GROUP.profile,
   ros: GROUP.profile,
   adp: GROUP.profile,
@@ -813,10 +852,14 @@ const COLUMN_GROUP: Record<ColumnKey, string> = {
   opinions: GROUP.snake,
 };
 
-const LEFT: ReadonlySet<ColumnKey> = new Set(["statut", "phase", "conservation", "conseil", "verdict", "tendance", "synthese"]);
+const LEFT: ReadonlySet<ColumnKey> = new Set(["statut", "phase", "conservation", "conseil", "verdict", "tendance", "synthese", "contrat"]);
 
 /** Columns dynasty.json fills (shown once it is in; sorting by one waits for it). */
 const DYNASTY_COLUMNS: readonly ColumnKey[] = ["dyn", "phase", "evol", "pnhl", "eta", "conservation", "fourchette", "conseil"];
+/** Columns the salary-cap league's contracts fill (from the same dynasty copy). */
+const CONTRACT_COLUMNS: readonly ColumnKey[] = ["sal", "sal2", "contrat"];
+/** Columns of the Captains cutdown only. */
+const CUTDOWN_COLUMNS: readonly ColumnKey[] = ["conservation", "conseil"];
 
 type SortSpec = NonNullable<Col["sort"]>;
 const SORTS: Partial<Record<ColumnKey, Omit<SortSpec, "label">>> = {
@@ -849,6 +892,16 @@ const SORTS: Partial<Record<ColumnKey, Omit<SortSpec, "label">>> = {
     defaultDir: "desc",
   },
   opinions: { value: (r) => r.snake?.opinions, defaultDir: "desc" },
+  // Cheapest first; the contract that runs longest first.
+  sal: { value: (r) => rowSalary(r, 0), defaultDir: "asc" },
+  sal2: { value: (r) => rowSalary(r, 1), defaultDir: "asc" },
+  contrat: {
+    value: (r) => {
+      const c = r.dynasty?.contract;
+      return c ? (c.expiry ?? 9999) : null;
+    },
+    defaultDir: "desc",
+  },
 };
 
 const hasDynasty = (c: FantraxCaps) => c.dynasty;
@@ -861,6 +914,8 @@ const NEEDS: Partial<Record<ColumnKey, (c: FantraxCaps) => boolean>> = {
   // is unreadable without being a member.
   ros: (c) => c.fxpa,
   ...Object.fromEntries(DYNASTY_COLUMNS.map((k) => [k, hasDynasty])),
+  ...Object.fromEntries(CUTDOWN_COLUMNS.map((k) => [k, (c: FantraxCaps) => c.dynasty && c.cutdown])),
+  ...Object.fromEntries(CONTRACT_COLUMNS.map((k) => [k, (c: FantraxCaps) => c.dynasty && c.salary])),
   verdict: (c) => c.snake,
   tendance: (c) => c.snake,
   synthese: (c) => c.snake,
@@ -868,7 +923,7 @@ const NEEDS: Partial<Record<ColumnKey, (c: FantraxCaps) => boolean>> = {
 };
 
 const EXTRAS: Partial<Record<ColumnKey, ExtraKind>> = {
-  ...Object.fromEntries(DYNASTY_COLUMNS.map((k) => [k, "dynasty" as const])),
+  ...Object.fromEntries([...DYNASTY_COLUMNS, ...CONTRACT_COLUMNS].map((k) => [k, "dynasty" as const])),
   verdict: "snake",
   opinions: "snake",
 };
@@ -967,6 +1022,22 @@ const EQUIPE_COLUMNS: readonly ColumnKey[] = [
   "verdict",
 ];
 
+/**
+ * A salary-cap league (Slapshot) shows its views with the contract beside the
+ * value: dynasty value and rank, career phase, season points, points over
+ * replacement, salary this season and next, contract end. Only there: every
+ * other league's views keep their own columns (`cols` is a function of caps).
+ */
+const SLAP_REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase"];
+const SLAP_DEFAULT_COLUMNS: readonly ColumnKey[] = ["statut", "verdict", "valeur", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase"];
+const SLAP_DYNASTIE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "dispo", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase", "pnhl", "eta"];
+const SLAP_ESPOIRS_COLUMNS: readonly ColumnKey[] = ["dyn", "sal", "contrat", "adp", "lnh", "phase", "pnhl", "eta", "fourchette", "verdict"];
+const SLAP_EQUIPE_COLUMNS: readonly ColumnKey[] = ["statut", "valeur", "dyn", "fp", "sal", "sal2", "contrat", "phase", "evol", "verdict"];
+const withSalary =
+  (plain: readonly ColumnKey[], salary: readonly ColumnKey[]) =>
+  (caps: FantraxCaps): readonly ColumnKey[] =>
+    caps.salary ? salary : plain;
+
 /** By dynasty value when the build published it, else the season's fallback. */
 const dynastyOr =
   (fallback: SortState | ((caps: FantraxCaps) => SortState)) =>
@@ -1015,7 +1086,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     description: "Tous les joueurs de la ligue, espoirs compris, par valeur.",
     filters: {},
     sort: { key: "valeur", dir: "desc" },
-    cols: DEFAULT_COLUMNS,
+    cols: withSalary(DEFAULT_COLUMNS, SLAP_DEFAULT_COLUMNS),
   },
   {
     id: "repechage",
@@ -1032,7 +1103,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     // 20). VONA is the need-aware number, so a live draft opens on it and VOR
     // stays one click away — and without a draft there is no VONA to sort by.
     sort: (caps) => (caps.draft && caps.vor ? { key: "vona", dir: "desc" } : { key: "valeur", dir: "desc" }),
-    cols: REPECHAGE_COLUMNS,
+    cols: withSalary(REPECHAGE_COLUMNS, SLAP_REPECHAGE_COLUMNS),
   },
   {
     id: "dynastie",
@@ -1041,7 +1112,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     description: "Joueurs et espoirs que personne n’a, par valeur dynastie (dans le mode choisi).",
     filters: { status: "dispo" },
     sort: { key: "dyn", dir: "desc" },
-    cols: DYNASTIE_COLUMNS,
+    cols: withSalary(DYNASTIE_COLUMNS, SLAP_DYNASTIE_COLUMNS),
   },
   {
     // NOT a dynasty view: a 38-round keeper draft spends half its picks on
@@ -1058,7 +1129,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
           : "Espoirs sans projection LNH que personne n'a. Cette ligue ne publie pas les âges : triez-les par ADP ou par rang au repêchage de la LNH.",
     filters: prospectFilters,
     sort: dynastyOr(prospectSort),
-    cols: ESPOIRS_COLUMNS,
+    cols: withSalary(ESPOIRS_COLUMNS, SLAP_ESPOIRS_COLUMNS),
   },
   {
     id: "autonomes",
@@ -1066,7 +1137,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     description: "Joueurs autonomes ou au ballottage actifs dans la LNH, par points projetés.",
     filters: { status: "dispo", type: "proj", active: true },
     sort: { key: "fp", dir: "desc" },
-    cols: DEFAULT_COLUMNS,
+    cols: withSalary(DEFAULT_COLUMNS, SLAP_DEFAULT_COLUMNS),
   },
   {
     id: "ballottage-ww",
@@ -1074,7 +1145,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     description: "Joueurs projetés au ballottage (une réclamation), par points projetés.",
     filters: { status: "ww", type: "proj" },
     sort: { key: "fp", dir: "desc" },
-    cols: DEFAULT_COLUMNS,
+    cols: withSalary(DEFAULT_COLUMNS, SLAP_DEFAULT_COLUMNS),
   },
   {
     id: "equipe",
@@ -1087,7 +1158,7 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
           : "Tout votre effectif.",
     filters: { status: "moi" },
     sort: dynastyOr({ key: "valeur", dir: "desc" as const }),
-    cols: EQUIPE_COLUMNS,
+    cols: withSalary(EQUIPE_COLUMNS, SLAP_EQUIPE_COLUMNS),
   },
 ];
 

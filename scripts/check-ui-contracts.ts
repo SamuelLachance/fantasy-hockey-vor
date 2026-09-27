@@ -253,7 +253,7 @@ const files: Record<string, string[]> = {
   "src/components/fantrax/FantraxTableFilters.tsx": ['import("./FantraxDynastyFilters")'],
   "src/components/fantrax/FantraxDynastyFilters.tsx": ["KEEPER_FILTER_LABEL", "FREE_AT_YEARS", "DYNASTY_MODE_LABEL[mode]", "PHASE_FILTER_LABEL", '"Gratuit aux écrémages"'],
   // The browser's copy of dynasty.json first, the file itself on a dev server before any build.
-  "src/lib/fantrax/pool-client.ts": ['fantraxDataHref("dynasty-table.json")', 'fantraxDataHref("dynasty.json")'],
+  "src/lib/fantrax/pool-client.ts": ['fantraxDataHref(fantraxPublicFile(cfg, "dynasty-table.json"))', 'fantraxDataHref(fantraxPublicFile(cfg, "dynasty.json"))'],
   "src/components/league-shell/TabLink.tsx": ["useTabSearch", "prefetch={false}", "leagueTabPath"],
 
   // ---- shared helpers kept for the unified player table

@@ -193,8 +193,8 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
       ) : null}
       {liveAt ? (
         <p className="mt-2 text-xs text-slate-400">
-          Choix lus en direct sur Fantrax à {fmtTime(liveAt)}; mise à jour automatique aux 90 secondes pendant le
-          repêchage.
+          Choix lus en direct sur Fantrax à {fmtTime(liveAt)}; mise à jour automatique aux{" "}
+          {Math.round((config.cadence.draftPollMs ?? 90_000) / 1000)} secondes pendant le repêchage.
         </p>
       ) : null}
     </LeagueCard>

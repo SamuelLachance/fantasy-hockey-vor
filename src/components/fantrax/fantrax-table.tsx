@@ -17,6 +17,7 @@ import { canRankByPoints } from "@/lib/fantrax/points-vor";
 import {
   buildFantraxRows,
   FANTRAX_TABLE,
+  rowSalary,
   syncOwnersOf,
   fantraxDraftOdds,
   fantraxFallbackRows,
@@ -31,8 +32,11 @@ import {
   type PresetId,
 } from "@/lib/fantrax/table";
 import {
+  contractEndLabel,
   DYNASTY_LEGEND,
   fantraxTableNote,
+  salaryCell,
+  SLAPSHOT_LEGEND,
   iconTags,
   nhlDraftLabel,
   numCell,
@@ -131,6 +135,16 @@ const CELLS: Record<ColumnKey, (r: FantraxRow, ctx: FantraxCtx) => CellOut> = {
     };
   },
   fp: (r) => ({ node: numCell(r.fp, 0), className: MUTED }),
+  // Salary-cap league: this season's and next season's cap hit (projected ones in italics), contract end.
+  sal: (r) => salaryOut(r, 0),
+  sal2: (r) => salaryOut(r, 1),
+  contrat: (r, ctx) => {
+    const c = r.dynasty?.contract;
+    return {
+      node: c ? contractEndLabel(c, ctx.capSeason) : "—",
+      className: `whitespace-nowrap ${c && c.signed <= 1 ? "text-amber-200" : MUTED}`,
+    };
+  },
   fpm: (r) => ({ node: numCell(r.fpg, 2), className: MUTED }),
   age: (r) => ({ node: r.age ?? "—", className: MUTED }),
   ros: (r) => ({ node: numCell(r.ros, 0), className: MUTED }),
@@ -200,6 +214,26 @@ const CELLS: Record<ColumnKey, (r: FantraxRow, ctx: FantraxCtx) => CellOut> = {
   opinions: (r) => ({ node: r.snake?.opinions ?? "—", className: MUTED }),
 };
 
+/** A salary cell: signed seasons plain, a projected next contract in italics (its title says so). */
+function salaryOut(r: FantraxRow, t: number): CellOut {
+  const m = rowSalary(r, t);
+  const c = r.dynasty?.contract;
+  const projected = !!c && t >= c.signed;
+  return {
+    node:
+      m === null ? (
+        "—"
+      ) : projected ? (
+        <span title={c!.signed === 0 ? "Sans contrat LNH : contrat d’entrée supposé" : "Contrat projeté (le sien se termine avant)"} className="italic">
+          {salaryCell(m)}
+        </span>
+      ) : (
+        salaryCell(m)
+      ),
+    className: `tabular-nums ${m !== null && m >= 8 ? "text-amber-100" : MUTED}`,
+  };
+}
+
 /** Name, club and positions (the row header), with the few flags worth a glance. */
 function FantraxNameCell({ row: r, ctx, query, visible }: NameCellProps<FantraxRow, FantraxCtx>) {
   const tags = iconTags(r.icons);
@@ -265,21 +299,21 @@ const settled = (s: VerdictStatus) => s === "ready" || s === "error";
  * or filter by dynasty data stop waiting.
  */
 export function useDynastyIndex(wanted: boolean): { dynasty: DynastyIndex | null; settled: boolean } {
-  const { hasDynasty } = useFantraxLeague();
+  const { hasDynasty, config } = useFantraxLeague();
   const [read, setRead] = useState(() => {
-    const peek = peekDynasty();
+    const peek = peekDynasty(config);
     return { dynasty: peek.value, settled: !hasDynasty || peek.settled };
   });
   useEffect(() => {
     if (!wanted || !hasDynasty || read.settled) return;
     let cancelled = false;
-    loadDynasty().then((d) => {
+    loadDynasty(config).then((d) => {
       if (!cancelled) setRead({ dynasty: d, settled: true });
     });
     return () => {
       cancelled = true;
     };
-  }, [wanted, hasDynasty, read.settled]);
+  }, [wanted, hasDynasty, read.settled, config]);
   return read;
 }
 
@@ -409,6 +443,10 @@ export function useFantraxTableData({
       // fallback, so only the genuinely dynasty views turn on `keeper`.
       keeper: config.features.dynasty,
       dynasty: hasDynastyData,
+      // League facts (the config), like `keeper`: the views' columns must not
+      // change under the reader once the dynasty copy lands.
+      cutdown: config.features.keeperCutdown,
+      salary: !!config.salaryCap,
       dynastyPublished: hasDynasty,
       snake: hasSnake,
       snakeOpinions: hasOpinions,
@@ -422,7 +460,18 @@ export function useFantraxTableData({
     // `vor` here is the league's CONFIG, not the loaded map: the column must be
     // named « Valeur (VOR) » in the prerendered HTML too, or its header would
     // change under the reader once the snapshot lands.
-    () => ({ teamId, draftOpen, nextPick, teamName, teamIds, mode, dynastyIn: hasDynastyData, vor: canRankByPoints(config) }),
+    () => ({
+      teamId,
+      draftOpen,
+      nextPick,
+      teamName,
+      teamIds,
+      mode,
+      dynastyIn: hasDynastyData,
+      vor: canRankByPoints(config),
+      cutdown: config.features.keeperCutdown,
+      ...(config.salaryCap ? { capSeason: config.salaryCap.firstSeason } : {}),
+    }),
     [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config],
   );
   const labels = useMemo(() => fantraxLabels(rows, dynasty, snake), [rows, dynasty, snake]);
@@ -488,7 +537,7 @@ export function FantraxPlayerTable({
   /** The « Valeur dynastie » mode switch above the filters (off where the tab shows its own). */
   modeSwitch?: boolean;
 }) {
-  const { hasDynasty } = useFantraxLeague();
+  const { hasDynasty, config } = useFantraxLeague();
   const { data, pool, dynasty, snake } = useFantraxTableData({ autoLoad: true, fallback });
   // Only the views this league's data can apply: `availablePreset` drops the
   // dynasty ones for a league with no keeper model, and « Meilleure valeur
@@ -531,7 +580,9 @@ export function FantraxPlayerTable({
         hasDynasty ? (
           <>
             {modeSwitch ? <DynastyModeSwitch idPrefix={id} /> : null}
-            <p className={`text-xs text-slate-400 ${modeSwitch ? "mt-2" : ""}`}>{DYNASTY_LEGEND}</p>
+            <p className={`text-xs text-slate-400 ${modeSwitch ? "mt-2" : ""}`}>
+              {config.features.keeperCutdown ? DYNASTY_LEGEND : SLAPSHOT_LEGEND}
+            </p>
           </>
         ) : null
       }

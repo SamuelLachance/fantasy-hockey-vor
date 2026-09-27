@@ -20,11 +20,14 @@ export function FantraxDynastyFilters({
   mode,
   phases,
   onFilters,
+  cutdown = true,
 }: {
   filters: Filters;
   mode: DynastyMode;
   phases: readonly string[];
   onFilters: (patch: Partial<Filters>) => void;
+  /** The league has the Captains cutdown (its two filters show only then). */
+  cutdown?: boolean;
 }) {
   return (
     <fieldset className="min-w-0 rounded-xl border border-cyan-500/20 bg-cyan-500/[0.03] p-3">
@@ -41,30 +44,34 @@ export function FantraxDynastyFilters({
           ))}
         </Select>
         <RangeField label="Valeur dynastie" value={f.dyn} onChange={(dyn) => onFilters({ dyn })} />
-        <Select
-          label={`Écrémage ${FIRST_CUTDOWN}`}
-          value={f.keeper}
-          onChange={(v) => onFilters({ keeper: (KEEPER_ORDER as readonly string[]).includes(v) ? (v as KeeperStatus) : "" })}
-        >
-          <option value="">Tous</option>
-          {KEEPER_ORDER.map((k) => (
-            <option key={k} value={k}>
-              {KEEPER_FILTER_LABEL[k]}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label="Gratuit aux écrémages"
-          value={f.freeAt === null ? "" : String(f.freeAt)}
-          onChange={(v) => onFilters({ freeAt: v ? Number(v) : null })}
-        >
-          <option value="">Peu importe</option>
-          {FREE_AT_YEARS.map((y) => (
-            <option key={y} value={y}>
-              {freeAtLabel(y)}
-            </option>
-          ))}
-        </Select>
+        {cutdown ? (
+          <>
+            <Select
+              label={`Écrémage ${FIRST_CUTDOWN}`}
+              value={f.keeper}
+              onChange={(v) => onFilters({ keeper: (KEEPER_ORDER as readonly string[]).includes(v) ? (v as KeeperStatus) : "" })}
+            >
+              <option value="">Tous</option>
+              {KEEPER_ORDER.map((k) => (
+                <option key={k} value={k}>
+                  {KEEPER_FILTER_LABEL[k]}
+                </option>
+              ))}
+            </Select>
+            <Select
+              label="Gratuit aux écrémages"
+              value={f.freeAt === null ? "" : String(f.freeAt)}
+              onChange={(v) => onFilters({ freeAt: v ? Number(v) : null })}
+            >
+              <option value="">Peu importe</option>
+              {FREE_AT_YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {freeAtLabel(y)}
+                </option>
+              ))}
+            </Select>
+          </>
+        ) : null}
         <RangeField label="Chances LNH" unit="%" value={f.pNhl} onChange={(pNhl) => onFilters({ pNhl })} />
       </div>
     </fieldset>

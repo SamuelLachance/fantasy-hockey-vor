@@ -44,6 +44,10 @@ export interface ContractsFile {
   announced: number[];
   /** Cap shadow price per season, league points per M$ above the minimum. */
   lambda: number[];
+  /** Roster-spot rent per held season from 2027-28, league points (the method note). */
+  rosterSpot?: number;
+  /** Entry-level deal assumed for a prospect without an NHL contract. */
+  elc?: { capHit: number; years: number };
   players: Record<string, ContractRow>;
 }
 
@@ -130,37 +134,4 @@ export function salaryUsage(
     top,
     over: used[0]! > cap[0]! + 1e-9,
   };
-}
-
-/** `98,4 M$` (fr-CA, one decimal from 10 M$, two below). */
-export function fmtMoney(m: number): string {
-  const abs = Math.abs(m);
-  const s = abs.toLocaleString("fr-CA", {
-    minimumFractionDigits: abs >= 10 ? 1 : 2,
-    maximumFractionDigits: abs >= 10 ? 1 : 2,
-  });
-  return `${m < 0 ? "−" : ""}${s} M$`;
-}
-
-/** « 2026-27 ». */
-export function capSeasonLabel(y: number): string {
-  return `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
-}
-
-/** The cap line under the legality one: « Masse salariale : 98,4 M$ / 105 M$, marge 6,6 M$ (Actifs + Réserve). » */
-export function salaryLine(u: SalaryUsage): string {
-  const room = u.room[0] ?? 0;
-  const unknown = u.unknown.length ? `; ${u.unknown.length} salaire${u.unknown.length > 1 ? "s" : ""} inconnu${u.unknown.length > 1 ? "s" : ""}` : "";
-  const head = `Masse salariale : ${fmtMoney(u.used[0] ?? 0)} / ${fmtMoney(u.cap[0] ?? 0)}`;
-  return room < 0
-    ? `${head}, dépassement de ${fmtMoney(-room)} (Actifs + Réserve seulement${unknown}).`
-    : `${head}, marge ${fmtMoney(room)} (Actifs + Réserve seulement, ${u.counted} joueurs sur ${u.spots}${unknown}).`;
-}
-
-/** The growth assumption in words, for the method note. */
-export function capGrowthText(f: Pick<ContractsFile, "cap" | "firstSeason" | "growthAfter" | "announced" | "nhl">): string {
-  const last = Math.max(...f.announced);
-  const pct = (x: number) => `${String(Math.round(x * 1000) / 10).replace(".", ",")} %`;
-  const seasons = f.cap.slice(0, 4).map((c, t) => `${capSeasonLabel(f.firstSeason + t)} ${fmtMoney(c)}`).join(", ");
-  return `Plafond de la ligue : ${seasons}… Il suit le plafond de la LNH (annoncé jusqu’en ${capSeasonLabel(last)}), puis +${pct(f.growthAfter)} par saison (hypothèse, à confirmer par le commissaire).`;
 }

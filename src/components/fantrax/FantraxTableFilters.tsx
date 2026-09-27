@@ -141,12 +141,20 @@ export function FantraxTableFilters({
           </div>
         </fieldset>
         <RangeField label="Âge" value={f.age} onChange={(age) => onFilters({ age })} />
+        {caps.salary ? (
+          <RangeField
+            label={`Salaire ${String((ctx.capSeason ?? 2026) % 100).padStart(2, "0")}-${String(((ctx.capSeason ?? 2026) + 1) % 100).padStart(2, "0")}`}
+            unit="M$"
+            value={f.sal}
+            onChange={(sal) => onFilters({ sal })}
+          />
+        ) : null}
         <fieldset className="min-w-0">
           <legend className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Options</legend>
           <div className="flex flex-wrap gap-2">
             {/* Only a league that HAS Minors slots: elsewhere Fantrax's
                 minors-eligible flag answers a question the league never asks. */}
-            {caps.minors ? (
+            {caps.minors && caps.cutdown ? (
               <Toggle
                 label="Admissibles aux mineures"
                 title="Admissibles aux postes des mineures de la ligue cette saison (Fantrax)"
@@ -176,7 +184,9 @@ export function FantraxTableFilters({
         </fieldset>
       </div>
 
-      {caps.dynasty ? <FantraxDynastyFilters filters={f} mode={ctx.mode} phases={phases} onFilters={onFilters} /> : null}
+      {caps.dynasty ? (
+        <FantraxDynastyFilters filters={f} mode={ctx.mode} phases={phases} onFilters={onFilters} cutdown={caps.cutdown} />
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <button

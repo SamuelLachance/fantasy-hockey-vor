@@ -91,7 +91,16 @@ export interface SlapshotSnapshot {
     repl: { season: Record<SlapPos, number>; perGame: Record<string, number>; G: number };
     kDefault: Record<Group, number>;
     /** League cap, NHL cap and league minimum per season, M$; `announced`: start years whose NHL cap is announced. */
-    cap: { league: number[]; nhl: number[]; min: number[]; growthAfter: number; announced: number[] };
+    cap: {
+      league: number[];
+      nhl: number[];
+      min: number[];
+      growthAfter: number;
+      announced: number[];
+      /** Entry-level deal assumed for a prospect without an NHL contract (M$, seasons). */
+      elcCapHit: number;
+      elcYears: number;
+    };
     /** Cap shadow price per season (league points per M$ above the minimum). */
     lambda: number[];
     /** Per solved season (2026-27 …): both estimators and the snake allocation's team caps. */
@@ -388,6 +397,8 @@ export function runSlapshotBuild(
         announced: Object.keys(profile.cap.nhl)
           .map(Number)
           .sort((a, b) => a - b),
+        elcCapHit: profile.cap.elcCapHit,
+        elcYears: profile.cap.elcYears,
       },
       lambda: pr.lambda.map(r3),
       lambdaDiag: {

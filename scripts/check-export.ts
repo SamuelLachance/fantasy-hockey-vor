@@ -250,7 +250,9 @@ interface Budget {
 const isTab = (slug: string, tabs: string[]) => (p: string) => tabs.some((t) => p === `ligues/${slug}/${t}.html`);
 // Calibrated on the first build of the league spaces (measured + ~15 %).
 const BUDGETS: Budget[] = [
-  { label: "Mes ligues", match: (p) => p === "index.html", js: 20, htmlRaw: 80, htmlGz: 15 },
+  // 78 KB with two Fantrax cards; the Slapshot card's cap line (Masse salariale …) took it
+  // to 79.6, at the old 80 limit: 85 keeps the daily syncs' wording from failing a deploy.
+  { label: "Mes ligues", match: (p) => p === "index.html", js: 20, htmlRaw: 85, htmlGz: 15 },
   { label: "Captains · Aujourd’hui", match: isTab("captains-dynasty", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
   {
     label: "Captains · autres onglets",
@@ -292,23 +294,36 @@ const BUDGETS: Budget[] = [
     // none of them. That leaves only ~0.5 KB of headroom: the next addition
     // here should expect to have to measure and justify a move to 71, not
     // assume the budget is roomy.
-    js: 70,
+    //
+    // Measured again for the Slapshot salary cap (full dynasty, cap on the 23
+    // Active + Reserve): the A+B port alone built 69.7 on Repêchage, this tree
+    // 72.4 (Mon équipe 71.1, Ballottage 70.5). Of that +2.7, after moving the
+    // cap's words out of the planner's chunk (salary-copy.ts) and its money
+    // format into league-copy: ~0.9 the table model's contract columns, sorts,
+    // salary bound and per-league preset columns; ~0.5 the plan's cap use and
+    // the contracts read in the provider (every Slapshot tab shows the cap
+    // line); ~0.5 the dynasty reader's Slapshot records and the per-league
+    // dynasty cache; ~0.3 the Repêchage tab's three lazy Slapshot pieces
+    // (their bodies are separate chunks, loaded only by Slapshot); ~0.5 the
+    // cells, the legend and the copy. One dynamic route serves both leagues,
+    // so Captains carries these few KB too. 73 leaves ~0.6 KB: measure again
+    // before adding anything here.
+    js: 73,
     htmlRaw: 200,
     htmlGz: 35,
   },
-  // Slapshot (keeper, points): the same client code as Captains minus the
-  // dynasty modules — no cutdown card, no dynasty columns, filters or views —
-  // so it must stay UNDER the Captains numbers, never above them. Its HTML is
+  // Slapshot (full dynasty with a salary cap, points): the same client code
+  // as Captains (one dynamic route) — no cutdown card, but its own cap board,
+  // stash list and method note in lazy chunks — so the same number. Its HTML is
   // smaller too: 20 lineup slots but a 1-to-2-day matchup panel instead of a
   // 7-to-14-day one.
   { label: "Slapshot · Aujourd’hui", match: isTab("slapshot", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
   {
     label: "Slapshot · autres onglets",
     match: isTab("slapshot", ["repechage", "joueurs", "mon-equipe"]),
-    // The same chunk as the Captains tabs (one dynamic route), so the same
-    // number; it must never be the larger of the two, since it ships strictly
-    // less (no dynasty columns, filters, views or cutdown card).
-    js: 70,
+    // The same chunks as the Captains tabs (one dynamic route), so the same
+    // number (see the Captains entry for the measurement).
+    js: 73,
     htmlRaw: 200,
     htmlGz: 35,
   },

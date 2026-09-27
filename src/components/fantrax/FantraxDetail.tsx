@@ -23,7 +23,15 @@ export function FantraxDetail({ row, ctx, idPrefix }: { row: FantraxRow; ctx: Fa
   }
   items.push(
     ["Repêchage LNH", row.nhlDraft ? nhlDraftLabel(row.nhlDraft) : "non repêché ou inconnu"],
-    ["Mineures", row.minorsEligible ? "admissible aux postes des mineures de la ligue" : "non admissible"],
+    [
+      "Mineures",
+      // A league whose Minors take anyone (Slapshot) has no eligibility to state.
+      ctx.cutdown === false
+        ? "tout joueur peut y être placé (hors plafond salarial)"
+        : row.minorsEligible
+          ? "admissible aux postes des mineures de la ligue"
+          : "non admissible",
+    ],
   );
   if (row.gp !== null) items.push(["Matchs projetés", fmtNum(row.gp, 0)]);
   if (icons.length) items.push(["Fantrax", icons.join(", ")]);
@@ -42,9 +50,11 @@ export function FantraxDetail({ row, ctx, idPrefix }: { row: FantraxRow; ctx: Fa
         <DynastyDetail
           d={row.dynasty}
           zero={row.dynZero}
-          hint={row.dynasty ? dynastyHintText(row.dynasty, hintSide(row.owner, ctx.teamId)) : null}
+          hint={row.dynasty && ctx.cutdown !== false ? dynastyHintText(row.dynasty, hintSide(row.owner, ctx.teamId)) : null}
           mode={ctx.mode}
           idPrefix={idPrefix}
+          cutdown={ctx.cutdown !== false}
+          capSeason={ctx.capSeason ?? null}
         />
       ) : ctx.dynastyIn ? (
         <p className="mt-3 border-t border-white/10 pt-3 text-slate-300">

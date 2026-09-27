@@ -12,7 +12,6 @@
 import { CLAIMS_PER_WEEK, FANTRAX_GROUPS, LEAGUE_TIME_ZONE, type RosterLimits, type SlotId } from "./config";
 import type { PlanAlert, TeamGame } from "./daily-plan";
 import type { DeadReason } from "./roster-rules";
-import { fmtMoney } from "./salary-cap";
 
 // ------------------------------------------------------------ numbers
 
@@ -24,6 +23,18 @@ export function fmtNum(x: number, digits = 2): string {
   if (!Number.isFinite(x)) return "—";
   const s = Math.abs(x).toFixed(digits).replace(".", ",");
   return x < 0 && Number(s.replace(",", ".")) !== 0 ? `${MINUS}${s}` : s;
+}
+
+/**
+ * `98,4 M$` (one decimal from 10 M$, two below). Built by hand like the
+ * other numbers here: the page hydrates in whatever browser opens it.
+ */
+export function fmtMoney(m: number): string {
+  const abs = Math.abs(m);
+  const d = abs >= 10 ? 1 : 2;
+  // Round half up first: 0.975.toFixed(2) is "0.97" in binary floating point.
+  const s = (Math.round(abs * 10 ** d) / 10 ** d).toFixed(d).replace(".", ",");
+  return `${m < 0 ? MINUS : ""}${s}${NBSP}M$`;
 }
 
 /** Always signed: `+2,42`, `−0,50`, `+0,00`. */
