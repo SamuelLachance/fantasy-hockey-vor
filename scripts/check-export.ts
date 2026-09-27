@@ -260,6 +260,9 @@ const BUDGETS: Budget[] = [
   { label: "Snake", match: (p) => p === "snake.html", js: 25, htmlRaw: 80, htmlGz: 15 },
   { label: "/league (stub), 404", match: (p) => ["league.html", "404.html", "_not-found.html"].includes(p), js: 5, htmlRaw: 60, htmlGz: 12 },
   { label: "/draft/light-the-lamp", match: (p) => p === "draft/light-the-lamp.html", js: 45, htmlRaw: 700, htmlGz: 75 },
+  // Stand-alone live draft page for the Slapshot league (public/, no Next chunks):
+  // its board is inlined, its script is inline.
+  { label: "Slapshot · repêchage en direct", match: (p) => p === "slapshot-draft.html", js: 0, htmlRaw: 200, htmlGz: 40 },
 ];
 // Spec limit (§11: ≤ 200 KB; about 192 KB at the restructure).
 const SHARED_MAX = 200;
