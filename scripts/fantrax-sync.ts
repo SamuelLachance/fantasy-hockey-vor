@@ -64,16 +64,7 @@ import {
   type FantraxMatchPlayer,
   type NhlMatchCandidate,
 } from "../src/lib/fantrax/match";
-import {
-  goalieStartShares,
-  goalieValueFromProjection,
-  isRuledOut,
-  priorGoalieValue,
-  priorSkaterValue,
-  PRIOR_GOALIE_GP,
-  skaterValueFromProjection,
-  takeawaysPerGame,
-} from "../src/lib/fantrax/points-model";
+import { attachGoalieStartShares, valueRecord } from "../src/lib/fantrax/values-build";
 import { buildPool, RECENT_NHL_DRAFTS, type PoolDraftPick, type PoolFlags } from "../src/lib/fantrax/pool";
 import { parseScoringTable, scoringShape } from "../src/lib/fantrax/scoring";
 import type {
@@ -90,7 +81,7 @@ import { fetchJson } from "../src/lib/nhl-api";
 import { runDynastyBuild } from "./dynasty-inputs";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { normalizeTeamAbbrev } from "../src/lib/team-abbreviations";
-import type { GoalieProjection, ProjectionsDataset, SkaterProjection } from "../src/lib/types";
+import type { ProjectionsDataset } from "../src/lib/types";
 
 const ROOT = process.cwd();
 const PATHS = {
@@ -144,7 +135,6 @@ function readJson<T>(path: string): T | null {
   }
 }
 
-const round = (x: number, d = 3) => Math.round(x * 10 ** d) / 10 ** d;
 const fxTeam = (t: string | undefined) =>
   !t || t === FANTRAX_NO_TEAM ? FANTRAX_NO_TEAM : normalizeTeamAbbrev(t);
 
@@ -571,8 +561,6 @@ async function main() {
     const proj = match ? board.get(match.nhlId) : undefined;
     if (!proj && !rostered.has(fid)) continue;
     const profile = match ? profileById.get(match.nhlId) : undefined;
-    const tokens = eligiblePos.split(",");
-    const isGoalie = tokens.includes("G") && !tokens.some((t) => t === "C" || t === "W" || t === "D");
     const age = flags.get(fid)?.age ?? profile?.bio?.ageAtSeasonStart;
     const base = {
       n: fantraxDisplayName(fx.name),
@@ -580,53 +568,12 @@ async function main() {
       e: eligiblePos,
       ...(age !== undefined ? { age } : {}),
     };
-    if (isGoalie) {
-      if (proj?.isGoalie) {
-        const p = proj.projection as GoalieProjection;
-        const gE = goalieValueFromProjection(
-          scoring,
-          { gamesPlayed: proj.gamesPlayed, wins: p.wins, shutouts: p.shutouts, saves: p.saves, savePct: p.savePct },
-          profile ? { gamesPlayed: profile.careerTotals?.gamesPlayed ?? 0, otLosses: profile.careerTotals?.otLosses, assists: profile.careerTotals?.assists } : null,
-        );
-        players[fid] = { ...base, gp: proj.gamesPlayed, gE: round(gE), src: "proj" };
-      } else {
-        priorCount++;
-        players[fid] = { ...base, gp: fx.team === FANTRAX_NO_TEAM ? 0 : PRIOR_GOALIE_GP, gE: priorGoalieValue(), src: "prior" };
-      }
-      continue;
-    }
-    const dEligible = tokens.includes("D");
-    const primaryD = proj ? (proj.primaryPosition ?? proj.position) === "D" : dEligible && !tokens.includes("C") && !tokens.includes("W");
-    if (proj && !proj.isGoalie) {
-      const p = proj.projection as SkaterProjection;
-      const tk = dEligible
-        ? takeawaysPerGame(
-            (profile?.teamHistory ?? []).map((h) => ({
-              seasonId: h.seasonId,
-              gamesPlayed: h.gamesPlayed,
-              takeaways: h.advanced?.takeaways,
-            })),
-          )
-        : undefined;
-      const v = skaterValueFromProjection(
-        scoring,
-        { gamesPlayed: proj.gamesPlayed, goals: p.goals, assists: p.assists, shots: p.shots, hits: p.hits, blocks: p.blocks },
-        { primaryD, dEligible, takeawaysPerGame: tk },
-      );
-      players[fid] = { ...base, gp: proj.gamesPlayed, off: round(v.off), dx: round(v.dx), src: "proj" };
-    } else {
-      priorCount++;
-      const v = priorSkaterValue(primaryD);
-      players[fid] = { ...base, gp: 0, off: v.off, dx: dEligible ? v.dx : 0, src: "prior" };
-    }
+    const { record, prior } = valueRecord(scoring, base, proj, profile);
+    players[fid] = record;
+    if (prior) priorCount++;
   }
   // Goalie start shares within each NHL club, injured / minors goalies removed.
-  const shares = goalieStartShares(
-    Object.entries(players)
-      .filter(([, r]) => r.gE !== undefined)
-      .map(([id, r]) => ({ id, team: r.t, gp: r.gp, healthy: !isRuledOut({ team: r.t, icons: flags.get(id)?.icons }) })),
-  );
-  for (const [id, p] of shares) players[id]!.pS = round(p);
+  attachGoalieStartShares(players, (id) => flags.get(id)?.icons);
   const values: ValuesSnapshot = {
     fetchedAt: nowIso,
     season: dataset.season,
