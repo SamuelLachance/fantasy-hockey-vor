@@ -171,7 +171,7 @@ const BROWSER_REQUEST = { retries: 2, timeoutMs: 8_000 };
 
 /**
  * Live rosters (fatal if unreadable) and draft picks (optional) for the
- * lineup period that locks next. Two GETs, >= 1 s apart (client throttle).
+ * lineup period that locks next. Two GETs, >= 1.1 s apart (client throttle).
  */
 export async function fetchLiveOverlay(
   rosterPeriod: number,

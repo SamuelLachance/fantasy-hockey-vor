@@ -47,10 +47,15 @@ export function bestFpg(r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNA
   return (r.off ?? 0) + (dOnly ? dx : Math.max(0, dx));
 }
 
-/** Season value: projected games × best per-game value (starts × E for goalies). */
+/**
+ * Season value: projected games × best per-game value (starts × E for
+ * goalies), over the league's own fantasy season (`cadence.seasonShare` of
+ * the NHL games: Slapshot's ends in February).
+ */
 export function seasonFp(r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): number {
-  if (isGoalieRecord(r, cfg)) return r.gp * (r.gE ?? 0);
-  return r.gp * bestFpg(r, cfg);
+  const share = cfg.cadence.seasonShare ?? 1;
+  if (isGoalieRecord(r, cfg)) return r.gp * (r.gE ?? 0) * share;
+  return r.gp * bestFpg(r, cfg) * share;
 }
 
 // ------------------------------------------------------------ plan odds

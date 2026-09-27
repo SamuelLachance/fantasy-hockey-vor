@@ -28,6 +28,8 @@ export interface ColumnCopyCtx {
   vor?: boolean;
   /** Salary-cap league: first season of the contract columns (start year). */
   capSeason?: number;
+  /** Share of the NHL season the league's fantasy season covers (below 1: it ends early). */
+  seasonShare?: number;
 }
 
 /** « 26-27 » (short season label of the contract columns). */
@@ -73,7 +75,13 @@ export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
         title: "Chance qu'il soit encore disponible à votre prochain choix",
       };
     case "fp":
-      return { label: "FP saison", title: "Points de fantasy projetés sur la saison" };
+      return {
+        label: "FP saison",
+        title:
+          ctx.seasonShare !== undefined && ctx.seasonShare < 1
+            ? `Points de fantasy projetés sur la saison régulière de la ligue (environ ${Math.round(ctx.seasonShare * 100)}${NBSP}% des matchs de la LNH)`
+            : "Points de fantasy projetés sur la saison",
+      };
     case "fpm":
       return { label: "FP/match", title: "Points de fantasy projetés par match joué (par départ pour un gardien)" };
     case "age":
@@ -128,7 +136,7 @@ export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
       const y = (ctx.capSeason ?? 2026) + (col === "sal2" ? 1 : 0);
       return {
         label: `Salaire ${shortSeason(y)}`,
-        title: `Salaire ${shortSeason(y)} (moyenne annuelle de son contrat LNH réel pour cette saison, M$)${NBSP}: ce qui compte au plafond de la ligue s’il est parmi les 23 Actifs + Réserve (mineures et blessés ne comptent pas). Après la fin de son contrat, son prochain contrat projeté (en italique)${NBSP}; un espoir sans contrat LNH compte un contrat d’entrée supposé`,
+        title: `Salaire ${shortSeason(y)} (moyenne annuelle de son contrat LNH réel pour cette saison, M$)${NBSP}: ce qui compte au plafond de la ligue s’il est parmi les 23 Actifs + Réserve (mineures et blessés ne comptent pas). Après la fin de son contrat, son prochain contrat projeté (en italique)${NBSP}; un espoir sans contrat LNH ne compte rien avant son arrivée prévue, puis un contrat d’entrée supposé`,
       };
     }
     case "contrat":
@@ -346,7 +354,7 @@ export function fantraxTableNote(opts: {
 export function dynastyDraftNote(mode: DynastyMode, cutdown = true): string {
   if (!cutdown) {
     // A dynasty league without a cutdown but with a salary cap (Slapshot).
-    return `Valeur (VOR), VONA et Dispo. comptent les points de la saison 2026-27 (comme un repêchage d’un an); Valeur dyn. (mode ${DYNASTY_MODE_LABEL[mode]}) compte les 12 prochaines saisons, nettes du coût de chaque salaire sous le plafond${NBSP}: deux unités différentes, à ne pas additionner.`;
+    return `Valeur (VOR), VONA et Dispo. comptent les points de la saison 2026-27 de la ligue (saison régulière jusqu’à la fin février, comme un repêchage d’un an); Valeur dyn. (mode ${DYNASTY_MODE_LABEL[mode]}) compte les 12 prochaines saisons, nettes du coût de chaque salaire sous le plafond${NBSP}: deux unités différentes, à ne pas additionner.`;
   }
   return `Valeur saison, VONA et Dispo. comptent les points de la saison 2026-27 (comme un repêchage d’un an); Valeur dyn. (mode ${DYNASTY_MODE_LABEL[mode]}) compte les 12 prochaines saisons, écrémages et mineures compris${NBSP}: deux unités différentes, à ne pas additionner.`;
 }

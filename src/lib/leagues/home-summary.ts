@@ -96,7 +96,7 @@ function lockText(iso: string): string {
   return `${fmtDay(iso)}, ${fmtTime(iso)} (${fmtZone(iso)})`;
 }
 
-type FantraxHomePlan = Pick<DailyPlan, "teamName" | "dataAsOf" | "legality" | "alerts" | "draft" | "target" | "players" | "salary">;
+type FantraxHomePlan = Pick<DailyPlan, "teamName" | "dataAsOf" | "legality" | "alerts" | "draft" | "target" | "locks" | "players" | "salary">;
 
 /** Keeper slots per team at the offseason cutdown, and the first cutdown. */
 const KEEPER_SLOTS = 10;
@@ -168,8 +168,11 @@ export function fantraxHomeCard(
   } else if (d && d.state === "not-started") {
     alerts.push({ level: "info", text: "Le repêchage de la ligue n’a pas encore commencé.", tab: "repechage" });
   }
-  const dates: HomeDate[] = plan.target
-    ? [{ label: "Prochain verrouillage", iso: plan.target.start, text: lockText(plan.target.start), pastLabel: "verrouillé" }]
+  // Each player locks on his own game in some leagues: the next lock is then
+  // the first of my players' games still ahead, not the day's first puck drop.
+  const lockIso = plan.locks ? plan.locks.next : (plan.target?.start ?? null);
+  const dates: HomeDate[] = lockIso
+    ? [{ label: "Prochain verrouillage", iso: lockIso, text: lockText(lockIso), pastLabel: "verrouillé" }]
     : [];
   return {
     ...baseCard(entry),

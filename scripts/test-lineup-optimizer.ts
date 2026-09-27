@@ -178,5 +178,29 @@ assert(zero.assignments.filter((a) => a.slot === "G").every((a) => a.value === 0
 assert(zero.moves.some((m) => m.id === "in" && m.from === "MINORS"), "promotion from Minors is a move");
 assert(!zero.moves.some((m) => m.id === "out"), "a non-playing ACTIVE player is not shuffled needlessly");
 
+// ---- a player whose game has locked stays where he is
+{
+  const counts: SlotCounts = { C: 1, W: 1 } as SlotCounts;
+  const order: SlotId[] = ["C", "W"];
+  const cands: LineupCandidate[] = [
+    // locked in C with a small value: he keeps C even though "star" is better there
+    { id: "lockedC", eligible: ["C", "W"], status: "ACTIVE", currentSlot: "C", values: { C: 1, W: 1 }, locked: true },
+    { id: "star", eligible: ["C", "W"], status: "RESERVE", values: { C: 9, W: 8 } },
+    // locked on the bench: he cannot come in, however good
+    { id: "lockedBench", eligible: ["C", "W"], status: "RESERVE", values: { C: 20, W: 20 }, locked: true },
+  ];
+  const r = optimizeLineup(cands, counts, order);
+  const at = (slot: SlotId) => r.assignments.find((a) => a.slot === slot)?.playerId;
+  assert(at("C") === "lockedC" && at("W") === "star", `locked player keeps his slot, the rest re-fills around him (${at("C")}, ${at("W")})`);
+  assert(!r.moves.some((m) => m.id === "lockedC" || m.id === "lockedBench"), "no move for a locked player");
+  // a locked Active player in no lineup slot (benched) is not "moved to Reserve" either
+  const benched = optimizeLineup(
+    [{ id: "gone", eligible: ["C"], status: "ACTIVE", currentSlot: "Skt", values: { C: 5 }, locked: true }, ...cands.slice(1, 2)],
+    counts,
+    order,
+  );
+  assert(!benched.moves.some((m) => m.id === "gone"), "a locked player outside the slots is left alone");
+}
+
 if (failed) process.exit(1);
 console.log("OK: lineup optimizer (200 random rosters exact)");

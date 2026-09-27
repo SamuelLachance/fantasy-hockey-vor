@@ -5,9 +5,8 @@ import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } f
 import { TabSearchContext } from "@/components/league-shell/tab-search";
 // The store only (not the chips): the tabs' chunks carry the chips and Snake's copy.
 import { SnakeVerdictsProvider } from "@/components/snake/SnakeVerdictsContext";
-import { bestFpg, buildDailyPlan, seasonFp, type DailyPlan } from "@/lib/fantrax/daily-plan";
+import { bestFpg, buildDailyPlan, indexSchedule, lineupTarget, seasonFp, type DailyPlan } from "@/lib/fantrax/daily-plan";
 import { leagueVor } from "@/lib/fantrax/points-vor";
-import { targetRosterPeriod } from "@/lib/fantrax/dates";
 import {
   draftPollMs,
   fetchLiveOverlay,
@@ -196,7 +195,10 @@ export function FantraxLeagueProvider({
     return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs, config, vor, contracts: bundle.contracts });
   }, [bundle, state, teamId, planNowMs, config, vor]);
   const plan = computed ?? (teamId === initialPlan.teamId ? initialPlan : null);
-  const lockMs = plan?.target ? Date.parse(plan.target.start) : null;
+  // A game-lock league re-plans at each of its players' locks (locked players
+  // then stay put); a period-lock league when the whole lineup locks.
+  const lockAt = plan?.locks ? plan.locks.next : plan?.target?.start;
+  const lockMs = lockAt ? Date.parse(lockAt) : null;
 
   // ---- clock: countdowns every 30 s; re-plan once the shown lineup locks
   useEffect(() => {
@@ -222,8 +224,9 @@ export function FantraxLeagueProvider({
   const livePeriod = useMemo(() => {
     if (!bundle || planNowMs === null) return null;
     const periods = bundle.league.rosterPeriods;
-    return (targetRosterPeriod(periods, planNowMs) ?? periods[periods.length - 1])?.number ?? null;
-  }, [bundle, planNowMs]);
+    const target = lineupTarget(periods, indexSchedule(bundle.schedule, periods), planNowMs, config);
+    return (target ?? periods[periods.length - 1])?.number ?? null;
+  }, [bundle, planNowMs, config]);
 
   useEffect(() => {
     if (livePeriod === null) return;

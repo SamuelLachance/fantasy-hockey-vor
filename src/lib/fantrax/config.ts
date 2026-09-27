@@ -168,6 +168,13 @@ export interface FantraxCadence {
    * `minutesBefore` minutes before his own game (Slapshot: 5).
    */
   lock?: { kind: "period" | "game"; minutesBefore: number };
+  /**
+   * Share of the NHL regular season inside the league's fantasy regular
+   * season, which season totals are projected over. Absent = all of it.
+   * Slapshot's periods 1-82 end on 2027-02-25: 1,003 of the 1,344 NHL games
+   * start before then (0.746, the dynasty profile's `season.fantasyShare`).
+   */
+  seasonShare?: number;
   /** Live draft: how often the browser re-reads the picks while the draft runs (ms). */
   draftPollMs?: number;
   /**
@@ -508,6 +515,8 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     scoringPeriodDaysRange: [1, 4],
     /** Each player locks 5 minutes before his own game (commissioner rule). */
     lock: { kind: "game", minutesBefore: 5 },
+    /** Fantasy regular season = periods 1-82, through 2027-02-25 (the playoffs, 83-84, left out). */
+    seasonShare: 0.746,
     /** The 38-round draft runs for days, 6 minutes a pick: re-read the picks every 20 s. */
     draftPollMs: 20_000,
     // No weekly claim reset could be confirmed (fxpa is closed), and a

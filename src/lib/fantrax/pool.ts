@@ -526,8 +526,10 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
       ...(nhl !== undefined ? { nhl } : {}),
     };
     if (projected && value) {
-      rec.fp = round(seasonFp(value), 1);
-      rec.fpg = round(isGoalie ? (value.gE ?? 0) : bestFpg(value), 2);
+      // The league's own config: its eligibility tokens and its season length.
+      const cfg = input.config ?? CAPTAINS_DYNASTY;
+      rec.fp = round(seasonFp(value, cfg), 1);
+      rec.fpg = round(isGoalie ? (value.gE ?? 0) : bestFpg(value, cfg), 2);
       rec.gp = value.gp;
     }
     players.push(rec);

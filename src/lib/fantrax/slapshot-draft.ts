@@ -152,7 +152,13 @@ export function draftBoardView(input: {
     ...input.roster,
     ...input.myPicks.filter((id) => !input.roster.some((e) => e.id === id)).map((id) => ({ id, status: "ACTIVE" })),
   ];
-  const salary = input.contracts && input.rules ? salaryUsage(entries, input.contracts, input.rules) : null;
+  // Past the counted spots, the cap counts the best by season points (the
+  // players who start now); the rest are expected in the minors.
+  const season = new Map(input.rows.map((r) => [r.id, r.fp ?? 0]));
+  const salary =
+    input.contracts && input.rules
+      ? salaryUsage(entries, input.contracts, input.rules, 4, (id) => season.get(id) ?? Number.NEGATIVE_INFINITY)
+      : null;
   const open = salary ? salary.spots - salary.counted : 0;
   return {
     mine,

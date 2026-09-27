@@ -30,8 +30,11 @@ const rules = SLAPSHOT.salaryCap!;
 {
   const prof = JSON.parse(readFileSync(join(root, "src", "data", "dynasty", "slapshot", "league.json"), "utf8")) as {
     cap: { base: number; growthAfter: number };
+    season: { fantasyShare: number };
   };
   assert(prof.cap.base === rules.base, `config cap ${rules.base} = dynasty profile cap ${prof.cap.base}`);
+  // season totals on the site and the dynasty values cover the same fantasy season
+  assert(SLAPSHOT.cadence.seasonShare === prof.season.fantasyShare, `season share ${SLAPSHOT.cadence.seasonShare} = profile ${prof.season.fantasyShare}`);
   assert(prof.cap.growthAfter > 0 && prof.cap.growthAfter < 0.2, "one growth knob, a plausible rate");
   assert(rules.countedSpots === SLAPSHOT.limits.maxActive + SLAPSHOT.limits.maxReserve, "23 counted spots = Active 20 + Reserve 3");
 }
@@ -78,6 +81,26 @@ const file: ContractsFile = {
   assert(/Actifs \+ Réserve seulement/.test(line) && /1 salaire inconnu/.test(line), `cap line says what counts: ${line}`);
   const over = salaryUsage([...Array.from({ length: 10 }, () => ({ id: "b", status: "ACTIVE" }))], file, rules);
   assert(over.over && /dépassement/.test(salaryLine(over)), "over the cap is said so");
+  // A drafting team lists more Active players than the 23 counted spots (every
+  // pick lands in Active): the cap reads the best 23 by rank, the rest are
+  // expected in the minors, cap-free.
+  const drafted = [
+    ...Array.from({ length: 23 }, (_, i) => ({ id: `n${i}`, status: i < 20 ? "ACTIVE" : "RESERVE" })),
+    ...Array.from({ length: 10 }, (_, i) => ({ id: `p${i}`, status: "ACTIVE" })),
+  ];
+  const big: ContractsFile = {
+    ...file,
+    players: Object.fromEntries(
+      drafted.map((e) => [e.id, { c: new Array(6).fill(e.id.startsWith("n") ? 4.5 : 0.98), s: 3, x: 2029, st: "RFA" as const }]),
+    ),
+  };
+  const du = salaryUsage(drafted, big, rules, 4, (id) => (id.startsWith("n") ? 100 : 0));
+  assert(du.counted === 23 && du.listed === 33 && du.surplus.length === 10, `23 counted of 33 listed (${du.counted} / ${du.listed})`);
+  assert(near(du.used[0]!, 23 * 4.5, 1e-6) && !du.over, `cap over the 23 kept: ${du.used[0]}`);
+  assert(du.surplus.every((id) => id.startsWith("p")), "the lowest ranked are the surplus");
+  assert(/23 joueurs sur 23; 10 de plus, supposés aux mineures/.test(salaryLine(du)), `line names the surplus: ${salaryLine(du)}`);
+  const noRank = salaryUsage(drafted, big, rules);
+  assert(noRank.counted === 23 && noRank.surplus.length === 10, "without a rank, the first 23 listed count");
   assert(fmtMoney(0.975) === "0,98 M$" && fmtMoney(105) === "105,0 M$", "money format");
   assert(/\+5 % par saison/.test(capGrowthText(file)), `growth text: ${capGrowthText(file)}`);
 }

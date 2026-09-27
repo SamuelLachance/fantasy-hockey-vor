@@ -141,11 +141,15 @@ assert(near(b2b.get("a")! + b2b.get("b")!, 1, 1e-9), "b2b share moves to the par
   // A negative D extra: only the D-only player pays it.
   assert(near(bestFpg(rec("D", 3.234, -0.829), SLAPSHOT), 2.405, 1e-3), "a D-only player with a negative D extra is valued at off + dx");
   assert(near(bestFpg(rec("LW,D", 3.234, -0.829), SLAPSHOT), 3.234, 1e-9), "a player who can also take a wing keeps the better slot");
-  assert(near(seasonFp(rec("D", 3.234, -0.829), SLAPSHOT), 80 * 2.405, 1e-1), "the season total follows the same slot");
+  // Slapshot's fantasy season ends in February: season totals cover its share of the NHL games.
+  const share = SLAPSHOT.cadence.seasonShare!;
+  assert(share > 0.7 && share < 0.8, `Slapshot season share ${share}`);
+  assert(near(seasonFp(rec("D", 3.234, -0.829), SLAPSHOT), 80 * 2.405 * share, 1e-1), "the season total follows the same slot, over the league's season");
+  assert(near(seasonFp(rec("D,Skt", 2, 0.5), CAPTAINS_DYNASTY), 80 * 2.5, 1e-9), "Captains: the whole NHL season");
   // A goalie never goes through the skater branch.
   const g: ValueRecord = { n: "G", t: "DET", e: "G", gp: 55, gE: 5, pS: 0.7, src: "proj" };
   assert(near(bestFpg(g, SLAPSHOT), 3.5, 1e-9), "a goalie is start share x E per start");
-  assert(near(seasonFp(g, SLAPSHOT), 275, 1e-9), "and his season total is starts x E");
+  assert(near(seasonFp(g, SLAPSHOT), 275 * share, 1e-9), "and his season total is starts x E, over the league's season");
 }
 
 if (failed) process.exit(1);

@@ -27,13 +27,20 @@ function LineupTable({
   player,
   caption,
   withGames,
+  lockLead = null,
+  nowMs = null,
 }: {
   lineup: PlanLineup;
   player: PlayerLookup;
   caption: string;
   withGames: boolean;
+  /** Minutes before his game a player locks (game-lock league), else null. */
+  lockLead?: number | null;
+  nowMs?: number | null;
 }) {
   const moved = new Map(lineup.moves.map((m) => [m.id, m.from]));
+  const isLocked = (start: string | undefined) =>
+    lockLead !== null && nowMs !== null && !!start && nowMs >= Date.parse(start) - lockLead * 60_000;
   const captainId = lineup.captain?.id;
   return (
     // Scrolls rather than clips if a row is ever wider than a phone.
@@ -79,6 +86,7 @@ function LineupTable({
                           </Tag>
                         ) : null}
                         {from ? <Tag>depuis {moveEndLabel(from)}</Tag> : null}
+                        {isLocked(s.game?.startUTC) ? <Tag>verrouillé</Tag> : null}
                         {withGames ? (
                           <span className="text-xs text-slate-400 sm:hidden">{gameLabel(s.game)}</span>
                         ) : null}
@@ -156,7 +164,11 @@ export function LineupCard({ plan, player, nowMs }: LineupCardProps) {
   const t = plan.target;
   const best = plan.captains[0];
   const current = plan.currentCaptain;
-  const lockMs = t ? Date.parse(t.start) : null;
+  // Game-lock league: each player locks before his own game; the card counts
+  // down to the next one (the whole lineup locks at once elsewhere).
+  const locks = plan.locks;
+  const lockIso = locks ? locks.next : (t?.start ?? null);
+  const lockMs = lockIso ? Date.parse(lockIso) : null;
 
   return (
     <LeagueCard
@@ -166,14 +178,20 @@ export function LineupCard({ plan, player, nowMs }: LineupCardProps) {
       description={
         t ? (
           <>
-            Verrouillage :{" "}
-            <time dateTime={t.start} className="text-slate-200">
-              {fmtDay(t.start)} à {fmtTime(t.start)} ({fmtZone(t.start)})
-            </time>
+            {locks ? `Chaque joueur se verrouille ${locks.minutesBefore} minutes avant son match. Prochain verrouillage : ` : "Verrouillage : "}
+            {lockIso ? (
+              <time dateTime={lockIso} className="text-slate-200">
+                {fmtDay(lockIso)} à {fmtTime(lockIso)} ({fmtZone(lockIso)})
+              </time>
+            ) : (
+              "aucun"
+            )}
             {nowMs !== null && lockMs !== null ? (
               <span className="text-cyan-300"> ({fmtCountdown(lockMs, nowMs)})</span>
             ) : null}
-            . Reproduisez cet alignement dans Fantrax avant le premier match.
+            {locks
+              ? ". Placez chaque joueur avant son propre match; un joueur verrouillé reste à son poste."
+              : ". Reproduisez cet alignement dans Fantrax avant le premier match."}
           </>
         ) : (
           "Aucune période d'alignement à venir cette saison."
@@ -186,6 +204,8 @@ export function LineupCard({ plan, player, nowMs }: LineupCardProps) {
             lineup={plan.lineup}
             player={player}
             withGames
+            lockLead={locks ? locks.minutesBefore : null}
+            nowMs={nowMs}
             caption={t ? `Alignement optimal du ${fmtCalendarDay(t.date)}` : "Alignement optimal"}
           />
           <h3 className="mt-5 text-sm font-semibold text-white">Mouvements à faire dans Fantrax</h3>

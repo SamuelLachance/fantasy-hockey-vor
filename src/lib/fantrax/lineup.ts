@@ -23,6 +23,11 @@ export interface LineupCandidate {
   currentSlot?: string;
   /** Expected points in each eligible slot for the period (0 = no game / out). */
   values: Partial<Record<SlotId, number>>;
+  /**
+   * His game has locked (a league where each player locks on his own game):
+   * he stays where he is, in his current Active slot or out of the lineup.
+   */
+  locked?: boolean;
 }
 
 export interface LineupAssignment {
@@ -109,6 +114,8 @@ export function hungarianMin(cost: number[][]): number[] {
 }
 
 const FORBIDDEN = 1e9;
+/** Keeps a locked Active player in his slot whatever the values (far below FORBIDDEN). */
+const LOCKED_KEEP = 1e6;
 
 /**
  * Tiny tie-breaks so equal-value lineups prefer fewer moves: keep ACTIVE
@@ -146,7 +153,9 @@ export function optimizeLineup(
   const cost = rows.map((slot) => {
     const row = new Array<number>(cols).fill(0);
     candidates.forEach((c, j) => {
-      row[j] = c.eligible.includes(slot) ? -((c.values[slot] ?? 0) + stayBonus(c, slot)) : FORBIDDEN;
+      // A locked player can only keep his current Active slot (and always does).
+      if (c.locked) row[j] = c.status === "ACTIVE" && c.currentSlot === slot ? -(LOCKED_KEEP + (c.values[slot] ?? 0)) : FORBIDDEN;
+      else row[j] = c.eligible.includes(slot) ? -((c.values[slot] ?? 0) + stayBonus(c, slot)) : FORBIDDEN;
     });
     return row;
   });
@@ -175,7 +184,7 @@ export function optimizeLineup(
     moves.push({ id: c.id, from: c.status === "ACTIVE" ? (c.currentSlot ?? "ACTIVE") : c.status, to: a.slot });
   }
   for (const c of candidates) {
-    if (c.status === "ACTIVE" && !placed.has(c.id)) {
+    if (c.status === "ACTIVE" && !placed.has(c.id) && !c.locked) {
       moves.push({ id: c.id, from: c.currentSlot ?? "ACTIVE", to: "RESERVE" });
     }
   }

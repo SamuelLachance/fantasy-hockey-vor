@@ -76,10 +76,14 @@ export interface SalaryUsage {
   signed: number[];
   /** cap − used. */
   room: number[];
-  /** Players on Active + Reserve now. */
+  /** Players whose cap hit is counted: Active + Reserve, at most `spots`. */
   counted: number;
+  /** Players on Active + Reserve now (above `spots` while a draft seats every pick in Active). */
+  listed: number;
   /** Spots that count (23). */
   spots: number;
+  /** Active + Reserve players beyond the counted spots (the lowest ranked): expected in the minors, cap-free. */
+  surplus: string[];
   /** Counted players with no contract in the file (their salary is unknown, not 0). */
   unknown: string[];
   /** Counted players by cap hit this season, highest first: [id, M$]. */
@@ -94,15 +98,26 @@ const r2 = (x: number) => Math.round(x * 100) / 100;
  * Cap use of one roster: the players whose status counts (Active + Reserve),
  * their cap hits per season from the contracts file, against the league cap.
  * Future seasons keep today's counted players (what is already committed).
+ *
+ * Only `countedSpots` players count. Fantrax seats every draft pick in
+ * Active, so a drafting team lists more: the cap is then read over the
+ * `countedSpots` best by `rank` (higher first; the roster's order without
+ * one), and the rest are `surplus`, expected in the minors (cap-free).
  */
 export function salaryUsage(
   roster: ReadonlyArray<{ id: string; status: string }>,
   contracts: ContractsFile,
   rules: SalaryCapConfig,
   seasons = 4,
+  rank?: (id: string) => number,
 ): SalaryUsage {
   const n = Math.min(seasons, contracts.cap.length);
-  const counted = roster.filter((e) => rules.countedStatuses.includes(e.status));
+  const listed = roster.filter((e) => rules.countedStatuses.includes(e.status));
+  const order = rank
+    ? listed.map((e, i) => ({ e, i, v: rank(e.id) })).sort((a, b) => b.v - a.v || a.i - b.i).map((x) => x.e)
+    : listed;
+  const counted = order.slice(0, rules.countedSpots);
+  const surplus = order.slice(rules.countedSpots).map((e) => e.id);
   const used = new Array<number>(n).fill(0);
   const signed = new Array<number>(n).fill(0);
   const unknown: string[] = [];
@@ -129,7 +144,9 @@ export function salaryUsage(
     signed: signed.map(r2),
     room: cap.map((c, t) => r2(c - used[t]!)),
     counted: counted.length,
+    listed: listed.length,
     spots: rules.countedSpots,
+    surplus,
     unknown,
     top,
     over: used[0]! > cap[0]! + 1e-9,

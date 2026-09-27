@@ -308,7 +308,16 @@ const BUDGETS: Budget[] = [
     // cells, the legend and the copy. One dynamic route serves both leagues,
     // so Captains carries these few KB too. 73 leaves ~0.6 KB: measure again
     // before adding anything here.
-    js: 73,
+    //
+    // Measured again for the Slapshot rules pass (per-game lineup locks in
+    // the planner, the cap read over at most 23 counted players, season
+    // totals over the league's own season): Repêchage 71.8 → 73.5, every
+    // Fantrax tab +1.7 (Aujourd’hui 43.4 → 45.1). Of that, +2.2 KB raw /
+    // ~0.8 KB gz is code (the gzip of the page's chunks concatenated: 69.7 →
+    // 70.5); the other ~0.9 is Turbopack splitting the planner's chunk
+    // (46.2 KB raw) in two (25.8 + 21.9), each compressed on its own. 74.5
+    // leaves 1.0 KB.
+    js: 74.5,
     htmlRaw: 200,
     htmlGz: 35,
   },
@@ -323,7 +332,7 @@ const BUDGETS: Budget[] = [
     match: isTab("slapshot", ["repechage", "joueurs", "mon-equipe"]),
     // The same chunks as the Captains tabs (one dynamic route), so the same
     // number (see the Captains entry for the measurement).
-    js: 73,
+    js: 74.5,
     htmlRaw: 200,
     htmlGz: 35,
   },

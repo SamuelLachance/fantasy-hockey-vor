@@ -103,6 +103,22 @@ export function targetRosterPeriod<P extends IsoPeriod>(periods: P[], nowMs: num
   return null;
 }
 
+/**
+ * A league where each player locks on his own game: the lineup period to set
+ * now is the first one whose LAST lock is still ahead, so today's lineup
+ * stays the target until its last game locks (players in a later game that
+ * night can still move after the first puck drop). `lastLockMs` is null for
+ * a period without a known game, which then locks at its start.
+ */
+export function targetLineupPeriod<P extends IsoPeriod>(
+  periods: P[],
+  nowMs: number,
+  lastLockMs: (p: P) => number | null,
+): P | null {
+  for (const p of periods) if ((lastLockMs(p) ?? Date.parse(p.start)) > nowMs) return p;
+  return null;
+}
+
 export function periodContaining<P extends IsoPeriod>(periods: P[], ms: number): P | null {
   for (const p of periods) {
     if (Date.parse(p.start) <= ms && ms <= Date.parse(p.end)) return p;

@@ -45,7 +45,7 @@ export function SlapshotMethodNote({ id = "methode" }: { id?: string }) {
         </li>
         <li>
           <strong className="text-slate-100">Salaire</strong>
-          {`${NBSP}: la moyenne annuelle réelle de son contrat LNH pour la saison (source${NBSP}: capwages); après l’échéance, son prochain contrat est projeté (niveau, âge, statut JAS ou JAC) et affiché en italique. Salaire minimum de la ligue${NBSP}: ${c ? fmtMoney(c.min[0]!) : `0,85${NBSP}M$`}, qui croît avec le plafond.`}
+          {`${NBSP}: la moyenne annuelle réelle de son contrat LNH pour la saison (source${NBSP}: capwages); après l’échéance, son prochain contrat est projeté (la moyenne des contrats signés depuis 2023 par des joueurs de même niveau, âge et statut JAS ou JAC, vedettes comprises) et affiché en italique; un espoir sans contrat LNH ne compte rien avant son arrivée prévue. Salaire minimum de la ligue${NBSP}: ${c ? fmtMoney(c.min[0]!) : `0,85${NBSP}M$`}, qui croît avec le plafond.`}
         </li>
         <li>
           <strong className="text-slate-100">Espoirs sans contrat LNH</strong>

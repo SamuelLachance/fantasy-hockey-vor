@@ -24,6 +24,7 @@ import {
   claimWeekStart,
   rosterPeriodsIn,
   scoringPeriodAt,
+  targetLineupPeriod,
   targetRosterPeriod,
   torontoDate,
   type IsoPeriod,
@@ -177,6 +178,14 @@ export interface DailyPlan {
   teamName: string;
   fxpaOk: boolean;
   target: { rosterPeriod: number; start: string; end: string; date: string } | null;
+  /**
+   * A league where each player locks `minutesBefore` his own game (absent
+   * elsewhere): `next` is the earliest lock still ahead among this team's
+   * players who play in the target period (else that period's last lock,
+   * when the plan moves to the next day); `locked` are the rostered players
+   * whose game has locked, held where they are by the optimizer.
+   */
+  locks?: { minutesBefore: number; next: string | null; last: string | null; locked: string[] };
   scoringPeriod: {
     number: number;
     start: string;
@@ -287,6 +296,32 @@ export function indexSchedule(schedule: ScheduleSnapshot, rosterPeriods: IsoPeri
   }
   for (const list of starts.values()) list.sort((a, b) => a - b);
   return { byPeriod, starts };
+}
+
+/**
+ * The lineup period to set now. Period lock (Captains): the first period
+ * whose start, its first puck drop, is ahead. Game lock (Slapshot: each
+ * player locks `minutesBefore` his own game): the first period whose last
+ * game has not locked, so today's lineup stays the target all evening.
+ */
+export function lineupTarget<P extends IsoPeriod>(
+  periods: P[],
+  index: ScheduleIndex,
+  nowMs: number,
+  config: FantraxLeagueConfig,
+): P | null {
+  const lock = config.cadence.lock;
+  if (lock?.kind !== "game") return targetRosterPeriod(periods, nowMs);
+  return targetLineupPeriod(periods, nowMs, (p) => lastLockMs(index, p.number, lock.minutesBefore));
+}
+
+/** Lock of the last game of a lineup period (its start minus the lead), null without a game. */
+function lastLockMs(index: ScheduleIndex, period: number, minutesBefore: number): number | null {
+  const games = index.byPeriod.get(period);
+  if (!games?.size) return null;
+  let last = Number.NEGATIVE_INFINITY;
+  for (const g of games.values()) last = Math.max(last, Date.parse(g.startUTC));
+  return last - minutesBefore * 60_000;
 }
 
 function gamesAfter(index: ScheduleIndex, team: string, ms: number): number {
@@ -424,7 +459,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   // The lineup to set is the next one to lock; its scoring period is the
   // one whose caps and waiver window matter.
-  const target = targetRosterPeriod(league.rosterPeriods, nowMs);
+  const target = lineupTarget(league.rosterPeriods, index, nowMs, config);
   const sp = scoringPeriodAt(league.scoringPeriods, target ? Date.parse(target.start) : nowMs);
   const periodDays =
     sp && target
@@ -465,8 +500,37 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       }
     : null;
 
+  // ---- per-game locks (a league where each player locks on his own game):
+  // whoever's game in the target period has locked stays where he is.
+  const gameLock = config.cadence.lock?.kind === "game" ? config.cadence.lock : null;
+  const lead = (gameLock?.minutesBefore ?? 0) * 60_000;
+  const targetGames = target ? index.byPeriod.get(target.number) : undefined;
+  const lockOf = (id: string): number | null => {
+    const g = targetGames?.get(values.players[id]?.t ?? "");
+    return g ? Date.parse(g.startUTC) - lead : null;
+  };
+  const lockedIds = new Set(
+    gameLock ? roster.map((r) => r.id).filter((id) => (lockOf(id) ?? Number.POSITIVE_INFINITY) <= nowMs) : [],
+  );
+  const withLocks = (cands: LineupCandidate[], period: number) =>
+    lockedIds.size && period === target?.number
+      ? cands.map((c) => (lockedIds.has(c.id) ? { ...c, locked: true } : c))
+      : cands;
+  let locks: DailyPlan["locks"];
+  if (gameLock) {
+    const ahead = roster.map((r) => lockOf(r.id)).filter((t): t is number => t !== null && t > nowMs);
+    const lastMs = target ? lastLockMs(index, target.number, gameLock.minutesBefore) : null;
+    const nextMs = ahead.length ? Math.min(...ahead) : lastMs !== null && lastMs > nowMs ? lastMs : null;
+    locks = {
+      minutesBefore: gameLock.minutesBefore,
+      next: nextMs === null ? null : new Date(nextMs).toISOString(),
+      last: lastMs === null ? null : new Date(lastMs).toISOString(),
+      locked: [...lockedIds],
+    };
+  }
+
   // ---- tonight
-  const tonightCands = target ? rosterCandidates(ctx, roster, target.number) : [];
+  const tonightCands = target ? withLocks(rosterCandidates(ctx, roster, target.number), target.number) : [];
   const tonightRes = target ? optimizeLineup(tonightCands, slotCounts, slotOrder) : null;
   const lineup = tonightRes && target ? toPlanLineup(tonightRes, ctx, target.number) : null;
 
@@ -575,7 +639,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   });
 
   // ---- daily plans across the rest of the scoring period
-  const dayCands = periodDays.map((p) => rosterCandidates(ctx, roster, p.number));
+  const dayCands = periodDays.map((p) => withLocks(rosterCandidates(ctx, roster, p.number), p.number));
   const dayRes = dayCands.map((c) => optimizeLineup(c, slotCounts, slotOrder));
 
   // ---- cap monitor
@@ -586,7 +650,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const capUsed = state.caps[teamId];
   const sameSp = sp ? state.scoringPeriod === sp.number : false;
   const syncMs = Date.parse(state.fetchedAt);
-  const syncTarget = targetRosterPeriod(league.rosterPeriods, syncMs);
+  const syncTarget = lineupTarget(league.rosterPeriods, index, syncMs, config);
   const spDays = sp ? rosterPeriodsIn(league.rosterPeriods, sp) : [];
   // The sync bakes the scoring period of its own target, so `sameSp` puts
   // `syncTarget` inside this period.
@@ -840,8 +904,14 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     alerts.push({ level: "warn", code: "over-max-after-moves", count: afterMoves, limit: maxCounted });
   }
   // ---- salary cap (Active + Reserve only)
+  // Past the counted spots (a drafting team), the cap counts the best by
+  // season points; the rest are expected in the minors.
   const salaryPart =
-    config.salaryCap && input.contracts ? salaryUsage(roster, input.contracts, config.salaryCap) : null;
+    config.salaryCap && input.contracts
+      ? salaryUsage(roster, input.contracts, config.salaryCap, 4, (id) =>
+          values.players[id] ? seasonFp(values.players[id]!, config) : 0,
+        )
+      : null;
   if (salaryPart?.over) {
     alerts.push({
       level: "warn",
@@ -893,6 +963,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     target: target
       ? { rosterPeriod: target.number, start: target.start, end: target.end, date: torontoDate(Date.parse(target.start)) }
       : null,
+    ...(locks ? { locks } : {}),
     scoringPeriod: sp
       ? {
           number: sp.number,

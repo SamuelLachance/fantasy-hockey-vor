@@ -52,6 +52,13 @@ const base: HomePlan = {
   eq(card.syncedText, `À la synchro du ven. 25${NB}sept., 14${NB}h${NB}15 (HAE)`, "dated by the sync");
   eq(card.search, `?team=${captains.myTeamId}`, "links carry my team (not the one last looked at)");
   eq(card.dates.map((d) => [d.label, d.text]), [["Prochain verrouillage", `mar. 29${NB}sept., 17${NB}h (HAE)`]], "next lock");
+  // A league where each player locks on his own game: the next lock is my
+  // first player's game still ahead, not the day's first puck drop.
+  const perGame = fantraxHomeCard(captains, {
+    ...base,
+    locks: { minutesBefore: 5, next: "2026-09-30T02:25:00.000Z", last: "2026-09-30T02:25:00.000Z", locked: [] },
+  });
+  eq(perGame.dates.map((d) => [d.label, d.text]), [["Prochain verrouillage", `mar. 29${NB}sept., 22${NB}h${NB}25 (HAE)`]], "per-game next lock");
   eq(card.tabs.map((t) => t.tab), captains.tabs, "one link per tab");
   eq(card.defaultTab, "aujourdhui", "title links to the default tab");
 }

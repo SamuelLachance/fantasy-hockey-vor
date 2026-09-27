@@ -119,10 +119,10 @@ export function SlapshotDraftBoard() {
                   Marge moyenne par poste compté encore libre ({s.spots - s.counted}) :{" "}
                   <span className="font-semibold tabular-nums text-white">{fmtMoney(view.roomPerSpot)}</span>
                 </p>
-              ) : s.counted > s.spots ? (
+              ) : s.surplus.length ? (
                 <p className="text-sm text-amber-200">
-                  {s.counted} joueurs Actifs + Réserve pour {s.spots} places comptées : les surplus iront aux mineures (hors plafond) ou
-                  ailleurs.
+                  {s.listed} joueurs Actifs + Réserve pour {s.spots} places comptées : la masse compte les {s.spots} meilleurs cette
+                  saison; les {s.surplus.length} autres iront aux mineures (hors plafond).
                 </p>
               ) : null}
               <table className="mt-2 w-full text-sm">

@@ -223,6 +223,8 @@ function salaryOut(r: FantraxRow, t: number): CellOut {
     node:
       m === null ? (
         "—"
+      ) : projected && m === 0 ? (
+        <span title="Sans contrat LNH : aucun salaire avant son arrivée prévue dans la LNH">—</span>
       ) : projected ? (
         <span title={c!.signed === 0 ? "Sans contrat LNH : contrat d’entrée supposé" : "Contrat projeté (le sien se termine avant)"} className="italic">
           {salaryCell(m)}
@@ -471,6 +473,7 @@ export function useFantraxTableData({
       vor: canRankByPoints(config),
       cutdown: config.features.keeperCutdown,
       ...(config.salaryCap ? { capSeason: config.salaryCap.firstSeason } : {}),
+      ...(config.cadence.seasonShare !== undefined ? { seasonShare: config.cadence.seasonShare } : {}),
     }),
     [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config],
   );

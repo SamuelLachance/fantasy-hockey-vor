@@ -196,7 +196,9 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
     const free = own ? null : r.st === "FA" ? "FA" : "WW";
     const icons = r.ic ?? [];
     const rec = values?.players[r.id];
-    const fp = r.fp ?? null;
+    // A projected row's season total follows the league's config (its season
+    // length: Slapshot's fantasy season ends in February), not the pool's bake.
+    const fp = r.fp == null ? null : rec?.src === "proj" ? Math.round(seasonFp(rec, config) * 10) / 10 : r.fp;
     let value: number | null = null;
     if (fp !== null) {
       const sFp = rec?.src === "proj" ? seasonFp(rec, config) : fp;

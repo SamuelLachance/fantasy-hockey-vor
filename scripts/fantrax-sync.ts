@@ -47,7 +47,7 @@ import {
   type SlotId,
 } from "../src/lib/fantrax/config";
 import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
-import { buildDailyPlan, seasonFp } from "../src/lib/fantrax/daily-plan";
+import { buildDailyPlan, indexSchedule, lineupTarget, seasonFp } from "../src/lib/fantrax/daily-plan";
 import { leagueVor } from "../src/lib/fantrax/points-vor";
 import {
   addDays,
@@ -118,6 +118,7 @@ const KEPT_ICONS = new Set<string>(Object.values(FANTRAX_ICON));
 const POOL_MIN_ROS = 1;
 const POOL_MAX_ADP = 290;
 
+/** Public Fantrax calls only, at least 1.1 s apart (the client's MIN_INTERVAL_MS). */
 const req = { userAgent: SYNC_USER_AGENT };
 const LEAGUE = CFG.leagueId;
 
@@ -346,7 +347,14 @@ async function main() {
   const info = await fxeaGet<FxeaLeagueInfo>("getLeagueInfo", { leagueId: LEAGUE }, req);
   const rosterPeriods = toIsoPeriods(info.rosterPeriods);
   const scoringPeriods = toIsoPeriods(info.scoringPeriods);
-  const target = targetRosterPeriod(rosterPeriods, now) ?? rosterPeriods[rosterPeriods.length - 1]!;
+  // A league where each player locks on his own game keeps today's lineup as
+  // the target until its last game locks (the committed schedule is enough
+  // to know when that is); elsewhere the period that starts next.
+  const knownSchedule = readJson<ScheduleSnapshot>(PATHS.schedule);
+  const target =
+    (knownSchedule
+      ? lineupTarget(rosterPeriods, indexSchedule(knownSchedule, rosterPeriods), now, CFG)
+      : targetRosterPeriod(rosterPeriods, now)) ?? rosterPeriods[rosterPeriods.length - 1]!;
   const sp = scoringPeriodAt(scoringPeriods, Date.parse(target.start)) ?? scoringPeriods[scoringPeriods.length - 1]!;
   const rosters = await fxeaGet<FxeaTeamRosters>(
     "getTeamRosters",

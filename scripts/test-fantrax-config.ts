@@ -253,10 +253,11 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
       scoringPeriodDays: 2,
       scoringPeriodDaysRange: [1, 4],
       lock: { kind: "game", minutesBefore: 5 },
+      seasonShare: 0.746,
       draftPollMs: 20_000,
       claimWeekStartsOn: null,
     },
-    "Slapshot cadence: 84 custom periods of 1 to 4 days, per-game lock 5 minutes before, live draft polled every 20 s",
+    "Slapshot cadence: 84 custom periods of 1 to 4 days, per-game lock 5 minutes before, a fantasy season through February, live draft polled every 20 s",
   );
   eq(
     SLAPSHOT.features,

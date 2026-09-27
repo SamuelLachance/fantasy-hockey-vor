@@ -10,6 +10,7 @@ import {
   periodContaining,
   rosterPeriodsIn,
   scoringPeriodAt,
+  targetLineupPeriod,
   targetRosterPeriod,
   toIsoPeriods,
   torontoDate,
@@ -48,6 +49,16 @@ assert(targetRosterPeriod(rosterPeriods, at("2026-09-25T14:00:00Z"))?.number ===
 assert(targetRosterPeriod(rosterPeriods, at("2026-09-29T20:59:59Z"))?.number === 1, "1 s before lock → rp1");
 assert(targetRosterPeriod(rosterPeriods, at("2026-09-29T21:00:00Z"))?.number === 2, "at lock → next period");
 assert(targetRosterPeriod(rosterPeriods, at("2026-10-05T00:00:00Z")) === null, "past the last period → null");
+
+// Game lock: each player locks 5 min before his own game, so today's lineup
+// stays the target until its LAST game locks (22:25 EDT for a 22:30 puck drop).
+const lastLock: Record<number, number | null> = { 1: at("2026-09-30T02:25:00Z"), 2: null, 3: at("2026-10-03T02:25:00Z") };
+const lineup = (iso: string) => targetLineupPeriod(rosterPeriods, at(iso), (p) => lastLock[p.number] ?? null)?.number;
+assert(lineup("2026-09-29T20:59:59Z") === 1, "game lock: before the first game → rp1");
+assert(lineup("2026-09-29T21:30:00Z") === 1, "game lock: after the first puck drop, later games still to set → rp1");
+assert(lineup("2026-09-30T02:24:59Z") === 1, "game lock: 1 s before the last game locks → rp1");
+assert(lineup("2026-09-30T02:25:00Z") === 2, "game lock: the last game locked → next period");
+assert(lineup("2026-09-30T23:30:00Z") === 3, "a period without a known game locks at its start");
 assert(periodContaining(rosterPeriods, at("2026-09-30T12:00:00Z"))?.number === 1, "containing period");
 assert(scoringPeriodAt(scoring, at("2026-09-25T14:00:00Z"))?.number === 1, "preseason → scoring period 1");
 assert(scoringPeriodAt(scoring, at("2026-10-12T17:00:00Z"))?.number === 2, "13:00 EDT Oct 12 → period 2");

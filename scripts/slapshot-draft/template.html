@@ -118,7 +118,7 @@
       </div>
       <p class="mut" style="margin:8px 0 0">
         Valeur dynastie : points Slapshot attendus au-dessus du remplaçant sur 12 saisons (vieillissement, progression des jeunes calibrée sur l'historique LNH, arrivée des espoirs), moins le coût de son salaire dans le plafond, qui grimpe chaque saison. Un joueur peut être caché dans les mineures (0 point, 0 salaire) ou libéré, donc un mauvais contrat coûte au plus une place.
-        Pts saison : barème de la ligue (B 3,5 · P 2,5 · PPP 0,5 · BCN 1 · Tirs 0,25 ; gardiens V 3 · Arrêts 0,25 · BC −1 · Blanchissage 5 · P 3). Mises en échec et tirs bloqués : 0 (mis à 0 à chaque position).
+        Pts saison : sur la saison régulière de la ligue (périodes 1 à 82, jusqu’au 25 février, environ 75 % des matchs de la LNH), barème de la ligue (B 3,5 · P 2,5 · PPP 0,5 · BCN 1 · Tirs 0,25 ; gardiens V 3 · Arrêts 0,25 · BC −1 · Blanchissage 5 · P 3). Mises en échec et tirs bloqués : 0 (mis à 0 à chaque position).
         Salaire : impact réel sur le plafond LNH, saison par saison (une prolongation compte à partir de sa première saison ; après la fin du contrat, le prochain contrat projeté) ; en jaune, un salaire qui change en 27-28. Mêmes données que l’onglet Repêchage du site (__BUILT__).
       </p>
     </section>
@@ -239,11 +239,17 @@
       const miss = SLOTS[k] - count[k];
       return `<div><span class="pos pos-${k}">${k}</span><b class="${miss > 0 ? "clock" : "mine"}">${count[k]}/${SLOTS[k]}</b></div>`;
     }).join("");
-    const used = active.reduce((s, p) => s + (p.c || 0), 0);
+    // Only 23 spots count. Every pick lands in Active, so past 23 the cap reads
+    // the 23 with the most points this season (the site's rule); the others
+    // are expected in the minors, cap-free.
+    const counted = active.map((p, k) => ({ p, k })).sort((a, b) => (b.p.p ?? 0) - (a.p.p ?? 0) || a.k - b.k).slice(0, 23).map((x) => x.p);
+    const extra = active.length - counted.length;
+    const used = counted.reduce((s, p) => s + (p.c || 0), 0);
     const left = D.cap - used;
     const spots = Math.max(0, 23 - active.length);
     $("capline").innerHTML = `Plafond (actifs + réserve) : <b>${money(used)}</b> / ${D.cap} M$ · reste <b class="${left < 0 ? "err" : "mine"}">${money(left)}</b>`
       + (spots ? ` <span class="mut">(≈ ${money(left / spots)} par poste pour ${spots} postes libres sur 23)</span>` : "")
+      + (extra > 0 ? ` <span class="mut">(${extra} de plus que les 23 places : les moins productifs cette saison, laissés hors du calcul et supposés aux mineures)</span>` : "")
       + `<br><span class="mut">Les mineures et la liste des blessés ne comptent pas dans le plafond.</span>`;
     const STATUS_FR = { MINORS: "mineures", INJURED_RESERVE: "blessé", RESERVE: "réserve", ACTIVE: "actif", PICK: "repêché" };
     $("mine").innerHTML = mine.sort((a, b) => (dyn(b) ?? -1e9) - (dyn(a) ?? -1e9)).map((p) =>
@@ -251,19 +257,26 @@
       || `<li class="mut">Aucun joueur pour l'instant.</li>`;
   }
 
+  // Fantrax asks for public calls at least 1.1 s apart: every read books its
+  // own slot (the poll, the button and a tab coming back can overlap).
+  let nextCallAt = 0;
+  let loading = false;
   async function getJson(url) {
+    const at = Math.max(Date.now(), nextCallAt);
+    nextCallAt = at + 1100;
+    if (at > Date.now()) await new Promise((r) => setTimeout(r, at - Date.now()));
     const r = await fetch(url, { credentials: "omit", cache: "no-store" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   }
 
   async function load() {
+    if (loading) return;
+    loading = true;
     try {
       const base = "https://www.fantrax.com/fxea/general/";
-      const [draft, rosters] = await Promise.all([
-        getJson(`${base}getDraftResults?leagueId=${LEAGUE}`),
-        getJson(`${base}getTeamRosters?leagueId=${LEAGUE}`),
-      ]);
+      const draft = await getJson(`${base}getDraftResults?leagueId=${LEAGUE}`);
+      const rosters = await getJson(`${base}getTeamRosters?leagueId=${LEAGUE}`);
       const picks = (draft.draftPicks || []).slice().sort((a, b) => a.pick - b.pick);
       const un = new Set();
       const owner = new Map();
@@ -301,6 +314,8 @@
     } catch (e) {
       $("sync").textContent = `Lecture Fantrax impossible (${e.message}). Nouvel essai dans 20 s.`;
       $("sync").classList.add("err");
+    } finally {
+      loading = false;
     }
     render();
   }

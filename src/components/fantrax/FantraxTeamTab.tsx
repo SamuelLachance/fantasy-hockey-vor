@@ -39,12 +39,13 @@ const SlapshotMethodNote = dynamic(() => import("./SlapshotMethodNote").then((m)
  */
 export function FantraxTeamTab({ slug }: { slug: string }) {
   const { config, limits, teamName, teamId, defaultTeamId, hasDynasty } = useFantraxLeague();
-  // Without fxpa nobody carries an injury icon, so the count is structurally 0
-  // — not « nobody is hurt ». Say which it is rather than showing a hard zero.
-  const irLabel = config.features.fxpa ? "Blessés" : "Blessés (inconnu)";
+  // The tile counts the INJURED_RESERVE status that fxea's rosters carry, so
+  // it is a known IR count even without fxpa; only the injury icons (who is
+  // hurt but still Active) are unread there, which the lineup advice says.
+  const irLabel = config.features.fxpa ? "Blessés" : "Blessés (IR)";
   const irHint = config.features.fxpa
     ? undefined
-    : "Cette ligue ne publie pas ses détails joueur : les blessures ne sont pas lisibles, donc ce compte n'est pas 0 blessé mais 0 blessure connue.";
+    : "Joueurs placés sur la liste des blessés (IR) dans Fantrax. Cette ligue ne publie pas ses détails joueur : un joueur blessé qui n'a pas été placé en IR n'est pas signalé.";
   // Another team picked in the header: say so here too (the tab is « Mon équipe »).
   const heading = teamId === defaultTeamId ? `Effectif de ${teamName(teamId)}` : `Équipe consultée : ${teamName(teamId)}`;
   return (

@@ -6,7 +6,7 @@
  *   `*` CORS origin is rejected together with credentials).
  * - `fxpaPost` is for build-time scripts only: fxpa sends no CORS header.
  *
- * All requests share one throttle (>= 1 s apart) and mirror the retry shape
+ * All requests share one throttle (>= 1.1 s apart) and mirror the retry shape
  * of `fetchJson` in nhl-api.ts, with shorter backoff since Fantrax has shown
  * no rate limiting.
  */
@@ -36,6 +36,9 @@ export class FantraxApiError extends Error {
   }
 }
 
+/** Fantrax's public API asks for calls at least 1.1 s apart. */
+export const MIN_INTERVAL_MS = 1_100;
+
 let lastRequestAt = 0;
 
 async function throttle(minIntervalMs: number): Promise<void> {
@@ -52,7 +55,7 @@ async function requestText(
   const retries = opts.retries ?? 3;
   const timeoutMs = opts.timeoutMs ?? 30_000;
   for (let attempt = 0; attempt < retries; attempt++) {
-    await throttle(opts.minIntervalMs ?? 1_000);
+    await throttle(opts.minIntervalMs ?? MIN_INTERVAL_MS);
     let res: Response | null = null;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

@@ -7,7 +7,7 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID } from "../src/lib/fantrax/config";
+import { FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT } from "../src/lib/fantrax/config";
 import { buildDailyPlan, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
 import { torontoDateOfIso } from "../src/lib/fantrax/dates";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
@@ -57,6 +57,7 @@ assert(plan.goalies.every((g) => g.pStart >= 0 && g.pStart <= 1), "P(start) in [
 for (const id of [...plan.legality.fixes, ...plan.legality.reserveFills, ...plan.waivers.targets.map((t) => t.id)]) {
   assert(!!plan.players[id], `referenced player ${id} carried in players`);
 }
+assert(!("locks" in plan), "a period-lock league's plan carries no per-game locks (Captains' today.json unchanged)");
 const size = JSON.stringify(plan).length;
 assert(size < 20_000, `plan stays small for the page payload (${size} B)`);
 
@@ -202,6 +203,56 @@ assert(
 );
 assert(degraded.waivers.claimsLeft === null, "claims unknown");
 assert(degraded.cap?.known === false, "cap usage unknown");
+
+// ---- game lock (Slapshot: each player locks 5 min before his own game)
+{
+  const sState = load<StateSnapshot>("public", "fantrax", "slapshot", "state.json");
+  const sValues = load<ValuesSnapshot>("public", "fantrax", "slapshot", "values.json");
+  const sLeague = load<LeagueSnapshot>("src", "data", "fantrax", "slapshot", "league.json");
+  const sSchedule = load<ScheduleSnapshot>("public", "fantrax", "slapshot", `schedule-${NHL_SEASON_ID}.json`);
+  const team = SLAPSHOT.defaultTeamId;
+  // Opening night (lineup period 1): FLA-CAR 21:00Z first, CHI-VGK 02:30Z last.
+  const first = sSchedule.games.find(([, a, h]) => a === "FLA" && h === "CAR")!;
+  const last = sSchedule.games.find(([, a, h]) => a === "CHI" && h === "VGK")!;
+  assert(first[0] === "2026-09-29T21:00:00Z" && last[0] === "2026-09-30T02:30:00Z", "opening night in the committed schedule");
+  const lead = 5 * 60_000;
+  const lastLock = Date.parse(last[0]) - lead;
+  // two extra players on my roster from the first game: one Active in C, one on Reserve
+  const pick = (t: string, not: string[] = []) =>
+    Object.entries(sValues.players).find(([id, r]) => r.t === t && r.src === "proj" && !r.e.split(",").includes("G") && !not.includes(id))![0];
+  const car = pick("CAR");
+  const fla = pick("FLA");
+  const roster: RosterEntry[] = [
+    ...(sState.rosters[team] ?? []).filter((r) => r.id !== car && r.id !== fla),
+    { id: car, status: "ACTIVE", slot: "C" },
+    { id: fla, status: "RESERVE", slot: "RESERVE" },
+  ];
+  const sInput: PlanInputs = {
+    league: sLeague,
+    state: { ...sState, rosters: { ...sState.rosters, [team]: roster } },
+    values: sValues,
+    schedule: sSchedule,
+    teamId: team,
+    nowMs: Date.parse("2026-09-29T12:00:00Z"),
+    config: SLAPSHOT,
+  };
+  const morning = buildDailyPlan(sInput);
+  assert(morning.target?.rosterPeriod === 1 && !!morning.locks, "game lock: the plan carries the per-game locks");
+  assert(morning.locks!.next === new Date(Date.parse(first[0]) - lead).toISOString(), `next lock = my first player's game − 5 min (${morning.locks!.next})`);
+  assert(morning.locks!.last === new Date(lastLock).toISOString() && morning.locks!.locked.length === 0, "last lock of the night, nobody locked yet");
+  // After the first puck drop: the same night is still the target (VGK plays at 22:30 EDT)
+  const evening = buildDailyPlan({ ...sInput, nowMs: Date.parse("2026-09-29T21:30:00Z") });
+  assert(evening.target?.rosterPeriod === 1, `still tonight's lineup after the first game (target ${evening.target?.rosterPeriod})`);
+  assert(evening.locks!.locked.includes(car) && evening.locks!.locked.includes(fla), "the first game's players are locked");
+  assert(evening.locks!.next === new Date(lastLock).toISOString(), `next lock = the VGK game − 5 min (${evening.locks!.next})`);
+  const slots = evening.lineup!.slots;
+  assert(slots.some((x) => x.slot === "C" && x.id === car), "a locked Active player keeps his slot");
+  assert(!slots.some((x) => x.id === fla), "a locked Reserve player cannot come in");
+  assert(!evening.lineup!.moves.some((m) => m.id === car || m.id === fla), "no move involves a locked player");
+  // Once the night's last game has locked, the plan moves to the next day
+  const late = buildDailyPlan({ ...sInput, nowMs: lastLock + 1_000 });
+  assert(late.target?.rosterPeriod === 2, `after the last lock → period 2 (${late.target?.rosterPeriod})`);
+}
 
 if (failed) process.exit(1);
 console.log(`OK: fantrax daily plan (${plan.teamName}, ${size} B)`);

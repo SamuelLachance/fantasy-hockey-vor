@@ -19,9 +19,13 @@ export function salaryLine(u: SalaryUsage): string {
   const room = u.room[0] ?? 0;
   const unknown = u.unknown.length ? `; ${u.unknown.length} salaire${u.unknown.length > 1 ? "s" : ""} inconnu${u.unknown.length > 1 ? "s" : ""}` : "";
   const head = `Masse salariale : ${fmtMoney(u.used[0] ?? 0)} / ${fmtMoney(u.cap[0] ?? 0)}`;
+  // More Active + Reserve players than counted spots (a draft seats every pick in Active).
+  const extra = u.surplus?.length
+    ? `; ${u.surplus.length} de plus, supposé${u.surplus.length > 1 ? "s" : ""} aux mineures`
+    : "";
   return room < 0
-    ? `${head}, dépassement de ${fmtMoney(-room)} (Actifs + Réserve seulement${unknown}).`
-    : `${head}, marge ${fmtMoney(room)} (Actifs + Réserve seulement, ${u.counted} joueurs sur ${u.spots}${unknown}).`;
+    ? `${head}, dépassement de ${fmtMoney(-room)} (Actifs + Réserve seulement${extra}${unknown}).`
+    : `${head}, marge ${fmtMoney(room)} (Actifs + Réserve seulement, ${u.counted} joueurs sur ${u.spots}${extra}${unknown}).`;
 }
 
 /** The growth assumption in words, for the method note. */
