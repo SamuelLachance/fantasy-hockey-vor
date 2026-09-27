@@ -99,19 +99,32 @@ const calibrated = data.players.map((p) => {
   const availability = decision?.availability ? { availability: decision.availability } : {};
   if (decision?.availability) splitCount++;
   const prevGp = p.gamesPlayed;
-  if (prevGp <= 0 || newGp === prevGp) {
-    return { ...rest, primaryPosition, modelGamesPlayed: rawModelGp, ...availability };
-  }
-  const ratio = newGp / prevGp;
   const profile = profilesById.get(p.id);
   // A contextual projection (no NHL season of 10 games) is re-projected at
   // the rule's games: its totals were rounded per stat at 3-10 games, and
   // scaling them to 40 would multiply the rounding (1 goal in 3 → 16 in 48).
+  // A pure function of the profile and the games, so it runs on every pass
+  // (a fix to the contextual rates reaches a board whose games are settled).
+  const reproject =
+    !p.isGoalie && decision?.availability && p.projectionMethod === "contextual" && profile
+      ? () =>
+          projectSkaterFromProfile({ ...normalizeProfile(profile), position: primaryPosition }, newGp)
+            .projection
+      : null;
+  if (prevGp <= 0 || newGp === prevGp) {
+    return {
+      ...rest,
+      primaryPosition,
+      modelGamesPlayed: rawModelGp,
+      ...(reproject && prevGp > 0 ? { projection: reproject() } : {}),
+      ...availability,
+    };
+  }
+  const ratio = newGp / prevGp;
   const projection = p.isGoalie
     ? scaleGoalieProjection(p.projection as GoalieProjection, ratio)
-    : decision?.availability && p.projectionMethod === "contextual" && profile
-      ? projectSkaterFromProfile({ ...normalizeProfile(profile), position: primaryPosition }, newGp)
-          .projection
+    : reproject
+      ? reproject()
       : scaleSkaterProjection(p.projection as SkaterProjection, ratio);
   const uncertainty = p.uncertainty
     ? {

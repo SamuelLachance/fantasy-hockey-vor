@@ -100,6 +100,12 @@ export interface PlayerAvailability {
   league: "ahl" | "college" | "chl" | "europe";
   /** The curve's GP: the rate calibration pools players on it, as its reference did. */
   curveGamesPlayed: number;
+  /**
+   * Probit scale of the rule's error (split-season-gp.json `roleSd`):
+   * P(40+ games) = Φ((gamesPlayed − 40) / gpSd). The Captains dynasty
+   * blends its NHL and prospect routes by it instead of cutting at 40.
+   */
+  gpSd?: number;
 }
 
 export interface PlayerProjection {

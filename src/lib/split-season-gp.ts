@@ -127,6 +127,17 @@ export const SPLIT_FEATURES = {
   prospectAge: (x: SplitSeasonInput) => prospectDebut(x) * Math.min(x.age, 34),
   prospectDraftLog: (x: SplitSeasonInput) => prospectDebut(x) * Math.log(x.draftPick ?? 300),
   prospectToi: (x: SplitSeasonInput) => prospectDebut(x) * x.toiMinutes,
+  /**
+   * A first NHL stint after college / junior / Europe that did not end with
+   * the club: a teenager's trial before he went back to junior or Europe
+   * (Brady Martin, 2025-26) rarely sticks the next season; without these
+   * the youth and pedigree terms, fitted mostly on the players who stayed,
+   * took him to ~48 games.
+   */
+  prospectSentBack: (x: SplitSeasonInput, c: FeatureContext) =>
+    prospectDebut(x) * (1 - finishedValue(x, c)),
+  prospectSentBackYouth: (x: SplitSeasonInput, c: FeatureContext) =>
+    prospectDebut(x) * (1 - finishedValue(x, c)) * Math.max(0, 23 - x.age),
   /** Years under 23, with finishing the season and with the draft slot. */
   finishedYouth: (x: SplitSeasonInput, c: FeatureContext) =>
     finishedValue(x, c) * Math.max(0, 23 - x.age),
@@ -149,7 +160,20 @@ export interface LinearGpModel extends FeatureContext {
   coef: number[];
   floor: number;
   ceiling: number;
+  /**
+   * Spread of the realized games around a prediction, as a probit scale:
+   * P(next season ≥ ROLE_GP games) = Φ((prediction − ROLE_GP) / roleSd),
+   * fitted by maximum likelihood on the walk-forward predictions (split:
+   * ≈ 22 GP; empirical shares 0.13 / 0.43 / 0.62 / 0.81 at predictions of
+   * 15 / 35 / 45 / 55). The Captains dynasty route reads it
+   * (src/lib/dynasty/segment.ts): a hard cut at 40 games on a point
+   * estimate this noisy decided values on rounding.
+   */
+  roleSd?: number;
 }
+
+/** Half a season: the NHL-role cut the dynasty route uses (src/lib/dynasty/segment.ts). */
+export const ROLE_GP = 40;
 
 export interface SplitSeasonGpParams {
   version: 1;

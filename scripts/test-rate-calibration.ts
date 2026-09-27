@@ -7,6 +7,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import {
   clampSkaterProjection,
+  MAX_PPP_SHARE,
   findProjectionIssues,
   SKATER_RATE_LIMITS,
 } from "../src/lib/projection-sanity";
@@ -299,6 +300,11 @@ assert(SKATER_RATE_LIMITS.D.goals >= 0.4, "D goals limit sits above the realized
     { name: "Makar-like", position: "D", isGoalie: false, gamesPlayed: 70, projection: makarLike },
   ]);
   assert(issues.length === 0, "sanity check accepts a 22-goal defenseman");
+  // PPP above the realized maximum share of points (0.6): a 14-game sample carried at full rate
+  const hutsonLike = clampSkaterProjection({ ...makarLike, goals: 7, assists: 17, powerplayPoints: 17 }, 46, "D");
+  assert(hutsonLike.powerplayPoints === Math.round(MAX_PPP_SHARE * 24), `PPP capped at 60% of 24 points (got ${hutsonLike.powerplayPoints})`);
+  const quinnLike = clampSkaterProjection({ ...makarLike, goals: 11, assists: 61, powerplayPoints: 33 }, 74, "D");
+  assert(quinnLike.powerplayPoints === 33, "a realistic PP share is untouched");
 }
 
 // --- legacy board bootstrap ---

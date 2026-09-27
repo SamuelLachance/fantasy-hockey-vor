@@ -1,4 +1,4 @@
-import { loadLeagueSeasonsSync } from "./league-seasons";
+import { loadLeagueSeasonsSync, MIN_SEASON_COVERAGE, seasonCoverage } from "./league-seasons";
 import { durabilityKey, loadDurabilityRegistrySync } from "./ml/gamelog-durability";
 import { loadMoneyPuckSkaterRegistrySync, skaterSeasonKey } from "./moneypuck-skaters";
 import type { PlayerProfile } from "./profile-types";
@@ -243,6 +243,7 @@ export function decideSkaterGp(
     1,
     Math.min(CALIBRATED_GP_CEILING, Math.round(predictSplitSeasonGp(rule.params, input))),
   );
+  const gpSd = rule.params[input.kind].roleSd;
   return {
     gamesPlayed: gp,
     curveGamesPlayed: curveGp,
@@ -252,11 +253,18 @@ export function decideSkaterGp(
       otherGames: input.otherGames,
       league: input.league,
       curveGamesPlayed: curveGp,
+      ...(gpSd != null ? { gpSd } : {}),
     },
   };
 }
 
-/** Rule inputs from the committed game logs and league-seasons cache. */
+/**
+ * Rule inputs from the committed game logs and league-seasons cache. Null
+ * (every skater gets the curve, with a warning) when a file is missing, or
+ * when the cache predates the last completed season: the rule would then
+ * see no split season at all and silently stop applying (a new season's
+ * `npm run collect:leagues` refetches the players it lacks).
+ */
 export function splitSeasonRuleFromFiles(
   projectionSeasonId: number,
 ): SplitSeasonRule | null {
@@ -265,6 +273,14 @@ export function splitSeasonRuleFromFiles(
   const durability = loadDurabilityRegistrySync();
   const moneypuck = loadMoneyPuckSkaterRegistrySync();
   if (!params || !leagues) return null;
+  const last = projectionSeasonId - 10001;
+  const coverage = seasonCoverage(leagues, last);
+  if (coverage < MIN_SEASON_COVERAGE) {
+    console.warn(
+      `WARN: src/data/league-seasons.json covers ${last} for ${(coverage * 100).toFixed(0)}% of the players active the season before (< ${MIN_SEASON_COVERAGE * 100}%): run npm run collect:leagues`,
+    );
+    return null;
+  }
   return {
     params,
     projectionSeasonId,

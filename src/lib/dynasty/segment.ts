@@ -12,6 +12,15 @@
  * Contextual projections of 0–19 GP players are placeholders (Klepov's 62 GP)
  * and never count as an NHL role.
  *
+ * Blended route (2026-09-27): a skater with a prospect record whose NHL
+ * role hangs on his projected games (under 100 career GP), when those games
+ * come from the split-season rule (a late signing or a call-up:
+ * `proj.gpSd`), is valued on both routes, the paths mixed by
+ * P(40+ games) = Φ((GP − 40) / gpSd) (≈ 22 GP, the rule's walk-forward
+ * spread). A hard cut on that point estimate moved values 4–6× on a game
+ * or two (Konsta Helenius, 40.5 raw games: NHL route 123, prospect 30).
+ * The route shown (path, phase, segment) is the likelier one.
+ *
  * Year 0 (audit 2026-09-25): a current injury, IR stint or suspension trims
  * season 0 only (`avail0`); the goalie start share is his depth-chart share
  * with injured partners kept in, so neither an injury flag nor a partner's
@@ -27,6 +36,7 @@
  * shocks; no trajectory shift. Everyone else: the projection's realized
  * level × the half-strength year-0 age calibration, then the curve.
  */
+import { normalCdf } from "../fantrax/draft";
 import { goalieStartShares } from "../fantrax/points-model";
 import { ageShift, phaseByAge, trajectoryShift, type LevelFn, type Trajectory } from "./aging";
 import { ageAt, birthMs, cutdownAge, isEligible, seasonAnchorMs } from "./eligibility";
@@ -39,6 +49,10 @@ import type { SimPlayer } from "./simulate";
 import type { DynastyFlag, DynastyInput, Group, MarketSeg, PathKind, Phase } from "./types";
 
 export type Route = "nhl" | "prospect" | "nhl-part" | "slot" | "fringe";
+
+/** Projected games that make an NHL role (skaters / goalies). */
+export const SKATER_ROLE_GP = 40;
+export const GOALIE_ROLE_GP = 15;
 
 export interface Routed {
   input: DynastyInput;
@@ -59,6 +73,11 @@ export interface Routed {
   /** Conditional growth of a young NHL-path skater (null otherwise). */
   growth: YouthGrowth | null;
   pm: ProspectModel | null;
+  /**
+   * Blended route: P(40+ games), the share of paths on the NHL route (the
+   * rest on the prospect route); null when one route decides.
+   */
+  nhlShare: number | null;
 }
 
 export interface YouthGrowth {
@@ -123,12 +142,32 @@ export function depthChartShares(p: DynastyParams, goalies: readonly DepthGoalie
   );
 }
 
+/**
+ * P(40+ games) of a skater whose route is blended (see the header), else
+ * null: a prospect record, a real projection whose games come from the
+ * split-season rule, and an NHL role that hangs on those games.
+ */
+export function nhlRouteShare(
+  p: DynastyParams,
+  inp: DynastyInput,
+  g: Group,
+  gp0: number,
+  realProj: boolean,
+): number | null {
+  const sd = inp.proj?.gpSd;
+  if (g === "G" || !inp.prospect || !realProj || sd == null || !(sd > 0)) return null;
+  if (gp0 >= p.eligibility.skaterGp) return null;
+  return normalCdf((inp.proj!.gp - SKATER_ROLE_GP) / sd);
+}
+
 export function routePlayer(
   p: DynastyParams,
   level: LevelFn,
   inp: DynastyInput,
   remainingShare = 1,
   growthModel: GrowthModel = makeGrowth(p, level),
+  /** Blended route: take this side of the cut (the build simulates both). */
+  force?: "nhl" | "prospect",
 ): Routed {
   const proj = inp.proj;
   const rec = inp.prospect;
@@ -146,8 +185,14 @@ export function routePlayer(
 
   const realProj = proj?.src === "proj" && (proj.method === "ml" || gp0 >= 20);
   if (proj?.src === "proj" && !realProj) flags.add("placeholderProjection");
+  const nhlShare = nhlRouteShare(p, inp, g, gp0, realProj);
   const nhlRole =
-    realProj && (g === "G" ? proj!.gp >= 15 || gp0 >= p.eligibility.goalieGp : proj!.gp >= 40 || gp0 >= p.eligibility.skaterGp);
+    nhlShare != null && force
+      ? force === "nhl"
+      : realProj &&
+        (g === "G"
+          ? proj!.gp >= GOALIE_ROLE_GP || gp0 >= p.eligibility.goalieGp
+          : proj!.gp >= SKATER_ROLE_GP || gp0 >= p.eligibility.skaterGp);
   const [dMin, dMax] = p.prospect.draftAgeRange;
   const draft = inp.draft ?? rec?.draft ?? null;
   // Namesake guard: the draft age must be 17–21. Without a birth date the
@@ -295,5 +340,6 @@ export function routePlayer(
     sim,
     growth,
     pm,
+    nhlShare,
   };
 }

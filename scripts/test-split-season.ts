@@ -13,9 +13,11 @@ import {
 } from "../src/lib/split-season";
 import {
   isClubLeague,
+  isStaleForSeason,
   nhlGamesIn,
   otherLeagueGamesIn,
   parseLeagueSeasonTotals,
+  seasonCoverage,
   toiToSeconds,
   type LeagueSeasonsCache,
 } from "../src/lib/league-seasons";
@@ -161,6 +163,23 @@ const rehab = buildInjuryProfile(vetSeasons, false, [
 ]);
 assert(JSON.stringify(rehab) === JSON.stringify(vetBlind), "a conditioning loan keeps the injury reading");
 
+// Split last season after short NHL-only seasons: the note says where the
+// concern comes from, never "Missed ~0 games".
+const fragile = buildInjuryProfile(
+  [season(20232024, 30), season(20242025, 25), season(20252026, 13)],
+  false,
+  [{ seasonId: 20252026, gamesPlayed: 11, leagues: ["AHL"] }],
+);
+assert(fragile.trend === "injury_prone" && fragile.gamesMissedLastSeason === 0, "low NHL-only durability stays injury prone");
+assert(!/Missed ~0/.test(fragile.note) && /NHL-only seasons/.test(fragile.note) && /AHL/.test(fragile.note), `note: ${fragile.note}`);
+
+// A goalie with only split seasons keeps the plain NHL reading (a workload share, not a skater regular's 0.9).
+const goalieAllSplit = buildInjuryProfile([season(20242025, 10, true), season(20252026, 12, true)], true, [
+  { seasonId: 20242025, gamesPlayed: 40, leagues: ["AHL"] },
+  { seasonId: 20252026, gamesPlayed: 38, leagues: ["AHL"] },
+]);
+assert(goalieAllSplit.durabilityScore === 0.13, `goalie, all split seasons: plain NHL durability (got ${goalieAllSplit.durabilityScore})`);
+
 // Goalie split season: platoon note, not an injury.
 const goalie = buildInjuryProfile([season(20252026, 20, true)], true, [
   { seasonId: 20252026, gamesPlayed: 23, leagues: ["AHL"] },
@@ -259,6 +278,27 @@ assert(
 );
 assert(splitSeasonInput(7, 20262027, rule.sources) === null, "goalies never take the skater rule");
 
+// The rule's probit spread rides along for the dynasty route (P(40+ games)).
+const withSd = decideSkaterGp(skater(1, 45), withHistory(1, [[20252026, 14]]), gpCurve, {
+  ...rule,
+  params: { ...params, split: { ...params.split, roleSd: 22 } },
+});
+assert(withSd.availability?.gpSd === 22, "the split rule's roleSd is published as availability.gpSd");
+
+// A cache read before the last completed season: refetch the recently active, warn the rule off.
+assert(isStaleForSeason({ seasons: [[20242025, "NHL", 50, 900]] }, 20252026), "active in 2024-25, no 2025-26 line: stale");
+assert(!isStaleForSeason({ seasons: [[20242025, "NHL", 50, 900]], through: 20252026 }, 20252026), "read after 2025-26: not stale");
+assert(!isStaleForSeason({ seasons: [[20192020, "NHL", 50, 900]] }, 20252026), "long retired: left alone");
+const staleCache: LeagueSeasonsCache = {
+  builtAt: "",
+  source: "",
+  players: {
+    "1": { pos: "C", birth: "2000-01-01", draft: 1, draftYear: 2018, seasons: [[20242025, "NHL", 80, 1000], [20252026, "NHL", 70, 1000]] },
+    "2": { pos: "C", birth: "2000-01-01", draft: 1, draftYear: 2018, seasons: [[20242025, "NHL", 80, 1000]] },
+  },
+};
+assert(seasonCoverage(staleCache, 20252026) === 0.5 && seasonCoverage(staleCache, 20262027) === 0, "coverage of the last completed season");
+
 // The rate calibration pools a rule player on the curve's GP (as its reference did).
 assert(rateFitGamesPlayed({ gamesPlayed: 67, availability: { curveGamesPlayed: 32 } }) === 32, "rate pool: curve GP");
 assert(rateFitGamesPlayed({ gamesPlayed: 70 }) === 70, "rate pool: published GP otherwise");
@@ -284,6 +324,18 @@ if (fitted) {
     gameScore: 12, mpGames: 46,
   });
   assert(hutsonFit >= 42, `fitted rule: Hutson-like season ≥ 42 GP (got ${hutsonFit.toFixed(1)})`);
+  // A teenager's short trial before he went back to junior (Brady Martin,
+  // 2025-26): top-10 picks sent back like him averaged ~34 games the next
+  // season (n 13); finishing with the club is worth a lot more.
+  const trial: SplitSeasonInput = {
+    ...base, isDefense: false, age: 19.55, draftPick: 5, nhlGp82: 3, toiMinutes: 11.42, otherGames: 24, league: "chl", finished: false,
+    gameScore: 0.54, mpGames: 3,
+  };
+  const trialFit = predictSplitSeasonGp(fitted, trial);
+  const stayedFit = predictSplitSeasonGp(fitted, { ...trial, finished: true });
+  assert(trialFit <= 44, `fitted rule: a top-5 teenager sent back to junior after 3 games ≤ 44 GP (got ${trialFit.toFixed(1)})`);
+  assert(stayedFit > trialFit + 10, `finishing with the club counts (${stayedFit.toFixed(1)} vs ${trialFit.toFixed(1)})`);
+  assert((fitted.split.roleSd ?? 0) >= 15 && (fitted.split.roleSd ?? 0) <= 30, `probit spread of the split rule ≈ 22 (got ${fitted.split.roleSd})`);
   assert(vetFit <= 20, `fitted rule: AHL veteran sent down ≤ 20 GP (got ${vetFit.toFixed(1)})`);
   assert(khlFit <= 10, `fitted rule: 30-year-old back from the KHL ≤ 10 GP (got ${khlFit.toFixed(1)})`);
 }
@@ -305,6 +357,14 @@ if (yakemchuk) {
     `rates hold over the override (shots ${own.projection.shots} at 10, ${at40.projection.shots} at 40)`,
   );
   assert(at40.projection.goals >= 1, `no rounding to zero over 40 games (goals ${at40.projection.goals})`);
+}
+// 10+ NHL games but no 10-game season: hits and blocks pool every NHL season
+// (with a position prior), never 0 (Tristan Luneau: 15 hits, 14 blocks in 14 games).
+const luneau = profilesDoc.profiles.find((p) => p.id === 8483482);
+assert(luneau !== undefined, "Tristan Luneau's profile is committed");
+if (luneau) {
+  const at27 = projectSkaterFromProfile(normalizeProfile(luneau), 27).projection;
+  assert(at27.hits >= 15 && at27.blocks >= 15, `career-rate hits and blocks over 27 games (hits ${at27.hits}, blocks ${at27.blocks})`);
 }
 
 if (failed) process.exit(1);

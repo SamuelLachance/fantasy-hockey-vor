@@ -224,8 +224,11 @@ export function buildInjuryProfile(
   const lastSplit = last && split.includes(last) ? otherGames(last.seasonId) : undefined;
 
   const missed = lastSplit ? 0 : Math.max(0, SEASON_SCHEDULED_GAMES - lastGp);
+  // A goalie's games are a workload share (a starter tops out near 0.79 of
+  // the schedule), not a skater's availability: with no NHL-only season his
+  // durability stays the plain NHL reading rather than a skater regular's.
   const durability =
-    split.length === 0
+    split.length === 0 || (isGoalie && nhlOnly.length === 0)
       ? Math.min(1, avg / SEASON_SCHEDULED_GAMES)
       : nhlOnly.length > 0
         ? Math.min(
@@ -238,12 +241,18 @@ export function buildInjuryProfile(
 
   let trend: InjuryProfile["trend"] = "healthy";
   let note = "Consistent availability";
+  // After a split last season nothing was missed: a low durability comes
+  // from the NHL-only seasons before it, and the note says so.
   if (durability < 0.65 || missed >= 20) {
     trend = "injury_prone";
-    note = `Missed ~${missed} games last season; durability concern`;
+    note = lastSplit
+      ? "Durability concern over NHL-only seasons"
+      : `Missed ~${missed} games last season; durability concern`;
   } else if (durability < 0.85 || missed >= 10) {
     trend = "moderate";
-    note = `Missed ~${missed} games last season`;
+    note = lastSplit
+      ? "Below a regular's availability over NHL-only seasons"
+      : `Missed ~${missed} games last season`;
   }
   const splitNote = lastSplit
     ? `split season: ${lastGp} NHL GP + ${lastSplit.gamesPlayed} ${lastSplit.leagues.join("/")} GP (games in another league, not absences)`

@@ -78,6 +78,16 @@ const GOALIE_RATE_LIMITS = {
   savePctMax: 0.925,
 };
 
+/**
+ * Highest share of goals + assists scored on the power play in any NHL
+ * season of 40+ games and 20+ points in the profiles (Shayne Gostisbehere
+ * 2024-25: 27 of 45; 99th percentile 0.52). Like the rate limits, it only
+ * catches output above anything realized: a small NHL sample carried at
+ * full rate (Cole Hutson's 6 PPP in 14 games, kept at 0.37 per game: 17 of
+ * 24 projected points).
+ */
+export const MAX_PPP_SHARE = 0.6;
+
 function clampTotal(value: number, perGameMax: number, gamesPlayed: number): number {
   const max = Math.floor(perGameMax * Math.max(1, gamesPlayed));
   return Math.min(Math.max(0, Math.round(value)), max);
@@ -144,7 +154,11 @@ export function clampSkaterProjection(
     shots,
     blocks,
     hits,
-    powerplayPoints: Math.min(powerplayPoints, goals + assists),
+    powerplayPoints: Math.min(
+      powerplayPoints,
+      goals + assists,
+      Math.max(1, Math.round(MAX_PPP_SHARE * (goals + assists))),
+    ),
     penaltyMinutes,
     faceoffWins,
   };

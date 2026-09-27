@@ -90,26 +90,38 @@ function weightedSeasonAverage(
 
 const MAX_GOALIE_WIN_RATE = 0.62;
 
+/**
+ * Career rates of a player with 10+ NHL games but no 10-game season (the
+ * only caller). The landing's career totals carry goals, assists, shots,
+ * PPP and PIM but no hits, blocks or faceoffs: those pool every NHL season
+ * of the history (advanced stats), with MIN_SEASON_GP games of the position
+ * baseline as a prior. They used to come from the last 10-game season,
+ * which such a player never has, so every one of them projected 0 hits and
+ * 0 blocks (Tristan Luneau: 27 GP, 0 / 0 after 15 hits and 14 blocks in 14
+ * games).
+ */
 function careerSkaterRates(profile: PlayerProfile) {
   const career = profile.careerTotals;
   const gp = finite(career.gamesPlayed);
   if (gp < MIN_SEASON_GP) return null;
 
-  const last = profile.teamHistory
-    .filter((s) => !s.isGoalie && s.gamesPlayed >= MIN_SEASON_GP)
-    .slice(-1)[0];
+  const seasons = profile.teamHistory.filter((s) => !s.isGoalie && s.gamesPlayed > 0);
+  const pooledGp = seasons.reduce((sum, s) => sum + s.gamesPlayed, 0);
+  const baseline = rookieSkaterProjection(profile.position);
+  const pooled = (stat: "blocks" | "hits" | "faceoffWins") =>
+    (seasons.reduce((sum, s) => sum + finite(s.advanced[stat]), 0) +
+      (baseline[stat] / FULL_SEASON_GP) * MIN_SEASON_GP) /
+    (pooledGp + MIN_SEASON_GP);
 
   return {
     goals: perGame(finite(career.goals), gp),
     assists: perGame(finite(career.assists), gp),
     shots: perGame(finite(career.shots), gp),
-    blocks: last ? perGame(finite(last.advanced.blocks), last.gamesPlayed) : 0,
-    hits: last ? perGame(finite(last.advanced.hits), last.gamesPlayed) : 0,
+    blocks: pooled("blocks"),
+    hits: pooled("hits"),
     powerplayPoints: perGame(finite(career.powerPlayPoints), gp),
     penaltyMinutes: perGame(finite(career.pim), gp),
-    faceoffWins: last
-      ? perGame(finite(last.advanced.faceoffWins), last.gamesPlayed)
-      : 0,
+    faceoffWins: pooled("faceoffWins"),
   };
 }
 

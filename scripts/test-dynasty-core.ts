@@ -14,7 +14,9 @@ import { makeRetention } from "../src/lib/dynasty/retention";
 import { hashStr, mulberry32 } from "../src/lib/dynasty/rng";
 import { groupOf, realized, replacement, year0Cal } from "../src/lib/dynasty/scale";
 import { depthChartShares, routePlayer, statusAvailability } from "../src/lib/dynasty/segment";
-import { simulatePlayer, type SimContext, type SimPlayer } from "../src/lib/dynasty/simulate";
+import { mixSimResults, simulatePlayer, type SimContext, type SimPlayer } from "../src/lib/dynasty/simulate";
+import { buildDynasty } from "../src/lib/dynasty/index";
+import { normalCdf } from "../src/lib/fantrax/draft";
 import type { DynastyInput, ProspectRecord, SeasonLine } from "../src/lib/dynasty/types";
 
 let failed = 0;
@@ -289,6 +291,53 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(vet.seg === "late" && vet.phase === "late_career", `36-year-old → late / late_career (${vet.seg}, ${vet.phase})`);
   const unknownElig = routePlayer(params, level, input({ id: "u", eligNow: null, birthDate: "1996-01-01", careerGp: 500 }));
   assert(unknownElig.eligNow === false, "unknown flag → rule-based eligibility");
+}
+
+// ---- 5b. Blended route: games from the split-season rule (a late signing)
+{
+  const signing = (gp: number, gpSd?: number) =>
+    input({
+      id: "signing",
+      e: "D,Skt",
+      birthDate: "2006-06-28",
+      careerGp: 14,
+      proj: { src: "proj", gp, off: 2.6, dx: 0.9, method: "ml", ...(gpSd ? { gpSd } : {}) },
+      prospect: rec({ pos: "D", nhlGP: 14 }),
+      draft: { year: 2024, pick: 43 },
+    });
+  const hard = routePlayer(params, level, signing(46));
+  assert(hard.nhlShare === null && hard.route === "nhl", "without the rule's spread the 40-game cut decides");
+  const soft = routePlayer(params, level, signing(46, 22));
+  assert(soft.route === "nhl" && near(soft.nhlShare!, normalCdf(6 / 22), 1e-12), `P(40+ games) = Φ((46 − 40) / 22) (${soft.nhlShare})`);
+  assert(routePlayer(params, level, signing(39, 22)).route === "prospect", "the likelier side is the route shown");
+  const other = routePlayer(params, level, signing(46, 22), 1, undefined, "prospect");
+  assert(other.route === "prospect" && other.sim?.path === "prospect", "the other side can be forced");
+  const vet = routePlayer(params, level, { ...signing(46, 22), careerGp: 150, prospect: rec({ nhlGP: 150 }) });
+  assert(vet.nhlShare === null, "100+ career games: the NHL route, no blend");
+  const goalie = routePlayer(params, level, { ...signing(12, 22), e: "G", proj: { src: "proj", gp: 12, gE: 3.9, method: "ml", gpSd: 22 } });
+  assert(goalie.nhlShare === null, "goalies keep their cut");
+
+  // The mixture takes the first round(w · N) paths of the NHL side, the rest of the prospect side.
+  const cx = ctx({ N: 200 });
+  const a = simulatePlayer(soft.sim!, cx);
+  const b = simulatePlayer(other.sim!, cx);
+  const m = mixSimResults(a, b, 0.25);
+  assert(m.gain[0]![49] === a.gain[0]![49] && m.gain[0]![50] === b.gain[0]![50], "per-path gains: 50 NHL paths, then prospect paths");
+  assert(near(m.eligAt[1]!, 0.25 * a.eligAt[1]! + 0.75 * b.eligAt[1]!, 1e-12), "path shares mix with the same weight");
+  assert(near(m.pMade, 0.25 * a.pMade + 0.75 * b.pMade, 1e-12), "P(made) mixes");
+
+  // No cliff: a game either side of 40 moves the value by a few percent, not 4×.
+  const build = (gp: number, gpSd?: number) =>
+    buildDynasty(
+      { players: [signing(gp, gpSd)], meta: { valuesFetchedAt: "", stateFetchedAt: "", projectionsAt: "", prospectsBuiltAt: "" } },
+      params,
+      { paths: 2000, K: 40, market: false },
+    ).all.signing!.dv.balanced;
+  const [c39, c41] = [build(39), build(41)];
+  const [b39, b41] = [build(39, 22), build(41, 22)];
+  assert(c41 > 1.5 * c39, `hard cut: 39 → 41 games jumps (${c39.toFixed(1)} → ${c41.toFixed(1)})`);
+  assert(b41 > b39 && b41 < 1.15 * b39, `blended: 39 → 41 games moves a little (${b39.toFixed(1)} → ${b41.toFixed(1)})`);
+  assert(b39 > c39 && b41 < c41, "the blend sits between the two routes");
 }
 
 // ---- 6. Draft-slot prior

@@ -106,6 +106,13 @@ export function explainFr(r: DynastyRecord, maxLen = 220): string {
     clauses.push(`${who}${t}`);
     if (growth) clauses.push(growth);
   }
+  // 1b. a blended route with a real doubt: why the value sits between the two routes (before the keeper clause, which has its own column)
+  const roleClause =
+    r.nhlShare != null
+      ? `${pct(r.nhlShare)} de chances de jouer 40 matchs en ${seasonLabel(FIRST_SEASON)} (valeur mêlée LNH et espoir)`
+      : null;
+  const roleDoubt = r.nhlShare != null && r.nhlShare >= 0.1 && r.nhlShare <= 0.9;
+  if (roleClause && roleDoubt) clauses.push(roleClause);
   // 2. keeper economics (a rostered player: his own team's 10 slots)
   const firstCut = FIRST_SEASON + 1;
   const kv = keeperView(r);
@@ -120,8 +127,9 @@ export function explainFr(r: DynastyRecord, maxLen = 220): string {
   } else if (kv.status === "rental") clauses.push(kv.team ? KEEPER_TEAM_FR.rental : "location");
   else if (kv.status === "bubble") clauses.push(`${(kv.team ? KEEPER_TEAM_FR : KEEPER_FR).bubble} en ${firstCut}`);
   else if (kv.status === "core") clauses.push((kv.team ? KEEPER_TEAM_FR : KEEPER_FR).core);
-  // 3. current status, conflict / market (the market gap matters most for young players near the line)
+  // 3. current status, uncertain role, conflict / market (the market gap matters most for young players near the line)
   if (r.flags?.includes("injuredNow")) clauses.push(`indisponible en ce moment${NBSP}: 2026-27 réduite, pas la suite`);
+  if (roleClause && !roleDoubt) clauses.push(roleClause);
   if (r.flags?.includes("projectionConflict")) clauses.push("projection LNH et pedigree en désaccord");
   const gap = r.market.gap;
   if (gap != null && Math.abs(gap) > 50) {

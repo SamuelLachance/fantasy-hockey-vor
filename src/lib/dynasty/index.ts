@@ -4,7 +4,8 @@
  * no fetch, seeded RNG — the same inputs give the same snapshot.
  *
  * Pipeline: route each player (NHL path / prospect path / fringe; young
- * skaters get their conditional growth path, growth.ts) → an ungated pass
+ * skaters get their conditional growth path, growth.ts; a blended route
+ * simulates both sides and mixes the paths, segment.ts) → an ungated pass
  * sets the keeper-slot cost K and the keep-index gate → one gated
  * simulation per player (4,000 paths × 12 seasons) → values for every mode
  * → the market layer on thin segments → ranks, keeper status, eligibility
@@ -19,7 +20,7 @@ import type { DynastyParams } from "./params";
 import { makeRetention } from "./retention";
 import { replacement } from "./scale";
 import { routePlayer, type Route, type Routed } from "./segment";
-import { simulatePlayer, type SimContext } from "./simulate";
+import { mixSimResults, simulatePlayer, type SimContext } from "./simulate";
 import type { DynastyBuildInputs, DynastyRecord, DynastySnapshot, KeeperStatus, Mode } from "./types";
 import { MODES } from "./types";
 import { calibrateK, discount, modeWeights, summarize, type KCalibration, type PlayerValue } from "./value";
@@ -111,11 +112,19 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
 
   const seen = new Set<string>();
   const routed: Routed[] = [];
+  // Blended route (segment.ts): the other side of the 40-game cut, simulated
+  // too and mixed by P(40+ games); `routed` keeps the likelier side.
+  const otherSide = new Map<string, Routed>();
   for (const inp of inputs.players) {
     if (seen.has(inp.id)) continue;
     seen.add(inp.id);
     const rem = inp.team ? (inputs.remainingShare?.[inp.team] ?? 1) : 1;
-    routed.push(routePlayer(p, level, inp, rem, growth));
+    const r = routePlayer(p, level, inp, rem, growth);
+    routed.push(r);
+    if (r.nhlShare != null && r.sim) {
+      const alt = routePlayer(p, level, inp, rem, growth, r.route === "nhl" ? "prospect" : "nhl");
+      if (alt.sim) otherSide.set(inp.id, alt);
+    }
   }
   const routes = { nhl: 0, prospect: 0, "nhl-part": 0, slot: 0, fringe: 0 } as Record<Route, number>;
   for (const r of routed) routes[r.route]++;
@@ -135,7 +144,12 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
   const ki27 = new Map<string, Float64Array>();
   let done = 0;
   for (const r of routed) {
-    const res = r.sim ? simulatePlayer(r.sim, ctx) : null;
+    let res = r.sim ? simulatePlayer(r.sim, ctx) : null;
+    const alt = otherSide.get(r.input.id);
+    if (res && alt?.sim) {
+      const altRes = simulatePlayer(alt.sim, ctx);
+      res = r.route === "nhl" ? mixSimResults(res, altRes, r.nhlShare!) : mixSimResults(altRes, res, r.nhlShare!);
+    }
     const v = res ? summarize(res, modes) : null;
     if (res?.ki1 && res.eligAt[1]! < 1) ki27.set(r.input.id, res.ki1);
     values.set(r.input.id, v);
@@ -249,6 +263,7 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
       p50G: p50G.map((x) => Math.round(x)),
       eFP: (v ? v.eFP : new Array<number>(T).fill(0)).map((x) => Math.round(x)),
       trend: r.path === "nhl" && v?.trend != null ? r3(v.trend) : null,
+      ...(otherSide.has(id) ? { nhlShare: r3(r.nhlShare!) } : {}),
       ...(r.growth
         ? {
             growth: {

@@ -44,6 +44,8 @@ export interface LeagueSeasonsPlayer {
   draft: number | null;
   draftYear: number | null;
   seasons: LeagueSeasonLine[];
+  /** Last completed season when the landing was read (a later season is not in `seasons` yet). */
+  through?: number;
 }
 
 export interface LeagueSeasonsCache {
@@ -176,6 +178,44 @@ export function nhlGamesIn(
     }
   }
   return { games: 0, toiSeconds: 0 };
+}
+
+/**
+ * A cached player read before `seasonId` (the last completed season) was
+ * played, active in one of the two seasons before it and without a line
+ * for it: his `seasonId` lines may be missing (the split-season rule reads
+ * a split / away season up to two seasons back). Players inactive for
+ * longer are left alone.
+ */
+export function isStaleForSeason(
+  player: Pick<LeagueSeasonsPlayer, "seasons" | "through"> | null | undefined,
+  seasonId: number,
+): boolean {
+  if (!player || (player.through ?? 0) >= seasonId) return false;
+  const seasons = new Set(player.seasons.map((l) => l[0]));
+  if (seasons.has(seasonId)) return false;
+  return seasons.has(seasonId - 10001) || seasons.has(seasonId - 20002);
+}
+
+/** Minimum share of the cache's active players with a line for the last completed season. */
+export const MIN_SEASON_COVERAGE = 0.5;
+
+/**
+ * Of the cached players with a line in the season before `seasonId`, the
+ * share that also has one in `seasonId` (~0.92 when the cache is current;
+ * ~0 when it was built before `seasonId` was played).
+ */
+export function seasonCoverage(cache: LeagueSeasonsCache, seasonId: number): number {
+  let prior = 0;
+  let both = 0;
+  for (const p of Object.values(cache.players)) {
+    if (!p) continue;
+    const seasons = new Set(p.seasons.map((l) => l[0]));
+    if (!seasons.has(seasonId - 10001)) continue;
+    prior++;
+    if (seasons.has(seasonId)) both++;
+  }
+  return prior > 0 ? both / prior : 0;
 }
 
 let cache: LeagueSeasonsCache | null | undefined;

@@ -465,3 +465,50 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
   };
 }
 
+
+/**
+ * A mixture of two simulations of the same player on N paths each (the
+ * blended NHL / prospect route, segment.ts): the first round(wA · N) paths
+ * of `a`, then paths of `b` up to N, so per-path quantities (gains, bands,
+ * keep indices) are an exact stratified draw from the mixture. Shares
+ * already averaged over paths (eligibility, keeper, NHL presence, games,
+ * P(made)) mix with the same weight. The level path (`lvlRel`) and the
+ * arrivals follow the side that carries them.
+ */
+export function mixSimResults(a: SimResult, b: SimResult, wA: number): SimResult {
+  const N = a.N;
+  if (b.N !== N || b.T !== a.T) throw new Error("mixSimResults: simulations of different shapes");
+  const kA = Math.max(0, Math.min(N, Math.round(wA * N)));
+  const w = kA / N;
+  const perPath = (x: Float64Array, y: Float64Array) => {
+    const out = new Float64Array(N);
+    out.set(x.subarray(0, kA), 0);
+    out.set(y.subarray(kA, N), kA);
+    return out;
+  };
+  const rows = (x: Float64Array[], y: Float64Array[]) => x.map((row, t) => perPath(row, y[t]!));
+  const avg = (x: number[], y: number[]) => x.map((v, t) => w * v + (1 - w) * y[t]!);
+  // arrivals are listed per arriving path: keep each side's share of them
+  const take = (xs: number[], share: number) => xs.slice(0, Math.round(xs.length * share));
+  return {
+    N,
+    T: a.T,
+    gain: rows(a.gain, b.gain),
+    fp: rows(a.fp, b.fp),
+    vorPre: rows(a.vorPre, b.vorPre),
+    eligAt: avg(a.eligAt, b.eligAt),
+    keptAt: avg(a.keptAt, b.keptAt),
+    gateAt: avg(a.gateAt, b.gateAt),
+    inNhl: avg(a.inNhl, b.inNhl),
+    games: avg(a.games, b.games),
+    pMade: w * a.pMade + (1 - w) * b.pMade,
+    arrivals: [...take(a.arrivals, w), ...take(b.arrivals, 1 - w)],
+    lostBy: {
+      age: w * a.lostBy.age + (1 - w) * b.lostBy.age,
+      gp: w * a.lostBy.gp + (1 - w) * b.lostBy.gp,
+    },
+    lvlRel: a.lvlRel ?? b.lvlRel,
+    ki1: a.ki1 && b.ki1 ? perPath(a.ki1, b.ki1) : (a.ki1 ?? b.ki1),
+    gamesPath: a.gamesPath && b.gamesPath ? rows(a.gamesPath, b.gamesPath) : null,
+  };
+}

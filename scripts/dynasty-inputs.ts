@@ -143,6 +143,10 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
   const { values, state, nhlIds, pool, prospects, paths } = L;
   const dataset = readJson<ProjectionsDataset>(paths.players);
   const method = new Map(dataset.players.map((p) => [p.id, p.projectionMethod ?? null]));
+  // Games from the split-season rule: its spread blends the dynasty route (segment.ts).
+  const gpSd = new Map(
+    dataset.players.flatMap((p) => (p.availability?.gpSd != null ? [[p.id, p.availability.gpSd] as const] : [])),
+  );
   const profiles = new Map(readJson<{ profiles: PlayerProfile[] }>(paths.profiles).profiles.map((p) => [p.id, p]));
   const registry = readJson<DraftRegistry>(paths.registry).byName;
   const rostered = new Set(Object.values(state.rosters).flat().map((r) => r.id));
@@ -194,6 +198,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
         ...(v.gE !== undefined ? { gE: v.gE } : {}),
         ...(pS !== undefined ? { pS } : {}),
         method: m === "ml" || m === "contextual" ? m : null,
+        ...(v.src === "proj" && nhlId && gpSd.has(nhlId) ? { gpSd: gpSd.get(nhlId)! } : {}),
       },
       ...(rec ? { prospect: rec } : {}),
       ...(draft ? { draft: draft.draft, draftSource: draft.source } : {}),

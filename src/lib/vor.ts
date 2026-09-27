@@ -322,12 +322,18 @@ export interface VorBaselines {
 }
 
 export function applyVor(
-  players: RawPlayer[],
+  input: RawPlayer[],
   league: LeagueSettings = DEFAULT_LEAGUE,
   /** When set, skip pass-1 pool selection and reuse prior scarcity/replacement. */
-  reuse?: VorBaselines,
+  reuseInput?: VorBaselines,
 ): VorResult {
   const goalieFactor = league.goalieVorFactor ?? 1;
+  // Canonical order (by id): the pool sums (z-score means / SDs, scarcity
+  // weights) and every tie then no longer depend on the order the board was
+  // saved in, so a republish from the published board is bit-exact.
+  const byId = <T extends { id: number }>(rows: T[]) => [...rows].sort((a, b) => a.id - b.id);
+  const players = byId(input);
+  const reuse = reuseInput ? { ...reuseInput, zReference: byId(reuseInput.zReference) } : undefined;
 
   let categoryWeights: CategoryDifficultyWeights;
   let replacementLevels: Partial<Record<Position, number>>;

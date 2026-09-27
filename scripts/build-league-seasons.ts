@@ -9,9 +9,12 @@
  *
  * Polite by construction: one request at a time, at most one per 1.1 s, a
  * descriptive User-Agent, long back-off on 429 / 5xx. Resumable: players
- * already in the cache are skipped (`-- --refresh` refetches them all,
- * `-- --only <id,id>` fetches just those), and the file is rewritten every
- * 100 players. No login, public endpoint only.
+ * already in the cache are skipped unless stale, i.e. active in one of the
+ * two seasons before the last completed one without a line for it (fetched
+ * before it was played: at each new season, this refetches the recently
+ * active players the split-season rule reads); `-- --refresh` refetches
+ * them all, `-- --only <id,id>` fetches just those. The file is rewritten
+ * every 100 players. No login, public endpoint only.
  *
  * Then, offline, the committed profiles get their games in other leagues
  * and a re-read injury profile (`-- --no-profiles` skips it): a split season
@@ -24,12 +27,14 @@ import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { otherLeaguesFromLines } from "../src/lib/split-season";
 import {
+  isStaleForSeason,
   LEAGUE_SEASONS_PATH,
   parseLeagueSeasonTotals,
   type LeagueSeasonsCache,
   type LeagueSeasonsPlayer,
 } from "../src/lib/league-seasons";
 import { buildContextNarrative, buildInjuryProfile } from "../src/lib/player-profile";
+import { PROJECTION_SEASON_ID } from "../src/lib/nhl-api";
 import type { PlayerProfile } from "../src/lib/profile-types";
 
 const ROOT = process.cwd();
@@ -87,7 +92,7 @@ function candidateIds(): number[] {
   return out;
 }
 
-function playerFromLanding(landing: Record<string, unknown>): LeagueSeasonsPlayer {
+function playerFromLanding(landing: Record<string, unknown>, through: number): LeagueSeasonsPlayer {
   const draft = landing.draftDetails as
     | { overallPick?: number; year?: number }
     | undefined;
@@ -97,6 +102,7 @@ function playerFromLanding(landing: Record<string, unknown>): LeagueSeasonsPlaye
     draft: typeof draft?.overallPick === "number" ? draft.overallPick : null,
     draftYear: typeof draft?.year === "number" ? draft.year : null,
     seasons: parseLeagueSeasonTotals(landing.seasonTotals),
+    through,
   };
 }
 
@@ -112,9 +118,12 @@ async function main() {
   const existing = readJson<LeagueSeasonsCache>(LEAGUE_SEASONS_PATH);
   const players: LeagueSeasonsCache["players"] = { ...(existing?.players ?? {}) };
   const ids = only ?? candidateIds();
-  const todo = ids.filter((id) => refresh || only || !(String(id) in players));
+  const lastCompleted = PROJECTION_SEASON_ID - 10001;
+  const stale = (id: number) => isStaleForSeason(players[String(id)], lastCompleted);
+  const todo = ids.filter((id) => refresh || only || !(String(id) in players) || stale(id));
+  const staleCount = only || refresh ? 0 : ids.filter((id) => String(id) in players && stale(id)).length;
   console.log(
-    `${ids.length} players, ${todo.length} to fetch (~${Math.ceil((todo.length * MIN_INTERVAL_MS) / 60000)} min at one request per ${MIN_INTERVAL_MS} ms)`,
+    `${ids.length} players, ${todo.length} to fetch (${staleCount} cached without ${lastCompleted}; ~${Math.ceil((todo.length * MIN_INTERVAL_MS) / 60000)} min at one request per ${MIN_INTERVAL_MS} ms)`,
   );
 
   const save = () => {
@@ -142,6 +151,7 @@ async function main() {
       try {
         players[String(id)] = playerFromLanding(
           (await res.json()) as Record<string, unknown>,
+          lastCompleted,
         );
       } catch {
         failed++;

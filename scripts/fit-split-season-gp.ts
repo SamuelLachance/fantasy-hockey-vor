@@ -13,7 +13,9 @@
  *
  * Model: weighted ridge (λ = 1 on standardized features, recency weight
  * e^(−RECENCY · seasons back)), one per kind. The 2012-13 and 2020-21
- * seasons are left out (EXCLUDED_SEASONS).
+ * seasons are left out (EXCLUDED_SEASONS). Each model also carries the
+ * probit scale of its walk-forward errors (`roleSd`: P(ROLE_GP+ games) =
+ * Φ((prediction − ROLE_GP) / roleSd)), which the dynasty route reads.
  *
  * Backtest, walk-forward (train on seasons before the test season), against
  *  - "pipeline": the current pipeline, emulated: its v2 model GP is a ridge on
@@ -24,7 +26,7 @@
  *    path's 10 → curve;
  *  - "lag1": his NHL games of the season (the injury reading).
  *
- * Run: npm run gp:split-fit
+ * Run: npm run gp:split-fit [-- --dry] (--dry: report only, nothing written)
  */
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -40,6 +42,7 @@ import {
 import {
   featureVector,
   predictLinearGp,
+  ROLE_GP,
   scheduledGames,
   SPLIT_SEASON_GP_PATH,
   splitSeasonInput,
@@ -51,6 +54,7 @@ import {
   type SplitSeasonSources,
 } from "../src/lib/split-season-gp";
 import { loadMoneyPuckSkaterRegistrySync, skaterSeasonKey } from "../src/lib/moneypuck-skaters";
+import { normalCdf } from "../src/lib/fantrax/draft";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const FIRST_PROJECTION = 20092010; // t = 2008-09 (TOI and game logs complete)
@@ -104,6 +108,8 @@ const SPECS: Record<SplitKind, SplitFeatureName[]> = {
     "prospectToi",
     "finishedYouth",
     "youthDraftLog",
+    "prospectSentBack",
+    "prospectSentBackYouth",
   ],
   away: ["nhlShare", "toi", "isD", "age", "ageOver24", "draftLog", "undrafted", "europe", "career", "twoAway", "gameScorePg"],
 };
@@ -407,6 +413,10 @@ const SEGMENTS: Record<string, (s: Sample) => boolean> = {
   "debut after NCAA / CHL / Europe": (s) => s.x.careerGpBefore === 0 && s.x.league !== "ahl",
   "…and finished in the NHL at 16+ min (Hutson-like)": (s) =>
     s.x.careerGpBefore === 0 && s.x.league !== "ahl" && s.x.finished === true && s.x.toiMinutes >= 16,
+  "…and sent back before the end": (s) =>
+    s.x.careerGpBefore === 0 && s.x.league !== "ahl" && s.x.finished === false,
+  "…sent back, drafted top 20 (Brady Martin-like)": (s) =>
+    s.x.careerGpBefore === 0 && s.x.league !== "ahl" && s.x.finished === false && (s.x.draftPick ?? 999) <= 20,
   "AHL / ECHL call-up": (s) => s.x.league === "ahl",
   "NHL games < 10": (s) => s.x.nhlGp82 < 10,
   "NHL games 40+": (s) => s.x.nhlGp82 >= 40,
@@ -449,7 +459,36 @@ function walkForward(kind: SplitKind) {
     const mean = (a: number[]) => Math.round((a.reduce((x, v) => x + v, 0) / a.length) * 10) / 10;
     bands.push({ band: `${lo}-${lo + 10}`, n: sub.length, predicted: mean(sub.map((s) => s.raw)), actual: mean(sub.map((s) => s.y)) });
   }
-  return { segments: out, calibration: bands, ceiling };
+  return { segments: out, calibration: bands, ceiling, roleSd: fitRoleSd(capped), roleShares: roleShares(capped) };
+}
+
+/**
+ * Probit scale of the realized games around the prediction: the s that
+ * maximizes the likelihood of "played ROLE_GP+ games" under
+ * P = Φ((prediction − ROLE_GP) / s), on a 0.5-GP grid.
+ */
+function fitRoleSd(rows: Array<{ rule: number; y: number }>): number {
+  let best = { s: 20, ll: -Infinity };
+  for (let s = 5; s <= 50; s += 0.5) {
+    let ll = 0;
+    for (const r of rows) {
+      const q = Math.min(1 - 1e-6, Math.max(1e-6, normalCdf((r.rule - ROLE_GP) / s)));
+      ll += r.y >= ROLE_GP ? Math.log(q) : Math.log(1 - q);
+    }
+    if (ll > best.ll) best = { s, ll };
+  }
+  return best.s;
+}
+
+/** Realized share of ROLE_GP+ seasons per 10-game band of the prediction (reported). */
+function roleShares(rows: Array<{ rule: number; y: number }>) {
+  const out: Array<{ band: string; n: number; share: number }> = [];
+  for (let lo = 0; lo < 80; lo += 10) {
+    const sub = rows.filter((r) => r.rule >= lo && r.rule < lo + 10);
+    if (sub.length === 0) continue;
+    out.push({ band: `${lo}-${lo + 10}`, n: sub.length, share: Math.round((sub.filter((r) => r.y >= ROLE_GP).length / sub.length) * 100) / 100 });
+  }
+  return out;
 }
 
 const fmt = (m: Metrics) =>
@@ -464,6 +503,7 @@ const backtest: Record<string, unknown> = {
   },
 };
 const ceilings: Record<SplitKind, number> = { split: CEILING, away: CEILING };
+const roleSds: Record<SplitKind, number> = { split: 22, away: 22 };
 for (const kind of ["split", "away"] as const) {
   const res = walkForward(kind);
   backtest[kind] = res;
@@ -477,7 +517,11 @@ for (const kind of ["split", "away"] as const) {
   console.log(
     `calibration (raw predicted band: n, mean predicted → realized): ${res.calibration.map((b) => `${b.band}: ${b.n}, ${b.predicted} → ${b.actual}`).join(" · ")}; ceiling ${res.ceiling}`,
   );
+  console.log(
+    `P(${ROLE_GP}+ games) per predicted band: ${res.roleShares.map((b) => `${b.band}: ${b.share} (n ${b.n})`).join(" · ")}; probit scale ${res.roleSd}`,
+  );
   ceilings[kind] = res.ceiling;
+  roleSds[kind] = res.roleSd;
 }
 const emu = backtest.pipelineEmulator as { boardFit: Metrics; splitSkatersFit: Metrics };
 console.log(
@@ -493,8 +537,8 @@ const params: SplitSeasonGpParams = {
   fittedAt: new Date().toISOString(),
   source: `durability.json (${durability.builtAt}) + league-seasons.json (${leagues.builtAt}); ${samples.length} skater seasons ${FIRST_PROJECTION - 10001}→${LAST_PROJECTION - 10001}`,
   minOtherGames: SPLIT_SEASON_MIN_OTHER_GAMES,
-  split: { ...fitModel("split", samples.filter((s) => s.x.kind === "split"), anchor), ceiling: ceilings.split },
-  away: { ...fitModel("away", samples.filter((s) => s.x.kind === "away"), anchor), ceiling: ceilings.away },
+  split: { ...fitModel("split", samples.filter((s) => s.x.kind === "split"), anchor), ceiling: ceilings.split, roleSd: roleSds.split },
+  away: { ...fitModel("away", samples.filter((s) => s.x.kind === "away"), anchor), ceiling: ceilings.away, roleSd: roleSds.away },
   backtest,
 };
 const round4 = (m: LinearGpModel): LinearGpModel => ({
@@ -512,5 +556,9 @@ for (const kind of ["split", "away"] as const) {
     `\n${kind}: ${samples.filter((s) => s.x.kind === kind).length} seasons; GP = ${m.intercept} ${m.features.map((f, i) => `${m.coef[i]! >= 0 ? "+" : "−"} ${Math.abs(m.coef[i]!)}·${f}`).join(" ")} (clamped ${m.floor}–${m.ceiling})`,
   );
 }
-writeFileAtomic(SPLIT_SEASON_GP_PATH, `${JSON.stringify(params, null, 2)}\n`);
-console.log(`\nWrote ${SPLIT_SEASON_GP_PATH}`);
+if (process.argv.includes("--dry")) {
+  console.log("\n--dry: nothing written");
+} else {
+  writeFileAtomic(SPLIT_SEASON_GP_PATH, `${JSON.stringify(params, null, 2)}\n`);
+  console.log(`\nWrote ${SPLIT_SEASON_GP_PATH}`);
+}

@@ -133,6 +133,11 @@ export interface DynastyInput {
     pS?: number;
     /** players.json projectionMethod; null when not matched. */
     method: "ml" | "contextual" | null;
+    /**
+     * The games come from the split-season rule (players.json
+     * `availability`): its probit spread, P(40+ games) = Φ((gp − 40) / gpSd).
+     */
+    gpSd?: number;
   };
   prospect?: ProspectRecord;
   /** NHL entry draft (profile first, then the registry). */
@@ -217,6 +222,13 @@ export interface DynastyRecord {
    */
   growth?: { src: "season" | "projection"; base: number; baseAge: number; pct: number; pick: number | null; m: number[] };
   pNhl: number;
+  /**
+   * Blended route (a late signing or call-up whose projected games come
+   * from the split-season rule): P(40+ games), the share of the value from
+   * the NHL route, the rest from the prospect route. Absent when one route
+   * decides.
+   */
+  nhlShare?: number;
   /** Median first NHL season (start year) for the prospect path; null otherwise. */
   eta: number | null;
   elig: {
