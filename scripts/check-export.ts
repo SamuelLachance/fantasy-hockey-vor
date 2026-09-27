@@ -219,7 +219,9 @@ for (const page of htmlFiles) {
   const preload = [...markup.matchAll(/<link\b(?=[^>]*\bas="script")[^>]*\shref="([^"]+)"/g)].map((m) => m[1]!);
   scriptsOf.set(page, [...new Set([...src, ...preload])]);
 }
-const lists = [...scriptsOf.values()];
+// Stand-alone pages without Next chunks (public/slapshot-draft.html) would
+// empty the intersection and bill every page for the shared runtime.
+const lists = [...scriptsOf.values()].filter((l) => l.length > 0);
 const shared = (lists[0] ?? []).filter((s) => lists.every((l) => l.includes(s)));
 const fileOf = (url: string) => join(OUT, url.slice(BASE.length).split("?")[0]!);
 const sharedKb = shared.reduce((n, s) => n + gzKb(fileOf(s)), 0);
@@ -260,6 +262,9 @@ const BUDGETS: Budget[] = [
   { label: "Snake", match: (p) => p === "snake.html", js: 25, htmlRaw: 80, htmlGz: 15 },
   { label: "/league (stub), 404", match: (p) => ["league.html", "404.html", "_not-found.html"].includes(p), js: 5, htmlRaw: 60, htmlGz: 12 },
   { label: "/draft/light-the-lamp", match: (p) => p === "draft/light-the-lamp.html", js: 45, htmlRaw: 700, htmlGz: 75 },
+  // Stand-alone live draft page for the Slapshot league (public/, no Next chunks):
+  // its board is inlined, its script is inline.
+  { label: "Slapshot · repêchage en direct", match: (p) => p === "slapshot-draft.html", js: 0, htmlRaw: 550, htmlGz: 120 },
 ];
 // Spec limit (§11: ≤ 200 KB; about 192 KB at the restructure).
 const SHARED_MAX = 200;
