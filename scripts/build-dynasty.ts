@@ -21,6 +21,8 @@ import { dynastyGates, spearman } from "../src/lib/dynasty/checks";
 import { explainFr, KEEPER_TEAM_FR, keeperView, PHASE_FR, rosterHintFr } from "../src/lib/dynasty/explain";
 import { buildDynasty, DEFAULT_PATHS, type BuildResult, type DynastyRecord } from "../src/lib/dynasty/index";
 import { FANTRAX_DEFAULT_TEAM_ID } from "../src/lib/fantrax/config";
+import { writeFileAtomic } from "../src/lib/atomic-write";
+import { runSlapshotBuild, slapshotChecks, slapshotLite, slapshotPaths, slapshotReport } from "./dynasty-slapshot";
 import {
   dynastyUpToDate,
   loadDynastyFiles,
@@ -40,6 +42,34 @@ const REPORT = args.includes("--report");
 const IF_STALE = args.includes("--if-stale");
 const NO_MARKET = args.includes("--no-market");
 const STABILITY = args.includes("--stability");
+/** League profile: captains (default, the Captains Dynasty League) or slapshot. */
+const LEAGUE = argValue("--league") ?? "captains";
+/** Slapshot: also write the compact board file for the live draft page here. */
+const LITE = argValue("--lite");
+
+function slapshotMain() {
+  const b = runSlapshotBuild({
+    paths: PATH_COUNT,
+    ...(OUT ? { out: OUT } : {}),
+    ...(NO_MARKET ? { market: false } : {}),
+    compareNoCap: REPORT,
+    onProgress: (d, n) => {
+      if (REPORT && d % 500 === 0) process.stderr.write(`  ${d}/${n}\n`);
+    },
+  });
+  const P = b.snapshot.params;
+  console.log(
+    `OK: dynasty:build --league slapshot wrote ${Object.keys(b.snapshot.players).length} players (λ ${P.lambda[0]} pts/M$ [${P.lambdaDiag.method}], ${PATH_COUNT} paths, ${(b.ms / 1000).toFixed(1)} s) → ${OUT ?? slapshotPaths().out}`,
+  );
+  if (LITE) {
+    writeFileAtomic(LITE, `${JSON.stringify(slapshotLite(b))}\n`);
+    console.log(`OK: lite board → ${LITE}`);
+  }
+  const errors = slapshotChecks(b);
+  for (const e of errors) console.log(`  FAIL ${e}`);
+  if (REPORT) console.log(slapshotReport(b).join("\n"));
+  if (errors.length) process.exitCode = 1;
+}
 /** Seed stability: ranks compared in the top STABILITY_TOP; their 95th-percentile move must stay ≤ STABILITY_P95. */
 const STABILITY_TOP = 200;
 const STABILITY_P95 = 12;
@@ -247,6 +277,8 @@ function report(res: BuildResult, L: LoadedDynastyFiles, ms: number) {
 }
 
 function main() {
+  if (LEAGUE === "slapshot") return slapshotMain();
+  if (LEAGUE !== "captains") throw new Error(`--league ${LEAGUE}: unknown (captains | slapshot)`);
   const L = loadDynastyFiles();
   if (IF_STALE) {
     const why = dynastyUpToDate(L, OUT);

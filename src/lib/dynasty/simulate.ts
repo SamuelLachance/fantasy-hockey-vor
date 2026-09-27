@@ -46,8 +46,40 @@ import { clamp, rngFor } from "./rng";
 import type { Replacement } from "./scale";
 import type { Group } from "./types";
 
+/**
+ * A league other than the Captains Dynasty League (league profile, e.g.
+ * Slapshot): its own scoring, replacement and salary cap. The level θ stays
+ * on league 1's realized scale (aging, growth, retention and goalie roles are
+ * fitted there); only the season value converts it. Absent = league 1
+ * (captain premium, league-1 replacement), bit for bit.
+ */
+export interface SimLeague {
+  /** League fantasy points per league-1 realized point, × the share of NHL games inside the fantasy season. */
+  k: number;
+  /** Skater replacement per NHL game, league points (same fantasy-season share). */
+  r: number;
+  /** Goalie replacement per season slot, league points. */
+  rG: number;
+  /**
+   * Cap charge per season (league points): λ_t × (cap hit_t − league minimum),
+   * counted for the part of the season he sits on the active roster or the
+   * reserve (skaters: share / regular share, capped at 1; goalies: all
+   * season). The owner's options each season are play (value − charge) or
+   * the minors (0 points, 0 cap), so the season gain is max(0, value − charge).
+   */
+  capCost: number[];
+  /**
+   * No minors-eligibility rule (any player may sit in the minors): every
+   * season from 2027-28 is gated — the owner keeps him (paying the roster
+   * spot, ctx.K) while his keep index beats ctx.Kgate, else drops him for good.
+   */
+  noEligibility?: boolean;
+}
+
 export interface SimPlayer {
   id: string;
+  /** League profile season value (absent = league 1). */
+  lg?: SimLeague;
   g: Group;
   /** Age on Oct 1 of the first season (fractional). */
   age0: number;
@@ -259,7 +291,7 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       if (!live || Y0 + t + j < arrival) continue;
       const th = thetaGate !== null ? thetaGate * fwd : (pi * lv[t + j + PRE]!) / lvl25;
       thPrev = th;
-      idx += kdW[j]! * surv * Math.max(0, seasonValue(th, SG * sh));
+      idx += kdW[j]! * surv * Math.max(0, lg ? seasonValue(th, SG * sh) - capCharge(t + j, sh) : seasonValue(th, SG * sh));
     }
     return idx / kdSum;
   };
@@ -276,9 +308,15 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
   let lostAge = 0;
   let lostGp = 0;
 
-  const seasonValue = (th: number, games: number) =>
-    (g === "G" ? th * games - repl.Gseason : (th - R) * games) +
-    (g === "F" ? 0.5 * Math.max(0, th - repl.offRef) * games : 0);
+  const lg = pl.lg ?? null;
+  const seasonValue = lg
+    ? (th: number, games: number) => (g === "G" ? lg.k * th * games - lg.rG : (lg.k * th - lg.r) * games)
+    : (th: number, games: number) =>
+        (g === "G" ? th * games - repl.Gseason : (th - R) * games) +
+        (g === "F" ? 0.5 * Math.max(0, th - repl.offRef) * games : 0);
+  /** Cap charge of season t for a role share (league profile only). */
+  const capCharge = (t: number, sh: number) =>
+    lg ? (lg.capCost[t] ?? 0) * (g === "G" ? 1 : Math.min(1, sh / G.regShareMean)) : 0;
 
   for (let n = 0; n < N; n++) {
     let alive = true;
@@ -321,7 +359,7 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       const season = Y0 + t;
       const age = pl.age0 + t;
       // ---- eligibility at the cutdown before season t (t = 0: the Fantrax flag)
-      const eligible = t === 0 ? pl.eligNow : isEligible(p, g, cutAges[t]!, careerGp);
+      const eligible = pl.lg?.noEligibility ? false : t === 0 ? pl.eligNow : isEligible(p, g, cutAges[t]!, careerGp);
       if (eligible) eligAt[t]++;
       if (!lostCounted && wasEligible && !eligible) {
         lostCounted = true;
@@ -413,7 +451,12 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       const seasonScale = t === 0 ? remaining * avail0 : 1;
       const games = playing ? SG * share : 0;
       // in-season: the owner benches or drops him when the level is below replacement
-      const inSeason = playing ? Math.max(0, seasonValue(thetaT, games)) * seasonScale : 0;
+      // (league profile: play him — value less the cap charge — or stash him in the minors for 0)
+      const inSeason = playing
+        ? lg
+          ? Math.max(0, seasonValue(thetaT, games) - capCharge(t, share)) * seasonScale
+          : Math.max(0, seasonValue(thetaT, games)) * seasonScale
+        : 0;
       vorPre[t]![n] = alive ? inSeason : 0;
       fp[t]![n] = playing ? fpgReal * games * seasonScale : 0;
       if (playing) inNhl[t]++;

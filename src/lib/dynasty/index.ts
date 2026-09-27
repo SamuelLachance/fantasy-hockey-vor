@@ -45,6 +45,13 @@ export interface BuildOptions {
   /** RNG seed suffix (default SEED_KEY); a different key is a seed-stability check. */
   seedKey?: string;
   onProgress?: (done: number, total: number) => void;
+  /**
+   * Another league's profile (Slapshot): no keeper cutdown (every player
+   * carries over), and `prepare` attaches each simulated player's league
+   * season value (sim.lg: scoring, replacement, cap charge) once everyone is
+   * routed. Absent = the Captains Dynasty League.
+   */
+  league?: { keeperGate: boolean; prepare: (routed: Routed[]) => void };
 }
 
 export interface BuildInternal {
@@ -130,14 +137,24 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
   const routes = { nhl: 0, prospect: 0, "nhl-part": 0, slot: 0, fringe: 0 } as Record<Route, number>;
   for (const r of routed) routes[r.route]++;
 
+  if (opts.league) {
+    opts.league.prepare(routed);
+    // the blended route's other side scores in the same league (same contract, positions, scoring ratio)
+    for (const r of routed) {
+      const alt = otherSide.get(r.input.id);
+      if (alt?.sim && r.sim?.lg) alt.sim.lg = r.sim.lg;
+    }
+  }
   const sims = routed.filter((r) => r.sim).map((r) => r.sim!);
   const base = { p, level, ret, repl, growth };
-  const kGate = opts.Kgate ?? opts.K;
+  const keepGate = opts.league ? opts.league.keeperGate : true;
+  const kFixed = opts.K ?? (keepGate ? undefined : 0);
+  const kGate = opts.Kgate ?? kFixed;
   const K: KCalibration =
-    opts.K != null
-      ? { value: opts.K, band: [opts.K, opts.K], gate: kGate!, gateBand: [kGate!, kGate!], pool: 0, fallback: false }
+    kFixed != null
+      ? { value: kFixed, band: [kFixed, kFixed], gate: kGate!, gateBand: [kGate!, kGate!], pool: 0, fallback: false }
       : calibrateK(p, sims, base);
-  const ctx: SimContext = { ...base, K: K.value, Kgate: K.gate, N, keepGate: true, seedKey: opts.seedKey ?? SEED_KEY, recordKi: !!inputs.league };
+  const ctx: SimContext = { ...base, K: K.value, Kgate: K.gate, N, keepGate, seedKey: opts.seedKey ?? SEED_KEY, recordKi: !!inputs.league };
 
   const values = new Map<string, PlayerValue | null>();
   const keptPerCutdown = new Array<number>(T).fill(0);

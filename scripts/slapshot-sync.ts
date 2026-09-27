@@ -1,0 +1,81 @@
+/**
+ * Slapshot Fantasy League snapshot for the dynasty build: Fantrax positions
+ * (eligiblePos per Fantrax id), rosters and draft picks, from the public fxea
+ * endpoints (no login): src/data/dynasty/slapshot/pool.json.
+ *
+ * Run: npx tsx scripts/slapshot-sync.ts            (fetch, ≥ 1 s between calls)
+ *      npx tsx scripts/slapshot-sync.ts --from DIR  (DIR/n_getLeagueInfo.json,
+ *        n_getTeamRosters.json, n_draft.json already fetched)
+ */
+import { readFileSync } from "fs";
+import { join } from "path";
+import { writeFileAtomic } from "../src/lib/atomic-write";
+
+export const SLAPSHOT_LEAGUE_ID = "glxjunc7mtxdqi8x";
+const OUT = join(process.cwd(), "src", "data", "dynasty", "slapshot", "pool.json");
+const UA = "fantasy-hockey-vor/0.1 (personal dynasty research; public fxea endpoints; 1 req/s)";
+
+export interface SlapshotPool {
+  fetchedAt: string;
+  leagueId: string;
+  /** Fantrax id → Slapshot eligible positions ("C,LW"), NHL-relevant ids only (status not "FA" or listed in the universe). */
+  pos: Record<string, string>;
+  /** team id → Fantrax ids on its roster now. */
+  rosters: Record<string, string[]>;
+  teamNames: Record<string, string>;
+  /** Draft picks made so far: [pick, team id, player id]. */
+  picks: Array<[number, string, string]>;
+}
+
+interface LeagueInfo {
+  playerInfo: Record<string, { eligiblePos?: string; status?: string }>;
+  teamInfo?: Record<string, { name?: string; id?: string }>;
+}
+interface Rosters {
+  rosters: Record<string, { teamName?: string; rosterItems: Array<{ id: string }> }>;
+}
+interface Draft {
+  draftPicks: Array<{ pick: number; teamId: string; playerId?: string }>;
+}
+
+async function get<T>(path: string): Promise<T> {
+  const res = await fetch(`https://www.fantrax.com/fxea/general/${path}`, { headers: { "User-Agent": UA } });
+  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+  const out = (await res.json()) as T;
+  await new Promise((r) => setTimeout(r, 1100));
+  return out;
+}
+
+async function main() {
+  const args = process.argv.slice(2);
+  const fi = args.indexOf("--from");
+  const from = fi >= 0 ? args[fi + 1] : null;
+  const read = <T>(f: string) => JSON.parse(readFileSync(join(from!, f), "utf8")) as T;
+  const info = from ? read<LeagueInfo>("n_getLeagueInfo.json") : await get<LeagueInfo>(`getLeagueInfo?leagueId=${SLAPSHOT_LEAGUE_ID}`);
+  const rosters = from ? read<Rosters>("n_getTeamRosters.json") : await get<Rosters>(`getTeamRosters?leagueId=${SLAPSHOT_LEAGUE_ID}`);
+  const draft = from ? read<Draft>("n_draft.json") : await get<Draft>(`getDraftResults?leagueId=${SLAPSHOT_LEAGUE_ID}`);
+  const pos: Record<string, string> = {};
+  for (const [id, p] of Object.entries(info.playerInfo)) if (p.eligiblePos) pos[id] = p.eligiblePos;
+  const snap: SlapshotPool = {
+    fetchedAt: new Date().toISOString(),
+    leagueId: SLAPSHOT_LEAGUE_ID,
+    pos: Object.fromEntries(Object.entries(pos).sort((a, b) => a[0].localeCompare(b[0]))),
+    rosters: Object.fromEntries(
+      Object.entries(rosters.rosters).map(([t, r]) => [t, r.rosterItems.map((x) => x.id).sort()]),
+    ),
+    teamNames: Object.fromEntries(Object.entries(rosters.rosters).map(([t, r]) => [t, r.teamName ?? t])),
+    picks: draft.draftPicks
+      .filter((p) => p.playerId)
+      .sort((a, b) => a.pick - b.pick)
+      .map((p) => [p.pick, p.teamId, p.playerId!]),
+  };
+  writeFileAtomic(OUT, `${JSON.stringify(snap)}\n`);
+  console.log(
+    `OK: slapshot pool ${Object.keys(snap.pos).length} positions, ${Object.values(snap.rosters).flat().length} rostered, ${snap.picks.length} picks → ${OUT}`,
+  );
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
