@@ -54,6 +54,45 @@ const slugOf = (name: string) =>
     .replace(/^-|-$/g, "");
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * capwages spells some first names differently from the NHL (Nick Paul is
+ * "nicholas-paul", Egor Chinakhov "yegor-chinakhov"): the other spellings
+ * tried, one request each, only after the NHL spelling found no page.
+ */
+const FIRST_NAME_VARIANTS: Record<string, readonly string[]> = {
+  nick: ["nicholas"],
+  nicholas: ["nick"],
+  sam: ["samuel"],
+  samuel: ["sam"],
+  zach: ["zachary", "zack"],
+  zachary: ["zach", "zack"],
+  zack: ["zach", "zachary"],
+  alex: ["alexander", "alexandre"],
+  alexander: ["alex"],
+  joshua: ["josh"],
+  josh: ["joshua"],
+  kenneth: ["ken"],
+  patrick: ["pat"],
+  egor: ["yegor"],
+  dmitri: ["dmitry", "dmitriy"],
+  maxim: ["maksim", "max"],
+  max: ["maxwell", "maxim"],
+  georgii: ["georgi", "georgiy"],
+  sergei: ["sergey"],
+  arseny: ["arseni", "arseniy"],
+  matthew: ["matt"],
+  cam: ["cameron"],
+  ben: ["benjamin"],
+};
+
+/** Slugs to try for a player: his NHL spelling (and its -1 / -2 homonyms), then first-name variants. */
+export function slugCandidates(name: string): string[] {
+  const base = slugOf(name);
+  const [first, ...rest] = base.split("-");
+  const variants = (FIRST_NAME_VARIANTS[first ?? ""] ?? []).map((v) => [v, ...rest].join("-"));
+  return [...new Set([base, `${base}-1`, `${base}-2`, ...variants])];
+}
+
 interface CwContract {
   type?: string;
   expiryStatus?: string;
@@ -114,7 +153,7 @@ async function main() {
     writeFileAtomic(OUT, `${JSON.stringify(prev)}\n`);
   };
   for (const p of todo) {
-    const slugs = [slugOf(p.name), `${slugOf(p.name)}-1`, `${slugOf(p.name)}-2`];
+    const slugs = slugCandidates(p.name);
     let got: ContractSegment[] | null = null;
     let slug: string | null = null;
     let err: string | undefined;
@@ -132,8 +171,9 @@ async function main() {
           err = undefined;
           break;
         }
+        // No page under this spelling: the next candidate (a first-name variant) may have one.
         err = "not found";
-        break;
+        continue;
       } catch (e) {
         err = String(e).slice(0, 80);
         await sleep(DELAY_MS);
