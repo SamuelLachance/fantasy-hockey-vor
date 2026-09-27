@@ -10,13 +10,14 @@
  * in its own language.
  */
 import {
-  CLAIMS_PER_WEEK,
+  CAPTAINS_DYNASTY,
   DROP_PROTECT_MAX_AGE,
   DROP_PROTECT_MIN_ROS,
   DROP_PROTECT_TOP_N,
+  eligibleGroups,
   FANTRAX_ICON,
-  SLOT_ORDER,
   WAIVER_MIN_DELTA,
+  type FantraxLeagueConfig,
   type SlotId,
 } from "./config";
 import {
@@ -85,6 +86,21 @@ export interface PlanInputs {
   schedule: ScheduleSnapshot;
   teamId: string;
   nowMs: number;
+  /**
+   * Season points over the replacement level of each position, by Fantrax id
+   * (`leagueVor`), for a league whose slots all score a skater alike. It is
+   * what the draft board ranks by; without it the board falls back to season
+   * points with the empty-slot bonus. Passed in rather than computed here so
+   * this module stays a pure function of its inputs, and so the model is not
+   * bundled into every tab that only reads the plan.
+   */
+  vor?: ReadonlyMap<string, number> | null;
+  /**
+   * The league's config (slot table, eligibility, claim limit, features).
+   * The Captains league by default, so the browser — which re-runs this on
+   * the one snapshot it loaded — keeps working unchanged.
+   */
+  config?: FantraxLeagueConfig;
 }
 
 export interface TeamGame {
@@ -101,6 +117,8 @@ export type AlertCode =
   | "healthy-ir"
   | "over-max-after-moves"
   | "fxpa-down"
+  /** This league never exposes the injury / minors / caps details (fxpa closed). */
+  | "fxpa-closed"
   | "stale-data";
 
 /**
@@ -273,6 +291,7 @@ interface Ctx {
   values: ValuesSnapshot;
   index: ScheduleIndex;
   teamGoalies: Map<string, string[]>;
+  config: FantraxLeagueConfig;
 }
 
 function goalieShareForPeriod(ctx: Ctx, id: string, period: number | null): { p: number; b2b: boolean } {
@@ -303,7 +322,7 @@ function candidateFor(
   const rec = ctx.values.players[id];
   if (!rec) return null;
   const icons = ctx.state.icons[id] ?? [];
-  const eligible = eligibleSlots(rec.e);
+  const eligible = eligibleSlots(rec.e, ctx.config);
   const values: Partial<Record<SlotId, number>> = {};
   if (isGoalieRecord(rec)) {
     const out = isRuledOut({ team: rec.t, icons });
@@ -311,7 +330,11 @@ function candidateFor(
     values.G = p * dayToDayFactor(icons) * (rec.gE ?? 0);
   } else {
     const hasGame = period === null ? true : !!ctx.index.byPeriod.get(period)?.has(rec.t);
-    const p = skaterPlayProbability({ gp: rec.gp, fpg: bestFpg(rec), src: rec.src, team: rec.t, icons }, hasGame);
+    const p = skaterPlayProbability(
+      { gp: rec.gp, fpg: bestFpg(rec), src: rec.src, team: rec.t, icons },
+      hasGame,
+      ctx.config.priors,
+    );
     const isD = eligible.includes("D");
     for (const s of eligible) {
       if (s === "G") continue;
@@ -372,16 +395,18 @@ function waiverGroup(eligiblePos: string): string {
 
 export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const { league, state, values, schedule, teamId, nowMs } = input;
+  const config = input.config ?? CAPTAINS_DYNASTY;
   const index = indexSchedule(schedule, league.rosterPeriods);
   const teamGoalies = new Map<string, string[]>();
   for (const [id, r] of Object.entries(values.players)) {
-    if (!isGoalieRecord(r)) continue;
+    if (!isGoalieRecord(r, config)) continue;
     teamGoalies.set(r.t, [...(teamGoalies.get(r.t) ?? []), id]);
   }
-  const ctx: Ctx = { league, state, values, index, teamGoalies };
+  const ctx: Ctx = { league, state, values, index, teamGoalies, config };
   const roster = state.rosters[teamId] ?? [];
   const onRoster = new Map(roster.map((r) => [r.id, r]));
   const slotCounts = league.slotCounts;
+  const slotOrder = config.slots.order;
 
   // The lineup to set is the next one to lock; its scoring period is the
   // one whose caps and waiver window matter.
@@ -399,16 +424,17 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const evaluation = evaluateRoster(roster, flags, {
     limits: league.limits,
     slotCounts,
+    slotOrder,
     iconsKnown: state.fxpaOk,
   });
 
   // ---- per-game (schedule-free) lineup
   const baseCands = rosterCandidates(ctx, roster, null);
-  const baseRes = optimizeLineup(baseCands, slotCounts);
+  const baseRes = optimizeLineup(baseCands, slotCounts, slotOrder);
   const baseLineup = toPlanLineup(baseRes, ctx, null);
   // Captains are ranked by the whole per-game lineup each one allows, so the
   // advice always agrees with the optimizer's Skt pick.
-  const captains = captainRanking(baseCands, 5, slotCounts).map((c) => ({
+  const captains = captainRanking(baseCands, 5, slotCounts, slotOrder).map((c) => ({
     id: c.id,
     total: round(c.total),
     delta: round(c.delta),
@@ -421,13 +447,13 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     ? {
         id: sittingCaptain.id,
         gain: round(sittingCand ? captainGain(sittingCand) : 0),
-        delta: round(Math.min(0, totalWithCaptain(baseCands, sittingCaptain.id, slotCounts) - baseRes.total)),
+        delta: round(Math.min(0, totalWithCaptain(baseCands, sittingCaptain.id, slotCounts, slotOrder) - baseRes.total)),
       }
     : null;
 
   // ---- tonight
   const tonightCands = target ? rosterCandidates(ctx, roster, target.number) : [];
-  const tonightRes = target ? optimizeLineup(tonightCands, slotCounts) : null;
+  const tonightRes = target ? optimizeLineup(tonightCands, slotCounts, slotOrder) : null;
   const lineup = tonightRes && target ? toPlanLineup(tonightRes, ctx, target.number) : null;
 
   // ---- legality moves
@@ -456,7 +482,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     return c ? bestNonCaptainValue(c) : 0;
   };
   const fixes = promotable
-    .sort((a, b) => rank(b) - rank(a) || expected(b) - expected(a) || bestFpg(values.players[b]!) - bestFpg(values.players[a]!))
+    .sort((a, b) => rank(b) - rank(a) || expected(b) - expected(a) || bestFpg(values.players[b]!, config) - bestFpg(values.players[a]!, config))
     .slice(0, evaluation.need);
   let reserveRoom = Math.max(0, limits.maxReserve - evaluation.counts.reserve);
   const fixTo: Record<string, "ACTIVE" | "RESERVE"> = {};
@@ -473,7 +499,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   // Reserve bodies: Minors players who can go back down later first, then
   // by per-game value (the likeliest to be playing soon). The count needs no
   // icons, so this works even when fxpa was down.
-  const bodyScore = (id: string) => (canReturnToMinors(id) ? 1000 : 0) + (values.players[id] ? bestFpg(values.players[id]!) : 0);
+  const bodyScore = (id: string) => (canReturnToMinors(id) ? 1000 : 0) + (values.players[id] ? bestFpg(values.players[id]!, config) : 0);
   const bodies = (status: string) =>
     roster
       .filter((r) => r.status === status && !fixSet.has(r.id))
@@ -512,7 +538,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   // ---- goalies
   const goalieIds = roster
-    .filter((r) => values.players[r.id] && isGoalieRecord(values.players[r.id]!))
+    .filter((r) => values.players[r.id] && isGoalieRecord(values.players[r.id]!, config))
     .filter((r) => r.status !== "MINORS" || !deadReason(flags[r.id]))
     .map((r) => r.id);
   const goalies = goalieIds.map((id) => {
@@ -533,7 +559,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   // ---- daily plans across the rest of the scoring period
   const dayCands = periodDays.map((p) => rosterCandidates(ctx, roster, p.number));
-  const dayRes = dayCands.map((c) => optimizeLineup(c, slotCounts));
+  const dayRes = dayCands.map((c) => optimizeLineup(c, slotCounts, slotOrder));
 
   // ---- cap monitor
   // Cap usage is as of the sync, so the projection starts at the lineup
@@ -559,7 +585,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     let day = solved.get(p.number);
     if (!day) {
       const cands = rosterCandidates(ctx, roster, p.number);
-      day = { cands, res: optimizeLineup(cands, slotCounts) };
+      day = { cands, res: optimizeLineup(cands, slotCounts, slotOrder) };
     }
     const byId = new Map(day.cands.map((c) => [c.id, c]));
     let gp = 0;
@@ -587,7 +613,12 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     max !== null && byDay.length > 0 && used + sum(byDay.slice(0, -1)) >= max;
   const gpMax = sp ? (sp.gpMax ?? capUsed?.gpMax ?? null) : null;
   const gsMax = sp ? (sp.gsMax ?? capUsed?.gsMax ?? null) : null;
-  const cap = sp
+  // No cap block for a league whose config says it has no per-period GP / GS
+  // caps: an empty meter reading « 0 / ? » would suggest a rule exists and
+  // that the tool simply failed to read it. Slapshot's caps are not merely
+  // unread — fxpa is closed for it, so whether they exist at all is unknown,
+  // and the page says nothing rather than something wrong.
+  const cap = sp && config.features.gamesCaps
     ? {
         gp: usedGp,
         gpMax,
@@ -633,12 +664,14 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const potential = (id: string) => {
     const rec = values.players[id]!;
     const days = periodDays.filter((p) => index.byPeriod.get(p.number)?.has(rec.t)).length;
-    return bestFpg(rec) * days;
+    return bestFpg(rec, config) * days;
   };
   const shortlist = new Set<string>();
-  for (const g of ["C", "W", "D", "G"]) {
+  // The league's own group vocabulary: a fixed ["C","W","D","G"] token test
+  // matched no winger at all in a league whose slots are LW and RW.
+  for (const g of config.eligibility.groups) {
     available
-      .filter((id) => values.players[id]!.e.split(",").includes(g))
+      .filter((id) => eligibleGroups(values.players[id]!.e, config).includes(g))
       .filter((id) => !isRuledOut({ team: values.players[id]!.t, icons: state.icons[id] ?? [] }))
       .map((id) => ({ id, v: potential(id) }))
       .filter((x) => x.v > 0)
@@ -650,7 +683,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const promotedCount = evaluation.counts.counted + fixes.length + reserveFills.length - deadOut;
   const ranked = roster
     .filter((r) => r.status === "ACTIVE" || r.status === "RESERVE")
-    .map((r) => ({ id: r.id, v: values.players[r.id] ? seasonFp(values.players[r.id]!) : 0 }))
+    .map((r) => ({ id: r.id, v: values.players[r.id] ? seasonFp(values.players[r.id]!, config) : 0 }))
     .sort((a, b) => b.v - a.v);
   const core = new Set(ranked.slice(0, DROP_PROTECT_TOP_N).map((x) => x.id));
   const drops: DropOption[] = [];
@@ -661,8 +694,8 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     const protectedAsset =
       core.has(r.id) ||
       ((rec.age ?? 99) <= DROP_PROTECT_MAX_AGE && (state.ros[r.id] ?? 0) >= DROP_PROTECT_MIN_ROS);
-    if (eligibleForMinors) drops.push({ id: r.id, action: "minors", fpg: bestFpg(rec) });
-    else if (!protectedAsset) drops.push({ id: r.id, action: "drop", fpg: bestFpg(rec) });
+    if (eligibleForMinors) drops.push({ id: r.id, action: "minors", fpg: bestFpg(rec, config) });
+    else if (!protectedAsset) drops.push({ id: r.id, action: "drop", fpg: bestFpg(rec, config) });
   }
   const allTargets = periodDays.length
     ? waiverTargets(
@@ -670,11 +703,12 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
         [...shortlist].map((id) => ({
           id,
           status: waiverSet.has(id) ? ("WW" as const) : ("FA" as const),
-          fpg: bestFpg(values.players[id]!),
+          fpg: bestFpg(values.players[id]!, config),
           gamesLeftSeason: gamesAfter(index, values.players[id]!.t, nowMs),
         })),
         {
           slotCounts,
+          slotOrder,
           needsDrop: promotedCount >= maxCounted,
           drops,
           minDelta: WAIVER_MIN_DELTA,
@@ -693,7 +727,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     .map((t) => ({ ...t, delta: round(t.delta, 1), fpg: round(t.fpg), ros: round(t.ros, 1) }));
   // The counter resets Monday: a snapshot from an earlier claim week says
   // nothing about this one, so it starts from 0 until the next sync.
-  const weekStart = claimWeekStart(nowMs);
+  const weekStart = claimWeekStart(nowMs, config.cadence.claimWeekStartsOn ?? 1);
   const claimsUsed = !state.claims
     ? null
     : weekStart > state.claimsWeekStart
@@ -704,8 +738,11 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   let draft: DailyPlan["draft"] = null;
   if (state.draft && draftIsOpen(state)) {
     const need = draftNeed(baseLineup);
-    const { pool, poolShare } = draftPoolInputs(state, values, available);
-    const outlook = draftOutlook(state.draft.picks, teamId, pool, need, { poolShare });
+    const { pool, poolShare } = draftPoolInputs(state, values, available, config, input.vor ?? null);
+    const outlook = draftOutlook(state.draft.picks, teamId, pool, need, {
+      poolShare,
+      groups: config.eligibility.groups,
+    });
     // Odds are sure only when no other team picks before that pick of mine.
     const sureNext = outlook.picksBefore === 0;
     const sureFollowing = outlook.picksBeforeFollowing === 0;
@@ -738,7 +775,15 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   // ---- alerts
   const alerts: PlanAlert[] = [];
-  if (!state.fxpaOk) alerts.push({ level: "warn", code: "fxpa-down", detail: state.fxpaError });
+  if (!state.fxpaOk) {
+    // A league whose config says fxpa is closed is not a read to retry: say so
+    // once, plainly, instead of reporting a failure the user cannot act on.
+    alerts.push(
+      config.features.fxpa
+        ? { level: "warn", code: "fxpa-down", detail: state.fxpaError }
+        : { level: "info", code: "fxpa-closed" },
+    );
+  }
   const ageH = (nowMs - Date.parse(state.fetchedAt)) / 3_600_000;
   if (ageH > 36) alerts.push({ level: "warn", code: "stale-data", count: Math.round(ageH) });
   for (const issue of evaluation.issues) {
@@ -767,9 +812,9 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       to: deadMoves[d.id] ?? null,
     });
   }
-  for (const s of SLOT_ORDER) {
+  for (const s of slotOrder) {
     const f = evaluation.slots[s];
-    if (f.empty > 0) alerts.push({ level: "warn", code: "empty-slot", slot: s, count: f.empty });
+    if (f && f.empty > 0) alerts.push({ level: "warn", code: "empty-slot", slot: s, count: f.empty });
   }
   const promotedTonight = (tonightRes?.moves ?? []).filter((m) => m.from === "MINORS" || m.from === "INJURED_RESERVE").length;
   const afterMoves =
@@ -800,7 +845,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       t: rec.t,
       e: rec.e,
       st: onRoster.get(id)?.status ?? (waiverSet.has(id) ? "WW" : "FA"),
-      fpg: round(bestFpg(rec)),
+      fpg: round(bestFpg(rec, config)),
       src: rec.src,
       ...(rec.age !== undefined ? { age: rec.age } : {}),
       ...(state.ros[id] !== undefined ? { ros: state.ros[id] } : {}),
@@ -844,7 +889,10 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     waivers: {
       weekStart,
       claimsUsed,
-      claimsLeft: claimsUsed === null ? null : Math.max(0, CLAIMS_PER_WEEK - claimsUsed),
+      claimsLeft:
+        claimsUsed === null || config.features.claimsPerWeek === null
+          ? null
+          : Math.max(0, config.features.claimsPerWeek - claimsUsed),
       targets,
     },
     draft,

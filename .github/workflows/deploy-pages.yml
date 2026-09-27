@@ -46,19 +46,37 @@ jobs:
       - name: Unit checks
         run: npm run test:unit
 
-      # Fresh Fantrax data for the Captains tabs, so a push never republishes
-      # an old snapshot. The sync ends with the dynasty build (~30 s,
-      # public/fantrax/dynasty.json) and check:league gates both. Non-fatal:
-      # on any failure the committed snapshot and dynasty.json (already
-      # validated by `npm run check` above) are restored and used.
-      - name: Refresh league snapshot (non-fatal)
+      # Fresh Fantrax data for every league's tabs, so a push never republishes
+      # an old snapshot. `league:sync` takes ONE league per run and defaults to
+      # Captains, so each league gets its own block — and each restores only its
+      # OWN directories on failure: a single `git checkout -- src/data/fantrax
+      # public/fantrax` would throw away a good Slapshot sync because Captains
+      # failed. Order matters: Captains runs first and its restore is recursive,
+      # so there is no fresh Slapshot data for it to discard; Slapshot's restore
+      # names its own two directories, so its failure cannot undo the Captains
+      # refresh above. The Captains sync ends with the dynasty build (~30 s,
+      # public/fantrax/dynasty.json) and its check gates both. Non-fatal: on
+      # failure that league's committed snapshot (already validated by
+      # `npm run check` above) is restored and used.
+      - name: Refresh Captains Dynasty snapshot (non-fatal)
         run: |
           # 10 min budget (a sync takes ~1 min): a hung read counts as a failure.
-          if timeout 600 npm run league:sync && npm run check:league; then
-            echo "League snapshot refreshed"
+          if timeout 600 npm run league:sync -- --league captains-dynasty \
+            && npm run check:league:captains; then
+            echo "Captains Dynasty snapshot refreshed"
           else
             git checkout -- src/data/fantrax public/fantrax || true
-            echo "::warning::league sync failed, using committed snapshot"
+            echo "::warning::captains-dynasty sync failed, using committed snapshot"
+          fi
+
+      - name: Refresh Slapshot snapshot (non-fatal)
+        run: |
+          if timeout 600 npm run league:sync -- --league slapshot \
+            && npm run check:league:slapshot; then
+            echo "Slapshot snapshot refreshed"
+          else
+            git checkout -- src/data/fantrax/slapshot public/fantrax/slapshot || true
+            echo "::warning::slapshot sync failed, using committed snapshot"
           fi
 
       - name: Build static site

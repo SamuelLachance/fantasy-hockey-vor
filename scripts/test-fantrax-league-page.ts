@@ -110,6 +110,12 @@ eq(moveEndLabel("RESERVE"), "Réserve", "reserve move end");
 eq(moveEndLabel("W"), "W", "slot codes stay as Fantrax shows them");
 eq(positionsLabel("W,C,F,Skt"), "W/C", "primary positions");
 eq(positionsLabel("D,Skt"), "D", "defense");
+// A league that spells its wings by side keeps both sides: testing only
+// C / W / D / G turned "C,LW" into a bare « C » and left "LW,RW" on the raw
+// Fantrax string.
+eq(positionsLabel("C,LW"), "C/LW", "a centre who also plays left wing");
+eq(positionsLabel("LW,RW"), "LW/RW", "both wings");
+eq(positionsLabel("RW"), "RW", "one wing");
 eq(gameLabel(null), "Pas de match", "no game");
 {
   const intro = draftVonaIntro(20, 27);
@@ -160,6 +166,24 @@ assert(
   ),
   "legal summary",
 );
+// A league whose Active+Reserve minimum fxea does not publish (`minTotal: 0`)
+// gets no denominator — « 5/0 joueurs comptés » was nonsense — and a league
+// with no Minors slots is never told what its mineures do not count.
+{
+  const noMin = legalitySummary(
+    { illegal: false, need: 0, minTotal: 0, counts: { active: 5, reserve: 0, ir: 0, minors: 0, counted: 5 } },
+    false,
+  );
+  assert(noMin.includes("5 joueurs comptés") && !noMin.includes("5/0"), `no published minimum: no denominator (${noMin})`);
+  assert(!noMin.includes("mineures"), `no Minors slots: the word never appears (${noMin})`);
+  assert(noMin.includes("blessés 0 ne comptent pas"), `the IR clause stays (${noMin})`);
+  assert(
+    legalitySummary({ illegal: false, need: 0, minTotal: 15, counts: { active: 15, reserve: 2, ir: 0, minors: 3, counted: 17 } }).includes(
+      "mineures 3",
+    ),
+    "a league with Minors slots still names them",
+  );
+}
 assert(claimsText(null, null).includes("inconnues"), "claims unknown without fxpa");
 assert(claimsText(0, 5).includes("0/5") && claimsText(0, 5).includes("5 restantes"), "claims plural");
 assert(claimsText(4, 1).includes("1 restante"), "claims singular");
@@ -264,7 +288,15 @@ const contracts: Record<string, string[]> = {
   "src/app/ligues/[ligue]/layout.tsx": ["generateStaticParams", "dynamicParams = false", "<LeagueShell"],
   // One French document language for the whole site (no per-page switching).
   "src/app/layout.tsx": ['lang="fr-CA"', "index: false"],
-  "src/components/league-shell/server-adapters.tsx": ["initialPlan={fantraxToday}", "snakeFantraxSeed", "hasDynasty={hasDynasty}", '"dynasty.json"'],
+  // Each league's OWN baked snapshot and its OWN dynasty answer: a module
+  // constant read from one league's data would show it under another's name.
+  "src/components/league-shell/server-adapters.tsx": [
+    "fantraxBaked(entry.slug)",
+    "initialPlan={baked.today}",
+    "snakeFantraxSeed",
+    "hasDynasty={fantraxHasDynasty(entry.slug)}",
+  ],
+  "src/lib/fantrax/baked.ts": ["fantraxLeague(slug)", "features.dynasty", '"dynasty.json"'],
   "src/components/fantrax/FantraxLeagueProvider.tsx": [
     "<Suspense",
     "useSearchParams",
@@ -298,11 +330,23 @@ const contracts: Record<string, string[]> = {
   "src/components/fantrax/WeekGrid.tsx": ["relative -mx-4 overflow-x-auto"],
   "src/components/fantrax/DraftPanel.tsx": ["draftVonaIntro", "SnakeLeagueNote", "Derniers choix"],
   "src/components/fantrax/WaiverTargets.tsx": ["claimsText", "SnakeLeagueNote"],
-  "src/lib/fantrax/league-client.ts": ["fetchSnapshotFile", "sessionStorage", '"fantrax-live:v1"', '"fantrax-team"'],
+  // Every cache and every storage key is per league (two Fantrax leagues live
+  // in one single-page session).
+  "src/lib/fantrax/league-client.ts": [
+    "fetchSnapshotFile",
+    "sessionStorage",
+    "`fantrax-live:v1:${cfg.slug}`",
+    '"fantrax-team"',
+    "bundlePromises",
+  ],
   // The snapshot files: no credentials, one retry, the build's cache buster.
   "src/lib/fantrax/snapshot-fetch.ts": ['credentials: "omit"', "attempt < 2", "fantraxDataHref"],
   // The player table's pool, once per page view; dynasty only when the build saw it.
-  "src/lib/fantrax/pool-client.ts": ['fetchSnapshotFile<unknown>("pool.json")', 'fantraxDataHref("dynasty.json")', "peekFantraxPool"],
+  "src/lib/fantrax/pool-client.ts": [
+    'fetchSnapshotFile<unknown>(fantraxPublicFile(cfg, "pool.json"))',
+    'fantraxDataHref("dynasty-table.json")',
+    "peekFantraxPool",
+  ],
   // The tabs read the league through this context, never the provider's module.
   "src/components/fantrax/fantrax-league-context.ts": ["FantraxLeagueContext", "useFantraxLeague", "state: StateSnapshot | null"],
   // The player table: URL read inside Suspense (static export), native

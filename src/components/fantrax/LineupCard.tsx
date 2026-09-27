@@ -12,6 +12,7 @@ import {
   moveEndLabel,
 } from "@/lib/fantrax/league-copy";
 import { SnakeLeagueNote } from "@/components/snake/SnakeVerdicts";
+import { useFantraxLeague } from "./fantrax-league-context";
 import { LeagueCard, PlayerName, SlotBadge, Tag, type PlayerLookup } from "./LeagueCard";
 
 interface LineupCardProps {
@@ -143,12 +144,15 @@ function MovesList({ lineup, player }: { lineup: PlanLineup; player: PlayerLooku
 }
 
 /**
- * The lineup that locks next (optimal for that day's games), the moves to
- * make in Fantrax, the captain pick, and the schedule-free per-game lineup.
- * The captain advice compares whole per-game lineups (each candidate forced
- * into Skt, the other slots re-filled), so it always matches the optimizer.
+ * The lineup that locks next (optimal for that day's games), the moves to make
+ * in Fantrax, the captain pick where the league has a captain slot, and the
+ * schedule-free per-game lineup. The captain advice compares whole per-game
+ * lineups (each candidate forced into Skt, the other slots re-filled), so it
+ * always matches the optimizer.
  */
 export function LineupCard({ plan, player, nowMs }: LineupCardProps) {
+  const { config } = useFantraxLeague();
+  const captain = config.features.captainSlot;
   const t = plan.target;
   const best = plan.captains[0];
   const current = plan.currentCaptain;
@@ -189,60 +193,66 @@ export function LineupCard({ plan, player, nowMs }: LineupCardProps) {
         </>
       ) : null}
 
-      <div className="mt-6 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
-        <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-200">
-          <Crown className="h-4 w-4" aria-hidden="true" />
-          Capitaine (poste Skt)
-        </h3>
-        <p className="mt-1 text-xs text-slate-400">
-          {
-            "Le poste Skt compte l'attaque ×1,5 (buts, passes, tirs, mises en échec). Un défenseur y perd ses points de tirs bloqués et de revirements provoqués : le capitaine devrait presque toujours être un attaquant."
-          }
-        </p>
-        {current ? (
-          <p className="mt-3 text-sm text-slate-200">
-            Capitaine actuel : <span className="font-medium text-white">{player(current.id)?.n ?? "—"}</span>.{" "}
-            {best && best.id !== current.id && current.delta < 0 ? (
-              <>
-                Nommer <span className="font-medium text-amber-200">{player(best.id)?.n}</span> capitaine
-                (et replacer les autres) ajoute{" "}
-                <span className="font-semibold tabular-nums text-amber-200">{fmtSigned(-current.delta)} pt</span>{" "}
-                par match à l&apos;alignement par match.
-              </>
-            ) : (
-              <>{"C'est déjà le meilleur choix."}</>
-            )}
+      {/* Only a league that HAS a captain slot. Without one there is no
+          Skt row to fill, `plan.captains` is empty and `currentCaptain` is
+          null, so this whole card would read as advice about a poste the
+          league does not have. */}
+      {captain ? (
+        <div className="mt-6 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-200">
+            <Crown className="h-4 w-4" aria-hidden="true" />
+            Capitaine (poste Skt)
+          </h3>
+          <p className="mt-1 text-xs text-slate-400">
+            {
+              "Le poste Skt compte l'attaque ×1,5 (buts, passes, tirs, mises en échec). Un défenseur y perd ses points de tirs bloqués et de revirements provoqués : le capitaine devrait presque toujours être un attaquant."
+            }
           </p>
-        ) : (
-          <p className="mt-3 text-sm text-slate-200">
-            Poste Skt vide
-            {best ? (
-              <>
-                {" "}: placez-y <span className="font-medium text-amber-200">{player(best.id)?.n}</span>.
-              </>
-            ) : (
-              "."
-            )}
-          </p>
-        )}
-        {plan.captains.length > 0 ? (
-          <>
-            <h4 className="mt-3 text-xs font-medium uppercase tracking-wider text-slate-400">
-              Meilleurs capitaines (écart par match avec le meilleur choix)
-            </h4>
-            <ol className="mt-1 flex flex-wrap gap-2 text-sm">
-              {plan.captains.map((c, i) => (
-                <li key={c.id} className="rounded-lg bg-white/5 px-2.5 py-1 text-slate-200">
-                  <span className="text-slate-400">{i + 1}.</span> {player(c.id)?.n ?? "—"}{" "}
-                  <span className="tabular-nums text-amber-200">
-                    {c.delta < 0 ? fmtSigned(c.delta) : "meilleur"}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </>
-        ) : null}
-      </div>
+          {current ? (
+            <p className="mt-3 text-sm text-slate-200">
+              Capitaine actuel : <span className="font-medium text-white">{player(current.id)?.n ?? "—"}</span>.{" "}
+              {best && best.id !== current.id && current.delta < 0 ? (
+                <>
+                  Nommer <span className="font-medium text-amber-200">{player(best.id)?.n}</span> capitaine
+                  (et replacer les autres) ajoute{" "}
+                  <span className="font-semibold tabular-nums text-amber-200">{fmtSigned(-current.delta)} pt</span>{" "}
+                  par match à l&apos;alignement par match.
+                </>
+              ) : (
+                <>{"C'est déjà le meilleur choix."}</>
+              )}
+            </p>
+          ) : (
+            <p className="mt-3 text-sm text-slate-200">
+              Poste Skt vide
+              {best ? (
+                <>
+                  {" "}: placez-y <span className="font-medium text-amber-200">{player(best.id)?.n}</span>.
+                </>
+              ) : (
+                "."
+              )}
+            </p>
+          )}
+          {plan.captains.length > 0 ? (
+            <>
+              <h4 className="mt-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+                Meilleurs capitaines (écart par match avec le meilleur choix)
+              </h4>
+              <ol className="mt-1 flex flex-wrap gap-2 text-sm">
+                {plan.captains.map((c, i) => (
+                  <li key={c.id} className="rounded-lg bg-white/5 px-2.5 py-1 text-slate-200">
+                    <span className="text-slate-400">{i + 1}.</span> {player(c.id)?.n ?? "—"}{" "}
+                    <span className="tabular-nums text-amber-200">
+                      {c.delta < 0 ? fmtSigned(c.delta) : "meilleur"}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       <details className="mt-6 rounded-xl border border-white/10 bg-white/[0.02]">
         <summary className="flex min-h-11 cursor-pointer items-center px-4 py-2 text-sm font-medium text-slate-200 hover:text-white">

@@ -13,6 +13,7 @@ import { mergeSnakeIndex, parseSnakeIndex, type SnakeIndex } from "@/lib/fantrax
 import { fmtOdds, fmtSigned, pickLabel } from "@/lib/fantrax/league-copy";
 import type { PoolSnapshot } from "@/lib/fantrax/pool";
 import { loadDynasty, loadFantraxPool, peekDynasty, peekFantraxPool } from "@/lib/fantrax/pool-client";
+import { canRankByPoints } from "@/lib/fantrax/points-vor";
 import {
   buildFantraxRows,
   FANTRAX_TABLE,
@@ -42,6 +43,7 @@ import {
   trendCell,
 } from "@/lib/fantrax/table-copy";
 import { fmtInt } from "@/lib/player-table/copy";
+import { availablePreset } from "@/lib/player-table/model";
 import { highlightMatch } from "@/lib/player-table/highlight";
 import { snakePlayerHref } from "@/lib/snake/url";
 import {
@@ -303,11 +305,11 @@ export function useFantraxTableData({
   autoLoad: boolean;
   fallback: "draft" | "team" | null;
 }): FantraxTableSource {
-  const { plan, bundle, state, teamId, teams, teamName, hasDynasty, mode } = useFantraxLeague();
+  const { config, plan, bundle, state, teamId, teams, teamName, hasDynasty, mode, vor } = useFantraxLeague();
   // Rosters at the sync the dynasty values saw (the snapshot, before the live read).
   const syncOwners = useMemo(() => syncOwnersOf(bundle?.state), [bundle]);
   const [wanted, setWanted] = useState(autoLoad);
-  const [pool, setPool] = useState<PoolSnapshot | null>(peekFantraxPool);
+  const [pool, setPool] = useState<PoolSnapshot | null>(() => peekFantraxPool(config));
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const { dynasty, settled: dynastyIn } = useDynastyIndex(wanted);
@@ -315,7 +317,7 @@ export function useFantraxTableData({
   useEffect(() => {
     if (!wanted || pool) return;
     let cancelled = false;
-    loadFantraxPool().then(
+    loadFantraxPool(config).then(
       (p) => {
         if (cancelled) return;
         setPool(p);
@@ -328,7 +330,7 @@ export function useFantraxTableData({
     return () => {
       cancelled = true;
     };
-  }, [wanted, attempt, pool]);
+  }, [wanted, attempt, pool, config]);
 
   // ---- Snake: the compact verdicts (seed first), the full index when asked for
   const { rows: fxRows, status: fxStatus } = useSnakeFantraxRows();
@@ -342,25 +344,38 @@ export function useFantraxTableData({
   const teamPlan = plan?.teamId === teamId ? plan : null;
   const baseLineup = teamPlan?.baseLineup ?? null;
   const draft = useMemo(
-    () => (pool && state && bundle ? fantraxDraftOdds(state, bundle.values, teamId, baseLineup) : null),
-    [pool, state, bundle, teamId, baseLineup],
+    () => (pool && state && bundle ? fantraxDraftOdds(state, bundle.values, teamId, baseLineup, config, vor) : null),
+    [pool, state, bundle, teamId, baseLineup, config, vor],
   );
   const rows = useMemo(
     () =>
-      pool ? buildFantraxRows({ pool, state, values: bundle?.values ?? null, baseLineup, draft, dynasty, snake, syncOwners }) : [],
-    [pool, state, bundle, baseLineup, draft, dynasty, snake, syncOwners],
+      pool
+        ? buildFantraxRows({
+            pool,
+            state,
+            values: bundle?.values ?? null,
+            baseLineup,
+            draft,
+            dynasty,
+            snake,
+            syncOwners,
+            config,
+            vor,
+          })
+        : [],
+    [pool, state, bundle, baseLineup, draft, dynasty, snake, syncOwners, config, vor],
   );
   // Mon équipe: the whole roster once the league state is in (the plan
   // alone only holds the players it considered: said so until then).
   const rosterIn = fallback === "team" && !!state && !!bundle;
   const fallbackRows = useMemo(() => {
     if (!fallback) return undefined;
-    const extras = { dynasty, snake, syncOwners };
+    const extras = { dynasty, snake, syncOwners, config, vor };
     if (fallback === "team" && state && bundle) {
       return fantraxRosterRows(teamPlan, state.rosters[teamId] ?? [], bundle.values.players, teamId, extras);
     }
     return fantraxFallbackRows(teamPlan, fallback, extras);
-  }, [fallback, teamPlan, state, bundle, teamId, dynasty, snake, syncOwners]);
+  }, [fallback, teamPlan, state, bundle, teamId, dynasty, snake, syncOwners, config, vor]);
   const fallbackNote = fallback === "team" && !rosterIn ? PARTIAL_ROSTER_NOTE : undefined;
 
   // ---- what the data can show, and what cells need
@@ -372,19 +387,43 @@ export function useFantraxTableData({
   const caps = useMemo<FantraxCaps>(
     () => ({
       draft: draftCap,
+      // The league's own position vocabulary: Slapshot's four LW seats and four
+      // RW seats are two groups, so its filter, its position cells and its VONA
+      // cards say LW and RW rather than one « W » nobody can act on.
+      groups: config.eligibility.groups,
+      // Both false for a league with no Minors slot and no keeper model, which
+      // is what keeps its minors filter, its dynasty columns, its dynasty
+      // filters and its dynasty views off the page entirely.
+      minors: config.features.minors,
+      // Every fxpa-only field (Ros%, injury icons) at once: where fxpa is
+      // closed the column, its range filter and the « exclure les blessés »
+      // toggle go, instead of promising a filter that can only return nothing.
+      fxpa: config.features.fxpa,
+      // The league's CONFIG, not the loaded map — the same fact `ctx.vor` uses
+      // for the column's name. A view whose starting sort depended on whether
+      // the snapshot had arrived resolved to « Valeur » in the prerendered HTML
+      // and then wrote `?tri=valeur` into the URL, so the Repêchage tab opened
+      // on the wrong order and stayed there.
+      vor: canRankByPoints(config),
+      // The league fact, not the file: « Espoirs » has its own season-value
+      // fallback, so only the genuinely dynasty views turn on `keeper`.
+      keeper: config.features.dynasty,
       dynasty: hasDynastyData,
       dynastyPublished: hasDynasty,
       snake: hasSnake,
       snakeOpinions: hasOpinions,
     }),
-    [draftCap, hasDynastyData, hasDynasty, hasSnake, hasOpinions],
+    [draftCap, config, hasDynastyData, hasDynasty, hasSnake, hasOpinions],
   );
   const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
   const draftOpen = !!draft || !!planDraft;
   const nextPick = draft?.next?.pick ?? planDraft?.next?.pick ?? null;
   const ctx = useMemo<FantraxCtx>(
-    () => ({ teamId, draftOpen, nextPick, teamName, teamIds, mode, dynastyIn: hasDynastyData }),
-    [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData],
+    // `vor` here is the league's CONFIG, not the loaded map: the column must be
+    // named « Valeur (VOR) » in the prerendered HTML too, or its header would
+    // change under the reader once the snapshot lands.
+    () => ({ teamId, draftOpen, nextPick, teamName, teamIds, mode, dynastyIn: hasDynastyData, vor: canRankByPoints(config) }),
+    [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config],
   );
   const labels = useMemo(() => fantraxLabels(rows, dynasty, snake), [rows, dynasty, snake]);
 
@@ -451,8 +490,16 @@ export function FantraxPlayerTable({
 }) {
   const { hasDynasty } = useFantraxLeague();
   const { data, pool, dynasty, snake } = useFantraxTableData({ autoLoad: true, fallback });
-  // Views by dynasty value only where the build published it.
-  const chips = useMemo(() => presets.filter((p) => p !== "dynastie" || hasDynasty), [presets, hasDynasty]);
+  // Only the views this league's data can apply: `availablePreset` drops the
+  // dynasty ones for a league with no keeper model, and « Meilleure valeur
+  // dynastie » also waits for the file to be published.
+  const chips = useMemo(
+    () =>
+      presets.filter(
+        (p) => !!availablePreset(FANTRAX_TABLE, p, data.caps) && (p !== "dynastie" || hasDynasty),
+      ),
+    [presets, hasDynasty, data.caps],
+  );
   const note = pool
     ? fantraxTableNote({
         draftOpen: data.ctx.draftOpen,
@@ -463,6 +510,8 @@ export function FantraxPlayerTable({
         dynasty: !!dynasty,
         mode: data.ctx.mode,
         snake: !!snake,
+        vor: data.caps.vor,
+        fxpa: data.caps.fxpa,
         brief: !!footer,
       })
     : null;

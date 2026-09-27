@@ -23,9 +23,11 @@ export function withBasePath(suffix: string): string {
 }
 
 /**
- * Baked Fantrax snapshot file under `public/fantrax/` for the Captains
- * pages (basePath + build-time cache buster: Pages serves every file with
- * max-age=600).
+ * Baked Fantrax snapshot file under `public/fantrax/` (basePath +
+ * build-time cache buster: Pages serves every file with max-age=600).
+ * `file` is what the league publishes: a bare name for the Captains league,
+ * `<slug>/<name>` for another one — see `fantraxPublicFile` in
+ * `src/lib/fantrax/config.ts`.
  */
 export function fantraxDataHref(file: string): string {
   const path = withBasePath(`/fantrax/${file}`);

@@ -15,6 +15,8 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, relative, sep } from "path";
 import { gzipSync } from "zlib";
+import { CLIENT_DYNASTY_FILE } from "../src/lib/dynasty/client-snapshot";
+import { FANTRAX_LEAGUES } from "../src/lib/fantrax/config";
 import { LEGACY_RULES, legacyTarget } from "../src/lib/leagues/legacy";
 import { LEAGUES } from "../src/lib/leagues/registry";
 import { SITE_ORIGIN } from "../src/lib/site";
@@ -61,17 +63,28 @@ for (const p of tabPages) {
   if (!segs.some((s) => s.endsWith("__next._tree.txt"))) fail(`${p}/: segment payloads missing`);
 }
 if (existsSync(join(OUT, "sitemap.xml"))) fail("sitemap.xml is published (the site is noindex)");
-// The Captains tabs fetch the browser's copy of dynasty.json (build:pages writes it): same build, same players.
-if (existsSync(join(OUT, "fantrax", "dynasty.json"))) {
-  const slimPath = join(OUT, "fantrax", "dynasty-table.json");
-  if (!existsSync(slimPath)) fail("fantrax/dynasty-table.json missing (run tsx scripts/build-dynasty-client.ts before next build)");
+// A dynasty league's tabs fetch the browser's copy of its dynasty.json
+// (build:pages writes it): same build, same players. One published directory
+// per Fantrax league (Captains at the root of fantrax/, the others under
+// their slug), and no dynasty file at all for a league without the model.
+for (const cfg of Object.values(FANTRAX_LEAGUES)) {
+  const dir = cfg.paths.public.replace(/^public\//, "");
+  const fullRel = `${dir}/dynasty.json`;
+  const slimRel = `${dir}/${CLIENT_DYNASTY_FILE}`;
+  if (!existsSync(join(OUT, fullRel))) continue;
+  if (!cfg.features.dynasty) {
+    fail(`${fullRel} is published but ${cfg.slug} has no keeper model`);
+    continue;
+  }
+  const slimPath = join(OUT, slimRel);
+  if (!existsSync(slimPath)) fail(`${slimRel} missing (run tsx scripts/build-dynasty-client.ts before next build)`);
   else {
     type Snap = { builtAt?: string; players?: Record<string, unknown>; zero?: string[] };
-    const full = JSON.parse(read("fantrax/dynasty.json")) as Snap;
+    const full = JSON.parse(read(fullRel)) as Snap;
     const slim = JSON.parse(readFileSync(slimPath, "utf8")) as Snap;
     const ids = (s: Snap) => Object.keys(s.players ?? {}).sort().join(",");
     if (full.builtAt !== slim.builtAt || ids(full) !== ids(slim) || (full.zero ?? []).length !== (slim.zero ?? []).length) {
-      fail("fantrax/dynasty-table.json does not match fantrax/dynasty.json (stale copy)");
+      fail(`${slimRel} does not match ${fullRel} (stale copy)`);
     }
   }
 }
@@ -242,14 +255,60 @@ const BUDGETS: Budget[] = [
   {
     label: "Captains · autres onglets",
     match: isTab("captains-dynasty", ["repechage", "joueurs", "ballottage", "mon-equipe"]),
-    // Spec limit (measured 61.7–64.4 with the dynasty columns). The tabs
-    // import the league through its context module (never the provider's),
-    // so the planner is not shipped twice; the details row (the model's
-    // sentence, the six-season chart, the « Conseil » sentences, Snake's
-    // take), the dynasty filter row and the 2027 cutdown card load on
+    // Spec limit. The tabs import the league through its context module (never
+    // the provider's), so the planner is not shipped twice; the details row
+    // (the model's sentence, the six-season chart, the « Conseil » sentences,
+    // Snake's take), the dynasty filter row and the 2027 cutdown card load on
     // demand, and Snake's verdict store never pulls the dynasty modules
     // (Aujourd'hui stays at ~40).
-    js: 65,
+    //
+    // It was 65 for a measured 61.7–64.4 before a second Fantrax league
+    // existed. Building d7c50cb side by side with this tree gives 64.4 → 69.2
+    // on the heaviest tab (Repêchage), 63.1 → 67.9 on Mon équipe, and shared
+    // JS 192.2 → 193.3. Of that +4.8:
+    //   ~1.1  the points-over-replacement model (`points-vor.ts` and the league
+    //         fill it shares with the Yahoo engine). One dynamic route serves
+    //         both leagues, so a Slapshot tab and a Captains tab are the same
+    //         chunk, and Captains carries a model it cannot use
+    //         (`canRankByPoints` is false with a captain slot).
+    //   ~1.0  the second league's config — its slot table, eligibility tokens,
+    //         limits, priors — plus the eligibility helpers every league now
+    //         goes through instead of hard-coded C/W/D/G token tests.
+    //   ~0.8  the per-league copy: « Valeur » has two names and two
+    //         explanations, the board note and the table note each branch, and
+    //         the captain card and the minors filter are now conditional.
+    //   ~1.9  Turbopack re-splitting the page: 6 own chunks at d7c50cb, 8 here
+    //         (a 19.5 KB chunk became two of 10.4), each with its own module
+    //         wrappers. Not an import: the same modules, in more pieces.
+    // 70 leaves about as much room as the old 65 did over 64.4. Over it: look
+    // for an accidental import first, and only move the number with a
+    // measurement like the one above.
+    //
+    // Measured again after the review follow-ups: 69.2 → 69.5. The +0.3 is the
+    // per-league position vocabulary (`eligibility.groups`, `parseGroups`, the
+    // filter and the VONA panel reading it instead of a module constant) and
+    // the `fxpa` capability branches that drop the Ros% column, its range
+    // filter and the « exclure les blessés » toggle where the league publishes
+    // none of them. That leaves only ~0.5 KB of headroom: the next addition
+    // here should expect to have to measure and justify a move to 71, not
+    // assume the budget is roomy.
+    js: 70,
+    htmlRaw: 200,
+    htmlGz: 35,
+  },
+  // Slapshot (keeper, points): the same client code as Captains minus the
+  // dynasty modules — no cutdown card, no dynasty columns, filters or views —
+  // so it must stay UNDER the Captains numbers, never above them. Its HTML is
+  // smaller too: 20 lineup slots but a 1-to-2-day matchup panel instead of a
+  // 7-to-14-day one.
+  { label: "Slapshot · Aujourd’hui", match: isTab("slapshot", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
+  {
+    label: "Slapshot · autres onglets",
+    match: isTab("slapshot", ["repechage", "joueurs", "mon-equipe"]),
+    // The same chunk as the Captains tabs (one dynamic route), so the same
+    // number; it must never be the larger of the two, since it ships strictly
+    // less (no dynasty columns, filters, views or cutdown card).
+    js: 70,
     htmlRaw: 200,
     htmlGz: 35,
   },

@@ -1,28 +1,39 @@
 /**
- * Daily Fantrax report in the terminal — the fallback for the /league page.
+ * Daily Fantrax report in the terminal — the fallback for the league page.
  * Reads the snapshot written by `npm run league:sync`; `--live` first
  * re-reads rosters and draft picks from fxea (public API, no login).
  *
- * Run: npm run league:report -- --team <teamId> [--live] [--now <ISO>]
- *        [--dynasty winNow|balanced|longTerm] [--no-dynasty]
- * The dynasty section reads public/fantrax/dynasty.json (npm run dynasty:build).
+ * Run: npm run league:report -- [--league <slug>] --team <teamId> [--live]
+ *        [--now <ISO>] [--dynasty winNow|balanced|longTerm] [--no-dynasty]
+ *      npm run league:report -- [--league <slug>] --priors
+ *      npm run league:report -- [--league <slug>] --vor
+ * Default league: Captains Dynasty. The dynasty section reads that league's
+ * dynasty.json (npm run dynasty:build) and only exists for a league whose
+ * config enables the keeper model.
+ *
+ * `--vor` prints nothing else: the replacement levels the board is ranked by
+ * (`src/lib/fantrax/points-vor.ts`), the untaken-pool reading beside them and
+ * the weakest starter of each seat, so the "last starter, not best free agent"
+ * choice can be audited instead of trusted.
+ *
+ * `--priors` prints nothing else: it re-measures the league's own fallback
+ * values (`FantraxPriors` in `src/lib/fantrax/config.ts`) from the committed
+ * snapshot, so the numbers in the config can be checked rather than trusted.
+ * They are POINTS in that league's scoring, so they can never be shared
+ * between leagues.
  */
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
 import type { FxeaDraftResults, FxeaTeamRosters } from "../src/lib/fantrax/api-types";
 import { fxeaGet } from "../src/lib/fantrax/client";
-import {
-  CLAIMS_PER_WEEK,
-  FANTRAX_DEFAULT_TEAM_ID,
-  FANTRAX_LEAGUE_ID,
-  LEAGUE_TIME_ZONE,
-  SYNC_USER_AGENT,
-} from "../src/lib/fantrax/config";
+import { SYNC_USER_AGENT } from "../src/lib/fantrax/config";
+import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
 import { buildDailyPlan, type DailyPlan, type PlanAlert, type PlanLineup, type TeamGame } from "../src/lib/fantrax/daily-plan";
 import { liveOverlay, withLiveOverlay } from "../src/lib/fantrax/live";
 import { dynastyBoard, dynastyDropProtection } from "../src/lib/dynasty/board";
 import { explainFr, KEEPER_FR, KEEPER_TEAM_FR, keeperView, MODE_FR, PHASE_FR, rosterHintFr } from "../src/lib/dynasty/explain";
 import { MODES, type DynastySnapshot, type Mode } from "../src/lib/dynasty/types";
+import { bestFpg, isGoalieRecord, seasonFp } from "../src/lib/fantrax/draft-inputs";
+import { canRankByPoints, leagueVor, pointsVor, RESERVE_GOALIES_PER_TEAM, type VorPlayer } from "../src/lib/fantrax/points-vor";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
 import { deadReason } from "../src/lib/fantrax/roster-rules";
 import type {
@@ -38,18 +49,20 @@ const argValue = (flag: string) => {
   const i = args.indexOf(flag);
   return i >= 0 ? args[i + 1] : undefined;
 };
+const CFG = fantraxLeagueArg(args, "league:report");
+const PATHS = fantraxPaths(CFG, ROOT);
 
-function load<T>(...parts: string[]): T {
-  const path = join(ROOT, ...parts);
+function load<T>(path: string): T {
   if (!existsSync(path)) {
-    console.error(`FAIL: ${parts.join("/")} missing — run npm run league:sync first`);
+    const label = path.slice(ROOT.length + 1).split(/[\\/]/).join("/");
+    console.error(`FAIL: ${label} missing — run npm run league:sync -- --league ${CFG.slug} first`);
     process.exit(1);
   }
   return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
 const et = (iso: string, opts: Intl.DateTimeFormatOptions) =>
-  new Intl.DateTimeFormat("en-CA", { timeZone: LEAGUE_TIME_ZONE, ...opts }).format(new Date(iso));
+  new Intl.DateTimeFormat("en-CA", { timeZone: CFG.timeZone, ...opts }).format(new Date(iso));
 const etDateTime = (iso: string) =>
   et(iso, { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false, timeZoneName: "short" });
 const etTime = (iso: string) => et(iso, { hour: "2-digit", minute: "2-digit", hour12: false });
@@ -74,23 +87,114 @@ function until(iso: string, nowMs: number): string {
   return d > 0 ? `in ${d}d ${h}h` : `in ${h}h ${m}m`;
 }
 
+/**
+ * `--priors`: the p25 FP/G of this league's PROJECTED regulars (>= 40 GP),
+ * forwards and defencemen apart, and the expected points per start of the
+ * goalie on the last starting seat once every team keeps a spare.
+ *
+ * Printed beside what the config holds, but only comparable when the config's
+ * entry was measured the same way: Slapshot's was (it has no history — first
+ * season), Captains' was measured on the REALIZED 2025-26 regulars instead, so
+ * its two columns are expected to differ. The line under each says which.
+ */
+function reportPriors(): void {
+  const values = load<ValuesSnapshot>(PATHS.values);
+  const league = load<LeagueSnapshot>(PATHS.league);
+  const proj = Object.values(values.players).filter((r) => r.src === "proj");
+  const q25 = (xs: number[]) => {
+    const sorted = [...xs].sort((a, b) => a - b);
+    return sorted.length ? sorted[Math.max(0, Math.floor(0.25 * (sorted.length - 1)))]! : 0;
+  };
+  const dEligible = (e: string) => e.split(",").some((t) => CFG.eligibility.defenseTokens.includes(t.trim()));
+  const fwd: number[] = [];
+  const dee: number[] = [];
+  for (const r of proj) {
+    if (isGoalieRecord(r, CFG) || r.gp < 40) continue;
+    (dEligible(r.e) ? dee : fwd).push(bestFpg(r, CFG));
+  }
+  const goalies = proj
+    .filter((r) => isGoalieRecord(r, CFG))
+    .map((r) => ({ e: r.gE ?? 0, fp: r.gp * (r.gE ?? 0), gp: r.gp, n: r.n }))
+    .sort((a, b) => b.fp - a.fp);
+  // The same rule as Captains' « 48th goalie »: teams x (starting G seats + 1).
+  const seat = CFG.teams * ((league.slotCounts[CFG.eligibility.goalieToken as "G"] ?? 0) + 1);
+  const marginal = goalies[seat - 1];
+  const P = CFG.priors;
+  const projected = CFG.slug === "slapshot";
+  console.log(`priors — ${CFG.slug}, projections of ${values.projectionsAt}`);
+  console.log(
+    projected
+      ? "  (config measured the same way: the two columns should match)"
+      : "  (config measured on the REALIZED 2025-26 regulars: the two columns are NOT comparable)",
+  );
+  console.log(`  forwards  n=${fwd.length}  p25 FP/G ${fx(q25(fwd), 3)}   config fpg.F ${P.fpg.F}`);
+  console.log(`  defence   n=${dee.length}  p25 FP/G ${fx(q25(dee), 3)}   config fpg.D ${P.fpg.D}`);
+  console.log(
+    `  goalie seat #${seat} of ${goalies.length} projected: ${marginal?.n ?? "—"}  E/start ${fx(marginal?.e ?? 0, 3)} (${marginal?.gp ?? 0} starts)   config goalieE ${P.goalieE}`,
+  );
+  console.log(`  regularMinFpg ${P.regularMinFpg} (same quantity as fpg.F)   pPlay ${P.pPlay}`);
+}
+
+/**
+ * `--vor`: the three levels of the value model, per group and per seat.
+ *
+ * `replacement` is what VOR subtracts (the weakest STARTER of the group);
+ * `untaken` is the other reading (the best player nobody holds), which is sane
+ * for skaters and meaningless for goalies in a league with no free-agent market
+ * left; `marginal starter` is the weakest player seated in each slot, which is
+ * what proves the wings come out at the same depth. The reserve fill moves the
+ * untaken column ONLY — the starting-seat levels are invariant to it, which the
+ * last two lines show by re-running with no bench at all.
+ */
+function reportVor(): void {
+  const values = load<ValuesSnapshot>(PATHS.values);
+  const league = load<LeagueSnapshot>(PATHS.league);
+  const pool: VorPlayer[] = Object.entries(values.players)
+    .filter(([, r]) => r.src === "proj")
+    .map(([id, r]) => ({ id, eligiblePos: r.e, seasonFp: seasonFp(r, CFG) }));
+  console.log(`vor — ${CFG.slug}, projections of ${values.projectionsAt}, ${pool.length} projected players`);
+  if (!canRankByPoints(CFG)) {
+    console.log("  this league has a captain slot: one value per player is the wrong model, so no VOR is published");
+    return;
+  }
+  const v = pointsVor(CFG, pool, { slotCounts: league.slotCounts });
+  const bare = pointsVor(CFG, pool, { slotCounts: league.slotCounts, reservePerTeam: 0 });
+  console.log(
+    `  ${v.seats} starting seats, ${v.seated} filled; ${v.taken} players held (starters + ${CFG.limits.maxReserve} reserve a team, at most ${RESERVE_GOALIES_PER_TEAM} of them a goalie), ${v.untaken} untaken`,
+  );
+  console.log(`  ${pad("group", 6)} ${lpad("replacement", 12)} ${lpad("untaken", 9)} ${lpad("untaken(no bench)", 18)}`);
+  for (const g of CFG.eligibility.groups) {
+    console.log(
+      `  ${pad(g, 6)} ${lpad(fx(v.replacement[g] ?? 0, 3), 12)} ${lpad(fx(v.rawReplacement[g] ?? 0, 3), 9)} ${lpad(fx(bare.rawReplacement[g] ?? 0, 3), 18)}`,
+    );
+  }
+  const seats = Object.entries(v.marginalStarter).map(([slot, fp]) => `${slot} ${fx(fp ?? 0, 1)}`);
+  console.log(`  marginal starter per seat: ${seats.join(" · ")}`);
+  const same = CFG.eligibility.groups.every((g) => Math.abs((v.replacement[g] ?? 0) - (bare.replacement[g] ?? 0)) < 1e-9);
+  console.log(
+    same
+      ? "  the replacement levels are identical with and without the bench: VOR reads them off the starting seats only"
+      : "  WARNING: the bench moved a replacement level — it should not",
+  );
+}
+
 function main() {
-  const teamId = argValue("--team") ?? FANTRAX_DEFAULT_TEAM_ID;
+  const teamId = argValue("--team") ?? CFG.defaultTeamId;
   const nowArg = argValue("--now");
   const nowMs = nowArg ? Date.parse(nowArg) : Date.now();
   if (!Number.isFinite(nowMs)) throw new Error(`bad --now ${nowArg}`);
 
-  const league = load<LeagueSnapshot>("src", "data", "fantrax", "league.json");
-  const state = load<StateSnapshot>("public", "fantrax", "state.json");
-  const values = load<ValuesSnapshot>("public", "fantrax", "values.json");
-  const schedule = load<ScheduleSnapshot>("public", "fantrax", "schedule-20262027.json");
+  const league = load<LeagueSnapshot>(PATHS.league);
+  const state = load<StateSnapshot>(PATHS.state);
+  const values = load<ValuesSnapshot>(PATHS.values);
+  const schedule = load<ScheduleSnapshot>(PATHS.schedule);
   if (!league.teams.some((t) => t.id === teamId)) {
     throw new Error(`team ${teamId} is not in ${league.leagueName}`);
   }
-  const dynastyPath = join(ROOT, "public", "fantrax", "dynasty.json");
+  // Only a keeper-forever league has dynasty values at all.
   const dynasty =
-    !args.includes("--no-dynasty") && existsSync(dynastyPath)
-      ? (JSON.parse(readFileSync(dynastyPath, "utf8")) as DynastySnapshot)
+    CFG.features.dynasty && !args.includes("--no-dynasty") && existsSync(PATHS.dynasty)
+      ? (JSON.parse(readFileSync(PATHS.dynasty, "utf8")) as DynastySnapshot)
       : null;
   const modeArg = argValue("--dynasty") ?? "balanced";
   if (!MODES.includes(modeArg as Mode)) throw new Error(`bad --dynasty ${modeArg} (winNow | balanced | longTerm)`);
@@ -102,15 +206,17 @@ async function refreshLive(input: ReturnType<typeof main>) {
   const target = input.league.rosterPeriods.find((p) => Date.parse(p.start) > input.nowMs);
   const rosters = await fxeaGet<FxeaTeamRosters>(
     "getTeamRosters",
-    { leagueId: FANTRAX_LEAGUE_ID, period: target?.number ?? input.state.rosterPeriod },
+    { leagueId: CFG.leagueId, period: target?.number ?? input.state.rosterPeriod },
     req,
   );
-  const draft = await fxeaGet<FxeaDraftResults>("getDraftResults", { leagueId: FANTRAX_LEAGUE_ID }, req);
+  const draft = await fxeaGet<FxeaDraftResults>("getDraftResults", { leagueId: CFG.leagueId }, req);
   const period = target?.number ?? input.state.rosterPeriod;
   input.state = withLiveOverlay(input.state, liveOverlay(rosters, draft, Date.now(), period));
 }
 
 function print(plan: DailyPlan, input: ReturnType<typeof main>) {
+  /** The board ranks by points over replacement here, not by season FP. */
+  const vorLeague = canRankByPoints(CFG);
   const P = plan.players;
   const name = (id: string | null | undefined) => (id ? (P[id]?.n ?? input.values.players[id]?.n ?? id) : "—");
   const team = (id: string | null | undefined) => (id ? (P[id]?.t ?? "") : "");
@@ -121,7 +227,11 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
 
   out.push(`${input.league.leagueName} — ${plan.teamName} (${plan.teamId})`);
   out.push(
-    `Data synced ${etDateTime(plan.dataAsOf)} · fxpa ${plan.fxpaOk ? "ok" : "DOWN (no caps/injury flags)"} · projections ${input.values.projectionsAt.slice(0, 10)}`,
+    // "DOWN" is a read that failed; a league whose config says fxpa is closed
+    // is simply not a member's league, which is not a problem to chase.
+    `Data synced ${etDateTime(plan.dataAsOf)} · fxpa ${
+      plan.fxpaOk ? "ok" : CFG.features.fxpa ? "DOWN (no caps/injury flags)" : "closed for this league"
+    } · projections ${input.values.projectionsAt.slice(0, 10)}`,
   );
   if (plan.target) {
     out.push(`Next lineup lock: lineup period ${plan.target.rosterPeriod}, ${etDateTime(plan.target.start)} (${until(plan.target.start, input.nowMs)})`);
@@ -129,7 +239,11 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
   if (plan.scoringPeriod) {
     const sp = plan.scoringPeriod;
     out.push(
-      `Scoring period ${sp.number}: ${calDay(sp.firstDay)} → ${calDay(sp.lastDay)} · ${sp.daysLeft} lineup days left · caps GP ${sp.gpMax ?? "?"} / GS ${sp.gsMax ?? "?"}`,
+      // The caps only exist in a league whose config has them: printing
+      // « caps GP ? / GS ? » elsewhere invents a rule that was never read.
+      `Scoring period ${sp.number}: ${calDay(sp.firstDay)} → ${calDay(sp.lastDay)} · ${sp.daysLeft} lineup days left${
+        CFG.features.gamesCaps ? ` · caps GP ${sp.gpMax ?? "?"} / GS ${sp.gsMax ?? "?"}` : ""
+      }`,
     );
   }
 
@@ -229,7 +343,7 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
   h(`Waiver / FA targets (rest of scoring period ${plan.scoringPeriod?.number ?? "?"})`);
   const w = plan.waivers;
   out.push(
-    `Claims this week (since ${w.weekStart}): ${w.claimsUsed ?? "?"}/${CLAIMS_PER_WEEK} used${w.claimsLeft != null ? `, ${w.claimsLeft} left` : ""} · showing gains >= 3 FP, best 3 per position`,
+    `Claims this week (since ${w.weekStart}): ${w.claimsUsed ?? "?"}/${CFG.features.claimsPerWeek ?? "?"} used${w.claimsLeft != null ? `, ${w.claimsLeft} left` : ""} · showing gains >= 3 FP, best 3 per position`,
   );
   if (!w.targets.length) out.push("No pickup adds 3+ FP this period.");
   for (const t of w.targets) {
@@ -255,8 +369,9 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
       );
       if (d.following) {
         out.push(`VONA by position (expected best at #${d.next.pick} − expected best at #${d.following.pick}):`);
-        for (const g of ["C", "W", "D", "G"] as const) {
-          const v = d.vona[g];
+        for (const g of CFG.eligibility.groups) {
+          const v = d.vona[g] as (typeof d.vona)[typeof g] | undefined;
+          if (!v) continue;
           out.push(
             `  ${g}  ${lpad(v.vona == null ? "n/a" : signed(v.vona, 1), 6)}   #${d.next.pick}: ${pad(`${name(v.bestId)} (${pct(v.bestP)})`, 30)} ~${lpad(fx(v.now, 1), 6)}   #${d.following.pick}: ${pad(`${name(v.laterId)} (${pct(v.laterP)})`, 30)} ~${lpad(fx(v.later, 1), 6)}`,
           );
@@ -273,13 +388,13 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
       );
     }
     out.push(
-      "Value = season FP + up to 50% when your D/G slots are empty. Avail = chance he is still there at your next pick (ADP rank among the available with log-normal noise ~35% of the rank, binomial count of pool picks; no-ADP players rank last). Player VONA = value − expected best at his position by your following pick (negative: someone better should last). Prospects (no projection) are not ranked.",
+      `${vorLeague ? "Value = season FP over the replacement level of his position (the weakest starter of the league who could take his seat; run --vor for the levels)." : "Value = season FP + up to 50% when your D/G slots are empty."} Avail = chance he is still there at your next pick (ADP rank among the available with log-normal noise ~35% of the rank, binomial count of pool picks; no-ADP players rank last). Player VONA = value − expected best at his position by your following pick (negative: someone better should last). Prospects (no projection) are not ranked.`,
     );
   }
 
   if (input.dynasty) printDynasty(out, plan, input, input.dynasty, input.dynastyMode);
-  else if (!args.includes("--no-dynasty")) {
-    out.push("", "(no public/fantrax/dynasty.json: run npm run dynasty:build for the dynasty section)");
+  else if (CFG.features.dynasty && !args.includes("--no-dynasty")) {
+    out.push("", `(no ${CFG.paths.public}/dynasty.json: run npm run dynasty:build for the dynasty section)`);
   }
 
   console.log(out.join("\n"));
@@ -444,6 +559,8 @@ function alertLine(a: PlanAlert, name: (id: string | null | undefined) => string
       return `${tag} Suggested moves put Active+Reserve at ${a.count} (max ${a.limit}) — send someone to Minors or drop`;
     case "fxpa-down":
       return `${tag} fxpa unavailable (${a.detail ?? "?"}): no caps, injury or Minors flags`;
+    case "fxpa-closed":
+      return `${tag} This league publishes no player details: no injury flags, no Ros%, no waiver priority. The optimal lineup does not know who is hurt`;
     case "stale-data":
       return `${tag} Snapshot is ${a.count} h old — run npm run league:sync`;
     default:
@@ -471,9 +588,19 @@ function printLineup(
 }
 
 (async () => {
+  if (args.includes("--priors")) {
+    reportPriors();
+    return;
+  }
+  if (args.includes("--vor")) {
+    reportVor();
+    return;
+  }
   const input = main();
   if (args.includes("--live")) await refreshLive(input);
-  const plan = buildDailyPlan(input);
+  // The board's value model, same as the sync's and the browser's.
+  const vor = leagueVor(CFG, input.values.players, (id) => seasonFp(input.values.players[id]!, CFG), input.league.slotCounts);
+  const plan = buildDailyPlan({ ...input, config: CFG, vor });
   print(plan, input);
 })().catch((e) => {
   console.error(`FAIL: league:report — ${e instanceof Error ? e.message : String(e)}`);

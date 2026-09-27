@@ -3,12 +3,19 @@
  * ("This Team will not accumulate any stats for this lineup period"), so
  * this is the first thing the daily view checks.
  *
- * Rules (public rules page + `getTeamRosterInfo.miscData.statusTotals`):
- * Active + Reserve >= 15 (Minors and IR do not count); Active <= 15,
- * Reserve <= 5, IR <= 6, Minors <= 35; each active slot type at most its
- * count; a healthy player on IR makes the roster illegal after 2 lineup
- * periods (any injury flag, day-to-day included, or a suspension makes the
- * IR slot legitimate). Moving players out of Minors is never blocked.
+ * Rules, Captains league (public rules page +
+ * `getTeamRosterInfo.miscData.statusTotals`): Active + Reserve >= 15 (Minors
+ * and IR do not count); Active <= 15, Reserve <= 5, IR <= 6, Minors <= 35;
+ * each active slot type at most its count; a healthy player on IR makes the
+ * roster illegal after 2 lineup periods (any injury flag, day-to-day
+ * included, or a suspension makes the IR slot legitimate). Moving players out
+ * of Minors is never blocked.
+ *
+ * The numbers and the slot set are the league's, never the module's: pass
+ * `limits` / `slotCounts` / `slotOrder` from the league's config and synced
+ * snapshot. fxea only exposes maxActive and maxReserve, so minTotal, maxIr,
+ * maxMinors and the IR grace period come from each league's rules page and
+ * must never be inherited from another league.
  */
 import {
   DEFAULT_ROSTER_LIMITS,
@@ -18,6 +25,7 @@ import {
   IR_ELIGIBLE_ICONS,
   SLOT_ORDER,
   type RosterLimits,
+  type SlotCounts,
   type SlotId,
 } from "./config";
 
@@ -69,6 +77,9 @@ export interface SlotFill {
   dead: string[];
 }
 
+/** One entry per slot the league has, in its own order. */
+export type SlotFills = Partial<Record<SlotId, SlotFill>>;
+
 export interface RosterEvaluation {
   counts: { active: number; reserve: number; ir: number; minors: number; counted: number };
   minTotal: number;
@@ -76,7 +87,7 @@ export interface RosterEvaluation {
   need: number;
   illegal: boolean;
   issues: RosterIssue[];
-  slots: Record<SlotId, SlotFill>;
+  slots: SlotFills;
   dead: Array<{ id: string; slot: string; reason: DeadReason }>;
   healthyOnIr: string[];
   /** Minors players who can dress in the NHL today (no minor-league / injury flag). */
@@ -106,7 +117,9 @@ export function evaluateRoster(
   flags: Record<string, PlayerFlags>,
   opts: {
     limits?: RosterLimits;
-    slotCounts?: Record<SlotId, number>;
+    slotCounts?: SlotCounts;
+    /** The league's slots, in its own order (`config.slots.order`). */
+    slotOrder?: readonly SlotId[];
     /** Lineup periods each IR player has already spent healthy there. */
     healthyIrPeriods?: Record<string, number>;
     /**
@@ -118,11 +131,12 @@ export function evaluateRoster(
 ): RosterEvaluation {
   const limits = opts.limits ?? DEFAULT_ROSTER_LIMITS;
   const slotCounts = opts.slotCounts ?? DEFAULT_SLOT_COUNTS;
+  const slotOrder = opts.slotOrder ?? SLOT_ORDER;
   const iconsKnown = opts.iconsKnown ?? true;
   const counts = { active: 0, reserve: 0, ir: 0, minors: 0, counted: 0 };
-  const slots = Object.fromEntries(
-    SLOT_ORDER.map((s) => [s, { max: slotCounts[s] ?? 0, filled: 0, empty: 0, dead: [] as string[] }]),
-  ) as Record<SlotId, SlotFill>;
+  const slots: SlotFills = Object.fromEntries(
+    slotOrder.map((s) => [s, { max: slotCounts[s] ?? 0, filled: 0, empty: 0, dead: [] as string[] }]),
+  );
   const dead: RosterEvaluation["dead"] = [];
   const healthyOnIr: string[] = [];
   const movableFromMinors: string[] = [];
@@ -147,7 +161,9 @@ export function evaluateRoster(
     }
   }
   counts.counted = counts.active + counts.reserve;
-  for (const fill of Object.values(slots)) fill.empty = Math.max(0, fill.max - fill.filled);
+  for (const fill of Object.values(slots)) {
+    if (fill) fill.empty = Math.max(0, fill.max - fill.filled);
+  }
 
   const issues: RosterIssue[] = [];
   const need = Math.max(0, limits.minTotal - counts.counted);
@@ -161,9 +177,9 @@ export function evaluateRoster(
   over("too-many-reserve", counts.reserve, limits.maxReserve);
   over("too-many-ir", counts.ir, limits.maxIr);
   over("too-many-minors", counts.minors, limits.maxMinors);
-  for (const s of SLOT_ORDER) {
+  for (const s of slotOrder) {
     const f = slots[s];
-    if (f.filled > f.max) {
+    if (f && f.filled > f.max) {
       issues.push({ code: "slot-over", illegal: true, count: f.filled, limit: f.max, slot: s });
     }
   }

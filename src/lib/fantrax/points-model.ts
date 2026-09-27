@@ -16,6 +16,8 @@ import {
   PRIOR_FPG,
   PRIOR_GOALIE_E,
   PRIOR_P_PLAY,
+  type FantraxPriors,
+  type ScoringBaseSlot,
 } from "./config";
 import {
   goaliePoints,
@@ -34,6 +36,21 @@ export const SKATER_SHO_RATE = 0.05;
 /** D takeaways: league mean per GP (2025-26) and its shrinkage weight. */
 export const TK_PRIOR_RATE = 0.279;
 export const TK_PRIOR_GP = 40;
+/**
+ * Shorthanded goals per GP, league mean: 0.409 per 82 GP, measured over the
+ * 1,198 skaters in `player-profiles.json` with career SHG and GP (2.7% of all
+ * goals). `players.json` does not project SHG, so a league that scores it
+ * (Slapshot: SHG 1) gets the player's career rate shrunk toward this mean
+ * with `SHG_PRIOR_GP` games of prior — the same shape as takeaways.
+ *
+ * Deliberately NOT `advancedSeasonLatest.shGoalsPer60`: it puts Blueger at
+ * ~7 SHG per 82 against 1.8 in his career, a defect `src/lib/ml/team-style.ts`
+ * documents. The whole category is worth at most ~2.7 points a season on
+ * ~300 (the best penalty killers reach 2.7 SHG per 82), so a flat, shrunk
+ * career rate is accurate enough and cannot mislead a draft.
+ */
+export const SHG_PRIOR_RATE = 0.409 / 82;
+export const SHG_PRIOR_GP = 82;
 /** Most recent season first. */
 export const TK_SEASON_WEIGHTS = [0.65, 0.35] as const;
 /** Goalie OT/SO losses per GP league mean, and goalie assists per GP. */
@@ -74,6 +91,23 @@ export interface SkaterProjectionInput {
   shots: number;
   hits: number;
   blocks: number;
+  /** `players.json` `projection.powerplayPoints`; only leagues that score PPP need it. */
+  powerplayPoints?: number;
+}
+
+/** Career line a shorthanded-goal rate is shrunk from. */
+export interface SkaterCareer {
+  gamesPlayed: number;
+  shorthandedGoals?: number;
+}
+
+/**
+ * Career SHG per game shrunk toward the league mean with `SHG_PRIOR_GP` games
+ * of prior; the bare league mean without a career line.
+ */
+export function shorthandedGoalsPerGame(career?: SkaterCareer | null): number {
+  const gp = career?.gamesPlayed ?? 0;
+  return ((career?.shorthandedGoals ?? 0) + SHG_PRIOR_GP * SHG_PRIOR_RATE) / (gp + SHG_PRIOR_GP);
 }
 
 export interface GoalieProjectionInput {
@@ -116,16 +150,32 @@ export function takeawaysPerGame(history: TakeawaySeason[]): number {
 }
 
 /**
- * Per-game stat line for a skater. Blk / Tk / SHO only matter in a D slot,
- * so they stay 0 for players who can't fill one (keeps `dx` = 0 for forwards).
+ * Per-game stat line for a skater.
+ *
+ * Blk / Tk / skater SHO only matter in a D slot, so they stay 0 for players
+ * who can't fill one (keeps `dx` = 0 for forwards). The last four —
+ * `a` (assists as one category), `ppp`, `shg`, `sb` — are what a league like
+ * Slapshot scores instead of Captains' A1/A2 split; a scoring table without
+ * those categories never reads them, so filling them always is free.
+ *
+ * `sb` (shots blocked for EVERY slot, not just D) is the raw projected block
+ * rate: unlike Captains' `blk` it is not a D-slot extra, so it must not be
+ * zeroed for forwards. Slapshot scores it 0 in all five of its slots, but the
+ * rate belongs in the line either way — the scoring table decides, not this.
  */
 export function skaterRatesFromProjection(
   p: SkaterProjectionInput,
-  opts: { primaryD: boolean; dEligible: boolean; takeawaysPerGame?: number },
+  opts: {
+    primaryD: boolean;
+    dEligible: boolean;
+    takeawaysPerGame?: number;
+    /** Career line for the shorthanded-goal rate (league mean without one). */
+    career?: SkaterCareer | null;
+  },
 ): SkaterRates {
   const gp = p.gamesPlayed;
   if (!(gp > 0)) {
-    return { g: 0, a1: 0, a2: 0, sog: 0, hit: 0, otp: 0, ht: 0, blk: 0, tk: 0, sho: 0 };
+    return { g: 0, a1: 0, a2: 0, sog: 0, hit: 0, otp: 0, ht: 0, blk: 0, tk: 0, sho: 0, a: 0, ppp: 0, shg: 0, sb: 0 };
   }
   const g = p.goals / gp;
   const a = p.assists / gp;
@@ -141,6 +191,10 @@ export function skaterRatesFromProjection(
     blk: opts.dEligible ? p.blocks / gp : 0,
     tk: opts.dEligible ? (opts.takeawaysPerGame ?? TK_PRIOR_RATE) : 0,
     sho: opts.dEligible ? SKATER_SHO_RATE : 0,
+    a,
+    ppp: (p.powerplayPoints ?? 0) / gp,
+    shg: shorthandedGoalsPerGame(opts.career),
+    sb: p.blocks / gp,
   };
 }
 
@@ -180,9 +234,16 @@ export function goalieRatesFromProjection(
 export function skaterValueFromProjection(
   table: ScoringTable,
   p: SkaterProjectionInput,
-  opts: { primaryD: boolean; dEligible: boolean; takeawaysPerGame?: number },
+  opts: {
+    primaryD: boolean;
+    dEligible: boolean;
+    takeawaysPerGame?: number;
+    career?: SkaterCareer | null;
+    /** The league's forward scoring column; Captains' "Default" by default. */
+    baseSlot?: ScoringBaseSlot;
+  },
 ): { off: number; dx: number } {
-  return skaterComponents(table, skaterRatesFromProjection(p, opts));
+  return skaterComponents(table, skaterRatesFromProjection(p, opts), opts.baseSlot);
 }
 
 /** Expected fantasy points per start. */
@@ -194,16 +255,21 @@ export function goalieValueFromProjection(
   return goaliePoints(table, goalieRatesFromProjection(p, career));
 }
 
-/** Prior per-game value for a skater with no projection. */
-export function priorSkaterValue(primaryD: boolean): { off: number; dx: number } {
+/**
+ * Prior per-game value for a skater with no projection, in the league's own
+ * points (`FantraxPriors`; Captains' numbers by default so every existing
+ * caller is unchanged).
+ */
+export function priorSkaterValue(
+  primaryD: boolean,
+  fpg: { F: number; D: number } = PRIOR_FPG,
+): { off: number; dx: number } {
   // The p25 FP/G already includes D extras; keep them in `dx` so a prior D
   // loses them in the Skt slot like everyone else.
-  return primaryD
-    ? { off: PRIOR_FPG.D * 0.8, dx: PRIOR_FPG.D * 0.2 }
-    : { off: PRIOR_FPG.F, dx: 0 };
+  return primaryD ? { off: fpg.D * 0.8, dx: fpg.D * 0.2 } : { off: fpg.F, dx: 0 };
 }
 
-export const priorGoalieValue = (): number => PRIOR_GOALIE_E;
+export const priorGoalieValue = (goalieE: number = PRIOR_GOALIE_E): number => goalieE;
 
 export interface PlayInput {
   /** Projected games (skaters) — drives the fringe-player discount. */
@@ -233,12 +299,20 @@ export function dayToDayFactor(icons: readonly string[] | undefined): number {
  * at 0.3) for fringe players; a flat discount for unprojected players.
  * Day-to-day halves whichever applies.
  */
-export function skaterPlayProbability(p: PlayInput, hasGame: boolean): number {
+export function skaterPlayProbability(
+  p: PlayInput,
+  hasGame: boolean,
+  /** The league's own points scale; Captains' numbers by default. */
+  priors: Pick<FantraxPriors, "pPlay" | "regularMinFpg"> = {
+    pPlay: PRIOR_P_PLAY,
+    regularMinFpg: REGULAR_MIN_FPG,
+  },
+): number {
   if (!hasGame || isRuledOut(p)) return 0;
   const dtd = dayToDayFactor(p.icons);
-  if (p.src === "prior") return PRIOR_P_PLAY * dtd;
+  if (p.src === "prior") return priors.pPlay * dtd;
   const regular =
-    p.gp >= REGULAR_GP || (p.gp >= REGULAR_FPG_MIN_GP && (p.fpg ?? 0) >= REGULAR_MIN_FPG);
+    p.gp >= REGULAR_GP || (p.gp >= REGULAR_FPG_MIN_GP && (p.fpg ?? 0) >= priors.regularMinFpg);
   if (regular) return dtd;
   return Math.min(1, Math.max(0.3, p.gp / 82)) * dtd;
 }

@@ -107,11 +107,21 @@ export interface PresetDef<F, Caps> {
   id: string;
   label: string | ((caps: Caps) => string);
   description: string | ((caps: Caps) => string);
-  /** Over the spec's default filters. */
-  filters: Partial<F>;
+  /**
+   * Over the spec's default filters. A function when a bound only makes sense
+   * with data the league has: an « espoirs ≤ 21 ans » view has to drop its age
+   * bound in a league that publishes no ages, or it would match nobody.
+   */
+  filters: Partial<F> | ((caps: Caps) => Partial<F>);
   sort: SortState | ((caps: Caps) => SortState);
   /** Its default columns. */
   cols: readonly string[];
+  /**
+   * Unavailable with this data: no chip, and `?vue=` ignored. A view whose
+   * whole point is a kind of data the league has not got (a dynasty view in a
+   * league with no keeper model) must not be offered at all.
+   */
+  needs?: (caps: Caps) => boolean;
 }
 
 /** A preset with the data on hand applied (labels, sort). */

@@ -6,9 +6,9 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import todayJson from "@/data/fantrax/today.json";
 import summaryJson from "@/data/snake-summary.json";
-import type { DailyPlan } from "@/lib/fantrax/daily-plan";
+import { fantraxBaked } from "@/lib/fantrax/baked";
+import { fantraxLeague } from "@/lib/fantrax/config";
 import { teamDynastySummary, type TeamDynastySummary } from "@/lib/fantrax/dynasty-hints";
 import { parseDynasty } from "@/lib/fantrax/dynasty-index";
 import { formatDateFr } from "@/lib/draft/draft-copy";
@@ -43,6 +43,10 @@ function readBoard<T>(slug: string): T {
 /**
  * My roster's 2027 cutdown outlook from the committed dynasty.json and
  * state.json (the same sync); null when either is missing or unreadable.
+ *
+ * Only ever called for a league whose config HAS the keeper model: the
+ * cutdown is the Captains league's own rule (10 keepers + 30 minors-eligible)
+ * and a keeper or redraft league must never be shown a line about it.
  */
 function captainsDynasty(teamId: string): TeamDynastySummary | null {
   try {
@@ -65,8 +69,12 @@ interface ProfileJson {
 export function homeLeagues(): HomeLeague[] {
   return LEAGUES.map((entry): HomeLeague => {
     if (entry.kind === "fantrax-points") {
-      const plan = todayJson as unknown as DailyPlan;
-      return { entry, card: fantraxHomeCard(entry, plan, captainsDynasty(entry.myTeamId)), local: null };
+      // This league's OWN baked plan, and the 2027 cutdown line only where the
+      // league has that model at all.
+      const cfg = fantraxLeague(entry.slug);
+      const plan = fantraxBaked(entry.slug).today;
+      const dynasty = cfg.features.dynasty ? captainsDynasty(entry.myTeamId) : null;
+      return { entry, card: fantraxHomeCard(entry, plan, dynasty, cfg.features.minors), local: null };
     }
     const profile = readProfile<ProfileJson>(entry.profileSlug ?? entry.slug);
     return {

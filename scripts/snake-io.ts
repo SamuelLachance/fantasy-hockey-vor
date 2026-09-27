@@ -56,13 +56,23 @@ export function readPublicSnakeBodies(root: string): Map<string, string> {
   return m;
 }
 
-/** Content hash of the public files (12 hex chars), for `?v=`. */
+/**
+ * Content hash of the public files (12 hex chars), for `?v=`.
+ *
+ * Line endings are normalised to LF first, so the hash names the CONTENT and
+ * not the platform the bytes were checked out on. Without that, a clone with
+ * `core.autocrlf=true` (the Windows default) hashes CRLF bodies, matches
+ * nothing, and `check:snake` fails on every Windows machine with no data
+ * problem at all. The committed `snake-version.json` already holds the LF
+ * hash, so this makes the check agree with what is published rather than
+ * changing what is published.
+ */
 export function snakeContentVersion(bodies: ReadonlyMap<string, string>): string {
   const h = createHash("sha256");
   for (const rel of [...bodies.keys()].sort()) {
     h.update(rel);
     h.update("\0");
-    h.update(bodies.get(rel)!);
+    h.update(bodies.get(rel)!.replace(/\r\n/g, "\n"));
     h.update("\0");
   }
   return h.digest("hex").slice(0, 12);

@@ -6,6 +6,7 @@
  * player table does not ship the lineup optimizer and the rest of the
  * planner a second time.
  */
+import { CAPTAINS_DYNASTY, eligibleGroups, eligibleSlots, type FantraxLeagueConfig } from "./config";
 import type { PlanLineup } from "./daily-plan";
 import type { DraftGroup, DraftPoolPlayer } from "./draft";
 import { isRuledOut } from "./points-model";
@@ -15,20 +16,41 @@ const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 
 // ------------------------------------------------------------ values
 
-/** A goalie with a projected value per start. */
-export const isGoalieRecord = (r: ValueRecord) => r.e.split(",").includes("G") && r.gE !== undefined;
+/**
+ * A goalie with a projected value per start. `gE` is the discriminator (the
+ * sync writes `gE` for goalies and `off`/`dx` for skaters); the token check
+ * is belt and braces and uses the league's own goalie token.
+ */
+export const isGoalieRecord = (r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY) =>
+  r.e.split(",").includes(cfg.eligibility.goalieToken) && r.gE !== undefined;
 
-/** Best per-game value outside the Skt slot (C/W/F = off, D = off + dx). */
-export function bestFpg(r: ValueRecord): number {
-  if (isGoalieRecord(r)) return (r.pS ?? 0) * (r.gE ?? 0);
-  const dOk = r.e.split(",").includes("D");
-  return (r.off ?? 0) + (dOk ? Math.max(0, r.dx ?? 0) : 0);
+/**
+ * Best per-game value outside the Skt slot: `off` in a forward slot,
+ * `off + dx` in the D slot.
+ *
+ * `dx` may be NEGATIVE in a league whose D column pays a category less than the
+ * column `off` is measured in — which is exactly what a scoring table like
+ * Slapshot's produces under the "Fantrax ignores the per-slot rows" reading
+ * (see `ScoringBaseSlot`). A player who can ONLY sit at D then really is worth
+ * `off + dx`, so clamping the extra at 0 would over-value him; a player who can
+ * also take a forward slot takes the better of the two, which is what "best"
+ * means.
+ */
+export function bestFpg(r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): number {
+  if (isGoalieRecord(r, cfg)) return (r.pS ?? 0) * (r.gE ?? 0);
+  const dOk = r.e.split(",").some((t) => cfg.eligibility.defenseTokens.includes(t.trim()));
+  if (!dOk) return r.off ?? 0;
+  // Slots he can fill, the captain seat aside (it multiplies `off`, so it is
+  // never the reason a D-only player is worth more than `off + dx`).
+  const dOnly = eligibleSlots(r.e, cfg).every((s) => s === "D" || s === "Skt");
+  const dx = r.dx ?? 0;
+  return (r.off ?? 0) + (dOnly ? dx : Math.max(0, dx));
 }
 
 /** Season value: projected games × best per-game value (starts × E for goalies). */
-export function seasonFp(r: ValueRecord): number {
-  if (isGoalieRecord(r)) return r.gp * (r.gE ?? 0);
-  return r.gp * bestFpg(r);
+export function seasonFp(r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): number {
+  if (isGoalieRecord(r, cfg)) return r.gp * (r.gE ?? 0);
+  return r.gp * bestFpg(r, cfg);
 }
 
 // ------------------------------------------------------------ plan odds
@@ -95,14 +117,25 @@ export function draftPoolInputs(
   state: StateSnapshot,
   values: ValuesSnapshot,
   available: readonly string[] = availableProjected(state, values),
+  cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY,
+  /** Season points over replacement by Fantrax id, where the league models it. */
+  vor: ReadonlyMap<string, number> | null = null,
 ): { pool: DraftPoolPlayer[]; poolShare: number } {
   const pool: DraftPoolPlayer[] = available
     .filter((id) => !isRuledOut({ team: values.players[id]!.t, icons: state.icons[id] ?? [] }))
     .map((id) => {
       const rec = values.players[id]!;
-      const tokens = rec.e.split(",");
-      const groups = (["C", "W", "D", "G"] as const).filter((g) => tokens.includes(g));
-      return { id, groups, seasonFp: seasonFp(rec), adp: state.adp[id] ?? Number.POSITIVE_INFINITY };
+      // The league's own token vocabulary: reading the group names as tokens
+      // left every pure LW / RW in no group, hence with no VONA at all.
+      const groups = eligibleGroups(rec.e, cfg);
+      const v = vor?.get(id);
+      return {
+        id,
+        groups,
+        seasonFp: seasonFp(rec, cfg),
+        ...(v !== undefined ? { vor: v } : {}),
+        adp: state.adp[id] ?? Number.POSITIVE_INFINITY,
+      };
     })
     .filter((p) => p.seasonFp > 0);
   const made = (state.draft?.picks ?? []).filter((p) => p.playerId);

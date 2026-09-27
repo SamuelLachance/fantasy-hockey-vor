@@ -522,7 +522,7 @@ function fillLeague(
       accepts: profile.slotEligibility[slot],
     }),
   );
-  const fill = fillSlots(ordered, slots);
+  const fill = fillSlots<number, Valued, StartingSlot>(ordered, slots);
   const slotOf = new Map<number, ModelSlot>(fill.slotOf);
 
   const benchPerTeam = profile.roster.BN ?? 0;

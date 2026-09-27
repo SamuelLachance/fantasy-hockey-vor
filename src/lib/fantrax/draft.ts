@@ -58,15 +58,29 @@
  * expected at his position next time: about 0 when he will likely still be
  * there, negative when someone better there should last.
  *
- * This league's draft runs in a FIXED order (not snake, whatever the API
- * says), so pick numbers come straight from `draftPicks`.
+ * Pick numbers, rounds and the team on the clock come straight from
+ * `draftPicks` (fxea `getDraftResults`), so the draft's ORDER is whatever
+ * Fantrax says it is: a fixed order in Captains, a pure snake in Slapshot
+ * (round 1 = draftOrder, round 2 reversed, verified over all 1,216 picks).
+ * Nothing here assumes either.
  *
- * Value = season FP, plus up to +50% when the roster has empty D / G slots.
- * This is a redraft number; age and Ros% ride along as dynasty hints only.
+ * Value = season points above replacement (`DraftPoolPlayer.vor`) where the
+ * league models it, else season FP plus up to +50% when the roster has empty
+ * D / G slots. Both are redraft numbers; age and Ros% ride along as dynasty
+ * hints only.
  */
 
-export type DraftGroup = "C" | "W" | "D" | "G";
-export const DRAFT_GROUPS: readonly DraftGroup[] = ["C", "W", "D", "G"];
+import { CAPTAINS_DYNASTY, FANTRAX_GROUPS, type FantraxGroup } from "./config";
+
+/** A position group of the pool (see `FantraxGroup`). */
+export type DraftGroup = FantraxGroup;
+/**
+ * The group vocabulary ACROSS leagues. A board is ranked in the groups of the
+ * league it belongs to (`DraftOutlookOptions.groups`, i.e.
+ * `config.eligibility.groups`): Slapshot's wings are LW and RW, Captains' is
+ * one W. Iterate the league's list, not this one.
+ */
+export const DRAFT_GROUPS: readonly DraftGroup[] = FANTRAX_GROUPS;
 
 export interface DraftPickInfo {
   pick: number;
@@ -80,6 +94,12 @@ export interface DraftPoolPlayer {
   id: string;
   groups: readonly DraftGroup[];
   seasonFp: number;
+  /**
+   * Season points above the replacement level of his position
+   * (`points-vor.ts`), where the league's slots all score a skater alike.
+   * Absent for a league the model does not cover (one with a captain slot).
+   */
+  vor?: number;
   /** Lower = drafted earlier across Fantrax; Infinity when unranked. */
   adp: number;
 }
@@ -132,6 +152,12 @@ export interface DraftOutlook {
   /** Share (0..1) of other teams' picks expected to land on pool players. */
   poolShare: number;
   remaining: DraftPickInfo[];
+  /**
+   * One entry per group of the LEAGUE (`DraftOutlookOptions.groups`), not per
+   * `DRAFT_GROUPS`: read it with the same list the league's config gives, and
+   * guard a missing key — a baked snapshot older than a vocabulary change has
+   * the previous groups.
+   */
   vona: Record<DraftGroup, DraftGroupOutlook>;
   board: DraftBoardRow[];
 }
@@ -141,7 +167,24 @@ export type NeedWeights = Partial<Record<DraftGroup, number>>;
 
 export const NEED_BONUS = 0.5;
 
+/**
+ * What the board ranks by.
+ *
+ * With points over replacement in hand, that IS the value: it already says how
+ * scarce the position is, so adding the empty-slot bonus on top would count the
+ * same scarcity twice — and badly. In Slapshot's scoring a starting goalie is
+ * worth ~330 raw season points against ~410 for the best centre (0.25 a save
+ * over ~1,400 saves), and the bonus then multiplied every goalie by 1.5 on a
+ * roster with two empty goalie slots: the top of the board came out as eight
+ * goalies in a row. Against the real goalie replacement level (73.9 season
+ * points, the 64th and last starting seat) the same goalie is worth 255 and the
+ * centre 347, which is the true order.
+ *
+ * Without it (Captains, where a captain slot makes one value per player the
+ * wrong model) the need bonus is unchanged, and so is every number it produced.
+ */
 export function draftValue(p: DraftPoolPlayer, need: NeedWeights): number {
+  if (p.vor !== undefined) return p.vor;
   const w = Math.max(0, ...p.groups.map((g) => need[g] ?? 0));
   return p.seasonFp * (1 + NEED_BONUS * w);
 }
@@ -341,6 +384,11 @@ export interface DraftOutlookOptions {
   boardSize?: number;
   /** Share (0..1) of other teams' picks expected to come out of `pool`. */
   poolShare?: number;
+  /**
+   * Position groups to rank: the league's own `eligibility.groups`. Captains'
+   * by default, so every existing caller keeps its four cards.
+   */
+  groups?: readonly DraftGroup[];
 }
 
 export function draftOutlook(
@@ -386,8 +434,9 @@ export function draftOutlook(
   const atFollowing = picksBeforeFollowing === null ? null : availabilityAt(picksBeforeFollowing);
 
   const valued = available.map((p) => ({ p, value: draftValue(p, need) }));
+  const groups = opts.groups ?? CAPTAINS_DYNASTY.eligibility.groups;
   const vona = {} as DraftOutlook["vona"];
-  for (const g of DRAFT_GROUPS) {
+  for (const g of groups) {
     const inGroup = valued.filter((x) => x.p.groups.includes(g));
     const now = expectedBest(inGroup.map((x) => ({ id: x.p.id, value: x.value, available: atNext.get(x.p.id)! })));
     const later = atFollowing

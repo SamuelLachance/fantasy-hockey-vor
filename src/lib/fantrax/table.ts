@@ -35,6 +35,7 @@ import { DEFAULT_DYNASTY_MODE, type DynastyMode } from "./dynasty-mode";
 import type { DynastyIndex } from "./dynasty-index";
 import { lookupExtra, VERDICT_POSITIVE, verdictRank, type SnakeIndex, type SnakeInfo } from "./extras";
 import { POOL_GROUPS, type PoolGroup, type PoolRosterStatus, type PoolSnapshot, type PoolSource } from "./pool";
+import { CAPTAINS_DYNASTY, eligibleGroups, parseGroups, type FantraxLeagueConfig } from "./config";
 import type { StateSnapshot, ValuesSnapshot } from "./snapshot-types";
 import { columnCopy, SORT_LABEL } from "./table-copy";
 
@@ -75,7 +76,11 @@ export interface FantraxRow {
   fp: number | null;
   fpg: number | null;
   gp: number | null;
-  /** Season FP with the need bonus (the draft helper's value); projected players only. */
+  /**
+   * What the draft helper ranks by: season points over the replacement level of
+   * his position where the league models it (`points-vor.ts`), else season FP
+   * with the empty-slot bonus. Projected players only.
+   */
   value: number | null;
   /** Draft pool only, while the draft runs. */
   vona: number | null;
@@ -115,11 +120,17 @@ export function fantraxDraftOdds(
   values: ValuesSnapshot,
   teamId: string,
   baseLineup: Pick<PlanLineup, "slots"> | null,
+  config: FantraxLeagueConfig = CAPTAINS_DYNASTY,
+  vor: ReadonlyMap<string, number> | null = null,
 ): FantraxDraftOdds | null {
   if (!state.draft || !draftIsOpen(state)) return null;
-  const { pool, poolShare } = draftPoolInputs(state, values);
+  const { pool, poolShare } = draftPoolInputs(state, values, undefined, config, vor);
   const need = baseLineup ? draftNeed(baseLineup) : {};
-  const o = draftOutlook(state.draft.picks, teamId, pool, need, { poolShare, boardSize: Number.POSITIVE_INFINITY });
+  const o = draftOutlook(state.draft.picks, teamId, pool, need, {
+    poolShare,
+    boardSize: Number.POSITIVE_INFINITY,
+    groups: config.eligibility.groups,
+  });
   const sure = o.picksBefore === 0;
   const byId = new Map(
     o.board.map((b) => [
@@ -141,6 +152,10 @@ export interface FantraxRowsInput {
   snake: SnakeIndex | null;
   /** Owners at the sync the dynasty values were built on (`syncOwnersOf`); absent: records as is. */
   syncOwners?: ReadonlyMap<string, string> | null;
+  /** The league being shown; its eligibility vocabulary and scoring. */
+  config?: FantraxLeagueConfig;
+  /** Season points over replacement by Fantrax id (`points-vor.ts`), when modelled. */
+  vor?: ReadonlyMap<string, number> | null;
 }
 
 /** Player → team of a snapshot's rosters (the sync the dynasty values saw). */
@@ -160,6 +175,7 @@ const LETTER: Record<string, PoolRosterStatus> = {
 
 export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
   const { pool, state, values, draft } = input;
+  const config = input.config ?? CAPTAINS_DYNASTY;
   // Owners: live (or baked) rosters, then picks made since the last roster read.
   const owners = new Map<string, { team: string; status: PoolRosterStatus | null }>();
   if (state) {
@@ -173,7 +189,7 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
   const need = input.baseLineup ? draftNeed(input.baseLineup) : {};
   const rows: FantraxRow[] = [];
   for (const r of pool.players) {
-    const groups = POOL_GROUPS.filter((g) => r.pos.includes(g));
+    const groups = parseGroups(r.pos, config);
     const bakedTeam = r.st !== "FA" && r.st !== "WW" ? r.st : null;
     const own = state ? (owners.get(r.id) ?? null) : bakedTeam ? { team: bakedTeam, status: r.rs ?? null } : null;
     // Dropped since the sync: Fantrax puts him on waivers first.
@@ -183,8 +199,12 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
     const fp = r.fp ?? null;
     let value: number | null = null;
     if (fp !== null) {
-      const sFp = rec?.src === "proj" ? seasonFp(rec) : fp;
-      value = draftValue({ id: r.id, groups, seasonFp: sFp, adp: Number.POSITIVE_INFINITY }, need);
+      const sFp = rec?.src === "proj" ? seasonFp(rec, config) : fp;
+      const v = input.vor?.get(r.id);
+      value = draftValue(
+        { id: r.id, groups, seasonFp: sFp, ...(v !== undefined ? { vor: v } : {}), adp: Number.POSITIVE_INFINITY },
+        need,
+      );
     }
     const d = !own ? draft?.byId.get(r.id) : undefined;
     const model = input.dynasty?.byFantrax.get(r.id);
@@ -231,20 +251,25 @@ export interface FantraxExtras {
   snake: SnakeIndex | null;
   /** Owners at the dynasty values' sync (see `FantraxRowsInput.syncOwners`). */
   syncOwners?: ReadonlyMap<string, string> | null;
+  /** The league being shown; its eligibility vocabulary. */
+  config?: FantraxLeagueConfig;
+  /** Season points over replacement by Fantrax id, when modelled. */
+  vor?: ReadonlyMap<string, number> | null;
 }
 
 function planRow(id: string, p: PlanPlayer, over: Partial<FantraxRow>, extras: FantraxExtras): FantraxRow {
   const team = CLUBLESS.has(p.t) ? "" : p.t;
   const rec = extras.dynasty?.byFantrax.get(id);
   const dyn = rec ? currentRecord(rec, id, over.owner ?? null, extras.syncOwners) : null;
-  const eligible = p.e.split(",");
   const icons = p.icons ?? [];
   return {
     id,
     name: p.n,
     search: searchHaystack(p.n, team),
     team,
-    groups: POOL_GROUPS.filter((g) => eligible.includes(g)),
+    // The league's own tokens: reading the group names as tokens put every
+    // pure LW / RW of an LW/RW league in no group at all.
+    groups: eligibleGroups(p.e, extras.config ?? CAPTAINS_DYNASTY),
     age: p.age ?? null,
     birthDate: null,
     owner: null,
@@ -397,6 +422,37 @@ export const FREE_AT_YEARS: readonly number[] = [2027, 2028, 2029];
 export interface FantraxCaps {
   /** The draft is open and I still pick: VONA and odds exist. */
   draft: boolean;
+  /**
+   * This league's position groups, in display order (`eligibility.groups`):
+   * the filter's chips and the only `?pos=` values it keeps. Slapshot splits
+   * the wings (C / LW / RW / D / G), Captains does not (C / W / D / G).
+   */
+  groups: readonly PoolGroup[];
+  /**
+   * fxpa answers for this league, so the fields only it carries exist: injury
+   * icons, % of Fantrax leagues (Ros%) and the claim counters. Where it is
+   * closed every one of them is empty for every player, so the column, the
+   * range filter and the « exclure les blessés » toggle that read them are
+   * hidden rather than left to return nothing.
+   */
+  fxpa: boolean;
+  /**
+   * The league has Minors slots, so Fantrax's minors-eligible flag means
+   * something here (its filter and the « mineures comprises » wording).
+   */
+  minors: boolean;
+  /**
+   * Season points over replacement are modelled for this league
+   * (`canRankByPoints`): its column and its sort show.
+   */
+  vor: boolean;
+  /**
+   * The league's config HAS the keeper-forever model (`features.dynasty`),
+   * whether or not this build published its values. It is a league fact, so it
+   * is what gates the dynasty VIEWS; `dynasty` / `dynastyPublished` below are
+   * facts about the data on hand.
+   */
+  keeper: boolean;
   /** dynasty.json is in: its columns, filters and sorts show. */
   dynasty: boolean;
   /**
@@ -420,6 +476,8 @@ export interface FantraxCtx {
   teamIds: readonly string[];
   /** Dynasty value mode (Gagner maintenant, Équilibré, Long terme). */
   mode: DynastyMode;
+  /** « Valeur » is points over replacement here, not raw season points. */
+  vor?: boolean;
   /** dynasty.json is in (a row without a record then reads « non évalué »). */
   dynastyIn?: boolean;
 }
@@ -619,6 +677,12 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     return {
       ...f,
       status: knownStatus ? f.status : "tous",
+      // A bookmark from another league (or a hand-typed ?pos=RW on Captains)
+      // must not filter on a group this league does not rank.
+      pos: f.pos.filter((g) => caps.groups.includes(g)),
+      minors: caps.minors ? f.minors : false,
+      ros: caps.fxpa ? f.ros : ANY,
+      healthy: caps.fxpa ? f.healthy : false,
       verdict: caps.snake && (f.verdict === VERDICT_POSITIVE || verdicts.includes(f.verdict)) ? f.verdict : "",
       trend: caps.snake && (labels.trends ?? []).includes(f.trend) ? f.trend : "",
       phase: caps.dynasty && f.phase && (labels.phases ?? []).includes(f.phase) ? f.phase : "",
@@ -791,6 +855,11 @@ const hasDynasty = (c: FantraxCaps) => c.dynasty;
 const NEEDS: Partial<Record<ColumnKey, (c: FantraxCaps) => boolean>> = {
   vona: (c) => c.draft,
   dispo: (c) => c.draft,
+  // « % Fantrax » is an fxpa field. Where fxpa is closed it is empty for every
+  // player, so the column would be a wall of « — » and its range filter could
+  // only ever return nothing — on the very page whose banner says that number
+  // is unreadable without being a member.
+  ros: (c) => c.fxpa,
   ...Object.fromEntries(DYNASTY_COLUMNS.map((k) => [k, hasDynasty])),
   verdict: (c) => c.snake,
   tendance: (c) => c.snake,
@@ -812,7 +881,18 @@ export const FANTRAX_COLUMNS: readonly Col[] = COLUMN_KEYS.map((key): Col => {
     title: (ctx) => columnCopy(key, ctx).title,
     align: LEFT.has(key) ? "left" : "right",
     group: COLUMN_GROUP[key],
-    ...(sort ? { sort: { ...sort, label: SORT_LABEL[key as SortKey], ...(key === "fourchette" ? { button: "plafond de la fourchette" } : {}) } } : {}),
+    // « Valeur » has two names (season points, or points over replacement), so
+    // it takes no fixed sort label: the counter then reads the ctx-aware
+    // column label and says which one the table is sorted by.
+    ...(sort
+      ? {
+          sort: {
+            ...sort,
+            ...(key === "valeur" ? {} : { label: SORT_LABEL[key as SortKey] }),
+            ...(key === "fourchette" ? { button: "plafond de la fourchette" } : {}),
+          },
+        }
+      : {}),
     ...(NEEDS[key] ? { needs: NEEDS[key] } : {}),
     ...(key === "opinions" ? { lazy: "snakeFull" as const } : {}),
     ...(EXTRAS[key] ? { readsExtras: EXTRAS[key] } : {}),
@@ -889,9 +969,38 @@ const EQUIPE_COLUMNS: readonly ColumnKey[] = [
 
 /** By dynasty value when the build published it, else the season's fallback. */
 const dynastyOr =
-  (fallback: SortState) =>
+  (fallback: SortState | ((caps: FantraxCaps) => SortState)) =>
   (caps: FantraxCaps): SortState =>
-    caps.dynastyPublished ? { key: "dyn", dir: "desc" } : fallback;
+    caps.dynastyPublished ? { key: "dyn", dir: "desc" } : typeof fallback === "function" ? fallback(caps) : fallback;
+
+/**
+ * The dynasty views: only a league whose CONFIG has the keeper-forever model.
+ * `dynastyPublished` is a per-build file check, so gating on it silently lost
+ * « Espoirs » from a Captains build whose dynasty.json had not been written —
+ * a view that has always had a season-value fallback of its own.
+ */
+const keeperLeague = (caps: FantraxCaps) => caps.keeper;
+
+/**
+ * How prospects are ranked without dynasty values: by Ros% (the best signal
+ * Fantrax gives for a player nobody projects) where fxpa answers, else by ADP,
+ * which is the only one left.
+ */
+const prospectSort = (caps: FantraxCaps): SortState =>
+  caps.fxpa ? { key: "ros", dir: "desc" } : { key: "adp", dir: "asc" };
+
+/**
+ * A prospect's AGE comes from fxpa (an NHL bio only covers the ones who have
+ * played), so in a league where fxpa is closed not one of them has an age —
+ * measured on the 2026-09-27 Slapshot pool: 0 of 1,080. An « ≤ 21 ans » bound
+ * would then match nobody and the view would read « Aucun joueur ne correspond
+ * à ces filtres », so the bound is dropped and the label says so.
+ */
+const prospectFilters = (caps: FantraxCaps): Partial<FantraxFilters> => ({
+  status: "dispo",
+  type: "espoirs",
+  ...(caps.fxpa ? { age: { min: null, max: 21 } } : {}),
+});
 
 /**
  * One-click views (the chips) and each tab's starting view. Prospects and
@@ -916,11 +1025,18 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
         ? "Le repêchage au complet : joueurs projetés que personne n'a, actifs dans la LNH, par valeur."
         : "Joueurs projetés que personne n'a, actifs dans la LNH, par valeur.",
     filters: { status: "dispo", type: "proj", active: true },
-    sort: { key: "valeur", dir: "desc" },
+    // Points over replacement already says how scarce a position is, but not
+    // how scarce it is BY MY NEXT PICK, and in a 32-team league those are two
+    // different boards: at pick 118 the top of the VOR order was eight goalies
+    // whose own VONA cell, one column over, read −18 to −55 (2 goalie seats of
+    // 20). VONA is the need-aware number, so a live draft opens on it and VOR
+    // stays one click away — and without a draft there is no VONA to sort by.
+    sort: (caps) => (caps.draft && caps.vor ? { key: "vona", dir: "desc" } : { key: "valeur", dir: "desc" }),
     cols: REPECHAGE_COLUMNS,
   },
   {
     id: "dynastie",
+    needs: keeperLeague,
     label: "Meilleure valeur dynastie disponible",
     description: "Joueurs et espoirs que personne n’a, par valeur dynastie (dans le mode choisi).",
     filters: { status: "dispo" },
@@ -928,14 +1044,20 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     cols: DYNASTIE_COLUMNS,
   },
   {
+    // NOT a dynasty view: a 38-round keeper draft spends half its picks on
+    // prospects, and this is the only view that lists them. It has always had
+    // a fallback for a build without dynasty values, so it is offered
+    // whatever the league's model.
     id: "espoirs",
-    label: "Espoirs ≤ 21 ans disponibles",
+    label: (caps) => (caps.fxpa ? "Espoirs ≤ 21 ans disponibles" : "Espoirs disponibles"),
     description: (caps) =>
       caps.dynastyPublished
         ? "Espoirs sans projection LNH, 21 ans ou moins, que personne n’a, par valeur dynastie."
-        : "Espoirs sans projection LNH, 21 ans ou moins, que personne n'a.",
-    filters: { status: "dispo", type: "espoirs", age: { min: null, max: 21 } },
-    sort: dynastyOr({ key: "ros", dir: "desc" }),
+        : caps.fxpa
+          ? "Espoirs sans projection LNH, 21 ans ou moins, que personne n'a."
+          : "Espoirs sans projection LNH que personne n'a. Cette ligue ne publie pas les âges : triez-les par ADP ou par rang au repêchage de la LNH.",
+    filters: prospectFilters,
+    sort: dynastyOr(prospectSort),
     cols: ESPOIRS_COLUMNS,
   },
   {
@@ -960,9 +1082,11 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     description: (caps) =>
       caps.dynastyPublished
         ? "Tout votre effectif, mineures comprises, par valeur dynastie."
-        : "Tout votre effectif, mineures comprises.",
+        : caps.minors
+          ? "Tout votre effectif, mineures comprises."
+          : "Tout votre effectif.",
     filters: { status: "moi" },
-    sort: dynastyOr({ key: "valeur", dir: "desc" }),
+    sort: dynastyOr({ key: "valeur", dir: "desc" as const }),
     cols: EQUIPE_COLUMNS,
   },
 ];

@@ -131,12 +131,14 @@ export function rosterPeriodsIn<P extends IsoPeriod>(rosterPeriods: P[], scoring
 }
 
 /**
- * Start of the current claim week: the latest Monday 00:00 Eastern at or
- * before `nowMs` (claims reset Monday; FA and WW claims share the 5).
+ * Start of the current claim week: the latest `startsOn` 00:00 Eastern at or
+ * before `nowMs`. In the Captains league claims reset Monday (`startsOn` 1,
+ * the default) and FA and WW claims share the 5; another league resets on
+ * its own weekday (`cadence.claimWeekStartsOn`).
  */
-export function claimWeekStart(nowMs: number): string {
+export function claimWeekStart(nowMs: number, startsOn = 1): string {
   const today = torontoDate(nowMs);
-  const back = (torontoWeekday(nowMs) + 6) % 7; // Mon → 0 … Sun → 6
+  const back = (torontoWeekday(nowMs) - startsOn + 7) % 7; // startsOn → 0 … the day before → 6
   return addDays(today, -back);
 }
 

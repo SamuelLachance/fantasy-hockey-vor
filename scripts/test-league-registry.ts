@@ -7,6 +7,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { draftStorageKey } from "../src/lib/draft/draft-store";
+import { FANTRAX_LEAGUES } from "../src/lib/fantrax/config";
 import {
   KIND_TABS,
   LEAGUE_KINDS,
@@ -76,6 +77,22 @@ const load = <T>(...parts: string[]) => JSON.parse(readFileSync(join(process.cwd
   eq(captains.teams, league.teams.length, "Captains: team count matches league.json");
   assert(league.teams.some((t) => t.id === captains.myTeamId), "Captains: my team is in league.json");
   assert(captains.externalUrl?.includes(league.leagueId) ?? false, "Captains: Fantrax link uses the synced league id");
+  // A Fantrax league is a registry entry AND an engine config under the same
+  // slug, reading the snapshot of the league it names. (The config itself is
+  // pinned by scripts/test-fantrax-config.ts.)
+  for (const l of LEAGUES.filter((x) => x.kind === "fantrax-points")) {
+    const cfg = FANTRAX_LEAGUES[l.slug];
+    assert(!!cfg, `${l.slug}: has a Fantrax engine config`);
+    if (!cfg) continue;
+    eq(l.myTeamId, cfg.defaultTeamId, `${l.slug}: registry team = config team`);
+    eq(l.teams, cfg.teams, `${l.slug}: registry team count = config team count`);
+    const synced = load<{ leagueId: string; teams: Array<{ id: string }> }>(
+      ...cfg.paths.data.split("/"),
+      "league.json",
+    );
+    eq(synced.leagueId, cfg.leagueId, `${l.slug}: its snapshot is the league the config names`);
+    assert(synced.teams.some((t) => t.id === cfg.defaultTeamId), `${l.slug}: my team is in its own snapshot`);
+  }
 
   const ltl = getLeague("light-the-lamp")!;
   const profile = load<{ slug: string; teams: number; teamId: number; leagueId: number }>(

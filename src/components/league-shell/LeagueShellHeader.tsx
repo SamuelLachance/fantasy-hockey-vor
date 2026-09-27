@@ -6,6 +6,7 @@ import { LeagueSwitcher } from "./LeagueSwitcher";
 const ACCENT: Record<LeagueEntry["accent"], string> = {
   cyan: "text-cyan-300",
   violet: "text-violet-300",
+  amber: "text-amber-300",
 };
 
 /**

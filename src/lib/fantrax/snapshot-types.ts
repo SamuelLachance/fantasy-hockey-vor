@@ -3,7 +3,7 @@
  * the `src/data/fantrax/*` ones at build; the browser lazy-loads the
  * `public/fantrax/*` ones. A committed snapshot keeps builds offline-safe.
  */
-import type { RosterLimits, SlotId } from "./config";
+import type { RosterLimits, SlotCounts } from "./config";
 import type { IsoPeriod } from "./dates";
 import type { RosterEntry } from "./roster-rules";
 import type { ScoringTable } from "./scoring";
@@ -19,7 +19,7 @@ export interface LeagueSnapshot {
   seasonYear: number;
   startDate: string;
   endDate: string;
-  slotCounts: Record<SlotId, number>;
+  slotCounts: SlotCounts;
   limits: RosterLimits;
   scoring: ScoringTable;
   /** Skt ÷ Default points, uniform across offensive categories. */

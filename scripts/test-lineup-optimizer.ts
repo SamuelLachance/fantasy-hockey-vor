@@ -3,7 +3,7 @@
  * (vs an exhaustive DP over slot capacities), captain via the Skt slot.
  * Run: npx tsx scripts/test-lineup-optimizer.ts
  */
-import { DEFAULT_SLOT_COUNTS, SLOT_ORDER, type SlotId } from "../src/lib/fantrax/config";
+import { DEFAULT_SLOT_COUNTS, SLOT_ORDER, type SlotCounts, type SlotId } from "../src/lib/fantrax/config";
 import {
   captainGain,
   captainRanking,
@@ -37,7 +37,7 @@ function rng(seed: number) {
 }
 
 /** Exhaustive optimum: DP over (player index, remaining capacity per slot type). */
-function exactBest(cands: LineupCandidate[], counts: Record<SlotId, number>): number {
+function exactBest(cands: LineupCandidate[], counts: SlotCounts): number {
   const memo = new Map<string, number>();
   const rec = (i: number, cap: number[]): number => {
     if (i === cands.length) return 0;
@@ -55,7 +55,7 @@ function exactBest(cands: LineupCandidate[], counts: Record<SlotId, number>): nu
     memo.set(key, best);
     return best;
   };
-  return rec(0, SLOT_ORDER.map((s) => counts[s]));
+  return rec(0, SLOT_ORDER.map((s) => counts[s] ?? 0));
 }
 
 const ELIGIBILITY = ["C,F,Skt", "W,F,Skt", "W,C,F,Skt", "D,Skt", "D,W,F,Skt", "G"];

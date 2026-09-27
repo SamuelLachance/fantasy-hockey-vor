@@ -1,7 +1,7 @@
 import { ChevronRight, Trophy } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
-import { DRAFT_GROUPS } from "@/lib/fantrax/draft";
 import {
+  SLOT_LABEL,
   draftVonaIntro,
   fmtAgo,
   fmtNum,
@@ -13,6 +13,7 @@ import {
 } from "@/lib/fantrax/league-copy";
 import type { RecentPick } from "@/lib/fantrax/live";
 import { SnakeLeagueNote } from "@/components/snake/SnakeVerdicts";
+import { useFantraxLeague } from "./fantrax-league-context";
 import { LeagueCard, PlayerName, type PlayerLookup } from "./LeagueCard";
 
 interface DraftPanelProps {
@@ -36,6 +37,11 @@ const familyName = (n: string) => n.split(" ").slice(1).join(" ") || n;
  * near the top). Picks refresh live from Fantrax in the browser.
  */
 export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: DraftPanelProps) {
+  // The league's own groups: one « W » card in Captains, LW and RW apart in a
+  // league whose lineup has four seats of each. A baked plan from before a
+  // vocabulary change has the old keys, so a missing card is skipped rather
+  // than crashing the tab during a live draft.
+  const { config } = useFantraxLeague();
   const d = plan.draft;
   if (!d) return null;
   const { next, following } = d;
@@ -96,9 +102,10 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
         <>
           <h3 className="mt-5 text-sm font-semibold text-white">VONA par position</h3>
           <p className="mt-1 text-xs text-slate-400">{draftVonaIntro(next.pick, following?.pick ?? null)}</p>
-          <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {DRAFT_GROUPS.map((g) => {
-              const v = d.vona[g];
+          <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+            {config.eligibility.groups.map((g) => {
+              const v = d.vona[g] as (typeof d.vona)[typeof g] | undefined;
+              if (!v) return null;
               // The most likely best one left at each of my next two picks.
               const rows = [
                 { pick: next.pick, id: v.bestId, p: v.bestP },
@@ -107,7 +114,9 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
               return (
                 <li key={g} className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-xs font-semibold text-slate-400">{g}</span>
+                    <span className="text-xs font-semibold text-slate-400" title={SLOT_LABEL[g]}>
+                      {g}
+                    </span>
                     <span className="text-lg font-semibold tabular-nums text-white">
                       {v.vona == null ? "—" : fmtSigned(v.vona, 1)}
                     </span>

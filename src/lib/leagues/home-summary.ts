@@ -127,11 +127,13 @@ export function fantraxHomeCard(
   entry: LeagueEntry,
   plan: FantraxHomePlan,
   dynasty: Pick<TeamDynastySummary, "core" | "bubble" | "tradeBefore" | "text"> | null = null,
+  /** The league HAS Minors slots (`features.minors`): the legality line only names them then. */
+  minors = true,
 ): HomeCardData {
   const name = (id: string | null | undefined) => (id ? plan.players[id]?.n : undefined) ?? "Un joueur";
   const alerts: HomeAlert[] = [];
   if (plan.legality.illegal || plan.legality.need > 0) {
-    alerts.push({ level: "error", text: legalitySummary(plan.legality), tab: "aujourdhui", hash: "alertes" });
+    alerts.push({ level: "error", text: legalitySummary(plan.legality, minors), tab: "aujourdhui", hash: "alertes" });
   }
   const empty: string[] = [];
   for (const a of plan.alerts) {

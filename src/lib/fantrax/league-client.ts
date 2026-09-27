@@ -1,19 +1,30 @@
 /**
- * Browser data layer for Captains Dynasty. The pages first paint the default team's
- * plan baked into `today.json`; this module then brings in everything the
- * browser needs to re-run `buildDailyPlan` for any team at the current time:
+ * Browser data layer of a Fantrax points league. The pages first paint the
+ * default team's plan baked into that league's `today.json`; this module then
+ * brings in everything the browser needs to re-run `buildDailyPlan` for any
+ * team at the current time:
  *
- * - the baked snapshot (`public/fantrax/{values,state,schedule}.json`,
- *   fetched with the build-time cache buster, 8 s timeout, one retry: see
- *   `snapshot-fetch.ts`) plus league.json as a lazy JS chunk;
+ * - the baked snapshot (`<public>/{values,state,schedule}.json`, fetched with
+ *   the build-time cache buster, 8 s timeout, one retry: see
+ *   `snapshot-fetch.ts`) plus that league's league.json as a lazy JS chunk;
  * - live rosters and draft picks from fxea (CORS `*`, `credentials: "omit"`,
  *   no login), cached a couple of minutes in sessionStorage.
+ *
+ * EVERYTHING here is keyed by the league's config: the module-level promise
+ * caches, the sessionStorage overlay and the remembered team. Two Fantrax
+ * leagues live in one single-page session, so a cache shared between them
+ * would show one league's rosters under the other league's name.
  *
  * Storage access is wrapped: private windows and blocked site data throw.
  */
 import type { FxeaDraftResults, FxeaTeamRosters } from "./api-types";
 import { fxeaGet } from "./client";
-import { FANTRAX_LEAGUE_ID, NHL_SEASON_ID } from "./config";
+import {
+  CAPTAINS_DYNASTY,
+  fantraxPublicFile,
+  fantraxScheduleFile,
+  type FantraxLeagueConfig,
+} from "./config";
 import { liveOverlay, type LiveOverlay } from "./live";
 import { fetchSnapshotFile } from "./snapshot-fetch";
 import type {
@@ -31,32 +42,49 @@ export interface LeagueSnapshotBundle {
   schedule: ScheduleSnapshot;
 }
 
-let bundlePromise: Promise<LeagueSnapshotBundle> | null = null;
+/**
+ * `league.json` of each league as a lazy chunk. The import specifiers must be
+ * literals for the bundler to find the files at all, so a new league adds a
+ * line here (`check:league` fails when its files are missing).
+ */
+const LEAGUE_JSON: Record<string, () => Promise<{ default?: unknown }>> = {
+  "captains-dynasty": () => import("@/data/fantrax/league.json"),
+  slapshot: () => import("@/data/fantrax/slapshot/league.json"),
+};
 
-async function loadBundleOnce(): Promise<LeagueSnapshotBundle> {
+async function loadBundleOnce(cfg: FantraxLeagueConfig): Promise<LeagueSnapshotBundle> {
+  const loadLeagueJson = LEAGUE_JSON[cfg.slug];
+  if (!loadLeagueJson) throw new Error(`no league.json chunk for ${cfg.slug}`);
+  const file = (name: string) => fantraxPublicFile(cfg, name);
   const [leagueModule, values, state, schedule] = await Promise.all([
-    import("@/data/fantrax/league.json"),
-    fetchSnapshotFile<ValuesSnapshot>("values.json"),
-    fetchSnapshotFile<StateSnapshot>("state.json"),
-    fetchSnapshotFile<ScheduleSnapshot>(`schedule-${NHL_SEASON_ID}.json`),
+    loadLeagueJson(),
+    fetchSnapshotFile<ValuesSnapshot>(file("values.json")),
+    fetchSnapshotFile<StateSnapshot>(file("state.json")),
+    fetchSnapshotFile<ScheduleSnapshot>(file(fantraxScheduleFile(cfg))),
   ]);
   const league = (leagueModule.default ?? leagueModule) as unknown as LeagueSnapshot;
   if (!values?.players || !state?.rosters || !Array.isArray(schedule?.games)) {
     throw new Error("Fantrax snapshot is malformed");
   }
+  if (league.leagueId !== cfg.leagueId) {
+    // A wrong chunk would show another league's settings under this name.
+    throw new Error(`league.json is league ${league.leagueId}, expected ${cfg.leagueId}`);
+  }
   return { league, state, values, schedule };
 }
 
-/** Baked snapshot, fetched once per page view; a failure can be retried. */
-export function loadLeagueSnapshot(): Promise<LeagueSnapshotBundle> {
-  if (!bundlePromise) {
-    const p = loadBundleOnce().catch((err) => {
-      if (bundlePromise === p) bundlePromise = null;
-      throw err;
-    });
-    bundlePromise = p;
-  }
-  return bundlePromise;
+const bundlePromises = new Map<string, Promise<LeagueSnapshotBundle>>();
+
+/** Baked snapshot of one league, fetched once per page view; retryable. */
+export function loadLeagueSnapshot(cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): Promise<LeagueSnapshotBundle> {
+  const cached = bundlePromises.get(cfg.slug);
+  if (cached) return cached;
+  const p = loadBundleOnce(cfg).catch((err) => {
+    if (bundlePromises.get(cfg.slug) === p) bundlePromises.delete(cfg.slug);
+    throw err;
+  });
+  bundlePromises.set(cfg.slug, p);
+  return p;
 }
 
 // ------------------------------------------------------------ dynasty
@@ -66,11 +94,13 @@ let dynastyPromise: Promise<DynastySnapshot | null> | null = null;
 /**
  * public/fantrax/dynasty.json (npm run dynasty:build), fetched once per page
  * view. Optional: a missing or malformed file gives null and the page keeps
- * its season-only behaviour.
+ * its season-only behaviour. Only the Captains league has one: a league
+ * without the keeper model must never publish it (`check:league` fails on
+ * that), so this stays on the Captains path.
  */
 export function loadDynastySnapshot(): Promise<DynastySnapshot | null> {
   if (!dynastyPromise) {
-    dynastyPromise = fetchSnapshotFile<DynastySnapshot>("dynasty.json")
+    dynastyPromise = fetchSnapshotFile<DynastySnapshot>(fantraxPublicFile(CAPTAINS_DYNASTY, "dynasty.json"))
       .then((d) => (d && d.version === 1 && d.players && typeof d.players === "object" ? d : null))
       .catch(() => null);
   }
@@ -83,7 +113,7 @@ export function loadDynastySnapshot(): Promise<DynastySnapshot | null> {
 export const LIVE_CACHE_TTL_MS = 2 * 60_000;
 /** Draft picks are polled this often while the draft runs and the tab is visible. */
 export const LIVE_DRAFT_POLL_MS = 90_000;
-const LIVE_CACHE_KEY = "fantrax-live:v1";
+const liveCacheKey = (cfg: FantraxLeagueConfig) => `fantrax-live:v1:${cfg.slug}`;
 
 /** Cached overlay if it is for the same lineup period and still fresh. */
 export function parseLiveCache(
@@ -129,42 +159,50 @@ const BROWSER_REQUEST = { retries: 2, timeoutMs: 8_000 };
  */
 export async function fetchLiveOverlay(
   rosterPeriod: number,
-  opts: { force?: boolean } = {},
+  opts: { force?: boolean; config?: FantraxLeagueConfig } = {},
 ): Promise<LiveOverlay> {
+  const cfg = opts.config ?? CAPTAINS_DYNASTY;
+  const key = liveCacheKey(cfg);
   if (!opts.force) {
-    const cached = parseLiveCache(readSession(LIVE_CACHE_KEY), Date.now(), rosterPeriod);
+    const cached = parseLiveCache(readSession(key), Date.now(), rosterPeriod);
     if (cached) return cached;
   }
   const rosters = await fxeaGet<FxeaTeamRosters>(
     "getTeamRosters",
-    { leagueId: FANTRAX_LEAGUE_ID, period: rosterPeriod },
+    { leagueId: cfg.leagueId, period: rosterPeriod },
     BROWSER_REQUEST,
   );
   const draft = await fxeaGet<FxeaDraftResults>(
     "getDraftResults",
-    { leagueId: FANTRAX_LEAGUE_ID },
+    { leagueId: cfg.leagueId },
     BROWSER_REQUEST,
   ).catch(() => null);
   const overlay = liveOverlay(rosters, draft, Date.now(), rosterPeriod);
-  writeSession(LIVE_CACHE_KEY, JSON.stringify(overlay));
+  writeSession(key, JSON.stringify(overlay));
   return overlay;
 }
 
 // ------------------------------------------------------------ team choice
 
-const TEAM_STORAGE_KEY = "fantrax-team";
+/**
+ * The team last looked at, per league. Captains keeps the historical key so
+ * nobody loses the team they had picked; another league gets its own, since a
+ * team id of one league means nothing in another.
+ */
+const teamStorageKey = (cfg: FantraxLeagueConfig) =>
+  cfg.slug === CAPTAINS_DYNASTY.slug ? "fantrax-team" : `fantrax-team:${cfg.slug}`;
 
-export function readStoredTeam(): string | null {
+export function readStoredTeam(cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): string | null {
   try {
-    return globalThis.localStorage?.getItem(TEAM_STORAGE_KEY) ?? null;
+    return globalThis.localStorage?.getItem(teamStorageKey(cfg)) ?? null;
   } catch {
     return null;
   }
 }
 
-export function storeTeam(teamId: string): void {
+export function storeTeam(teamId: string, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): void {
   try {
-    globalThis.localStorage?.setItem(TEAM_STORAGE_KEY, teamId);
+    globalThis.localStorage?.setItem(teamStorageKey(cfg), teamId);
   } catch {
     // Not remembered across visits; the URL still carries it.
   }

@@ -24,6 +24,8 @@ export interface ColumnCopy {
 export interface ColumnCopyCtx {
   nextPick: number | null;
   mode?: DynastyMode;
+  /** « Valeur » is points over replacement in this league, not raw season points. */
+  vor?: boolean;
 }
 
 /** « Valeur dynastie » units, said once wherever it sits next to season points. */
@@ -42,7 +44,16 @@ export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
     case "statut":
       return { label: "Statut", title: "Où il est : disponible, au ballottage ou dans quelle équipe" };
     case "valeur":
-      return { label: "Valeur saison", title: `Points projetés sur la saison 2026-27, jusqu'à +50${NBSP}% si vos postes D ou G sont vides` };
+      // Two different numbers, so two different names: in a league where every
+      // poste scores a skater the same way, « Valeur » is points over
+      // replacement (the only number that compares a gardien to a centre);
+      // elsewhere it stays the raw season total with the empty-slot bonus.
+      return ctx.vor
+        ? {
+            label: "Valeur (VOR)",
+            title: `Points au-dessus du remplacement${NBSP}: ses points projetés de la saison moins ceux du dernier partant de la ligue qui pourrait prendre son poste (remplissage optimal de tous les postes partants de la ligue, positions multiples comprises). Ajoutez la colonne « FP saison » pour le total brut`,
+          }
+        : { label: "Valeur saison", title: `Points projetés sur la saison 2026-27, jusqu'à +50${NBSP}% si vos postes D ou G sont vides` };
     case "vona":
       return { label: "VONA", title: "Valeur moins le meilleur attendu à sa position à votre choix suivant" };
     case "dispo":
@@ -242,6 +253,14 @@ export function fantraxTableNote(opts: {
   /** The page's dynasty mode (named in the note). */
   mode?: DynastyMode;
   snake: boolean;
+  /** « Valeur » is points over replacement here, not raw season points. */
+  vor?: boolean;
+  /**
+   * fxpa answers for this league, so « % Fantrax » exists. Where it does not,
+   * the sentence that tells the reader how to rank prospects must not send him
+   * to a column that is empty for every one of them.
+   */
+  fxpa?: boolean;
   /** Under the Repêchage tab's own note (value, VONA and odds already explained there). */
   brief?: boolean;
 }): string {
@@ -249,17 +268,24 @@ export function fantraxTableNote(opts: {
     `${fmtInt(opts.counts.projected)} joueurs projetés et ${fmtInt(opts.counts.prospects)} espoirs${NBSP}: les joueurs que nous projetons, ceux qui ont un ADP Fantrax, ceux d'une équipe de la ligue ou au ballottage, les choix des repêchages de la LNH ${opts.recentDrafts[0]} à ${opts.recentDrafts[1]} et ceux pris dans au moins 1${NBSP}% des ligues Fantrax.`,
   ];
   if (!opts.brief) {
-    parts.push(`Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides (comme au repêchage).`);
+    parts.push(
+      opts.vor
+        ? `Valeur (VOR) = points projetés au-dessus du remplacement à sa position (comme au repêchage)${NBSP}: le seul chiffre qui compare un gardien à un centre. Ajoutez la colonne «${NBSP}FP saison${NBSP}» (Colonnes → Projection) pour le total brut.`
+        : `Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides (comme au repêchage).`,
+    );
     if (opts.draftOpen && opts.nextPick !== null) {
       parts.push(
         `VONA et Dispo. (chance d'être encore là à votre choix ${pickLabel(opts.nextPick)}) : mêmes calculs que l’onglet Repêchage, pour les joueurs projetés; les choix faits en direct retirent les joueurs repêchés.`,
       );
     }
   }
+  // « % Fantrax » only where fxpa answers: elsewhere the column is not even on
+  // the page (`NEEDS.ros`), so naming it would send the reader nowhere.
+  const prospectSorts = opts.fxpa === false ? "ADP, âge ou rang au repêchage de la LNH" : "% Fantrax, ADP, âge ou rang au repêchage de la LNH";
   parts.push(
     opts.dynasty
-      ? `Les espoirs n’ont pas de projection de saison${NBSP}: triez-les par valeur dynastie, chances LNH, % Fantrax, ADP, âge ou rang au repêchage de la LNH.`
-      : "Les espoirs n'ont pas de projection : triez-les par % Fantrax, ADP, âge ou rang au repêchage de la LNH.",
+      ? `Les espoirs n’ont pas de projection de saison${NBSP}: triez-les par valeur dynastie, chances LNH, ${prospectSorts}.`
+      : `Les espoirs n'ont pas de projection${NBSP}: triez-les par ${prospectSorts}.`,
   );
   if (opts.dynasty) {
     parts.push(

@@ -14,6 +14,8 @@ import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
 interface RosterAlertsProps {
   plan: DailyPlan;
   player: PlayerLookup;
+  /** The league HAS Minors slots: the legality line only mentions them then. */
+  minors: boolean;
 }
 
 /**
@@ -23,7 +25,7 @@ interface RosterAlertsProps {
  * other alert. The dead-player advice in the alerts comes from the same
  * after-moves count, so following all of it leaves a legal roster.
  */
-export function RosterAlerts({ plan, player }: RosterAlertsProps) {
+export function RosterAlerts({ plan, player, minors }: RosterAlertsProps) {
   const L = plan.legality;
   const name = (id: string | null | undefined) => (id ? (player(id)?.n ?? "Nouveau joueur") : "—");
   const others = L.movableFromMinors.filter((id) => !L.fixes.includes(id) && !L.reserveFills.includes(id));
@@ -58,7 +60,7 @@ export function RosterAlerts({ plan, player }: RosterAlertsProps) {
             : "border border-emerald-500/30 bg-emerald-500/10 text-emerald-100"
         }`}
       >
-        {legalitySummary(L)}
+        {legalitySummary(L, minors)}
       </p>
 
       {L.fixes.length + L.reserveFills.length > 0 ? (

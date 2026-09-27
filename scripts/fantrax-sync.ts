@@ -1,9 +1,12 @@
 /**
- * Pulls the Captains Dynasty League (Fantrax) state and bakes the /league
- * snapshot: src/data/fantrax/{league,nhl-ids,today,prospect-pool}.json and
- * public/fantrax/{values,state,pool,schedule-20262027}.json, then rebuilds the
- * dynasty values public/fantrax/dynasty.json (scripts/dynasty-inputs.ts,
- * ~15 s; skip with --no-dynasty).
+ * Pulls one Fantrax league's state and bakes its snapshot:
+ * <data>/{league,nhl-ids,today,prospect-pool}.json and
+ * <public>/{values,state,pool,schedule-20262027}.json, then — only for a
+ * league whose config enables the dynasty model — rebuilds its dynasty
+ * values <public>/dynasty.json (scripts/dynasty-inputs.ts, ~15 s; skip with
+ * --no-dynasty). Which league, where its files live, its slot table, its
+ * scoring source, its roster limits and which of caps / minors / captain /
+ * dynasty it even has all come from `src/lib/fantrax/config.ts`.
  *
  * Read-only and unauthenticated: fxea (public Beta API) for settings,
  * rosters, draft, ids and ADP; two batched fxpa POSTs for caps, injury /
@@ -12,12 +15,16 @@
  * the recent entry drafts. Fantrax
  * requests are >= 1 s apart with a descriptive User-Agent. If fxpa fails the
  * sync still writes everything with `state.fxpaOk = false`; if fxea fails it
- * exits non-zero and leaves the committed snapshot untouched.
+ * exits non-zero and leaves the committed snapshot untouched. A league whose
+ * config says fxpa is closed (`features.fxpa: false`) never calls it and
+ * degrades the same way.
  *
- * Run: npm run league:sync [-- --full-schedule] [-- --team <teamId>] [-- --no-dynasty]
+ * Run: npm run league:sync [-- --league <slug>] [-- --full-schedule]
+ *        [-- --team <teamId>] [-- --no-dynasty]
+ * Default league: Captains Dynasty, with exactly the paths and settings it
+ * has always had.
  */
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import type {
   FxeaAdpRow,
@@ -34,19 +41,14 @@ import type {
 } from "../src/lib/fantrax/api-types";
 import { fxeaGet, fxeaPost, fxpaPost } from "../src/lib/fantrax/client";
 import {
-  DEFAULT_ROSTER_LIMITS,
-  DEFAULT_SLOT_COUNTS,
-  FANTRAX_DEFAULT_TEAM_ID,
   FANTRAX_ICON,
-  FANTRAX_LEAGUE_ID,
   FANTRAX_NO_TEAM,
-  FANTRAX_SEASON_CODE,
-  NHL_SEASON_ID,
-  SLOT_ORDER,
   SYNC_USER_AGENT,
   type SlotId,
 } from "../src/lib/fantrax/config";
-import { buildDailyPlan } from "../src/lib/fantrax/daily-plan";
+import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
+import { buildDailyPlan, seasonFp } from "../src/lib/fantrax/daily-plan";
+import { leagueVor } from "../src/lib/fantrax/points-vor";
 import {
   addDays,
   claimWeekStart,
@@ -66,7 +68,7 @@ import {
 } from "../src/lib/fantrax/match";
 import { attachGoalieStartShares, valueRecord } from "../src/lib/fantrax/values-build";
 import { buildPool, RECENT_NHL_DRAFTS, type PoolDraftPick, type PoolFlags } from "../src/lib/fantrax/pool";
-import { parseScoringTable, scoringShape } from "../src/lib/fantrax/scoring";
+import { scoringShape, scoringTableFromInfo, unscoredCategories } from "../src/lib/fantrax/scoring";
 import type {
   CapUsage,
   LeagueSnapshot,
@@ -78,33 +80,22 @@ import type {
   ValuesSnapshot,
 } from "../src/lib/fantrax/snapshot-types";
 import { fetchJson } from "../src/lib/nhl-api";
-import { runDynastyBuild } from "./dynasty-inputs";
+import { dynastyPaths, loadDynastyFiles, runDynastyBuild } from "./dynasty-inputs";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { normalizeTeamAbbrev } from "../src/lib/team-abbreviations";
 import type { ProjectionsDataset } from "../src/lib/types";
 
 const ROOT = process.cwd();
-const PATHS = {
-  league: join(ROOT, "src", "data", "fantrax", "league.json"),
-  nhlIds: join(ROOT, "src", "data", "fantrax", "nhl-ids.json"),
-  today: join(ROOT, "src", "data", "fantrax", "today.json"),
-  overrides: join(ROOT, "src", "data", "fantrax", "id-overrides.json"),
-  prospectPool: join(ROOT, "src", "data", "fantrax", "prospect-pool.json"),
-  values: join(ROOT, "public", "fantrax", "values.json"),
-  state: join(ROOT, "public", "fantrax", "state.json"),
-  pool: join(ROOT, "public", "fantrax", "pool.json"),
-  draftRegistry: join(ROOT, "src", "data", "draft-registry.json"),
-  schedule: join(ROOT, "public", "fantrax", `schedule-${NHL_SEASON_ID}.json`),
-  players: join(ROOT, "src", "data", "players.json"),
-  profiles: join(ROOT, "src", "data", "player-profiles.json"),
-};
 
 const args = process.argv.slice(2);
 const argValue = (flag: string) => {
   const i = args.indexOf(flag);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const TEAM_ID = argValue("--team") ?? FANTRAX_DEFAULT_TEAM_ID;
+/** Which league this run syncs; Captains unless `--league` says otherwise. */
+const CFG = fantraxLeagueArg(args, "league:sync");
+const PATHS = fantraxPaths(CFG, ROOT);
+const TEAM_ID = argValue("--team") ?? CFG.defaultTeamId;
 const FULL_SCHEDULE = args.includes("--full-schedule");
 const DYNASTY = !args.includes("--no-dynasty");
 const SCHEDULE_MAX_AGE_DAYS = 7;
@@ -124,7 +115,7 @@ const POOL_MIN_ROS = 1;
 const POOL_MAX_ADP = 290;
 
 const req = { userAgent: SYNC_USER_AGENT };
-const LEAGUE = FANTRAX_LEAGUE_ID;
+const LEAGUE = CFG.leagueId;
 
 function readJson<T>(path: string): T | null {
   if (!existsSync(path)) return null;
@@ -317,7 +308,7 @@ async function syncSchedule(seasonStart: string, now: number): Promise<ScheduleS
       return d < lo || d > hi;
     });
     const games = [...kept, ...fresh].sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
-    return { season: NHL_SEASON_ID, fetchedAt: prev.fetchedAt, updatedAt: nowIso, games };
+    return { season: CFG.nhlSeasonId, fetchedAt: prev.fetchedAt, updatedAt: nowIso, games };
   }
   const games: Game[] = [];
   let date: string | undefined = seasonStart;
@@ -337,7 +328,7 @@ async function syncSchedule(seasonStart: string, now: number): Promise<ScheduleS
     return true;
   });
   unique.sort((a, b) => a[0].localeCompare(b[0]) || a[1].localeCompare(b[1]));
-  return { season: NHL_SEASON_ID, fetchedAt: nowIso, updatedAt: nowIso, games: unique };
+  return { season: CFG.nhlSeasonId, fetchedAt: nowIso, updatedAt: nowIso, games: unique };
 }
 
 // ------------------------------------------------------------ main
@@ -345,7 +336,7 @@ async function syncSchedule(seasonStart: string, now: number): Promise<ScheduleS
 async function main() {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
-  console.log(`league:sync ${LEAGUE} team ${TEAM_ID} @ ${nowIso}`);
+  console.log(`league:sync ${CFG.slug} (${LEAGUE}) team ${TEAM_ID} @ ${nowIso}`);
 
   // ---- fxea (fatal on failure: keep the committed snapshot)
   const info = await fxeaGet<FxeaLeagueInfo>("getLeagueInfo", { leagueId: LEAGUE }, req);
@@ -379,39 +370,56 @@ async function main() {
     prevLeague?.capsSource === "fxpa" &&
     prevLeague.scoringPeriods.length === scoringPeriods.length &&
     prevLeague.scoringPeriods.every((p) => p.gpMax != null && p.gsMax != null);
-  const capPeriods = haveAllCaps ? [] : scoringPeriods.map((p) => p.number).filter((n) => n !== sp.number);
+  const capPeriods =
+    !CFG.features.gamesCaps || haveAllCaps
+      ? []
+      : scoringPeriods.map((p) => p.number).filter((n) => n !== sp.number);
   let fxpaOk = true;
   let fxpaError: string | undefined;
   const caps: Record<string, CapUsage> = {};
   const periodCaps = new Map<number, CapUsage>();
   let claims: Record<string, number> | null = null;
-  const claimsSince = claimWeekStart(now);
+  const claimsSince = claimWeekStart(now, CFG.cadence.claimWeekStartsOn ?? 1);
   const flags = new Map<string, PlayerFlagsRow>();
   try {
+    // A league whose config says fxpa is closed degrades like a failed read:
+    // no icons, no Ros%, no caps, no claims — never league 1's values.
+    if (!CFG.features.fxpa) throw new Error("fxpa is closed for this league (features.fxpa: false)");
     const rosterMsg = (teamId: string, period: number): FxpaMessage => ({
       method: "getTeamRosterInfo",
       data: { leagueId: LEAGUE, teamId, view: "GAMES_PER_POS", scoringPeriod: String(period) },
     });
+    // Only the reads this league's features justify: a league without games
+    // caps asks for none, a league without a weekly claim limit asks for no
+    // transaction history.
+    const capTeams = CFG.features.gamesCaps ? teamIds : [];
+    const wantClaims = CFG.features.claimsPerWeek !== null;
     const batch1: FxpaMessage[] = [
-      ...teamIds.map((t) => rosterMsg(t, sp.number)),
+      ...capTeams.map((t) => rosterMsg(t, sp.number)),
       ...capPeriods.map((p) => rosterMsg(TEAM_ID, p)),
-      {
-        method: "getTransactionDetailsHistory",
-        data: { leagueId: LEAGUE, maxResultsPerPage: "250", pageNumber: "1", view: "CLAIM_DROP" },
-      },
+      ...(wantClaims
+        ? [
+            {
+              method: "getTransactionDetailsHistory",
+              data: { leagueId: LEAGUE, maxResultsPerPage: "250", pageNumber: "1", view: "CLAIM_DROP" },
+            } satisfies FxpaMessage,
+          ]
+        : []),
     ];
-    const r1 = await fxpaPost(batch1, req);
-    teamIds.forEach((t, i) => {
+    const r1 = batch1.length > 0 ? await fxpaPost(batch1, req) : [];
+    capTeams.forEach((t, i) => {
       const c = parseCaps(r1[i] as FxpaTeamRosterInfoData | null);
       if (c) caps[t] = c;
     });
     const mine = caps[TEAM_ID];
     if (mine) periodCaps.set(sp.number, mine);
     capPeriods.forEach((p, i) => {
-      const c = parseCaps(r1[teamIds.length + i] as FxpaTeamRosterInfoData | null);
+      const c = parseCaps(r1[capTeams.length + i] as FxpaTeamRosterInfoData | null);
       if (c) periodCaps.set(p, c);
     });
-    claims = countClaims(r1[r1.length - 1] as FxpaTransactionHistoryData | null, claimsSince);
+    if (wantClaims) {
+      claims = countClaims(r1[r1.length - 1] as FxpaTransactionHistoryData | null, claimsSince);
+    }
 
     const stats = (filter: string, pos: string, n: number, ytd: boolean): FxpaMessage => ({
       method: "getPlayerStats",
@@ -422,7 +430,7 @@ async function main() {
         maxResultsPerPage: String(n),
         pageNumber: "1",
         ...(ytd
-          ? { seasonOrProjection: `SEASON_${FANTRAX_SEASON_CODE}_YEAR_TO_DATE`, timeframeTypeCode: "YEAR_TO_DATE" }
+          ? { seasonOrProjection: `SEASON_${CFG.seasonCode}_YEAR_TO_DATE`, timeframeTypeCode: "YEAR_TO_DATE" }
           : {}),
       },
     });
@@ -438,7 +446,7 @@ async function main() {
     r2.forEach((d, i) => {
       for (const [id, row] of parsePlayerStats(d as FxpaPlayerStatsData | null, i < 2)) flags.set(id, row);
     });
-    if (Object.keys(caps).length === 0 || flags.size === 0) {
+    if ((CFG.features.gamesCaps && Object.keys(caps).length === 0) || flags.size === 0) {
       throw new Error(`fxpa returned ${Object.keys(caps).length} caps / ${flags.size} player rows`);
     }
     console.log(`fxpa: caps for ${Object.keys(caps).length} teams, ${periodCaps.size} periods, ${flags.size} player rows`);
@@ -450,7 +458,7 @@ async function main() {
   // Prospects' flags (age, Ros%, icons) for the explorer pool only. Optional:
   // without them the pool still lists every prospect, with fewer details.
   const prospectFlags = new Map<string, PlayerFlagsRow>();
-  if (fxpaOk) {
+  if (fxpaOk && CFG.features.minors) {
     try {
       const [d] = await fxpaPost(
         [
@@ -475,11 +483,16 @@ async function main() {
   }
 
   // ---- league.json
-  const scoring = parseScoringTable(info.scoringSystem.scoringCategorySettings);
+  const scoring = scoringTableFromInfo(info.scoringSystem, CFG.scoringSource);
   const shape = scoringShape(scoring);
+  const unscored = unscoredCategories(scoring);
+  if (unscored.length > 0) {
+    // The value model would drop them silently; check:league fails on this too.
+    console.warn(`WARN: ${CFG.slug} scores categories the model has no rate for: ${unscored.join(", ")}`);
+  }
   const prevCaps = new Map((prevLeague?.scoringPeriods ?? []).map((p) => [p.number, p]));
-  const slotCounts = { ...DEFAULT_SLOT_COUNTS };
-  for (const s of SLOT_ORDER) {
+  const slotCounts = { ...CFG.slots.counts };
+  for (const s of CFG.slots.order) {
     const c = info.rosterInfo.positionConstraints[s]?.maxActive;
     if (typeof c === "number") slotCounts[s as SlotId] = c;
   }
@@ -491,13 +504,15 @@ async function main() {
     startDate: info.startDate,
     endDate: info.endDate,
     slotCounts,
+    // fxea exposes only these two; minTotal / maxIr / maxMinors / the IR
+    // grace period come from this league's own rules page (its config).
     limits: {
-      ...DEFAULT_ROSTER_LIMITS,
-      maxActive: info.rosterInfo.maxTotalActivePlayers ?? DEFAULT_ROSTER_LIMITS.maxActive,
-      maxReserve: info.rosterInfo.maxTotalReservePlayers ?? DEFAULT_ROSTER_LIMITS.maxReserve,
+      ...CFG.limits,
+      maxActive: info.rosterInfo.maxTotalActivePlayers ?? CFG.limits.maxActive,
+      maxReserve: info.rosterInfo.maxTotalReservePlayers ?? CFG.limits.maxReserve,
     },
     scoring,
-    sktMultiplier: shape.sktMultiplier,
+    sktMultiplier: CFG.features.captainSlot ? shape.sktMultiplier : 1,
     scoringPeriods: scoringPeriods.map((p) => {
       const c = periodCaps.get(p.number);
       const old = prevCaps.get(p.number);
@@ -510,7 +525,9 @@ async function main() {
       ? { firstPeriod: info.playoffs.firstPlayoffPeriod, teams: info.playoffs.numPlayoffTeams }
       : null,
   };
-  if (!shape.uniformSkt) console.warn("WARN: Skt multiplier differs across categories; captain values approximate");
+  if (CFG.features.captainSlot && !shape.uniformSkt) {
+    console.warn("WARN: Skt multiplier differs across categories; captain values approximate");
+  }
 
   // ---- matching
   const dataset = JSON.parse(readFileSync(PATHS.players, "utf8")) as ProjectionsDataset;
@@ -536,7 +553,7 @@ async function main() {
   for (const [fid, pi] of Object.entries(info.playerInfo)) {
     const idRow = playerIds[fid];
     if (!idRow?.name) continue;
-    fxPool.push({ fantraxId: fid, name: idRow.name, team: fxTeam(idRow.team), groups: groupsFromEligible(pi.eligiblePos) });
+    fxPool.push({ fantraxId: fid, name: idRow.name, team: fxTeam(idRow.team), groups: groupsFromEligible(pi.eligiblePos, CFG) });
   }
   const overridesFile = readJson<{ overrides: Array<{ fantraxId: string; nhlId: number | null }> }>(PATHS.overrides);
   const overrides = Object.fromEntries((overridesFile?.overrides ?? []).map((o) => [o.fantraxId, o.nhlId]));
@@ -568,7 +585,7 @@ async function main() {
       e: eligiblePos,
       ...(age !== undefined ? { age } : {}),
     };
-    const { record, prior } = valueRecord(scoring, base, proj, profile);
+    const { record, prior } = valueRecord(scoring, base, proj, profile, CFG);
     players[fid] = record;
     if (prior) priorCount++;
   }
@@ -647,6 +664,7 @@ async function main() {
     bios: new Map(profiles.map((p) => [p.id, { birthDate: p.bio?.birthDate, draft: p.draft }] as const)),
     draftPicks,
     teamAlias: normalizeTeamAbbrev,
+    config: CFG,
   });
   // ---- prospect-pool.json: unrostered minors-eligible players without a
   // values row (additive: values.json / state.json are untouched by it).
@@ -683,8 +701,20 @@ async function main() {
   const schedule = await syncSchedule(info.startDate, now);
   console.log(`schedule: ${schedule.games.length} regular-season games (full rebuild ${schedule.fetchedAt})`);
 
-  // ---- today.json (default team plan, server-rendered by /league)
-  const plan = buildDailyPlan({ league: leagueSnap, state, values, schedule, teamId: TEAM_ID, nowMs: now });
+  // ---- today.json (default team plan, server-rendered by the league's tabs)
+  // The value model the draft board ranks by, built once from this league's
+  // own projected pool (null for a league `points-vor` does not cover).
+  const vor = leagueVor(CFG, values.players, (id) => seasonFp(values.players[id]!, CFG), leagueSnap.slotCounts);
+  const plan = buildDailyPlan({
+    league: leagueSnap,
+    state,
+    values,
+    schedule,
+    teamId: TEAM_ID,
+    nowMs: now,
+    config: CFG,
+    vor,
+  });
 
   // All fetched: write everything (each file atomically).
   writeFileAtomic(PATHS.league, `${JSON.stringify(leagueSnap)}\n`);
@@ -694,8 +724,9 @@ async function main() {
   writeFileAtomic(PATHS.pool, `${JSON.stringify(pool)}\n`);
   writeFileAtomic(PATHS.schedule, `${JSON.stringify(schedule)}\n`);
   writeFileAtomic(PATHS.today, `${JSON.stringify(plan)}\n`);
-  // Without fxpa there are no minors flags: keep the previous pool.
-  if (fxpaOk) writeFileAtomic(PATHS.prospectPool, `${JSON.stringify(prospectPool)}\n`);
+  // Without fxpa there are no minors flags: keep the previous pool. A league
+  // without Minors slots has no prospect pool at all.
+  if (fxpaOk && CFG.features.minors) writeFileAtomic(PATHS.prospectPool, `${JSON.stringify(prospectPool)}\n`);
 
   const activeIds = Object.values(stateRosters).flat().filter((r) => r.status === "ACTIVE").map((r) => r.id);
   const activeMatched = activeIds.filter((id) => players[id]?.src === "proj").length;
@@ -709,11 +740,17 @@ async function main() {
   console.log(`OK: league:sync wrote snapshot (fxpaOk=${fxpaOk})`);
 
   // ---- dynasty values (depend on rosters, Ros%, ADP and the pool just written)
+  // Only for a league whose config enables the keeper model: the Captains
+  // cutdown (10 keepers + 30 minors-eligible) is that league's rule and must
+  // never be computed, let alone shown, for another one.
   // Non-fatal: the season snapshot above is already written; check:league
   // flags a dynasty.json that no longer matches the rosters.
-  if (DYNASTY) {
+  if (DYNASTY && !CFG.features.dynasty) {
+    console.log(`dynasty: skipped (${CFG.slug} has no keeper-forever model)`);
+  }
+  if (DYNASTY && CFG.features.dynasty) {
     try {
-      const { result, ms } = runDynastyBuild();
+      const { result, ms } = runDynastyBuild({}, loadDynastyFiles(dynastyPaths(ROOT, CFG)));
       console.log(
         `OK: dynasty values for ${Object.keys(result.snapshot.players).length} players (K ${result.snapshot.params.K.value}, ${(ms / 1000).toFixed(1)} s)`,
       );

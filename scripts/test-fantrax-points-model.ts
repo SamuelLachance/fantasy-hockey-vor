@@ -20,6 +20,9 @@ import {
   TK_PRIOR_RATE,
 } from "../src/lib/fantrax/points-model";
 import { parseScoringTable } from "../src/lib/fantrax/scoring";
+import { bestFpg, seasonFp } from "../src/lib/fantrax/draft-inputs";
+import { CAPTAINS_DYNASTY, SLAPSHOT } from "../src/lib/fantrax/config";
+import type { ValueRecord } from "../src/lib/fantrax/snapshot-types";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -121,6 +124,29 @@ assert(shares.get("e") === 0, "clubless goalie 0");
 const b2b = backToBackShares(new Map([["a", 0.75], ["b", 0.25]]));
 assert(near(b2b.get("a")!, 0.75 * BACK_TO_BACK_STARTER_FACTOR, 1e-9), "b2b starter keeps 35%");
 assert(near(b2b.get("a")! + b2b.get("b")!, 1, 1e-9), "b2b share moves to the partner");
+
+// ---- bestFpg: which slot a skater is really valued in.
+//
+// `dx` is the D slot's extra over the column `off` is measured in. It is
+// positive in Captains (Blk / Tk / skater SHO are D-only), but a league can pay
+// a category LESS at D than at the base column — Slapshot's scoring table does
+// exactly that under the "Fantrax ignores the per-slot rows" reading of its
+// Hit / SB zeros (see `ScoringBaseSlot`). A player who can only sit at D is then
+// really worth `off + dx`, and clamping the extra at 0 would over-value him.
+{
+  const rec = (e: string, off: number, dx: number): ValueRecord => ({ n: "X", t: "DET", e, gp: 80, off, dx, src: "proj" });
+  // Captains: a pure D gains his blocks, a W/D dual takes the better slot.
+  assert(near(bestFpg(rec("D,Skt", 2, 0.5), CAPTAINS_DYNASTY), 2.5, 1e-9), "Captains: a pure D is valued in the D slot");
+  assert(near(bestFpg(rec("W,D,F,Skt", 2, 0.5), CAPTAINS_DYNASTY), 2.5, 1e-9), "Captains: a dual takes the better of his slots");
+  // A negative D extra: only the D-only player pays it.
+  assert(near(bestFpg(rec("D", 3.234, -0.829), SLAPSHOT), 2.405, 1e-3), "a D-only player with a negative D extra is valued at off + dx");
+  assert(near(bestFpg(rec("LW,D", 3.234, -0.829), SLAPSHOT), 3.234, 1e-9), "a player who can also take a wing keeps the better slot");
+  assert(near(seasonFp(rec("D", 3.234, -0.829), SLAPSHOT), 80 * 2.405, 1e-1), "the season total follows the same slot");
+  // A goalie never goes through the skater branch.
+  const g: ValueRecord = { n: "G", t: "DET", e: "G", gp: 55, gE: 5, pS: 0.7, src: "proj" };
+  assert(near(bestFpg(g, SLAPSHOT), 3.5, 1e-9), "a goalie is start share x E per start");
+  assert(near(seasonFp(g, SLAPSHOT), 275, 1e-9), "and his season total is starts x E");
+}
 
 if (failed) process.exit(1);
 console.log("OK: fantrax points model");

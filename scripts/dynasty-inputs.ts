@@ -17,7 +17,6 @@
  * depth-chart shares (injured partners kept in; see segment.ts).
  */
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { writeClientDynasty } from "./dynasty-client";
 import { normalizeDraftName, type DraftRegistry } from "../src/lib/draft-registry";
@@ -35,7 +34,8 @@ import {
   type ProspectsFile,
   type SeasonLine,
 } from "../src/lib/dynasty/index";
-import { NHL_SEASON_ID } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, NHL_SEASON_ID, type FantraxLeagueConfig } from "../src/lib/fantrax/config";
+import { fantraxPaths } from "./fantrax-paths";
 import type {
   ProspectPoolSnapshot,
   ScheduleSnapshot,
@@ -45,20 +45,29 @@ import type {
 import type { PlayerProfile } from "../src/lib/profile-types";
 import type { ProjectionsDataset } from "../src/lib/types";
 
-export function dynastyPaths(root = process.cwd()) {
+/**
+ * Files of the dynasty build, for one Fantrax league. Only a league whose
+ * config enables the keeper model ever gets here (see `features.dynasty`);
+ * the default is the Captains league, with its historical flat paths.
+ */
+export function dynastyPaths(root = process.cwd(), cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY) {
+  if (!cfg.features.dynasty) {
+    throw new Error(`league ${cfg.slug} has no dynasty model (features.dynasty: false)`);
+  }
+  const p = fantraxPaths(cfg, root);
   return {
-    values: join(root, "public", "fantrax", "values.json"),
-    state: join(root, "public", "fantrax", "state.json"),
-    schedule: join(root, "public", "fantrax", `schedule-${NHL_SEASON_ID}.json`),
-    out: join(root, "public", "fantrax", "dynasty.json"),
-    nhlIds: join(root, "src", "data", "fantrax", "nhl-ids.json"),
-    pool: join(root, "src", "data", "fantrax", "prospect-pool.json"),
-    players: join(root, "src", "data", "players.json"),
-    profiles: join(root, "src", "data", "player-profiles.json"),
-    registry: join(root, "src", "data", "draft-registry.json"),
-    params: join(root, "src", "data", "dynasty", "params.json"),
-    prospects: join(root, "src", "data", "dynasty", "prospects.json"),
-    benchmarks: join(root, "src", "data", "dynasty", "benchmarks.json"),
+    values: p.values,
+    state: p.state,
+    schedule: p.schedule,
+    out: p.dynasty,
+    nhlIds: p.nhlIds,
+    pool: p.prospectPool,
+    players: p.players,
+    profiles: p.profiles,
+    registry: p.draftRegistry,
+    params: p.dynastyParams,
+    prospects: p.dynastyProspects,
+    benchmarks: p.dynastyBenchmarks,
   };
 }
 export type DynastyPaths = ReturnType<typeof dynastyPaths>;

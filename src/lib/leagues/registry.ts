@@ -4,11 +4,17 @@
  * URL redirects and the export checks. Client-safe: literals only, no `fs`
  * and no data imports.
  *
- * Adding a league = one entry here (plus, for a Yahoo categories league,
- * its profile `src/data/leagues/<profileSlug>.json`). A new kind of league
- * also needs its `KIND_TABS`, a server adapter and a table adapter.
+ * Adding a league = one entry here (plus, for a Fantrax points league, its
+ * engine config in `src/lib/fantrax/config.ts` under the same slug; for a
+ * Yahoo categories league, its profile `src/data/leagues/<profileSlug>.json`).
+ * A new kind of league also needs its `KIND_TABS`, a server adapter and a
+ * table adapter.
  */
-import { FANTRAX_DEFAULT_TEAM_ID, FANTRAX_LEAGUE_ID } from "@/lib/fantrax/config";
+import { fantraxLeague } from "@/lib/fantrax/config";
+
+/** Engine configs of the Fantrax leagues below, keyed by the same slug. */
+const captains = fantraxLeague("captains-dynasty");
+const slapshot = fantraxLeague("slapshot");
 
 export const LEAGUE_KINDS = ["fantrax-points", "yahoo-categories"] as const;
 export type LeagueKind = (typeof LEAGUE_KINDS)[number];
@@ -83,12 +89,12 @@ export interface LeagueEntry {
   externalUrl: string | null;
   /** yahoo-categories: `src/data/leagues/<p>.json` and `public/leagues/<p>/board.json`. */
   profileSlug?: string;
-  accent: "cyan" | "violet";
+  accent: "cyan" | "violet" | "amber";
 }
 
 export const LEAGUES: readonly LeagueEntry[] = [
   {
-    slug: "captains-dynasty",
+    slug: captains.slug,
     kind: "fantrax-points",
     name: "Captains Dynasty League",
     shortName: "Captains Dynasty",
@@ -96,14 +102,38 @@ export const LEAGUES: readonly LeagueEntry[] = [
     format: "dynastie",
     scoring: "points",
     season: "2026-27",
-    teams: 16,
-    myTeamId: FANTRAX_DEFAULT_TEAM_ID,
+    teams: captains.teams,
+    myTeamId: captains.defaultTeamId,
     tabs: ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe"],
     defaultTab: "aujourdhui",
     legacyPaths: [{ path: "/league", tab: "aujourdhui" }],
     // leagueId confirmed by src/data/fantrax/league.json.
-    externalUrl: `https://www.fantrax.com/fantasy/league/${FANTRAX_LEAGUE_ID}/home`,
+    externalUrl: `https://www.fantrax.com/fantasy/league/${captains.leagueId}/home`,
     accent: "cyan",
+  },
+  {
+    slug: slapshot.slug,
+    kind: "fantrax-points",
+    name: "Slapshot Fantasy League",
+    shortName: "Slapshot",
+    platform: "Fantrax",
+    format: "keeper",
+    scoring: "points",
+    season: "2026-27",
+    teams: slapshot.teams,
+    myTeamId: slapshot.defaultTeamId,
+    // No « Ballottage » tab: the claim limit, the waiver period and the claim
+    // priority are the four things fxpa would answer and it is closed for
+    // this league, and a two-day scoring period makes the « gain over the
+    // rest of the period » threshold the waiver helper ranks by meaningless.
+    // Free agents are on « Joueurs » (the « Autonomes à ajouter » view).
+    tabs: ["repechage", "joueurs", "aujourdhui", "mon-equipe"],
+    // The draft is live (2026-09-27, 38 rounds); the season opens Sep 29.
+    defaultTab: "repechage",
+    legacyPaths: [],
+    // leagueId confirmed by src/data/fantrax/slapshot/league.json.
+    externalUrl: `https://www.fantrax.com/fantasy/league/${slapshot.leagueId}/home`,
+    accent: "amber",
   },
   {
     slug: "light-the-lamp",

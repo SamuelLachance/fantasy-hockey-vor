@@ -1,17 +1,23 @@
 /**
- * The player table's data (Captains Dynasty): the whole league pool
- * (`public/fantrax/pool.json`, prospects included) and the dynasty values
- * (`public/fantrax/dynasty.json`, rebuilt by every league sync). Fetched on
- * demand, once per page view, and kept across tab changes. Apart from `league-client.ts` so the tabs'
- * table code does not carry the live Fantrax reads.
+ * The player table's data for one Fantrax points league: the whole league pool
+ * (`<public>/pool.json`, prospects included) and the dynasty values
+ * (`public/fantrax/dynasty.json`, rebuilt by every Captains sync). Fetched on
+ * demand, once per page view, and kept across tab changes. Apart from
+ * `league-client.ts` so the tabs' table code does not carry the live Fantrax
+ * reads.
+ *
+ * The pool cache is keyed by league: both Fantrax leagues can be visited in
+ * one single-page session, and one league's pool under the other's name would
+ * put players nobody in that league can draft on its board.
  */
 import { fantraxDataHref } from "@/lib/site";
+import { CAPTAINS_DYNASTY, fantraxPublicFile, type FantraxLeagueConfig } from "./config";
 import { parseDynasty, type DynastyIndex } from "./dynasty-index";
 import { isPoolSnapshot, type PoolSnapshot } from "./pool";
 import { fetchOptionalJson, fetchSnapshotFile } from "./snapshot-fetch";
 
-let poolPromise: Promise<PoolSnapshot> | null = null;
-let poolValue: PoolSnapshot | null = null;
+const poolPromises = new Map<string, Promise<PoolSnapshot>>();
+const poolValues = new Map<string, PoolSnapshot>();
 let dynastyPromise: Promise<DynastyIndex | null> | null = null;
 /** undefined until the dynasty read settles (null: unreadable). */
 let dynastyValue: DynastyIndex | null | undefined;
@@ -20,26 +26,26 @@ let dynastyValue: DynastyIndex | null | undefined;
  * The player table's pool (required; retried like the snapshot). Fetched
  * once per page view, on demand, and kept across tab changes.
  */
-export function loadFantraxPool(): Promise<PoolSnapshot> {
-  if (!poolPromise) {
-    const p = fetchSnapshotFile<unknown>("pool.json")
-      .then((pool) => {
-        if (!isPoolSnapshot(pool)) throw new Error("pool.json is malformed");
-        poolValue = pool;
-        return pool;
-      })
-      .catch((err) => {
-        if (poolPromise === p) poolPromise = null;
-        throw err;
-      });
-    poolPromise = p;
-  }
-  return poolPromise;
+export function loadFantraxPool(cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): Promise<PoolSnapshot> {
+  const cached = poolPromises.get(cfg.slug);
+  if (cached) return cached;
+  const p = fetchSnapshotFile<unknown>(fantraxPublicFile(cfg, "pool.json"))
+    .then((pool) => {
+      if (!isPoolSnapshot(pool)) throw new Error("pool.json is malformed");
+      poolValues.set(cfg.slug, pool);
+      return pool;
+    })
+    .catch((err) => {
+      if (poolPromises.get(cfg.slug) === p) poolPromises.delete(cfg.slug);
+      throw err;
+    });
+  poolPromises.set(cfg.slug, p);
+  return p;
 }
 
 /** The pool when this page view already loaded it (a tab change paints at once). */
-export function peekFantraxPool(): PoolSnapshot | null {
-  return poolValue;
+export function peekFantraxPool(cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): PoolSnapshot | null {
+  return poolValues.get(cfg.slug) ?? null;
 }
 
 /**

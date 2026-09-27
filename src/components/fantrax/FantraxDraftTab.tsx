@@ -2,6 +2,7 @@
 
 import { TabLink } from "@/components/league-shell/TabLink";
 import { draftBoardNote } from "@/lib/fantrax/league-copy";
+import { canRankByPoints } from "@/lib/fantrax/points-vor";
 import { dynastyDraftNote } from "@/lib/fantrax/table-copy";
 import { DraftPanel } from "./DraftPanel";
 import { FantraxPlanGate } from "./FantraxPlanGate";
@@ -17,10 +18,10 @@ import { FantraxPlayerTable } from "./fantrax-table";
  * they are two different units.
  */
 export function FantraxDraftTab({ slug }: { slug: string }) {
-  const { player, teamName, live, nowMs, plan, hasDynasty, mode } = useFantraxLeague();
+  const { config, player, teamName, live, nowMs, plan, hasDynasty, mode } = useFantraxLeague();
   const d = plan?.draft ?? null;
   const notes = [
-    d ? draftBoardNote(d.next?.pick ?? null, d.following?.pick ?? null, d.poolShare, hasDynasty) : null,
+    d ? draftBoardNote(d.next?.pick ?? null, d.following?.pick ?? null, d.poolShare, hasDynasty, canRankByPoints(config)) : null,
     hasDynasty ? dynastyDraftNote(mode) : null,
   ].filter(Boolean);
   return (

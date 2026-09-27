@@ -13,7 +13,7 @@
 import { readFileSync } from "fs";
 import { gzipSync } from "zlib";
 import { join } from "path";
-import { FANTRAX_DEFAULT_TEAM_ID, NHL_SEASON_ID } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, FANTRAX_DEFAULT_TEAM_ID, NHL_SEASON_ID, SLAPSHOT } from "../src/lib/fantrax/config";
 import { availableProjected, type DailyPlan } from "../src/lib/fantrax/daily-plan";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
 import { buildDailyPlan } from "../src/lib/fantrax/daily-plan";
@@ -62,6 +62,7 @@ import {
   baseView,
   clampPage,
   effectiveView,
+  findPreset,
   matchesPreset,
   nextSort as nextSortOf,
   pageCount,
@@ -110,7 +111,39 @@ type ExplorerRow = FantraxRow;
 type ExplorerFilters = FantraxFilters;
 type ExplorerCapabilities = FantraxCaps;
 type ExplorerView = TableView<FantraxFilters>;
-const NO_CAPS: FantraxCaps = { draft: false, dynasty: false, dynastyPublished: false, snake: false, snakeOpinions: false };
+const NO_CAPS: FantraxCaps = {
+  draft: false,
+  // Captains' group vocabulary: one winger group (its lineup has one W slot
+  // plus the flex F). Slapshot's is C / LW / RW / D / G.
+  groups: CAPTAINS_DYNASTY.eligibility.groups,
+  // Captains has Minors slots and fxpa answers for it; it has a captain slot,
+  // so points over replacement is not modelled for it (`canRankByPoints`), and
+  // it IS a keeper-forever league.
+  minors: true,
+  fxpa: true,
+  vor: false,
+  keeper: true,
+  dynasty: false,
+  dynastyPublished: false,
+  snake: false,
+  snakeOpinions: false,
+};
+/** A second Fantrax league: LW / RW apart, no fxpa, no keeper model, VOR ranked. */
+const SLAPSHOT_CAPS: FantraxCaps = {
+  ...NO_CAPS,
+  draft: true,
+  groups: SLAPSHOT.eligibility.groups,
+  minors: false,
+  fxpa: false,
+  vor: true,
+  keeper: false,
+};
+/**
+ * Captains with its dynasty values published: the two dynasty views only exist
+ * in a league whose config has the keeper model (`PresetDef.needs`), so a base
+ * built from one of them needs these capabilities.
+ */
+const KEEPER_CAPS: FantraxCaps = { ...NO_CAPS, dynasty: true, dynastyPublished: true };
 /** The Joueurs tab's base: the old explorer's default view. */
 const TOUS = tableBase(FANTRAX_TABLE, "tous", NO_CAPS, 50);
 const DEFAULT_VIEW: ExplorerView = baseView(TOUS);
@@ -683,16 +716,57 @@ assert(!sameExplorerSearch(DEFAULT_VIEW, "?statut=dispo"), "different view");
 // ------------------------------------------------------------ presets and columns
 
 const noExtras: ExplorerCapabilities = { ...NO_CAPS, draft: true };
-const withExtras: ExplorerCapabilities = {
-  draft: true,
-  dynasty: true,
-  dynastyPublished: true,
-  snake: true,
-  snakeOpinions: true,
-};
+const withExtras: ExplorerCapabilities = { ...NO_CAPS, draft: true, dynasty: true, dynastyPublished: true, snake: true, snakeOpinions: true };
 const presets = explorerPresets(noExtras);
 // The explorer's four presets, plus the Joueurs tab's own view (« tous »), waivers only and the dynasty view.
 eq(presets.map((p) => p.id), ["tous", "repechage", "dynastie", "espoirs", "autonomes", "ballottage-ww", "equipe"], "seven presets");
+// A league whose config has no keeper model (Slapshot) must not be OFFERED the
+// dynasty views at all, not even sorted by something else: « Meilleure valeur
+// dynastie » and « Espoirs » are the Captains cutdown's own questions.
+{
+  const noKeeper: FantraxCaps = { ...noExtras, keeper: false, dynasty: false, dynastyPublished: false };
+  const offered = FANTRAX_TABLE.presets.filter((x) => !x.needs || x.needs(noKeeper)).map((x) => x.id);
+  // « Espoirs » is NOT a dynasty view: a 38-round keeper draft spends half its
+  // picks on prospects and this is the only view that lists them. Only
+  // « Meilleure valeur dynastie » is the Captains cutdown's own question.
+  eq(
+    offered,
+    ["tous", "repechage", "espoirs", "autonomes", "ballottage-ww", "equipe"],
+    "no keeper model: only the dynasty-value view is withheld",
+  );
+  eq(findPreset(FANTRAX_TABLE, "dynastie", noKeeper), null, "?vue=dynastie is ignored without the keeper model");
+  assert(!!findPreset(FANTRAX_TABLE, "dynastie", KEEPER_CAPS), "?vue=dynastie works in a keeper league");
+  assert(!!findPreset(FANTRAX_TABLE, "espoirs", noKeeper), "?vue=espoirs works in any league: it has a season fallback");
+  // The gate is the league's CONFIG, not this build's dynasty.json: a Captains
+  // build whose values were not written keeps the dynasty view, sorted by the
+  // season fallback, instead of silently losing it.
+  assert(
+    !!findPreset(FANTRAX_TABLE, "dynastie", { ...noExtras, dynasty: false, dynastyPublished: false }),
+    "the keeper model, not the published file, decides the dynasty view",
+  );
+  // « Mon équipe » drops « mineures comprises » where there are no Minors slots.
+  const noMinors = resolvePreset(FANTRAX_TABLE, FANTRAX_TABLE.presets.find((x) => x.id === "equipe")!, {
+    ...noKeeper,
+    minors: false,
+  });
+  assert(!noMinors.description.includes("mineures"), "no Minors slots: the team view says nothing about them");
+  // « Valeur » IS the points-over-replacement number where the league models it
+  // (`draftValue`), so the draft view keeps one sort key and gets the right
+  // order from the data; only the column's NAME changes.
+  eq(presetOf(noExtras, "repechage").sort.key, "valeur", "the draft view is ranked by « Valeur » without a VOR model");
+  // In a VOR league « Valeur » is scarcity over the WHOLE season, and during a
+  // live draft that is not the same board as scarcity by my next pick: ranking
+  // Slapshot by VOR put eight goalies in the top fifteen for two goalie seats,
+  // each with a negative VONA one column over. VONA is the need-aware number.
+  eq(presetOf(SLAPSHOT_CAPS, "repechage").sort, { key: "vona", dir: "desc" }, "a live VOR draft opens on VONA");
+  eq(presetOf({ ...SLAPSHOT_CAPS, draft: false }, "repechage").sort.key, "valeur", "no draft, no VONA: back to « Valeur »");
+  eq(columnCopy("valeur", { nextPick: null }).label, "Valeur saison", "raw season points by default");
+  eq(columnCopy("valeur", { nextPick: null, vor: true }).label, "Valeur (VOR)", "points over replacement where modelled");
+  assert(
+    columnCopy("valeur", { nextPick: null, vor: true }).title.includes("au-dessus du remplacement"),
+    "and the header says what it is",
+  );
+}
 // « Agents libres » became « Autonomes » (the site's word for free agents, as in the Statut column).
 eq(
   presets.map((p) => p.label),
@@ -701,6 +775,20 @@ eq(
 );
 const espoirsPreset = presetOf(noExtras, "espoirs");
 eq(espoirsPreset.sort.key, "ros", "prospects by Ros% without dynasty data");
+// Ros% comes from fxpa. Where fxpa is closed it is empty for every player, so
+// the view opens on ADP — the only signal left — instead of on a dead column.
+eq(presetOf(SLAPSHOT_CAPS, "espoirs").sort, { key: "adp", dir: "asc" }, "prospects by ADP where fxpa is closed");
+// A prospect's age comes from fxpa too (0 of Slapshot's 1,080 pool prospects
+// has one), so the « ≤ 21 ans » bound has to go with it or the view matches
+// nobody — and the label must stop promising an age it cannot apply.
+eq(presetOf(noExtras, "espoirs").filters.age, { min: null, max: 21 }, "with fxpa: the age bound stands");
+eq(presetOf(noExtras, "espoirs").label, "Espoirs ≤ 21 ans disponibles", "…and the label says 21 ans");
+eq(presetOf(SLAPSHOT_CAPS, "espoirs").filters.age, ANY, "without fxpa: no age bound, since nobody has an age");
+eq(presetOf(SLAPSHOT_CAPS, "espoirs").label, "Espoirs disponibles", "…and the label stops promising one");
+assert(
+  presetOf(SLAPSHOT_CAPS, "espoirs").description.includes("ne publie pas les âges"),
+  "…and the description says why",
+);
 eq(presetOf(withExtras, "espoirs").sort, { key: "dyn", dir: "desc" }, "prospects by dynasty value when published");
 eq(presetOf({ ...noExtras, dynastyPublished: true }, "espoirs").sort.key, "dyn", "…from the first paint (published, not loaded yet)");
 eq(presetOf(withExtras, "equipe").sort.key, "dyn", "Mon équipe by dynasty value");
@@ -887,7 +975,7 @@ eq(counterText(0, 1, 1, { label: valeurLabel, dir: "desc" }), "Aucun joueur ne c
   const offQs = viewSearch(FANTRAX_TABLE, off, rep, "");
   eq(offQs, "?statut=tous&type=tous&actifs=0", "explicit off tokens");
   eq(parseView(FANTRAX_TABLE, offQs, rep), off, "off tokens round trip");
-  const espBase = tableBase(FANTRAX_TABLE, "espoirs", NO_CAPS, 50);
+  const espBase = tableBase(FANTRAX_TABLE, "espoirs", KEEPER_CAPS, 50);
   const openAge: TableView<FantraxFilters> = { ...baseView(espBase), filters: { ...espBase.filters, age: ANY } };
   eq(viewSearch(FANTRAX_TABLE, openAge, espBase, ""), "?age=-", "an open range on a base with a bound: age=-");
   eq(parseView(FANTRAX_TABLE, "?age=-", espBase).filters.age, ANY, "age=- reads back open");

@@ -1,13 +1,17 @@
 /**
  * Daily lineup optimizer: a maximum-weight assignment of candidates to the
- * 15 active slot instances (C3 W5 F1 D3 Skt1 G2), solved exactly with the
- * Hungarian algorithm (≤ ~40 × 30, well under a millisecond).
+ * active slot instances (Captains: C3 W5 F1 D3 Skt1 G2 = 15), solved exactly
+ * with the Hungarian algorithm (≤ ~40 × 30, well under a millisecond).
  *
  * The captain is not a separate decision: whoever the assignment puts in
  * the Skt slot is the captain, because his value there (×1.5 offense, and
- * no Blk/Tk/SHO for a D) competes with every other placement.
+ * no Blk/Tk/SHO for a D) competes with every other placement. A league
+ * without a Skt slot simply has no such row.
+ *
+ * Slot counts come from the league's synced snapshot (`league.slotCounts`)
+ * and the slot order from its config; both default to the Captains league.
  */
-import { DEFAULT_SLOT_COUNTS, SLOT_ORDER, type SlotId } from "./config";
+import { DEFAULT_SLOT_COUNTS, SLOT_ORDER, type SlotCounts, type SlotId } from "./config";
 
 export interface LineupCandidate {
   id: string;
@@ -41,11 +45,10 @@ export interface LineupResult {
   moves: LineupMove[];
 }
 
-/** Slot tokens a player can fill, from Fantrax `eligiblePos`. */
-export function eligibleSlots(eligiblePos: string): SlotId[] {
-  const tokens = new Set(eligiblePos.split(",").map((t) => t.trim()));
-  return SLOT_ORDER.filter((s) => tokens.has(s));
-}
+// `eligibleSlots` moved to `config.ts` (arithmetic on the config, and
+// importing it from here pulled the Hungarian solver into pages that only
+// needed the eligibility). Re-exported so every existing importer is unchanged.
+export { eligibleSlots } from "./config";
 
 /**
  * Hungarian algorithm (Kuhn–Munkres with potentials, O(n²m)), minimizing
@@ -133,10 +136,11 @@ export function captainGain(c: LineupCandidate): number {
 
 export function optimizeLineup(
   candidates: LineupCandidate[],
-  slotCounts: Record<SlotId, number> = DEFAULT_SLOT_COUNTS,
+  slotCounts: SlotCounts = DEFAULT_SLOT_COUNTS,
+  slotOrder: readonly SlotId[] = SLOT_ORDER,
 ): LineupResult {
   const rows: SlotId[] = [];
-  for (const s of SLOT_ORDER) for (let k = 0; k < (slotCounts[s] ?? 0); k++) rows.push(s);
+  for (const s of slotOrder) for (let k = 0; k < (slotCounts[s] ?? 0); k++) rows.push(s);
   // Columns: every candidate, then one "leave empty" column per slot row.
   const cols = candidates.length + rows.length;
   const cost = rows.map((slot) => {
@@ -186,13 +190,14 @@ export function optimizeLineup(
 export function totalWithCaptain(
   candidates: LineupCandidate[],
   id: string | null,
-  slotCounts: Record<SlotId, number> = DEFAULT_SLOT_COUNTS,
+  slotCounts: SlotCounts = DEFAULT_SLOT_COUNTS,
+  slotOrder: readonly SlotId[] = SLOT_ORDER,
 ): number {
   const forced = candidates.map((c): LineupCandidate => {
     if (c.id === id) return { ...c, eligible: c.eligible.includes("Skt") ? ["Skt"] : [] };
     return { ...c, eligible: c.eligible.filter((s) => s !== "Skt") };
   });
-  return optimizeLineup(forced, slotCounts).total;
+  return optimizeLineup(forced, slotCounts, slotOrder).total;
 }
 
 export interface CaptainOption {
@@ -215,13 +220,14 @@ export interface CaptainOption {
 export function captainRanking(
   candidates: LineupCandidate[],
   limit = 5,
-  slotCounts: Record<SlotId, number> = DEFAULT_SLOT_COUNTS,
+  slotCounts: SlotCounts = DEFAULT_SLOT_COUNTS,
+  slotOrder: readonly SlotId[] = SLOT_ORDER,
 ): CaptainOption[] {
-  const best = optimizeLineup(candidates, slotCounts).total;
+  const best = optimizeLineup(candidates, slotCounts, slotOrder).total;
   return candidates
     .filter((c) => c.eligible.includes("Skt") && (c.values.Skt ?? 0) > 0)
     .map((c) => {
-      const total = totalWithCaptain(candidates, c.id, slotCounts);
+      const total = totalWithCaptain(candidates, c.id, slotCounts, slotOrder);
       return { id: c.id, total, delta: Math.min(0, total - best), gain: captainGain(c), value: c.values.Skt ?? 0 };
     })
     .sort((a, b) => b.total - a.total || b.gain - a.gain)

@@ -5,7 +5,8 @@ import { Suspense, useCallback, useEffect, useMemo, useState, type ReactNode } f
 import { TabSearchContext } from "@/components/league-shell/tab-search";
 // The store only (not the chips): the tabs' chunks carry the chips and Snake's copy.
 import { SnakeVerdictsProvider } from "@/components/snake/SnakeVerdictsContext";
-import { bestFpg, buildDailyPlan, type DailyPlan } from "@/lib/fantrax/daily-plan";
+import { bestFpg, buildDailyPlan, seasonFp, type DailyPlan } from "@/lib/fantrax/daily-plan";
+import { leagueVor } from "@/lib/fantrax/points-vor";
 import { targetRosterPeriod } from "@/lib/fantrax/dates";
 import {
   fetchLiveOverlay,
@@ -25,12 +26,14 @@ import {
   parseDynastyMode,
   type DynastyMode,
 } from "@/lib/fantrax/dynasty-mode";
-import type { RosterLimits } from "@/lib/fantrax/config";
+import { fantraxLeague, type RosterLimits } from "@/lib/fantrax/config";
 import type { SnakeFantraxFile } from "@/lib/snake/types";
 import { FantraxLeagueContext, type FantraxLeagueValue, type LoadState } from "./fantrax-league-context";
 import type { PlayerLookup } from "./LeagueCard";
 
 interface FantraxLeagueProviderProps {
+  /** Registry slug of the league being shown; picks its engine config. */
+  slug: string;
   /** Default team's plan baked at sync time (first paint, no JS needed). */
   initialPlan: DailyPlan;
   /** Sorted on the server so the options hydrate identically. */
@@ -78,14 +81,18 @@ function replaceSearch(search: string): void {
 const CLOCK_TICK_MS = 30_000;
 
 /**
- * Everything the Captains Dynasty tabs share, held in the league layout so
- * it survives tab changes: the chosen team, the baked snapshot, the live
- * rosters and draft picks from Fantrax (polled every 90 s while the draft
- * runs and the page is visible), the clock, and the same pure planner
- * re-run in the browser for whichever team is picked. First paint is the
- * default team's baked plan; "now" only exists in effects (React purity).
+ * Everything one Fantrax points league's tabs share, held in the league layout
+ * so it survives tab changes: the chosen team, the baked snapshot, the live
+ * rosters and draft picks from Fantrax (polled every 90 s while the draft runs
+ * and the page is visible), the clock, and the same pure planner re-run in the
+ * browser for whichever team is picked. First paint is the default team's
+ * baked plan; "now" only exists in effects (React purity).
+ *
+ * Every read is scoped to `slug`'s config, so two Fantrax leagues in one
+ * session never share a snapshot, a live overlay or a remembered team.
  */
 export function FantraxLeagueProvider({
+  slug,
   initialPlan,
   teams,
   leagueName,
@@ -95,6 +102,7 @@ export function FantraxLeagueProvider({
   hasDynasty,
   children,
 }: FantraxLeagueProviderProps) {
+  const config = useMemo(() => fantraxLeague(slug), [slug]);
   const [teamId, setTeamId] = useState(defaultTeamId);
   const [mode, setMode] = useState<DynastyMode>(DEFAULT_DYNASTY_MODE);
   const [nowMs, setNowMs] = useState<number | null>(null);
@@ -112,21 +120,21 @@ export function FantraxLeagueProvider({
   // next tab must not fall back to a team peeked at earlier.
   const onUrlTeam = useCallback(
     (fromUrl: string | null) => {
-      const picked = pickTeam([fromUrl, readStoredTeam()], teams, defaultTeamId);
-      if (fromUrl && picked === fromUrl) storeTeam(picked);
+      const picked = pickTeam([fromUrl, readStoredTeam(config)], teams, defaultTeamId);
+      if (fromUrl && picked === fromUrl) storeTeam(picked, config);
       setTeamId(picked);
     },
-    [teams, defaultTeamId],
+    [teams, defaultTeamId, config],
   );
 
   const chooseTeam = useCallback(
     (next: string) => {
       setTeamId(next);
-      storeTeam(next);
+      storeTeam(next, config);
       // The tab links carry the team from state (TabSearchContext), not from the URL.
       replaceSearch(teamSearch(window.location.search, next, defaultTeamId));
     },
-    [defaultTeamId],
+    [defaultTeamId, config],
   );
 
   // The dynasty mode: from the address (Back / Forward, a shared link), or picked on a tab.
@@ -139,7 +147,7 @@ export function FantraxLeagueProvider({
   // ---- baked snapshot (values / state / schedule / league)
   useEffect(() => {
     let cancelled = false;
-    loadLeagueSnapshot().then(
+    loadLeagueSnapshot(config).then(
       (b) => {
         if (cancelled) return;
         // Plan right away rather than on the next clock tick: background
@@ -157,16 +165,35 @@ export function FantraxLeagueProvider({
     return () => {
       cancelled = true;
     };
-  }, [bundleAttempt]);
+  }, [bundleAttempt, config]);
 
   // ---- rosters and picks: the snapshot's, the live read over them
   const state = useMemo(() => (bundle ? withLiveOverlay(bundle.state, live) : null), [bundle, live]);
 
+  /**
+   * Points over replacement for the whole projected pool, from the LEAGUE's
+   * depth: the replacement level is a property of its starting seats, so it is
+   * built from the snapshot and never moves with the live picks (`state` is
+   * deliberately not a dependency).
+   */
+  const vor = useMemo(
+    () =>
+      bundle
+        ? leagueVor(
+            config,
+            bundle.values.players,
+            (id) => seasonFp(bundle.values.players[id]!, config),
+            bundle.league.slotCounts,
+          )
+        : null,
+    [bundle, config],
+  );
+
   // ---- plan (browser re-run once the snapshot is in; baked plan until then)
   const computed = useMemo(() => {
     if (!bundle || !state || planNowMs === null) return null;
-    return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs });
-  }, [bundle, state, teamId, planNowMs]);
+    return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs, config, vor });
+  }, [bundle, state, teamId, planNowMs, config, vor]);
   const plan = computed ?? (teamId === initialPlan.teamId ? initialPlan : null);
   const lockMs = plan?.target ? Date.parse(plan.target.start) : null;
 
@@ -200,7 +227,7 @@ export function FantraxLeagueProvider({
   useEffect(() => {
     if (livePeriod === null) return;
     let cancelled = false;
-    fetchLiveOverlay(livePeriod, { force: refreshCount > 0 }).then(
+    fetchLiveOverlay(livePeriod, { force: refreshCount > 0, config }).then(
       (o) => {
         if (cancelled) return;
         setLive(o);
@@ -213,7 +240,7 @@ export function FantraxLeagueProvider({
     return () => {
       cancelled = true;
     };
-  }, [livePeriod, refreshCount]);
+  }, [livePeriod, refreshCount, config]);
 
   // While the draft runs, poll picks (only when the tab is visible).
   const draftOpen = !!plan?.draft;
@@ -221,7 +248,7 @@ export function FantraxLeagueProvider({
     if (!draftOpen || livePeriod === null) return;
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
-      fetchLiveOverlay(livePeriod, { force: true }).then(
+      fetchLiveOverlay(livePeriod, { force: true, config }).then(
         (o) => {
           setLive(o);
           setLiveState("ready");
@@ -230,7 +257,7 @@ export function FantraxLeagueProvider({
       );
     }, LIVE_DRAFT_POLL_MS);
     return () => window.clearInterval(id);
-  }, [draftOpen, livePeriod]);
+  }, [draftOpen, livePeriod, config]);
 
   // Busy only while a request is really in flight: the snapshot, or the live
   // read once the snapshot is in (without it there is no period to read).
@@ -252,9 +279,9 @@ export function FantraxLeagueProvider({
       const p = plan?.players[id];
       if (p) return p;
       const v = bundle?.values.players[id];
-      return v ? { n: v.n, t: v.t, e: v.e, st: "", fpg: bestFpg(v), src: v.src, age: v.age } : undefined;
+      return v ? { n: v.n, t: v.t, e: v.e, st: "", fpg: bestFpg(v, config), src: v.src, age: v.age } : undefined;
     },
-    [plan, bundle],
+    [plan, bundle, config],
   );
   const teamName = useCallback(
     (id: string) => teams.find((t) => t.id === id)?.name ?? "Équipe inconnue",
@@ -263,6 +290,7 @@ export function FantraxLeagueProvider({
 
   const value = useMemo<FantraxLeagueValue>(
     () => ({
+      config,
       teams,
       leagueName,
       limits,
@@ -276,6 +304,7 @@ export function FantraxLeagueProvider({
       live,
       liveState,
       busy,
+      vor,
       nowMs,
       refresh,
       player,
@@ -284,7 +313,7 @@ export function FantraxLeagueProvider({
       mode,
       chooseMode,
     }),
-    [teams, leagueName, limits, defaultTeamId, teamId, chooseTeam, plan, bundle, bundleState, state, live, liveState, busy, nowMs, refresh, player, teamName, hasDynasty, mode, chooseMode],
+    [config, teams, leagueName, limits, defaultTeamId, teamId, chooseTeam, plan, bundle, bundleState, state, live, liveState, busy, vor, nowMs, refresh, player, teamName, hasDynasty, mode, chooseMode],
   );
   // Tab links keep a non-default team and dynasty mode (from state: the URL
   // writes above are invisible to useSearchParams).

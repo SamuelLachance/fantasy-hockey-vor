@@ -7,7 +7,6 @@ import type { FilterUiProps } from "@/components/player-table/adapter";
 import { CHIP, RangeField, Select, Toggle } from "@/components/player-table/fields";
 import { BUTTON_CLASS as BUTTON } from "@/components/player-table/PlayerTableToolbar";
 import { SLOT_LABEL } from "@/lib/fantrax/league-copy";
-import { POOL_GROUPS } from "@/lib/fantrax/pool";
 import {
   FANTRAX_TYPES,
   NO_NHL_TEAM,
@@ -42,8 +41,10 @@ export function FantraxTableFilters({
   actions,
 }: FilterUiProps<Filters, FantraxCaps, FantraxCtx>) {
   const moreId = useId();
+  // Only the fields this league actually shows: a hidden one is normalized
+  // back to « any », so counting it would badge a filter nobody can see.
   const advancedCount =
-    [f.fp, f.fpg, f.ros, f.adp, f.eta].filter((r) => r.min !== null || r.max !== null).length +
+    [f.fp, f.fpg, f.adp, f.eta, ...(caps.fxpa ? [f.ros] : [])].filter((r) => r.min !== null || r.max !== null).length +
     [f.verdict, f.trend].filter(Boolean).length;
   // Open by default when a bookmarked view carries advanced filters; the
   // user's own toggle wins from then on.
@@ -111,7 +112,7 @@ export function FantraxTableFilters({
         <fieldset className="min-w-0">
           <legend className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Positions</legend>
           <div className="flex flex-wrap gap-2">
-            {POOL_GROUPS.map((g) => {
+            {caps.groups.map((g) => {
               const on = f.pos.includes(g);
               return (
                 <label
@@ -126,7 +127,7 @@ export function FantraxTableFilters({
                     checked={on}
                     onChange={(e) =>
                       onFilters({
-                        pos: POOL_GROUPS.filter((x) => (x === g ? e.target.checked : f.pos.includes(x))),
+                        pos: caps.groups.filter((x) => (x === g ? e.target.checked : f.pos.includes(x))),
                       })
                     }
                     className="sr-only"
@@ -143,24 +144,34 @@ export function FantraxTableFilters({
         <fieldset className="min-w-0">
           <legend className="mb-1 text-xs font-medium uppercase tracking-wider text-slate-400">Options</legend>
           <div className="flex flex-wrap gap-2">
-            <Toggle
-              label="Admissibles aux mineures"
-              title="Admissibles aux postes des mineures de la ligue cette saison (Fantrax)"
-              checked={f.minors}
-              onChange={(minors) => onFilters({ minors })}
-            />
+            {/* Only a league that HAS Minors slots: elsewhere Fantrax's
+                minors-eligible flag answers a question the league never asks. */}
+            {caps.minors ? (
+              <Toggle
+                label="Admissibles aux mineures"
+                title="Admissibles aux postes des mineures de la ligue cette saison (Fantrax)"
+                checked={f.minors}
+                onChange={(minors) => onFilters({ minors })}
+              />
+            ) : null}
             <Toggle
               label="Actifs dans la LNH"
-              title="Sans les joueurs sans club LNH, assignés aux mineures, sans contrat, suspendus, inactifs, blessés ou absents des listes de Fantrax (comme les onglets Repêchage et Ballottage)"
+              title="Sans les joueurs sans club LNH, assignés aux mineures (LAH, junior, Europe), sans contrat, suspendus, inactifs, blessés ou absents des listes de Fantrax : le même filtre que la vue « Meilleurs disponibles »"
               checked={f.active}
               onChange={(active) => onFilters({ active })}
             />
-            <Toggle
-              label="Exclure les blessés"
-              title="Sans les joueurs sur la liste des blessés de la LNH ou absents; ceux au jour le jour restent"
-              checked={f.healthy}
-              onChange={(healthy) => onFilters({ healthy })}
-            />
+            {/* Injuries come from fxpa's player icons. Where fxpa answers
+                `WARNING_NOT_LOGGED_IN` nobody carries one, so the toggle
+                removed nobody while promising it would — on the very page whose
+                banner says injuries are unreadable for this league. */}
+            {caps.fxpa ? (
+              <Toggle
+                label="Exclure les blessés"
+                title="Sans les joueurs sur la liste des blessés de la LNH ou absents; ceux au jour le jour restent"
+                checked={f.healthy}
+                onChange={(healthy) => onFilters({ healthy })}
+              />
+            ) : null}
           </div>
         </fieldset>
       </div>
@@ -194,7 +205,9 @@ export function FantraxTableFilters({
       >
         <RangeField label="FP saison" value={f.fp} onChange={(fp) => onFilters({ fp })} />
         <RangeField label="FP/match" value={f.fpg} onChange={(fpg) => onFilters({ fpg })} />
-        <RangeField label="% Fantrax" unit="%" value={f.ros} onChange={(ros) => onFilters({ ros })} />
+        {caps.fxpa ? (
+          <RangeField label="% Fantrax" unit="%" value={f.ros} onChange={(ros) => onFilters({ ros })} />
+        ) : null}
         <RangeField label="ADP" value={f.adp} onChange={(adp) => onFilters({ adp })} />
         {caps.dynasty ? (
           <RangeField label="Arrivée LNH (année)" value={f.eta} onChange={(eta) => onFilters({ eta })} />

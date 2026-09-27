@@ -12,6 +12,8 @@
  *   never inherit the NJD star's projection.
  */
 
+import { CAPTAINS_DYNASTY, type FantraxLeagueConfig } from "./config";
+
 export type PositionGroup = "F" | "D" | "G";
 
 /** First-name nicknames folded onto one spelling before comparing. */
@@ -109,13 +111,23 @@ export function fantraxDisplayName(name: string): string {
   return i < 0 ? name.trim() : `${name.slice(i + 1).trim()} ${name.slice(0, i).trim()}`;
 }
 
-/** Groups from Fantrax `eligiblePos` ("W,C,F,Skt", "D,Skt", "G"). */
-export function groupsFromEligible(eligiblePos: string): Set<PositionGroup> {
+/**
+ * Groups from Fantrax `eligiblePos` ("W,C,F,Skt", "D,Skt", "G" on Captains;
+ * "LW,RW", "C", "D", "G" on a league that splits the wings). The tokens come
+ * from the league's config, never from a fixed list: with a hard-coded
+ * C/W/F test a pure LW came back in no group at all, and a player in no
+ * group can be matched to anyone of the same name — a goalie included.
+ */
+export function groupsFromEligible(
+  eligiblePos: string,
+  cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY,
+): Set<PositionGroup> {
   const tokens = eligiblePos.split(",").map((t) => t.trim());
+  const { goalieToken, skaterTokens, defenseTokens } = cfg.eligibility;
   const out = new Set<PositionGroup>();
-  if (tokens.includes("G")) out.add("G");
-  if (tokens.includes("D")) out.add("D");
-  if (tokens.some((t) => t === "C" || t === "W" || t === "F")) out.add("F");
+  if (tokens.includes(goalieToken)) out.add("G");
+  if (tokens.some((t) => defenseTokens.includes(t))) out.add("D");
+  if (tokens.some((t) => skaterTokens.includes(t) && !defenseTokens.includes(t))) out.add("F");
   return out;
 }
 

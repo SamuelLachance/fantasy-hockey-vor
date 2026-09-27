@@ -124,7 +124,10 @@ export function PlayerTable<R, F, Caps, Ctx>({
   // ---- what the view does with this data
   const env = useMemo(() => ({ caps, labels, ctx }), [caps, labels, ctx]);
   const effective = useMemo(() => effectiveView(spec, view, base, env), [spec, view, base, env]);
-  const allPresets = useMemo(() => spec.presets.map((p) => resolvePreset(spec, p, caps)), [spec, caps]);
+  const allPresets = useMemo(
+    () => spec.presets.filter((p) => !p.needs || p.needs(caps)).map((p) => resolvePreset(spec, p, caps)),
+    [spec, caps],
+  );
   const chips = useMemo(
     () => chipIds.map((pid) => allPresets.find((p) => p.id === pid)).filter((p): p is ResolvedPreset<F> => !!p),
     [chipIds, allPresets],

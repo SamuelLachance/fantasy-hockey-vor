@@ -29,6 +29,15 @@ export interface FxeaScoringGroup {
   configs: FxeaScoringConfig[];
 }
 
+/**
+ * The other view of the same scoring system:
+ * `{ SKATING: { Hit: { D: "points0", Default: "points0.15" } }, GOALIE: {…} }`.
+ * Unlike `scoringCategorySettings` it keeps the rows worth 0, so it is the
+ * only complete source for a league that configures a category to 0 per slot
+ * (see `ScoringSource` in `config.ts`).
+ */
+export type FxeaScoringCategories = Record<string, Record<string, Record<string, string>>>;
+
 export interface FxeaLeagueInfo {
   leagueName: string;
   seasonYear: number;
@@ -46,7 +55,13 @@ export interface FxeaLeagueInfo {
   teamInfo: Record<string, { name: string; id: string }>;
   /** status: FA (free agent), WW (on waivers), T (on a team). */
   playerInfo: Record<string, { eligiblePos: string; status: string }>;
-  scoringSystem: { scoringCategorySettings: FxeaScoringGroup[] };
+  scoringSystem: {
+    scoringCategorySettings: FxeaScoringGroup[];
+    /** Present on every league seen so far; see `FxeaScoringCategories`. */
+    scoringCategories?: FxeaScoringCategories;
+    /** e.g. "HEAD_TO_HEAD_POINTS_BASED". */
+    type?: string;
+  };
   matchups?: Array<{ period: number; matchupList: unknown[] }>;
   playoffs?: {
     lastRegularSeasonPeriod: number;

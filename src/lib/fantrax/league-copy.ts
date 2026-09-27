@@ -9,7 +9,7 @@
  * narrow no-break space, which would be a hydration mismatch. `Intl` is
  * only used for Eastern wall-clock parts, which every engine agrees on.
  */
-import { CLAIMS_PER_WEEK, LEAGUE_TIME_ZONE, type SlotId } from "./config";
+import { CLAIMS_PER_WEEK, FANTRAX_GROUPS, LEAGUE_TIME_ZONE, type SlotId } from "./config";
 import type { PlanAlert, TeamGame } from "./daily-plan";
 import type { DeadReason } from "./roster-rules";
 
@@ -173,6 +173,8 @@ export function fmtAgo(thenMs: number, nowMs: number): string {
 export const SLOT_LABEL: Record<SlotId, string> = {
   C: "Centre",
   W: "Ailier",
+  LW: "Ailier gauche",
+  RW: "Ailier droit",
   F: "Attaquant (C ou W)",
   D: "Défenseur",
   Skt: "Capitaine (attaque ×1,5)",
@@ -210,9 +212,16 @@ export function deadReasonLabel(reason: string | undefined): string {
   return (reason && DEAD_REASON[reason as DeadReason]) || "ne joue pas";
 }
 
-/** Primary positions for display: `C,F,Skt` → `C`, `W,C,F,Skt` → `W/C`. */
+/**
+ * Primary positions for display: `C,F,Skt` → `C`, `W,C,F,Skt` → `W/C`,
+ * `C,LW` → `C/LW`. The kept set is `FANTRAX_GROUPS`, the vocabulary across
+ * leagues, so a league that spells its wings by side keeps both — testing
+ * only C / W / D / G turned Slapshot's `C,LW` into a bare `C` and left every
+ * pure winger on the raw `LW,RW`.
+ */
 export function positionsLabel(eligiblePos: string): string {
-  const t = eligiblePos.split(",").filter((x) => x === "C" || x === "W" || x === "D" || x === "G");
+  const keep = new Set<string>(FANTRAX_GROUPS);
+  const t = eligiblePos.split(",").filter((x) => keep.has(x));
   return t.join("/") || eligiblePos;
 }
 
@@ -265,6 +274,8 @@ export function alertText(a: PlanAlert, name: NameOf): string | null {
       return `Les mouvements suggérés portent Actifs + Réserve à ${n} (max. ${a.limit ?? "?"}) : envoyez un joueur aux mineures ou libérez-en un.`;
     case "fxpa-down":
       return "Données Fantrax partielles à la dernière synchronisation : plafonds de matchs, blessures et statut des mineures inconnus.";
+    case "fxpa-closed":
+      return "Cette ligue ne publie pas ses détails joueur : blessures, % de ligues Fantrax et priorité au ballottage ne sont pas lisibles sans être membre. L'alignement optimal ne sait donc pas qui est blessé — vérifiez dans Fantrax avant de le reproduire.";
     case "stale-data":
       return `Les données datent de ${n}${NBSP}h : la synchronisation automatique semble en retard.`;
     default:
@@ -274,14 +285,27 @@ export function alertText(a: PlanAlert, name: NameOf): string | null {
 
 // ------------------------------------------------------------ sentences
 
-export function legalitySummary(l: {
-  illegal: boolean;
-  need: number;
-  minTotal: number;
-  counts: { active: number; reserve: number; ir: number; minors: number; counted: number };
-}): string {
+/**
+ * The legality line of a roster. Both halves follow the league: a league whose
+ * Active+Reserve minimum is not published (`minTotal: 0`, Slapshot) gets no
+ * denominator — « 5/0 joueurs comptés » was nonsense — and a league with no
+ * Minors slots is never told what its mineures do not count, because it has
+ * none.
+ */
+export function legalitySummary(
+  l: {
+    illegal: boolean;
+    need: number;
+    minTotal: number;
+    counts: { active: number; reserve: number; ir: number; minors: number; counted: number };
+  },
+  /** The league HAS Minors slots (`features.minors`). */
+  minors = true,
+): string {
   const c = l.counts;
-  const base = `${c.counted}/${l.minTotal} joueurs comptés (Actifs ${c.active} + Réserve ${c.reserve}; blessés ${c.ir} et mineures ${c.minors} ne comptent pas)`;
+  const counted = l.minTotal > 0 ? `${c.counted}/${l.minTotal}` : `${c.counted}`;
+  const out = minors ? `blessés ${c.ir} et mineures ${c.minors} ne comptent pas` : `blessés ${c.ir} ne comptent pas`;
+  const base = `${counted} joueurs comptés (Actifs ${c.active} + Réserve ${c.reserve}; ${out})`;
   if (l.need > 0) {
     return `Alignement illégal : ${base}. Il en manque ${l.need} — sinon l'équipe ne marque aucun point.`;
   }
@@ -304,8 +328,19 @@ export function draftVonaIntro(next: number, following: number | null): string {
  * values published, the last sentence points to the dynasty view instead
  * of age and Ros% as dynasty clues.
  */
-export function draftBoardNote(next: number | null, following: number | null, poolShare: number, dynasty = false): string {
-  const parts = [`Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`];
+export function draftBoardNote(
+  next: number | null,
+  following: number | null,
+  poolShare: number,
+  dynasty = false,
+  /** « Valeur » is points over replacement here, not raw season points. */
+  vor = false,
+): string {
+  const parts = [
+    vor
+      ? `Valeur (VOR) = points projetés au-dessus du remplacement à sa position${NBSP}: ses points de saison moins ceux du dernier partant de la ligue qui pourrait prendre son poste. C'est le seul chiffre qui compare un gardien à un centre; ajoutez la colonne «${NBSP}FP saison${NBSP}» (Colonnes → Projection) pour le total brut.`
+      : `Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`,
+  ];
   if (next !== null && following !== null) {
     parts.push(
       `VONA d'un joueur = sa valeur moins le meilleur attendu à sa position au ${pickLabel(following)} (négative si mieux devrait y rester).`,
@@ -316,10 +351,14 @@ export function draftBoardNote(next: number | null, following: number | null, po
       `Dispo. = chance qu'il soit encore là à votre choix ${pickLabel(next)}, selon son rang ADP Fantrax parmi les disponibles et le nombre de choix d'ici là, dont environ ${fmtPct(poolShare)} vont à des joueurs projetés (les autres, à des espoirs).`,
     );
   }
+  // Where to find the players this view leaves out. The dynasty views only
+  // exist in a league whose config has the keeper model, so a keeper or
+  // redraft league is sent to the Joueurs tab instead of to a view it has not
+  // got — and is told nothing about « indices dynastie » either.
   parts.push(
     dynasty
       ? `La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: la vue «${NBSP}Meilleure valeur dynastie disponible${NBSP}» classe joueurs et espoirs ensemble.`
-      : `L'âge et le % Fantrax servent d'indices dynastie. La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: voyez la vue Espoirs ou l’onglet Joueurs.`,
+      : `La vue «${NBSP}Meilleurs disponibles${NBSP}» exclut les espoirs sans projection${NBSP}: voyez l’onglet Joueurs, qui les liste tous.`,
   );
   return parts.join(" ");
 }

@@ -7,18 +7,14 @@
  * and tab). The home page does not come through here (see
  * `src/lib/leagues/home-data.ts`).
  */
-import { existsSync } from "fs";
-import { join } from "path";
 import type { ReactNode } from "react";
 import { CategoryDuelTab } from "@/components/draft/CategoryDuelTab";
 import { CategoryLeagueHeader } from "@/components/draft/CategoryLeagueHeader";
 import { CategoryPlayersTab } from "@/components/draft/CategoryPlayersTab";
-import leagueJson from "@/data/fantrax/league.json";
-import todayJson from "@/data/fantrax/today.json";
+import { fantraxLeague } from "@/lib/fantrax/config";
 import summaryJson from "@/data/snake-summary.json";
-import type { DailyPlan } from "@/lib/fantrax/daily-plan";
-import type { LeagueSnapshot } from "@/lib/fantrax/snapshot-types";
-import { TAB_META, type LeagueEntry, type LeagueKind, type LeagueTab } from "@/lib/leagues/registry";
+import { fantraxBaked, fantraxHasDynasty } from "@/lib/fantrax/baked";
+import { FORMAT_LABEL, TAB_META, type LeagueEntry, type LeagueKind, type LeagueTab } from "@/lib/leagues/registry";
 import { snakeFantraxSeed } from "@/lib/snake/league-seed";
 import type { SnakeSummaryFile } from "@/lib/snake/types";
 import { categoryBoard, categorySnakeSeed } from "./category-board";
@@ -55,29 +51,31 @@ export interface ServerLeagueAdapter {
 
 // ------------------------------------------------------------ fantrax-points
 
-// Baked by `npm run league:sync` (the daily Action re-runs it before each build).
-const fantraxLeague = leagueJson as unknown as LeagueSnapshot;
-const fantraxToday = todayJson as unknown as DailyPlan;
-// Dynasty values (rebuilt by every `npm run league:sync`): without the
-// file at build time, the browser never asks for it.
-const hasDynasty = existsSync(join(process.cwd(), "public", "fantrax", "dynasty.json"));
-
+/**
+ * Each Fantrax league's OWN baked snapshot, by slug (`src/lib/fantrax/baked.ts`).
+ * Reading `@/data/fantrax/league.json` as a module constant here was the
+ * single biggest hazard of adding a second Fantrax league: it would have shown
+ * the Captains league's settings, teams and daily plan under the other
+ * league's name.
+ */
 function FantraxShell({ entry, children }: { entry: LeagueEntry; children: ReactNode }) {
-  // Server-rendered props stay small: the default team's plan (~14 KB) and
+  const baked = fantraxBaked(entry.slug);
+  // Server-rendered props stay small: the default team's plan (~10-14 KB) and
   // the team names. Everything else is fetched by the browser on demand.
-  const teams = fantraxLeague.teams
+  const teams = baked.league.teams
     .map((t) => ({ id: t.id, name: t.name }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr-CA"));
-  const defaultTeamId = teams.some((t) => t.id === entry.myTeamId) ? entry.myTeamId : fantraxToday.teamId;
+  const defaultTeamId = teams.some((t) => t.id === entry.myTeamId) ? entry.myTeamId : baked.today.teamId;
   return (
     <FantraxShellPart
-      initialPlan={fantraxToday}
+      slug={entry.slug}
+      initialPlan={baked.today}
       teams={teams}
-      leagueName={fantraxLeague.leagueName}
-      limits={fantraxLeague.limits}
+      leagueName={baked.league.leagueName}
+      limits={baked.league.limits}
       defaultTeamId={defaultTeamId}
-      snakeSeed={snakeFantraxSeed(fantraxToday, summaryJson as unknown as SnakeSummaryFile)}
-      hasDynasty={hasDynasty}
+      snakeSeed={snakeFantraxSeed(baked.today, summaryJson as unknown as SnakeSummaryFile)}
+      hasDynasty={fantraxHasDynasty(entry.slug)}
     >
       {children}
     </FantraxShellPart>
@@ -91,14 +89,29 @@ function FantraxTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
     case "repechage":
       return <FantraxDraftPart slug={entry.slug} />;
     case "joueurs":
-      return <FantraxPlayersPart />;
+      return <FantraxPlayersPart slug={entry.slug} />;
     case "ballottage":
       return <FantraxWaiversPart />;
     case "mon-equipe":
-      return <FantraxTeamPart />;
+      return <FantraxTeamPart slug={entry.slug} />;
     default:
       return null;
   }
+}
+
+/**
+ * A tab's lead line. The generic one describes the Captains feature set, so a
+ * league without a captain slot or without games caps gets its own wording
+ * rather than a promise the page cannot keep.
+ */
+function fantraxLead(entry: LeagueEntry, tab: LeagueTab): string {
+  const cfg = fantraxLeague(entry.slug);
+  if (tab === "aujourdhui" && !cfg.features.captainSlot) {
+    const parts = ["Légalité", `alignement optimal (${cfg.limits.maxActive} postes)`, "gardiens"];
+    if (cfg.features.gamesCaps) parts.push("plafonds");
+    return `${parts.join(", ")}, duel de ${cfg.cadence.scoringPeriodDays} jours.`;
+  }
+  return TAB_META[tab].description;
 }
 
 const FANTRAX_POINTS: ServerLeagueAdapter = {
@@ -108,9 +121,14 @@ const FANTRAX_POINTS: ServerLeagueAdapter = {
   Shell: FantraxShell,
   Header: () => <FantraxHeaderPart />,
   Tab: FantraxTab,
+  // The format is the league's, not the kind's: « dynastie » for Captains,
+  // « keeper » for Slapshot. Saying « dynastie » for a keeper league would
+  // promise a cutdown model that does not apply to it.
+  // The same wording as the tab's own lead, so the meta description cannot
+  // promise a captain or a games cap the league has not got.
   describe: (entry, tab) =>
-    `${TAB_META[tab].description} Ligue Fantrax ${entry.name} (dynastie, points), outil non officiel en lecture seule.`,
-  lead: (_entry, tab) => TAB_META[tab].description,
+    `${fantraxLead(entry, tab)} Ligue Fantrax ${entry.name} (${FORMAT_LABEL[entry.format].toLowerCase()}, points), outil non officiel en lecture seule.`,
+  lead: (entry, tab) => fantraxLead(entry, tab),
 };
 
 // ------------------------------------------------------------ yahoo-categories

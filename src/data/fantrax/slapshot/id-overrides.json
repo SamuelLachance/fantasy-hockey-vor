@@ -1,0 +1,4 @@
+{
+  "description": "Hand-kept Fantrax id -> NHL id overrides for fantrax-sync, Slapshot Fantasy League. They win over automatic matching; nhlId null forces 'no match' (player gets the prior). Fantrax ids are platform-wide, so an override that belongs in every league belongs in src/data/fantrax/id-overrides.json too — keep them apart on purpose: a match is only wrong in the league whose eligibility vocabulary produced it.",
+  "overrides": []
+}

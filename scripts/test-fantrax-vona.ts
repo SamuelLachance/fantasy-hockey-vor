@@ -6,13 +6,12 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { FANTRAX_DEFAULT_TEAM_ID } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, FANTRAX_DEFAULT_TEAM_ID } from "../src/lib/fantrax/config";
 import { buildDailyPlan, PLAN_ODDS_EPS, planOdds, seasonFp, type DailyPlan } from "../src/lib/fantrax/daily-plan";
 import {
   availability,
   binomialPmf,
   DEFAULT_RANKED_POOL,
-  DRAFT_GROUPS,
   draftOutlook,
   expectedBest,
   goneCutoffs,
@@ -139,6 +138,13 @@ assert(expectedBest([]).value === 0 && expectedBest([]).topId === null, "empty p
 // ---- VONA: a steep position with others drafting ahead
 // Fixed order, 12 teams, me at #6 and #18; five picks made. The top of the
 // ADP board is low-value filler; the real value sits just behind it.
+/**
+ * The groups THIS board is ranked in. `DRAFT_GROUPS` is the vocabulary across
+ * leagues (it carries LW and RW for a league that splits the wings), so
+ * iterating it here would read cards a Captains-shaped outlook never fills.
+ */
+const GROUPS = CAPTAINS_DYNASTY.eligibility.groups;
+
 const picks: DraftPickInfo[] = Array.from({ length: 24 }, (_, i) => ({
   pick: i + 1,
   round: i < 12 ? 1 : 2,
@@ -169,8 +175,8 @@ function checkSteep(o: DraftOutlook, label: string) {
   const v = o.vona;
   assert(v.C.vona! > 5, `${label}: steep C has a real VONA (${v.C.vona})`);
   assert(v.C.vona! > v.W.vona! && v.C.vona! > v.D.vona! && v.C.vona! > v.G.vona!, `${label}: C outranks the flat positions`);
-  assert(DRAFT_GROUPS.every((g) => v[g].vona! >= -1e-9), `${label}: VONA by position is never negative`);
-  assert(DRAFT_GROUPS.every((g) => v[g].later <= v[g].now + 1e-9), `${label}: expected best only drops`);
+  assert(GROUPS.every((g) => v[g].vona! >= -1e-9), `${label}: VONA by position is never negative`);
+  assert(GROUPS.every((g) => v[g].later <= v[g].now + 1e-9), `${label}: expected best only drops`);
   const rowOf = (id: string) => o.board.find((b) => b.id === id)!;
   for (const b of o.board) {
     assert(near(b.vona!, b.value - v[b.vonaGroup!].later), `${label}: ${b.id} VONA = value − E_best later`);
@@ -224,7 +230,7 @@ assert(out.vona.C.laterId === "cStar" && out.vona.C.laterP < 0.6, "the star may 
 
   const nonDegenerate = (d: NonNullable<DailyPlan["draft"]> | DraftOutlook, label: string) => {
     if (!d.following) return;
-    const vs = DRAFT_GROUPS.map((g) => d.vona[g].vona ?? 0);
+    const vs = GROUPS.map((g) => d.vona[g].vona ?? 0);
     assert(vs.some((x) => Math.abs(x) >= 0.1), `${label}: VONA not zero everywhere (${vs.join(", ")})`);
     assert(new Set(d.board.map((b) => b.vona)).size > 1, `${label}: per-player VONA not all equal`);
     assert(d.board.some((b) => (b.vona ?? 0) !== 0), `${label}: per-player VONA not all zero`);
@@ -242,10 +248,10 @@ assert(out.vona.C.laterId === "cStar" && out.vona.C.laterP < 0.6, "the star may 
     const shown = (p: number) => fmtOdds(p) !== fmtOdds(0) && fmtOdds(p) !== fmtOdds(1);
     if (d.picksBefore > 0) {
       assert(d.board.every((b) => inside(b.available) && shown(b.available)), `${label}: board odds stay off 0 / 1`);
-      assert(DRAFT_GROUPS.every((g) => !d.vona[g].bestId || inside(d.vona[g].bestP)), `${label}: best-now odds stay off 0 / 1`);
+      assert(GROUPS.every((g) => !d.vona[g].bestId || inside(d.vona[g].bestP)), `${label}: best-now odds stay off 0 / 1`);
     }
     if ((d.picksBeforeFollowing ?? 0) > 0) {
-      assert(DRAFT_GROUPS.every((g) => !d.vona[g].laterId || inside(d.vona[g].laterP)), `${label}: best-later odds stay off 0 / 1`);
+      assert(GROUPS.every((g) => !d.vona[g].laterId || inside(d.vona[g].laterP)), `${label}: best-later odds stay off 0 / 1`);
     }
   };
   if (plan.draft) noFalseCertainty(plan.draft, "snapshot plan");
@@ -285,7 +291,7 @@ assert(out.vona.C.laterId === "cStar" && out.vona.C.laterP < 0.6, "the star may 
     .filter(([, rec]) => rec.src === "proj")
     .map(([id, rec]) => ({
       id,
-      groups: DRAFT_GROUPS.filter((g) => rec.e.split(",").includes(g)),
+      groups: GROUPS.filter((g) => rec.e.split(",").includes(g)),
       seasonFp: seasonFp(rec),
       adp: state.adp[id] ?? Number.POSITIVE_INFINITY,
     }))

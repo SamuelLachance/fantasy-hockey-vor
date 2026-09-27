@@ -68,6 +68,8 @@ export function LeagueCard({
 const SLOT_COLORS: Record<SlotId, string> = {
   C: "bg-cyan-500/20 text-cyan-300 ring-cyan-500/30",
   W: "bg-sky-500/20 text-sky-300 ring-sky-500/30",
+  LW: "bg-sky-500/20 text-sky-300 ring-sky-500/30",
+  RW: "bg-teal-500/20 text-teal-300 ring-teal-500/30",
   F: "bg-blue-500/20 text-blue-300 ring-blue-500/30",
   D: "bg-indigo-500/20 text-indigo-300 ring-indigo-500/30",
   Skt: "bg-amber-500/20 text-amber-200 ring-amber-500/40",

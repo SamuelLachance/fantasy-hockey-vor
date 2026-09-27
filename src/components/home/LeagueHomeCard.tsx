@@ -8,6 +8,7 @@ import { leagueTabPath } from "@/lib/leagues/routes";
 const ACCENT: Record<HomeCardData["accent"], string> = {
   cyan: "text-cyan-300",
   violet: "text-violet-300",
+  amber: "text-amber-300",
 };
 
 const LEVEL: Record<HomeAlert["level"], { icon: ReactNode; cls: string; sr: string }> = {

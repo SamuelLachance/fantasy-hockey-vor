@@ -11,7 +11,7 @@
  * players are tried. The games-cap planner (Phase 3) is not applied here —
  * in period 1 the caps cannot bind without streaming.
  */
-import type { SlotId } from "./config";
+import { SLOT_ORDER, type SlotCounts, type SlotId } from "./config";
 import { optimizeLineup, type LineupCandidate } from "./lineup";
 
 export interface WaiverDay {
@@ -52,7 +52,9 @@ export interface WaiverTarget {
 }
 
 export interface WaiverOptions {
-  slotCounts: Record<SlotId, number>;
+  slotCounts: SlotCounts;
+  /** The league's slots, in its own order; the Captains ones by default. */
+  slotOrder?: readonly SlotId[];
   /** Counted players are at the Active + Reserve maximum. */
   needsDrop: boolean;
   drops: DropOption[];
@@ -60,9 +62,14 @@ export interface WaiverOptions {
   limit?: number;
 }
 
-function periodTotal(days: WaiverDay[], transform: (d: WaiverDay) => LineupCandidate[], slots: Record<SlotId, number>): number {
+function periodTotal(
+  days: WaiverDay[],
+  transform: (d: WaiverDay) => LineupCandidate[],
+  slots: SlotCounts,
+  slotOrder: readonly SlotId[] | undefined,
+): number {
   let total = 0;
-  for (const d of days) total += optimizeLineup(transform(d), slots).total;
+  for (const d of days) total += optimizeLineup(transform(d), slots, slotOrder ?? SLOT_ORDER).total;
   return total;
 }
 
@@ -72,14 +79,14 @@ export function waiverTargets(
   opts: WaiverOptions,
 ): WaiverTarget[] {
   const slots = opts.slotCounts;
-  const base = periodTotal(days, (d) => d.candidates, slots);
+  const base = periodTotal(days, (d) => d.candidates, slots, opts.slotOrder);
 
   // Cheapest drops first: what the current plan loses without each player.
   const drops = opts.needsDrop
     ? opts.drops
         .map((d) => ({
           d,
-          loss: base - periodTotal(days, (day) => day.candidates.filter((c) => c.id !== d.id), slots),
+          loss: base - periodTotal(days, (day) => day.candidates.filter((c) => c.id !== d.id), slots, opts.slotOrder),
         }))
         .sort((a, b) => a.loss - b.loss)
         .slice(0, 3)
@@ -101,7 +108,7 @@ export function waiverTargets(
     const options = opts.needsDrop ? drops : [null];
     let best: WaiverTarget | null = null;
     for (const drop of options) {
-      const delta = periodTotal(days, (d) => withPlayer(d, drop?.id), slots) - base;
+      const delta = periodTotal(days, (d) => withPlayer(d, drop?.id), slots, opts.slotOrder) - base;
       const ros = (p.fpg - (drop?.fpg ?? 0)) * p.gamesLeftSeason;
       if (!best || delta > best.delta + 1e-9) {
         best = { id: p.id, status: p.status, delta, days: playDays, fpg: p.fpg, drop, ros };

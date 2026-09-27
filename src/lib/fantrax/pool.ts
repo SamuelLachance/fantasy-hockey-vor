@@ -18,13 +18,28 @@
  * read by the /league explorer in the browser. Keys are short and absent
  * fields are omitted: the file stays small and gzips well.
  */
-import { FANTRAX_ICON, FANTRAX_NO_TEAM } from "./config";
+import {
+  CAPTAINS_DYNASTY,
+  eligibleGroups,
+  FANTRAX_GROUPS,
+  FANTRAX_ICON,
+  FANTRAX_NO_TEAM,
+  type FantraxGroup,
+  type FantraxLeagueConfig,
+} from "./config";
 import { bestFpg, seasonFp } from "./draft-inputs";
 import { canonicalFirstName, fantraxDisplayName, nameKey } from "./match";
 import type { ValueRecord } from "./snapshot-types";
 
-export type PoolGroup = "C" | "W" | "D" | "G";
-export const POOL_GROUPS: readonly PoolGroup[] = ["C", "W", "D", "G"];
+export type PoolGroup = FantraxGroup;
+/**
+ * The group vocabulary ACROSS leagues (see `FANTRAX_GROUPS`): what a `pos`
+ * string of any league's pool may spell, and what `?pos=` is parsed against.
+ * A league's own chips, cells and VONA cards come from
+ * `config.eligibility.groups` — Slapshot's wings are LW and RW, Captains' is
+ * one W.
+ */
+export const POOL_GROUPS: readonly PoolGroup[] = FANTRAX_GROUPS;
 
 /** How many NHL entry drafts (the latest included) count as "recent". */
 export const RECENT_NHL_DRAFTS = 6;
@@ -144,6 +159,8 @@ export interface PoolBuildInput {
   draftPicks: readonly PoolDraftPick[];
   /** Normalizes NHL team codes (ARI → UTA…). */
   teamAlias?: (team: string) => string;
+  /** The league whose eligibility vocabulary `eligiblePos` speaks. */
+  config?: FantraxLeagueConfig;
 }
 
 const ROSTER_STATUS: Record<string, PoolRosterStatus> = {
@@ -158,10 +175,17 @@ const POOL_ICONS = new Set<string>(
   Object.values(FANTRAX_ICON).filter((i) => i !== FANTRAX_ICON.minorsEligible),
 );
 
-/** Groups from Fantrax eligiblePos ("W,C,F,Skt" → "CW"). */
-export function poolGroups(eligiblePos: string): string {
-  const tokens = eligiblePos.split(",").map((t) => t.trim());
-  return POOL_GROUPS.filter((g) => tokens.includes(g)).join("");
+/**
+ * Groups from Fantrax eligiblePos, as the compact `pos` string: "W,C,F,Skt" →
+ * "CW" on Captains, "LW,RW" → "LWRW" on a league that splits the wings. The
+ * league's config owns both the mapping and the vocabulary — reading the group
+ * names as tokens dropped every pure winger of an LW/RW league out of the pool
+ * entirely, and collapsing the two wings into one "W" left its RW filter with
+ * nothing to select. Read back with `parseGroups`, never character by
+ * character: "LWRW" is two groups, not four.
+ */
+export function poolGroups(eligiblePos: string, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): string {
+  return eligibleGroups(eligiblePos, cfg).join("");
 }
 
 const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
@@ -476,7 +500,7 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
     const rostersWidely = (flags?.ros ?? 0) >= POOL_MIN_ROS;
     if (!projected && adp === undefined && !rostered && !onWaivers && !recentPick && !rostersWidely) continue;
 
-    const pos = poolGroups(value?.e ?? who.league.eligiblePos);
+    const pos = poolGroups(value?.e ?? who.league.eligiblePos, input.config ?? CAPTAINS_DYNASTY);
     if (!pos) continue;
     const minorsEligible = !!flags?.minorsEligible || (flags?.icons ?? []).includes(FANTRAX_ICON.minorsEligible);
     const icons = (flags?.icons ?? []).filter((i) => POOL_ICONS.has(i));

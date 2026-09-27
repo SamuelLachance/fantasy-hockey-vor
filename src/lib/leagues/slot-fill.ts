@@ -1,20 +1,25 @@
-import type { Position } from "../types";
-
+/**
+ * The seat labels and the eligibility labels are plain strings, so the same
+ * fill serves a Yahoo categories league (Yahoo positions into C/LW/RW/D/F/G/
+ * Util/BN seats, numeric NHL ids) and a Fantrax points league (Fantrax
+ * `eligiblePos` tokens into that league's own slots, string Fantrax ids).
+ */
 export interface SlotSpec<S extends string = string> {
   slot: S;
   /** Total seats of this slot type across the league (teams × per-team). */
   capacity: number;
-  accepts: readonly Position[];
+  /** Eligibility labels this seat takes (positions, or a league's slot tokens). */
+  accepts: readonly string[];
 }
 
-export interface FillablePlayer {
-  id: number;
-  positions: readonly Position[];
+export interface FillablePlayer<Id extends string | number = number> {
+  id: Id;
+  positions: readonly string[];
 }
 
-export interface FillResult<P extends FillablePlayer, S extends string> {
+export interface FillResult<Id extends string | number, P extends FillablePlayer<Id>, S extends string> {
   /** Player id → slot type it ended up in. */
-  slotOf: Map<number, S>;
+  slotOf: Map<Id, S>;
   /** Assigned players per slot type, in the order they were seated. */
   bySlot: Map<S, P[]>;
   /** Players (in input order) that could not be seated. */
@@ -41,16 +46,16 @@ export interface FillResult<P extends FillablePlayer, S extends string> {
  * per-slot average off one fill and treat it as a property of the league (see
  * `averageTeam` in `category-vor.ts`).
  */
-export function fillSlots<P extends FillablePlayer, S extends string>(
+export function fillSlots<Id extends string | number, P extends FillablePlayer<Id>, S extends string>(
   orderedPlayers: readonly P[],
   slots: readonly SlotSpec<S>[],
-): FillResult<P, S> {
+): FillResult<Id, P, S> {
   const bySlot = new Map<S, P[]>(slots.map((s) => [s.slot, [] as P[]]));
   const capacity = new Map<S, number>(slots.map((s) => [s.slot, s.capacity]));
-  const slotOf = new Map<number, S>();
+  const slotOf = new Map<Id, S>();
   const unassigned: P[] = [];
 
-  const accepts = (spec: SlotSpec<S>, positions: readonly Position[]) =>
+  const accepts = (spec: SlotSpec<S>, positions: readonly string[]) =>
     positions.some((pos) => spec.accepts.includes(pos));
   const hasRoom = (slot: S) =>
     (bySlot.get(slot)?.length ?? 0) < (capacity.get(slot) ?? 0);

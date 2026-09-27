@@ -37,7 +37,10 @@ export default function HomePage() {
         </p>
       </div>
       <BoardLinkNotice />
-      <div className="grid gap-6 lg:grid-cols-2">
+      {/* Three leagues in a two-column grid left the third one alone on a
+          second row, below the fold on a laptop, with the right half of its row
+          empty. A third column from xl up keeps every league on one screen. */}
+      <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
         {leagues.map(({ entry, card, local }) => (
           <LeagueHomeCard key={entry.slug} card={card}>
             {local ? <CategoryDraftLocal {...local} /> : null}

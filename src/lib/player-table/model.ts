@@ -75,14 +75,24 @@ export function resolvePreset<R, F, Caps, Ctx>(
     id: preset.id,
     label: typeof preset.label === "function" ? preset.label(caps) : preset.label,
     description: typeof preset.description === "function" ? preset.description(caps) : preset.description,
-    filters: { ...spec.defaults.filters, ...preset.filters },
+    filters: { ...spec.defaults.filters, ...(typeof preset.filters === "function" ? preset.filters(caps) : preset.filters) },
     sort: typeof preset.sort === "function" ? preset.sort(caps) : { ...preset.sort },
     cols: preset.cols,
   };
 }
 
-export function findPreset<R, F, Caps, Ctx>(spec: TableSpec<R, F, Caps, Ctx>, id: string | null, caps: Caps): ResolvedPreset<F> | null {
+/** A preset this data can apply (`needs`); undefined otherwise. */
+export function availablePreset<R, F, Caps, Ctx>(
+  spec: TableSpec<R, F, Caps, Ctx>,
+  id: string | null,
+  caps: Caps,
+): PresetDef<F, Caps> | undefined {
   const p = id ? spec.presets.find((x) => x.id === id) : undefined;
+  return p && (!p.needs || p.needs(caps)) ? p : undefined;
+}
+
+export function findPreset<R, F, Caps, Ctx>(spec: TableSpec<R, F, Caps, Ctx>, id: string | null, caps: Caps): ResolvedPreset<F> | null {
+  const p = availablePreset(spec, id, caps);
   return p ? resolvePreset(spec, p, caps) : null;
 }
 

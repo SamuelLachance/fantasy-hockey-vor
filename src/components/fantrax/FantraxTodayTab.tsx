@@ -13,23 +13,36 @@ import { LineupCard } from "./LineupCard";
 import { RosterAlerts } from "./RosterAlerts";
 import { WeekGrid } from "./WeekGrid";
 
-const SECTIONS = [
-  { id: "alertes", label: "Légalité" },
-  { id: "alignement", label: "Alignement" },
-  { id: "gardiens", label: "Gardiens" },
-  { id: "plafonds", label: "Plafonds" },
-  { id: "calendrier", label: "Calendrier" },
-];
+/**
+ * The sections a league actually has. « Plafonds » only where per-period
+ * GP / GS caps exist: a league whose config has none (and whose fxpa is closed,
+ * so their very existence is unknown) gets no empty meter and no dead anchor.
+ */
+function sectionsOf(hasCaps: boolean) {
+  return [
+    { id: "alertes", label: "Légalité" },
+    { id: "alignement", label: "Alignement" },
+    { id: "gardiens", label: "Gardiens" },
+    ...(hasCaps ? [{ id: "plafonds", label: "Plafonds" }] : []),
+    { id: "calendrier", label: "Calendrier" },
+  ];
+}
 
-/** Captains · Aujourd'hui: roster legality, best lineup and captain, goalies, caps, the week. */
+/**
+ * Aujourd'hui: roster legality, the best lineup (and the captain where the
+ * league has one), goalie starts, the games caps where they exist, and the
+ * matchup's remaining days — 7 to 14 in Captains, 1 or 2 in a league with four
+ * matchups a week.
+ */
 export function FantraxTodayTab({ slug }: { slug: string }) {
-  const { player, nowMs } = useFantraxLeague();
+  const { config, player, nowMs } = useFantraxLeague();
+  const sections = sectionsOf(config.features.gamesCaps);
   const tabSearch = useTabSearch();
   return (
     <div className="space-y-6">
       <nav aria-label="Sections de la page">
         <ul className="flex flex-wrap gap-2">
-          {SECTIONS.map((s) => (
+          {sections.map((s) => (
             <li key={s.id}>
               <a
                 href={`#${s.id}`}
@@ -67,12 +80,12 @@ export function FantraxTodayTab({ slug }: { slug: string }) {
                   </Link>
                 </p>
               ) : null}
-              <RosterAlerts plan={plan} player={player} />
+              <RosterAlerts plan={plan} player={player} minors={config.features.minors} />
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
                 <LineupCard plan={plan} player={player} nowMs={nowMs} />
                 <div className="min-w-0 space-y-6">
                   <GoalieStarts plan={plan} player={player} />
-                  <CapMeter plan={plan} />
+                  {config.features.gamesCaps ? <CapMeter plan={plan} /> : null}
                 </div>
               </div>
               <WeekGrid plan={plan} player={player} />
