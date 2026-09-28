@@ -34,6 +34,8 @@ export interface SlapshotSnapshotLike {
   };
   players: Record<string, SlapshotRecord>;
   zero: string[];
+  /** The zero-value ids' contracts (a snapshot built before they were written has none). */
+  zeroContracts?: Record<string, Pick<SlapshotRecord["contract"], "cap" | "signed" | "expiry" | "status" | "elc">>;
 }
 
 /** Seasons of the value chart and the gains the browser keeps. */
@@ -128,11 +130,18 @@ export function slapshotClientSnapshot(full: SlapshotSnapshotLike): ClientSlapsh
   };
 }
 
-/** Start years whose NHL cap is announced (the profile's `cap.nhl` keys); the rest grow by `growthAfter`. */
+/**
+ * Every modeled player's cap hits — the valued ones and the zero-value ones
+ * alike (a late pick of a zero-value NHL player counts his real cap hit, not
+ * « sans salaire connu »). Start years whose NHL cap is announced (the
+ * profile's `cap.nhl` keys); the rest grow by `growthAfter`.
+ */
 export function slapshotContracts(full: SlapshotSnapshotLike, firstSeason: number, announced: readonly number[]): ContractsFile {
   const players: Record<string, ContractRow> = {};
-  for (const id of Object.keys(full.players).sort()) {
-    const c = full.players[id]!.contract;
+  const all: Record<string, Pick<SlapshotRecord["contract"], "cap" | "signed" | "expiry" | "status" | "elc">> = { ...full.zeroContracts };
+  for (const [id, r] of Object.entries(full.players)) all[id] = r.contract;
+  for (const id of Object.keys(all).sort()) {
+    const c = all[id]!;
     players[id] = {
       c: c.cap.slice(0, CONTRACT_SEASONS).map(r2),
       s: c.signed,

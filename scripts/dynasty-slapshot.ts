@@ -37,12 +37,14 @@ import {
   type SalaryModel,
   type SalaryRow,
   type SeatPlayer,
+  type SlapContractOut,
   type SlapPlayerData,
   type SlapPos,
   type SlapPrepared,
   type SlapshotProfile,
   type SlapshotRecord,
 } from "../src/lib/dynasty/slapshot";
+import { CONTRACT_SEASONS } from "../src/lib/fantrax/salary-cap";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import type { ProjectionsDataset } from "../src/lib/types";
 import { assembleDynastyInputs, loadDynastyFiles, type LoadedDynastyFiles } from "./dynasty-inputs";
@@ -122,7 +124,16 @@ export interface SlapshotSnapshot {
   players: Record<string, SlapshotRecord>;
   /** Modeled players left out (value < 0.5 in every mode, not rostered): read 0. */
   zero: string[];
+  /**
+   * Their contracts all the same (the first `CONTRACT_SEASONS` seasons): a
+   * zero-value player drafted late still counts his cap hit, so the site's
+   * contracts.json carries every modeled player, not only the valued ones.
+   */
+  zeroContracts: Record<string, SlapZeroContract>;
 }
+
+/** A zero-value player's contract: `SlapContractOut` without the model's fields. */
+export type SlapZeroContract = Pick<SlapContractOut, "cap" | "signed" | "expiry" | "status" | "elc">;
 
 /**
  * Known contract seasons of one NHL player: capwages rows (newest contract
@@ -346,10 +357,15 @@ export function runSlapshotBuild(
   for (const [id, rec] of Object.entries(result.all)) records[id] = slapshotRecord(rec, pr, id, (r) => explainSlapshotFr(r, y0));
   const players: Record<string, SlapshotRecord> = {};
   const zero: string[] = [];
+  const zeroContracts: Record<string, SlapZeroContract> = {};
   for (const id of Object.keys(records).sort()) {
     const r = records[id]!;
     if (rosteredIds.has(id) || r.dv.longTerm >= p.output.minLongTerm || r.dv.balanced >= p.output.minLongTerm) players[id] = r;
-    else zero.push(id);
+    else {
+      zero.push(id);
+      const c = r.contract;
+      zeroContracts[id] = { cap: c.cap.slice(0, CONTRACT_SEASONS), signed: c.signed, expiry: c.expiry, status: c.status, elc: c.elc };
+    }
   }
   const r3 = (x: number) => Math.round(x * 1000) / 1000;
   const meta = inputs.meta;
@@ -423,6 +439,7 @@ export function runSlapshotBuild(
     },
     players,
     zero,
+    zeroContracts,
   };
   if (opts.out !== null) {
     const out = opts.out ?? SP.out;

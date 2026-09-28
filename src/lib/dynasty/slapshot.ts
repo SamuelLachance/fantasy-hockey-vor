@@ -1004,9 +1004,20 @@ export function explainSlapshotFr(r: SlapshotRecord, y0 = 2026, maxLen = 240): s
   } else if (c.nextAav != null && r.path === "nhl") {
     clauses.push(`sans contrat pour ${seasonLabel(y0)}${NBSP}: ~${money(c.nextAav)} projetés`);
   }
-  const charge = c.capFP.slice(0, 2).reduce((s, x) => s + x, 0);
+  // The cap charge of each of the next two seasons, not their average: λ
+  // differs several-fold between them (McDavid 15.9 then 2.5 points).
+  const c0 = c.capFP[0] ?? 0;
+  const c1 = c.capFP[1] ?? 0;
+  const charge = c0 + c1;
   const gain = r.eG.slice(0, 2).reduce((s, x) => s + x, 0);
-  if (charge >= 5 && charge >= 0.1 * (gain + charge)) clauses.push(`le plafond lui coûte ~${Math.round(charge / 2)} pts par saison`);
+  if (charge >= 5 && charge >= 0.1 * (gain + charge)) {
+    const [a, b] = [Math.round(c0), Math.round(c1)];
+    clauses.push(
+      a === b
+        ? `le plafond lui coûte ~${a} pts en ${seasonLabel(y0)} comme en ${seasonLabel(y0 + 1)}`
+        : `le plafond lui coûte ~${a} pts en ${seasonLabel(y0)}, ~${b} en ${seasonLabel(y0 + 1)}`,
+    );
+  }
   let tot = 0;
   let near = 0;
   r.eG.forEach((x, t) => {

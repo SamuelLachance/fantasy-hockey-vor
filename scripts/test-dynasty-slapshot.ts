@@ -333,6 +333,18 @@ const lgOf = (capCost: number[], over: Partial<SimLeague> = {}): SimLeague => ({
   assert(s.length > 0 && s.length <= 240, `sentence length ${s.length}`);
   assert(/0,98 M\$ en 2026-27, puis 18,8 M\$ signés jusqu’en 2031-32/.test(s), `extension starting later is spelled out: ${s}`);
   assert(!/Snake|Boisvert/i.test(s), "no scout names");
+  // The cap charge: each season's own, never their average (λ differs ~6x).
+  const star = explainSlapshotFr(
+    {
+      ...rec,
+      contract: { ...rec.contract, cap: [12.5, 12.5, 12.5], signed: 3, elc: false, capFP: [15.9, 2.5, 2.4] },
+      eG: [60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10, 5],
+    } as unknown as SlapshotRecord,
+    2026,
+    400,
+  );
+  assert(/le plafond lui coûte ~16 pts en 2026-27, ~3 en 2027-28/.test(star), `cap charge per season: ${star}`);
+  assert(!/pts par saison/.test(star), `no averaged charge: ${star}`);
 }
 
 // ---------------------------------------------------------------- the published snapshot
