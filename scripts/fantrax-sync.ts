@@ -84,6 +84,7 @@ import { dynastyPaths, loadDynastyFiles, runDynastyBuild } from "./dynasty-input
 import { writeClientDynasty } from "./dynasty-client";
 import { runSlapshotBuild, slapshotChecks, slapshotPaths } from "./dynasty-slapshot";
 import { slapshotPoolFrom, writeSlapshotPool } from "./slapshot-sync";
+import { buildSlapshotDraftPage } from "./build-slapshot-draft-page";
 import type { ContractsFile } from "../src/lib/fantrax/salary-cap";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import { normalizeTeamAbbrev } from "../src/lib/team-abbreviations";
@@ -778,6 +779,17 @@ async function main() {
     `prospect pool: ${Object.keys(prospectPool.players).length} unrostered minors-eligible players${fxpaOk ? "" : " (not written: fxpa down)"}`,
   );
   console.log(`OK: league:sync wrote snapshot (fxpaOk=${fxpaOk})`);
+
+  // The stand-alone live draft page embeds the same values and contracts:
+  // regenerate it with them (build:pages does it again before every deploy).
+  if (CFG.dynastyProfile === "slapshot") {
+    try {
+      const r = buildSlapshotDraftPage();
+      console.log(`OK: public/slapshot-draft.html (${r.rows} players, ${Math.round(r.bytes / 1024)} KB)`);
+    } catch (e) {
+      console.warn(`WARN: slapshot-draft.html not regenerated: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
 
   // ---- dynasty values (depend on rosters, Ros%, ADP and the pool just written)
   // Only for the Captains profile here: its cutdown (10 keepers + 30

@@ -76,10 +76,13 @@ jobs:
             && npm run check:league:slapshot; then
             echo "Slapshot snapshot refreshed"
           else
-            git checkout -- src/data/fantrax/slapshot public/fantrax/slapshot src/data/dynasty/slapshot/pool.json || true
+            git checkout -- src/data/fantrax/slapshot public/fantrax/slapshot src/data/dynasty/slapshot/pool.json public/slapshot-draft.html || true
             echo "::warning::slapshot sync failed, using committed snapshot"
           fi
 
+      # build:pages also regenerates public/slapshot-draft.html from the
+      # dynasty.json being deployed (build-slapshot-draft-page.ts), so the
+      # stand-alone draft page never lags the site's Repêchage tab.
       - name: Build static site
         run: npm run build:pages
         env:

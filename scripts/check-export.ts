@@ -89,6 +89,26 @@ for (const cfg of Object.values(FANTRAX_LEAGUES)) {
   }
 }
 
+// The stand-alone Slapshot draft page embeds values and contracts: they must
+// be the deployed dynasty.json's (build:pages regenerates the page first).
+{
+  const page = join(OUT, "slapshot-draft.html");
+  const dyn = join(OUT, "fantrax", "slapshot", "dynasty.json");
+  if (existsSync(page) && existsSync(dyn)) {
+    const m = /<script id="data" type="application\/json">([\s\S]*?)<\/script>/.exec(readFileSync(page, "utf8"));
+    let embedded: string | null = null;
+    try {
+      embedded = m ? ((JSON.parse(m[1]!) as { dynastyBuiltAt?: string }).dynastyBuiltAt ?? null) : null;
+    } catch {
+      embedded = null;
+    }
+    const published = (JSON.parse(readFileSync(dyn, "utf8")) as { builtAt?: string }).builtAt ?? null;
+    if (embedded !== published) {
+      fail(`slapshot-draft.html embeds values of ${embedded ?? "?"}, dynasty.json is ${published ?? "?"} (run tsx scripts/build-slapshot-draft-page.ts)`);
+    }
+  }
+}
+
 // ---- helpers
 /** HTML with script / style / template bodies removed (tags and attributes kept). */
 function markupOnly(html: string): string {
@@ -250,9 +270,17 @@ interface Budget {
 const isTab = (slug: string, tabs: string[]) => (p: string) => tabs.some((t) => p === `ligues/${slug}/${t}.html`);
 // Calibrated on the first build of the league spaces (measured + ~15 %).
 const BUDGETS: Budget[] = [
-  // 78 KB with two Fantrax cards; the Slapshot card's cap line (Masse salariale …) took it
-  // to 79.6, at the old 80 limit: 85 keeps the daily syncs' wording from failing a deploy.
-  { label: "Mes ligues", match: (p) => p === "index.html", js: 20, htmlRaw: 85, htmlGz: 15 },
+  // Measured on the deploy build (GITHUB_PAGES=true, basePath in every link):
+  // 81.3 KB before the cards were bounded, with only 3 + 3 alert lines, and
+  // 95 KB for an illegal, over-cap Slapshot roster mid-draft (8 alerts). Each
+  // line cost ~2.3 KB (its HTML with two inline SVG icons, and the page data).
+  // Now a Fantrax card lists at most HOME_MAX_ALERTS (4) lines, the rest folded
+  // into « Et N autres alertes » (home-summary.ts, tested there on that very
+  // roster), and a line's classes and icons live in globals.css
+  // (.home-alert-*): 71 KB on the committed data, 73 KB with BOTH Fantrax
+  // leagues on a worst-case plan (12 alerts each, the longest wordings, on the
+  // clock). 80 leaves 7 KB for the synced wording over that worst case.
+  { label: "Mes ligues", match: (p) => p === "index.html", js: 20, htmlRaw: 80, htmlGz: 15 },
   { label: "Captains · Aujourd’hui", match: isTab("captains-dynasty", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
   {
     label: "Captains · autres onglets",
@@ -317,6 +345,16 @@ const BUDGETS: Budget[] = [
     // 70.5); the other ~0.9 is Turbopack splitting the planner's chunk
     // (46.2 KB raw) in two (25.8 + 21.9), each compressed on its own. 74.5
     // leaves 1.0 KB.
+    //
+    // Deploy build (GITHUB_PAGES=true) after the draft follow-ups: the points-
+    // over-replacement model (points-vor.ts and its seat fill, ~6.4 KB raw) is
+    // now a chunk the provider imports only for a league it ranks, so no
+    // Captains tab loads it: Joueurs 71.0 → 69.0, Ballottage 72.2 → 70.3, Mon
+    // équipe 71.9 → 70.8. Repêchage 73.6 → 73.5: the same saving, spent on the
+    // live-draft states every league's panel now has (the last good live
+    // draft kept and dated, the background poll, the taken players' tags).
+    // What remains Slapshot-only here is inline in synchronous paths (the
+    // planner's per-game locks and cap line, the table's contract columns).
     js: 74.5,
     htmlRaw: 200,
     htmlGz: 35,
