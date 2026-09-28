@@ -11,6 +11,7 @@ import { getDraftStore } from "@/lib/draft/draft-store";
 import { draftTimeline } from "@/lib/draft/suggestions";
 import { buildLineup, categoryTargets, teamCategoryStrength } from "@/lib/draft/team";
 import { leagueTabPath } from "@/lib/leagues/routes";
+import { fmtInt } from "@/lib/player-table/copy";
 import type { SnakeNhlFile } from "@/lib/snake/types";
 import { CategoryPlayerTable, useCategoryTableData } from "./category-table";
 import { DraftMyTeam } from "./DraftMyTeam";
@@ -101,10 +102,10 @@ function TeamBody({ board, slug }: { board: DraftBoard; slug: string }) {
         {view.notFound > 0 ? (
           <p className="text-xs text-slate-400">
             {poolStatus === "error"
-              ? `${view.notFound} de vos choix ne sont pas dans les ${board.players.length} premiers joueurs et la liste complète n’a pas pu être chargée.`
+              ? `${view.notFound === 1 ? "Un de vos choix n’est" : `${fmtInt(view.notFound)} de vos choix ne sont`} pas dans les ${fmtInt(board.players.length)} premiers joueurs et la liste complète n’a pas pu être chargée.`
               : poolStatus === "ready"
-                ? `${view.notFound} de vos choix ne sont plus dans la liste des joueurs de la ligue.`
-                : `Chargement de la liste complète pour ${view.notFound} de vos choix…`}
+                ? `${view.notFound === 1 ? "Un de vos choix n’est" : `${fmtInt(view.notFound)} de vos choix ne sont`} plus dans la liste des joueurs de la ligue.`
+                : `Chargement de la liste complète pour ${view.notFound === 1 ? "un" : fmtInt(view.notFound)} de vos choix…`}
           </p>
         ) : null}
         {view.unlisted > 0 ? (

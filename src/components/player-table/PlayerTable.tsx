@@ -265,9 +265,11 @@ export function PlayerTable<R, F, Caps, Ctx>({
   }, [allPresets, spec, setView]);
 
   // ---- `?joueur=`: search him from the tab's view, open his details, bring him into view
+  // (in the rows shown: when the full list failed, the fallback rows still on screen).
+  const focusRows = source ?? data.rows;
   useEffect(() => {
     if (!focus || (data.status !== "ready" && data.status !== "error")) return;
-    const row = data.rows.find((r) => spec.rowKey(r) === focus);
+    const row = focusRows.find((r) => spec.rowKey(r) === focus);
     const t = window.setTimeout(() => {
       clearFocus();
       if (!row) {
@@ -285,7 +287,7 @@ export function PlayerTable<R, F, Caps, Ctx>({
       setExpanded(focus);
     }, 0);
     return () => window.clearTimeout(t);
-  }, [focus, data.status, data.rows, spec, base, setView, clearFocus]);
+  }, [focus, data.status, focusRows, spec, base, setView, clearFocus]);
   useEffect(() => {
     const key = scrollTarget.current;
     if (!key || expanded !== key) return;

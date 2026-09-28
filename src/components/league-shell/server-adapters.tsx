@@ -131,6 +131,8 @@ function CategoryTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
       return (
         <CategoryPlayersTab
           board={categoryBoard(entry)}
+          slug={entry.slug}
+          counts={categoryPoolCounts(entry)}
           table={<CategoryPlayersPart board={categoryBoard(entry)} seed={categorySnakeSeed(entry)} />}
         />
       );
@@ -147,9 +149,8 @@ function CategoryTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
 function categoryLead(entry: LeagueEntry, tab: LeagueTab): string {
   if (tab === "joueurs") {
     const c = categoryPoolCounts(entry);
-    const unprojected = c.roster + c.prospect;
     return `Les ${fmtInt(c.projected)} joueurs projetés, valorisés pour les catégories de cette ligue${
-      unprojected > 0 ? `, puis ${fmtInt(unprojected)} joueurs des effectifs et listes d’espoirs de la LNH sans projection` : ""
+      c.unprojected > 0 ? `, puis ${fmtInt(c.unprojected)} joueurs rattachés à une équipe de la LNH, sans projection (effectifs, espoirs, club-école, junior, Europe)` : ""
     } : filtres, tris, colonnes.`;
   }
   return TAB_META[tab].description;

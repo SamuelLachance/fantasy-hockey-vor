@@ -6,6 +6,7 @@ import { DRAFT_FILTERS, draftFilterLabel, displayRank, type DraftFilter, type Dr
 import type { DraftBoard } from "@/lib/draft/board-types";
 import { CATEGORY_SHORT, pickLabel } from "@/lib/draft/draft-copy";
 import type { LeagueCategory } from "@/lib/leagues/types";
+import { fmtInt } from "@/lib/player-table/copy";
 import { DraftPlayerRow } from "./DraftPlayerRow";
 
 interface DraftBoardListProps {
@@ -85,7 +86,7 @@ export function DraftBoardList({
             Tableau VOR
           </h2>
           <p className="text-xs text-slate-500">
-            {remaining} disponibles · {rows.length} affichés
+            {fmtInt(remaining)} disponibles · {fmtInt(rows.length)} affichés
           </p>
         </div>
         {identifying ? (

@@ -26,9 +26,8 @@ import {
   isGoalieBoardPlayer,
   type DraftBoard,
   type DraftBoardPlayer,
-  type NoProjectionKind,
 } from "./board-types";
-import { CATEGORY_FR, CATEGORY_SHORT, pickLabel } from "./draft-copy";
+import { CATEGORY_FR, CATEGORY_SHORT, noProjectionLabel, noProjectionTag, pickLabel } from "./draft-copy";
 import { UNLISTED_PLAYER_ID, type DraftState } from "./draft-state";
 
 export { VERDICT_POSITIVE };
@@ -333,10 +332,8 @@ export function categoryCell(board: DraftBoard, r: CategoryRow, c: LeagueCategor
 /** A projected figure for sorts: null without a projection (sorted last either way). */
 const projected = (r: Pick<CategoryRow, "noProj">, x: number | null): number | null => (r.noProj ? null : x);
 
-/** « Pas de projection » (on an NHL roster) / « Espoir sans projection » (prospect list only). */
-export function noProjectionLabel(kind: NoProjectionKind): string {
-  return kind === "roster" ? "Pas de projection" : "Espoir sans projection";
-}
+// The labels live with the draft copy (the draft helper's rows read them too).
+export { noProjectionLabel, noProjectionTag };
 
 function columns(board: DraftBoard): Col[] {
   const cats = boardCategories(board);

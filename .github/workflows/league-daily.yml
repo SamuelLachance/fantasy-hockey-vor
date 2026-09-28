@@ -69,8 +69,9 @@ jobs:
       - name: Validate league snapshot
         run: npm run check:league
 
-      # Who the NHL lists today (every club's roster and prospect list, public
-      # API, 64 requests >= 1.2 s apart): the Light the Lamp list's players
+      # Who the NHL lists today (every club's roster and prospect list, then
+      # the public player search index for the rest of each organisation:
+      # 65 requests >= 1.2 s apart): the Light the Lamp list's players
       # without a projection (call-ups, waiver-wire rookies) and current
       # clubs, rebuilt into board.json / pool.json by build:pages. Non-fatal:
       # the script never writes a partial file, and on any failure the

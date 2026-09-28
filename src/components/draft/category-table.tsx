@@ -32,6 +32,7 @@ import {
   categoryTable,
   draftDone,
   noProjectionLabel,
+  noProjectionTag,
   oddsPickOf,
   type CategoryCaps,
   type CategoryCtx,
@@ -86,18 +87,20 @@ function elsewhere(row: SnakeRow): Array<{ href: string; label: string }> {
 
 const NONE: CellOut = { node: "—", className: "text-slate-400" };
 
-/** The « Pas de projection » / « Espoir » tag of a row the projections never saw. */
+const NO_PROJECTION_TITLE: Record<NonNullable<CategoryRow["noProj"]>, string> = {
+  roster: "Dans un effectif de la LNH, mais sans projection (recrue, rappel ou retour d’Europe ou de la LAH) : aucune valeur dans la ligue",
+  prospect: "Sur la liste d’espoirs d’une équipe de la LNH, sans projection : aucune valeur dans la ligue",
+  org: "Dans l’organisation d’une équipe de la LNH (club-école, junior, université, Europe ou blessé), hors de son effectif, sans projection : aucune valeur dans la ligue",
+};
+
+/** The « Pas de projection » / « Espoir » / « Hors effectif » tag of a row the projections never saw. */
 function NoProjectionTag({ kind }: { kind: NonNullable<CategoryRow["noProj"]> }) {
   return (
     <span
       className="whitespace-nowrap rounded-full px-1.5 text-[11px] font-medium text-amber-200 ring-1 ring-inset ring-amber-300/30"
-      title={
-        kind === "roster"
-          ? "Dans un effectif de la LNH, mais sans projection (recrue, rappel ou retour d’Europe ou de la LAH) : aucune valeur dans la ligue"
-          : "Sur la liste d’espoirs d’une équipe de la LNH, sans projection : aucune valeur dans la ligue"
-      }
+      title={NO_PROJECTION_TITLE[kind]}
     >
-      {kind === "roster" ? "Pas de projection" : "Espoir"}
+      {noProjectionTag(kind)}
     </span>
   );
 }
@@ -280,6 +283,13 @@ function detailFor(board: DraftBoard) {
   };
 }
 
+const NO_PROJECTION_DETAIL: Record<NonNullable<CategoryRow["noProj"]>, string> = {
+  roster:
+    "Pas de projection : il est dans l’effectif actuel de son équipe, mais les projections ne l’ont pas vu (en général une recrue, ou un joueur de retour d’Europe ou de la LAH sans match dans la LNH depuis trois saisons). Il n’a donc ni valeur ni rang dans la ligue.",
+  prospect: "Pas de projection : il est sur la liste d’espoirs de son équipe, pas dans son effectif. Il n’a donc ni valeur ni rang dans la ligue.",
+  org: "Pas de projection : la LNH le rattache à l’organisation de son équipe (club-école, junior, université, Europe, ou blessé à long terme), mais il n’est ni dans son effectif actuel ni sur sa liste d’espoirs publiée. Il n’a donc ni valeur ni rang dans la ligue.",
+};
+
 /** Details of a player the projections never saw: who lists him, and why there is no value. */
 function NoProjectionDetail({ row: r, ctx, snake }: { row: CategoryRow; ctx: CategoryCtx; snake: ReactNode }) {
   const items: Array<[string, string]> = [
@@ -291,9 +301,7 @@ function NoProjectionDetail({ row: r, ctx, snake }: { row: CategoryRow; ctx: Cat
   return (
     <>
       <p className="mb-2 max-w-3xl text-amber-100/90">
-        {r.noProj === "roster"
-          ? "Pas de projection : il est dans l’effectif actuel de son équipe, mais les projections ne l’ont pas vu (en général une recrue, ou un joueur de retour d’Europe ou de la LAH sans match dans la LNH depuis trois saisons). Il n’a donc ni valeur ni rang dans la ligue."
-          : "Pas de projection : il est sur la liste d’espoirs de son équipe, pas dans son effectif. Il n’a donc ni valeur ni rang dans la ligue."}
+        {NO_PROJECTION_DETAIL[r.noProj ?? "roster"]}
       </p>
       <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
         {items.map(([k, v]) => (
@@ -481,7 +489,7 @@ export function CategoryPlayersTable({ board, seed }: { board: DraftBoard; seed:
         board={board}
         id="joueurs"
         title="Liste des joueurs"
-        description="Tous les joueurs projetés, par rang dans la ligue, puis ceux que la LNH inscrit sans projection (effectifs et listes d’espoirs). Une colonne par catégorie au besoin (Colonnes). La vue (filtres, tri, colonnes) est gardée dans l’adresse de la page."
+        description="Tous les joueurs projetés, par rang dans la ligue, puis ceux que la LNH rattache à une équipe sans projection (effectifs, listes d’espoirs, reste des organisations). Une colonne par catégorie au besoin (Colonnes). La vue (filtres, tri, colonnes) est gardée dans l’adresse de la page."
         base="tous"
         presets={["tous", "disponibles", "equipe"]}
         perPage={50}

@@ -97,7 +97,9 @@ for (const slug of slugs) {
     if (unprojectedIds.has(u.id)) errors.push(`pool: unprojected ${u.name} (${u.id}) listed twice`);
     unprojectedIds.add(u.id);
     if (u.pos.length === 0) errors.push(`pool: unprojected ${u.name}: no position`);
-    if (u.noProj !== "roster" && u.noProj !== "prospect") errors.push(`pool: unprojected ${u.name}: ${String(u.noProj)}`);
+    if (u.noProj !== "roster" && u.noProj !== "prospect" && u.noProj !== "org") {
+      errors.push(`pool: unprojected ${u.name}: ${String(u.noProj)}`);
+    }
   }
   if (!inputs.nhlRosters) warnings.push(`${NHL_ROSTERS_FILE} missing: the pool lists no unprojected player (run npm run nhl:rosters)`);
   else {
@@ -105,11 +107,16 @@ for (const slug of slugs) {
     if (ageDays > NHL_ROSTERS_STALE_DAYS) {
       warnings.push(`${NHL_ROSTERS_FILE} is ${Math.floor(ageDays)} days old (run npm run nhl:rosters)`);
     }
-    // Everyone on an NHL roster is somewhere in the league's lists.
+    // Everyone the NHL ties to a club (roster, prospect list, organisation)
+    // is somewhere in the league's lists.
     for (const r of inputs.nhlRosters.players) {
-      if (r.list === "roster" && !projectedIds.has(r.id) && !unprojectedIds.has(r.id)) {
-        errors.push(`${r.name} (${r.team}, ${r.id}) is on an NHL roster but in neither the board nor the pool`);
+      if (!projectedIds.has(r.id) && !unprojectedIds.has(r.id)) {
+        errors.push(`${r.name} (${r.team}, ${r.id}, ${r.list}) is listed by the NHL but in neither the board nor the pool`);
       }
+    }
+    // The search index fills the thin prospect lists (DET, UTA, VAN came back empty in September 2026).
+    if (!inputs.nhlRosters.players.some((r) => r.list === "org")) {
+      warnings.push(`${NHL_ROSTERS_FILE} has no organisation players (search index): run npm run nhl:rosters`);
     }
   }
 
@@ -167,17 +174,18 @@ for (const slug of slugs) {
     }
   }
   // Hand rank moves: every listed id is on the board under that name and
-  // carries its reason; the moves only reorder rows (the rank slots, overall
-  // and per position, are the engine's); the published VOR never rises down
-  // the board (a VOR sort agrees with the rank).
-  // An id that has left the board (engine rank past BOARD_DEPTH after a
-  // retrain, or dropped from players.json) only warns, like the builder that
-  // skips it: this check gates every Pages deploy and the daily refresh of
-  // the other leagues, which a stale Light the Lamp move must not block.
+  // carries its reason (a projected player past BOARD_DEPTH is pulled onto
+  // the board by the builder); the moves only reorder rows (the rank slots,
+  // overall and per position, are the engine's); the published VOR never
+  // rises down the board (a VOR sort agrees with the rank).
+  // An id nobody projects any more (dropped from players.json) only warns,
+  // like the builder that skips it: this check gates every Pages deploy and
+  // the daily refresh of the other leagues, which a stale Light the Lamp
+  // move must not block.
   const adjustments = inputs.rankAdjustments?.adjustments ?? [];
   for (const id of adjustmentsMissing) {
     const a = adjustments.find((x) => x.id === id);
-    warnings.push(`adjusted id ${id}${a ? ` (${a.name})` : ""} is not on the board — move skipped; review ${adjPath}`);
+    warnings.push(`adjusted id ${id}${a ? ` (${a.name})` : ""} has no projection (not in players.json) — move skipped; review ${adjPath}`);
   }
   const byId = new Map(board.players.map((p) => [p.id, p]));
   for (const a of adjustments) {

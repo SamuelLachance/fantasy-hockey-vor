@@ -24,12 +24,22 @@ import {
   categoryTable,
   DEFAULT_CATEGORY_FILTERS,
   noProjectionLabel,
+  noProjectionTag,
   type CategoryCtx,
   type CategoryRow,
 } from "../src/lib/draft/table";
 import { loadBoardInputs } from "../src/lib/leagues/board-inputs";
 import { buildLeagueBoard, serializePool } from "../src/lib/leagues/league-board";
-import { mergeNhlLists, nhlCodePosition, nhlRostersErrors, parseNhlList, type NhlRostersFile } from "../src/lib/nhl-rosters";
+import {
+  mergeNhlLists,
+  nhlCodePosition,
+  nhlRostersErrors,
+  parseNhlList,
+  parseNhlSearchIndex,
+  THIN_PROSPECT_LIST,
+  thinProspectClubs,
+  type NhlRostersFile,
+} from "../src/lib/nhl-rosters";
 import { filterRows, sortRows, tableBase } from "../src/lib/player-table/model";
 import { parseView, viewParams } from "../src/lib/player-table/url";
 
@@ -77,6 +87,36 @@ const poolRaw: unknown = JSON.parse(readFileSync(join(dir, "pool.json"), "utf8")
   assert(nhlRostersErrors(file, 600).some((e) => e.includes("only 3")), "a half-fetched snapshot is refused");
   assert(nhlRostersErrors({ ...file, players: [...merged, merged[0]!] }, 3).some((e) => e.includes("duplicate")), "duplicates refused");
   assert(nhlRostersErrors({ ...file, players: [{ ...merged[0]!, team: "XYZ" }] }, 0).some((e) => e.includes("team")), "unknown club refused");
+
+  // The search index: everyone the NHL ties to a club (it fills the empty prospect lists).
+  const index = [
+    { playerId: "8485387", name: "Caleb  Desnoyers", positionCode: "C", teamAbbrev: "UTA", active: true },
+    { playerId: 8484795, name: "Tij Iginla", positionCode: "C", teamAbbrev: "UTA", active: false },
+    { playerId: "8470000", name: "Retraité", positionCode: "D", teamAbbrev: null, lastTeamAbbrev: "MTL" },
+    { playerId: "8470001", name: "Ancien club", positionCode: "D", teamAbbrev: "ARI" },
+    { playerId: "x", name: "Bad Id", positionCode: "C", teamAbbrev: "MTL" },
+    { playerId: "8470002", name: "Bad Code", positionCode: "F", teamAbbrev: "MTL" },
+    { playerId: "10", name: "Ivan Demidov", positionCode: "R", teamAbbrev: "MTL" },
+    null,
+  ];
+  const org = parseNhlSearchIndex(index);
+  eq(
+    org,
+    [
+      { id: 8485387, name: "Caleb Desnoyers", team: "UTA", code: "C", birthDate: null, list: "org" },
+      { id: 8484795, name: "Tij Iginla", team: "UTA", code: "C", birthDate: null, list: "org" },
+      { id: 10, name: "Ivan Demidov", team: "MTL", code: "R", birthDate: null, list: "org" },
+    ],
+    "index rows: a current club only, malformed entries skipped",
+  );
+  eq(parseNhlSearchIndex({ error: "x" }), [], "an index error body is no row");
+  const withOrg = mergeNhlLists([org, [prospect], rows]);
+  eq(withOrg.find((p) => p.id === 10)!.list, "roster", "a roster spot wins over the index");
+  eq(mergeNhlLists([org, [{ ...prospect, id: 8484795, team: "UTA" }]]).find((p) => p.id === 8484795)!.list, "prospect", "a prospect list wins over the index");
+  eq(withOrg.filter((p) => p.list === "org").map((p) => p.id), [8484795, 8485387], "index-only players kept as « org »");
+  assert(nhlRostersErrors({ ...file, players: withOrg }, 1).length === 0, "an « org » row is a valid snapshot row");
+  const thin = thinProspectClubs([...Array.from({ length: THIN_PROSPECT_LIST }, (_, i) => ({ ...prospect, id: 100 + i, team: "MTL" })), { ...prospect, id: 99, team: "DET" }]);
+  assert(!thin.includes("MTL") && thin.includes("DET") && thin.includes("UTA"), "thin prospect lists: DET (1) and UTA (0), not MTL");
 }
 
 // ------------------------------------------------------------ the pool built with the board
@@ -98,15 +138,33 @@ const built = buildLeagueBoard(inputs);
   assert(pool.players.every((p) => p.rank > 400), "the pool starts past the board's depth");
   const ids = new Set(all.map((p) => p.id));
   assert(pool.unprojected.every((u) => !ids.has(u.id)), "the unprojected have no projection");
-  const rosterIds = new Set((inputs.nhlRosters?.players ?? []).filter((r) => r.list === "roster").map((r) => r.id));
-  for (const id of rosterIds) {
-    if (!ids.has(id) && !pool.unprojected.some((u) => u.id === id)) {
-      assert(false, `NHL roster player ${id} is listed`);
-      break;
-    }
-  }
+  const unprojectedIds = new Set(pool.unprojected.map((u) => u.id));
+  const unlisted = (inputs.nhlRosters?.players ?? []).filter((r) => !ids.has(r.id) && !unprojectedIds.has(r.id));
+  eq(unlisted.map((r) => `${r.name} (${r.list})`), [], "every player the NHL ties to a club is listed");
   const order = pool.unprojected.map((u) => u.noProj);
-  assert(order.indexOf("prospect") < 0 || order.lastIndexOf("roster") < order.indexOf("prospect"), "roster players before prospects");
+  const rankOf = { roster: 0, prospect: 1, org: 2 } as const;
+  assert(order.every((k, i) => i === 0 || rankOf[order[i - 1]!] <= rankOf[k]), "roster players, then prospect lists, then the rest of the organisations");
+  assert(order.includes("org"), "the organisations' players (search index) are in the pool");
+
+  // A hand move on a player past the board pulls him onto it (the pool keeps 1..N without him).
+  const deep = pool.players[60]!;
+  const adjustments = inputs.rankAdjustments ?? { schema: 1 as const, league: "light-the-lamp", decidedAt: "2026-09-27", adjustments: [] };
+  const pulled = buildLeagueBoard({
+    ...inputs,
+    rankAdjustments: {
+      ...adjustments,
+      adjustments: [...adjustments.adjustments, { id: deep.id, name: deep.name, engineRank: deep.rank, insertAt: 150, reason: "Test" }],
+    },
+  });
+  const onBoard = pulled.board.players.find((p) => p.id === deep.id);
+  assert(!!onBoard?.adjusted && onBoard.rank < 200 && onBoard.adjusted.fromRank === deep.rank, `${deep.name} (engine ${deep.rank}) moved up on the board`);
+  assert(!pulled.pool.players.some((p) => p.id === deep.id), "no longer in the pool");
+  eq(pulled.adjustmentsMissing, [], "no move skipped");
+  eq(
+    [...pulled.board.players, ...pulled.pool.players].map((p) => p.rank).sort((x, y) => x - y),
+    vor.players.map((_, i) => i + 1),
+    "board + pool ranks still 1..N",
+  );
 
   // Current club: a roster spot moves the club, a prospect list never does; no snapshot, no unprojected.
   const someone = b.players[10]!;
@@ -163,6 +221,10 @@ const byName = (name: string) => everyone.find((p) => p.name === name);
     const p = byName(name);
     assert(!!p && !p.noProj && p.rank > 400 && p.proj.length === board.categories.skater.length, `${name} is listed with his projection`);
   }
+  // Thin NHL prospect lists (DET, UTA, VAN empty in September 2026): the search index fills them.
+  for (const name of ["Carter Bear", "Trey Augustine", "Tij Iginla", "Caleb Desnoyers", "Ben Danford", "Cole Eiserman", "Kashawn Aitcheson"]) {
+    assert(!!byName(name), `${name} is listed`);
+  }
   const belzile = byName("Alex Belzile");
   assert(belzile?.noProj === "roster" && belzile.team === "MTL", "Alex Belzile: on the MTL roster, no projection");
 
@@ -178,7 +240,13 @@ const byName = (name: string) => everyone.find((p) => p.name === name);
   const counts = leaguePoolCounts(board, pool);
   eq(counts.total, everyone.length, "counts add up");
   eq(counts.projected, board.players.length + pool.players.length, "projected count");
-  eq(leaguePoolCounts(board, null), { projected: board.players.length, roster: 0, prospect: 0, total: board.players.length }, "no pool: the board");
+  eq(counts.unprojected, pool.unprojected.length, "unprojected count");
+  eq(counts.roster + counts.prospect + counts.org, counts.unprojected, "roster + prospect + org");
+  eq(
+    leaguePoolCounts(board, null),
+    { projected: board.players.length, roster: 0, prospect: 0, org: 0, unprojected: 0, total: board.players.length },
+    "no pool: the board",
+  );
 
   // Snake: the seed keeps its entries, the pool adds the rest.
   const poolId = Object.keys(pool.snake)[0];
@@ -207,7 +275,12 @@ const rows: CategoryRow[] = buildCategoryRows(board, { state: state0, currentPic
   assert(noProj.length === pool.unprojected.length && noProj.every((r) => r.zRel.length === 0 && r.available === null), "unprojected rows");
   const cats = [...board.categories.skater, ...board.categories.goalie];
   assert(noProj.every((r) => cats.every((c) => categoryCell(board, r, c) === null)), "no category cell without a projection");
-  eq([noProjectionLabel("roster"), noProjectionLabel("prospect")], ["Pas de projection", "Espoir sans projection"], "labels");
+  eq(
+    [noProjectionLabel("roster"), noProjectionLabel("prospect"), noProjectionLabel("org")],
+    ["Pas de projection", "Espoir sans projection", "Hors effectif, sans projection"],
+    "labels",
+  );
+  eq([noProjectionTag("roster"), noProjectionTag("prospect"), noProjectionTag("org")], ["Pas de projection", "Espoir", "Hors effectif"], "tags");
 
   const tail = (key: string, dir: "asc" | "desc") => {
     const sorted = sortRows(spec, rows, { key, dir }, ctx);

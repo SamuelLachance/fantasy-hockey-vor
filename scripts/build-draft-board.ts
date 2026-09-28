@@ -8,8 +8,8 @@
  * Hand rank moves (`src/data/leagues/<slug>/rank-adjustments.json`) are
  * applied after the engine ranks; the log lists them.
  * Also writes the league's `pool.json` (every other projected player, then
- * the players on an NHL roster or prospect list without a projection, from
- * the committed `src/data/nhl-rosters.json`), which the tables fetch.
+ * the players the NHL ties to a club without a projection, from the
+ * committed `src/data/nhl-rosters.json`), which the tables fetch.
  * Run: npm run draft:board [-- <slug>]   (default: every Yahoo categories
  * league of the registry, src/lib/leagues/registry.ts)
  */
@@ -31,9 +31,9 @@ for (const slug of slugs) {
 
   const gw = vor.goalieWeight;
   console.log(`${board.leagueName}: ${board.players.length} players → ${out}`);
-  const onRoster = pool.unprojected.filter((p) => p.noProj === "roster").length;
+  const n = (k: string) => pool.unprojected.filter((p) => p.noProj === k).length;
   console.log(
-    `pool: ${pool.players.length} more projected players, ${onRoster} rostered and ${pool.unprojected.length - onRoster} prospects without a projection → ${poolOut}`,
+    `pool: ${pool.players.length} more projected players; without a projection, ${n("roster")} rostered, ${n("prospect")} on prospect lists and ${n("org")} elsewhere in an organisation → ${poolOut}`,
   );
   if (teamChanges.size > 0) {
     const byId = new Map([...board.players, ...pool.players].map((p) => [p.id, p.name]));
@@ -65,7 +65,7 @@ for (const slug of slugs) {
     );
   }
   if (adjustmentsMissing.length > 0) {
-    console.warn(`WARN: adjusted ids not on the board (skipped): ${adjustmentsMissing.join(", ")}`);
+    console.warn(`WARN: adjusted ids nobody projects (not in players.json; skipped): ${adjustmentsMissing.join(", ")}`);
   }
   for (const p of board.players.slice(0, 30)) {
     console.log(

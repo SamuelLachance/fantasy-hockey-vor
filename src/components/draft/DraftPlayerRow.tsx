@@ -6,6 +6,7 @@ import { groupRelativeZ, isGoalieBoardPlayer } from "@/lib/draft/board-types";
 import {
   formatFr,
   formatPercentFr,
+  noProjectionLabel,
   pickLabel,
   yearsLabel,
 } from "@/lib/draft/draft-copy";
@@ -117,7 +118,7 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
               className="whitespace-nowrap text-amber-200/90"
               title="La LNH l’inscrit, mais il n’a pas de projection : aucune valeur dans la ligue"
             >
-              {noProj === "roster" ? "Pas de projection" : "Espoir, sans projection"}
+              {noProjectionLabel(noProj)}
             </span>
           ) : (
             <CategoryMiniBars

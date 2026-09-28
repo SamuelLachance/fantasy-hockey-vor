@@ -54,8 +54,12 @@ export interface DraftBoardPlayer {
   noProj?: NoProjectionKind;
 }
 
-/** Why a listed player has no projection row: on a club's roster, or only on its prospect list. */
-export type NoProjectionKind = "roster" | "prospect";
+/**
+ * Why a listed player has no projection row: on a club's roster, only on
+ * its prospect list, or only in its organisation (the NHL's search index
+ * ties him to the club: AHL, junior, college, Europe, long-term injured).
+ */
+export type NoProjectionKind = "roster" | "prospect" | "org";
 
 /** A player the NHL lists today whom the projections never saw (`pool.json`). */
 export interface UnprojectedPlayer {
@@ -74,9 +78,10 @@ export interface UnprojectedPlayer {
  * `npm run draft:board`): fetched by the tables, never inlined in a page.
  * `players` are the projected players past the board, in the same row shape
  * at their own engine ranks (board and pool ranks together are 1..N with no
- * gap), `unprojected` the players on an NHL roster or prospect list with no
- * projection, and `snake` Snake's verdicts for the pool's players he
- * discussed (the pages' seed covers the board).
+ * gap), `unprojected` the players the NHL ties to a club (roster,
+ * prospect list or organisation) with no projection, and `snake` Snake's
+ * verdicts for the pool's players he discussed (the pages' seed covers the
+ * board).
  */
 export interface LeaguePool {
   schema: 1;

@@ -58,7 +58,11 @@ export interface BuiltBoard {
    * `check:draft-board` compares the adjusted board's rank slots with).
    */
   enginePlayers: DraftBoardPlayer[];
-  /** Adjusted ids that are not on the board (skipped; check:draft-board warns on them). */
+  /**
+   * Adjusted ids nobody projects (skipped; check:draft-board warns on them).
+   * A projected player past the board is pulled onto it first, so a move
+   * works at any engine rank.
+   */
   adjustmentsMissing: number[];
   /** Everyone else (`pool.json`): projected players past the board, then the unprojected. */
   pool: LeaguePool;
@@ -154,9 +158,10 @@ const RANK_KEYS: readonly BoardPosition[] = ["C", "LW", "RW", "F", "D", "G"];
  *
  * Ranks are slots, not indexes: the k-th row of the new order takes the
  * k-th smallest engine rank (likewise per position). The board is 1..400
- * with no gap, then the goalie floor and the market picks past
- * `BOARD_DEPTH` at their own engine ranks (a goalie at 437 must keep 437 —
- * the pick-availability odds read the rank of a player without ADP).
+ * with no gap, then the goalie floor, the market picks and any hand-moved
+ * player past `BOARD_DEPTH` at their own engine ranks (a goalie at 437 must
+ * keep 437 — the pick-availability odds read the rank of a player without
+ * ADP).
  */
 export function adjustBoardPlayers(
   players: readonly DraftBoardPlayer[],
@@ -235,12 +240,18 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
 
   let goalies = 0;
   const pickLimit = marketPickLimit(profile);
+  // A hand-moved player stays on the board wherever the engine ranks him:
+  // moves only reorder the board's own rank slots (the pool keeps its
+  // engine ranks), so one past BOARD_DEPTH is pulled on first, his engine
+  // slot with him (board + pool ranks stay 1..N).
+  const adjustedIds = new Set((inputs.rankAdjustments?.adjustments ?? []).map((a) => a.id));
   const keptIds = new Set<number>();
   for (const p of vor.players) {
     const keep =
       (p.isGoalie && goalies < BOARD_MIN_GOALIES) ||
       p.rank <= BOARD_DEPTH ||
-      isMarketPick(adp.matches.get(p.id)?.adp, pickLimit);
+      isMarketPick(adp.matches.get(p.id)?.adp, pickLimit) ||
+      adjustedIds.has(p.id);
     if (p.isGoalie) goalies++;
     if (keep) keptIds.add(p.id);
   }
@@ -393,10 +404,10 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
 }
 
 /**
- * Players on an NHL roster or prospect list with no projection (not in
- * `projected`): rostered players first, then prospects, each by name.
- * Yahoo eligibility when Yahoo knows him (last season's file), else his NHL
- * position.
+ * Players the NHL ties to a club with no projection (not in `projected`):
+ * rostered players first, then prospect lists, then the rest of the
+ * organisations (the search index), each by name. Yahoo eligibility when
+ * Yahoo knows him (last season's file), else his NHL position.
  */
 function unprojectedPlayers(inputs: BoardInputs, projected: ReadonlySet<number>, seasonStart: Date): UnprojectedPlayer[] {
   const out: UnprojectedPlayer[] = [];
@@ -414,7 +425,7 @@ function unprojectedPlayers(inputs: BoardInputs, projected: ReadonlySet<number>,
       noProj: r.list,
     });
   }
-  const order = { roster: 0, prospect: 1 } as const;
+  const order = { roster: 0, prospect: 1, org: 2 } as const;
   return out.sort((a, b) => order[a.noProj] - order[b.noProj] || a.name.localeCompare(b.name, "fr-CA") || a.id - b.id);
 }
 

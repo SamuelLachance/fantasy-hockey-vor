@@ -168,7 +168,8 @@ const files: Record<string, string[]> = {
   "src/lib/draft/league-pool-client.ts": ['leagueDataHref(slug, "pool.json")', "isLeaguePool(raw, slug)", 'credentials: "omit"'],
   "src/lib/draft/league-pool.ts": ["export function leaguePlayers", "unprojectedRow", "noProj"],
   "src/components/draft/DraftPlayerRow.tsx": ["<SnakeNhlMini id={p.id} />", "memo(function DraftPlayerRow"],
-  "src/components/draft/CategoryPlayersTab.tsx": ["<DraftMethodNote", "shortcuts={false}", "{table}"],
+  // The players without a projection sort after everyone projected: the tab says so and links them alone.
+  "src/components/draft/CategoryPlayersTab.tsx": ["<DraftMethodNote", "shortcuts={false}", "{table}", '"?projection=sans"'],
   "src/components/draft/category-table.tsx": [
     "categoryAdapter",
     "getDraftStore",
@@ -195,6 +196,8 @@ const files: Record<string, string[]> = {
     "useDeferredValue",
     "IntersectionObserver",
     "TABLE_COPY.notInPool",
+    // `?joueur=` looks in the rows on screen (the fallback rows when the full list failed).
+    "const focusRows = source ?? data.rows",
     "wantFullSnake",
     "aria-labelledby",
     // A page setting the rows follow (the dynasty mode) is said in the one live region.
@@ -296,6 +299,8 @@ const files: Record<string, string[]> = {
     "SnakeMethodology",
     "SnakeDisclaimerShort",
     'canonical: "/snake"',
+    // « Dans vos ligues »: every categories league player Snake discussed, board and pool.
+    "categoryListedSnakeIds(l)",
     "robots: { index: false",
     "safe-area-inset-bottom",
   ],

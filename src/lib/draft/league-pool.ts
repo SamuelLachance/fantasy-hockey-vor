@@ -1,13 +1,14 @@
 /**
  * A categories league's whole player list: the draft board inlined in the
  * page, plus its `pool.json` once fetched (every other projected player at
- * his engine rank, then the players on an NHL roster or prospect list with
- * no projection). Pure: no fetch, no React.
+ * his engine rank, then the players the NHL ties to a club with no
+ * projection: rosters, prospect lists, the rest of the organisations).
+ * Pure: no fetch, no React.
  */
 import type { SnakeNhlEntry } from "../snake/types";
 import type { DraftBoard, DraftBoardPlayer, LeaguePool, NoProjectionKind, UnprojectedPlayer } from "./board-types";
 
-const NO_PROJ: readonly NoProjectionKind[] = ["roster", "prospect"];
+const NO_PROJ: readonly NoProjectionKind[] = ["roster", "prospect", "org"];
 
 /** Shape check of a fetched pool.json (a Pages 404 page or another league's file is refused). */
 export function isLeaguePool(raw: unknown, slug: string): raw is LeaguePool {
@@ -59,8 +60,8 @@ const merged = new WeakMap<LeaguePool, WeakMap<DraftBoard, DraftBoardPlayer[]>>(
  * Everyone, in rank order: the board's rows (hand moves included), the
  * pool's projected rows at their engine ranks (a row the board already has
  * is skipped: a page and a pool from two builds never list a player twice),
- * then the unprojected, roster players before prospects. Built once per
- * board and pool.
+ * then the unprojected in the pool's order (roster players, prospect lists,
+ * then the rest of the organisations). Built once per board and pool.
  */
 export function leaguePlayers(board: DraftBoard, pool: LeaguePool | null): readonly DraftBoardPlayer[] {
   if (!pool) return board.players;
@@ -99,10 +100,22 @@ export function leagueSnakeRows(
   return { ...pool.snake, ...(seed ?? {}) };
 }
 
+export interface LeaguePoolCounts {
+  projected: number;
+  /** Without a projection: on an NHL roster, only on a prospect list, only in an organisation. */
+  roster: number;
+  prospect: number;
+  org: number;
+  /** Every unprojected player. */
+  unprojected: number;
+  total: number;
+}
+
 /** How many players each list holds (the tabs' lead and notes). */
-export function leaguePoolCounts(board: DraftBoard, pool: LeaguePool | null): { projected: number; roster: number; prospect: number; total: number } {
+export function leaguePoolCounts(board: DraftBoard, pool: LeaguePool | null): LeaguePoolCounts {
   const projected = board.players.length + (pool?.players.length ?? 0);
-  const roster = pool?.unprojected.filter((u) => u.noProj === "roster").length ?? 0;
-  const prospect = (pool?.unprojected.length ?? 0) - roster;
-  return { projected, roster, prospect, total: projected + roster + prospect };
+  const n = (k: NoProjectionKind) => pool?.unprojected.filter((u) => u.noProj === k).length ?? 0;
+  const [roster, prospect, org] = [n("roster"), n("prospect"), n("org")];
+  const unprojected = roster + prospect + org;
+  return { projected, roster, prospect, org, unprojected, total: projected + unprojected };
 }
