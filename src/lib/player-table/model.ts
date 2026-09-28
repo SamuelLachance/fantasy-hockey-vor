@@ -259,6 +259,9 @@ export function nextSort<R, F, Caps, Ctx>(spec: TableSpec<R, F, Caps, Ctx>, curr
   return { key, dir: sortDefaultDir(spec, key) };
 }
 
+/** « Tout afficher »: one page holding every row (`?par=` spells it like any page size). */
+export const PER_PAGE_ALL = 10_000;
+
 export function pageCount(total: number, perPage: number): number {
   return Math.max(1, Math.ceil(total / Math.max(1, perPage)));
 }

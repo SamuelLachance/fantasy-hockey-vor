@@ -94,10 +94,13 @@ for (const cfg of Object.values(FANTRAX_LEAGUES)) {
 {
   const page = join(OUT, "slapshot-draft.html");
   const dyn = join(OUT, "fantrax", "slapshot", "dynasty.json");
-  // The table grows past its first 300 rows on demand (« Afficher 300 de
-  // plus » / « Tout afficher », a829d03): the regenerated page must keep them.
-  if (existsSync(page) && !/data-more="all"/.test(readFileSync(page, "utf8"))) {
-    fail("slapshot-draft.html lost its « Tout afficher » button (scripts/slapshot-draft/template.html)");
+  // Every row is reachable: pages of 100 with « Tout afficher » (the pager
+  // replaced a829d03's « Afficher 300 de plus »; test-slapshot-draft runs it).
+  if (existsSync(page)) {
+    const html = readFileSync(page, "utf8");
+    if (!html.includes('<nav id="pager"') || !html.includes('pageBtn("all"') || /rows\.length >= 300/.test(html)) {
+      fail("slapshot-draft.html lost its pager or « Tout afficher » (scripts/slapshot-draft/template.html)");
+    }
   }
   if (existsSync(page) && existsSync(dyn)) {
     const m = /<script id="data" type="application\/json">([\s\S]*?)<\/script>/.exec(readFileSync(page, "utf8"));

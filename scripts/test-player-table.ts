@@ -26,6 +26,7 @@ import {
   matchesPreset,
   nextSort,
   pageCount,
+  PER_PAGE_ALL,
   resetView,
   sortLabel,
   sortRows,
@@ -202,6 +203,7 @@ eq(nextSort(SPEC, { key: "pts", dir: "desc" }, "pts"), { key: "pts", dir: "asc" 
 eq(nextSort(SPEC, { key: "pts", dir: "desc" }, "age"), { key: "age", dir: "asc" }, "a new column starts at its natural direction");
 eq(nextSort(SPEC, { key: "age", dir: "asc" }, NAME_SORT), { key: NAME_SORT, dir: "asc" }, "the name column starts ascending");
 eq([pageCount(0, 25), pageCount(51, 25), clampPage(9, 51, 25), clampPage(0, 51, 25), clampPage(2.7, 51, 25)], [1, 3, 3, 1, 2], "pages");
+eq([pageCount(2716, PER_PAGE_ALL), clampPage(4, 2716, PER_PAGE_ALL)], [1, 1], "« Tout afficher »: one page holds a whole pool");
 eq(sortLabel(SPEC, "pts", CTX), "Points", "sort label");
 eq(sortLabel(SPEC, "age", CTX), "Âge", "sort label falls back to the column label");
 eq(sortLabel(SPEC, NAME_SORT, CTX), "Nom", "name sort label");
@@ -290,6 +292,9 @@ eq(viewParams(SPEC, { ...baseView(TOUS), sort: { key: "pts", dir: "asc" } }, TOU
 {
   const junk = parseView(SPEC, "?tri=nope&ordre=up&page=-3&par=7&pos=lower&age=abc&moi=yes&cols=zz,pts", TOUS);
   eq([junk.sort, junk.page, junk.perPage, junk.filters.pos, junk.filters.age, junk.filters.mine, junk.cols], [TOUS.sort, 1, 50, "", ANY_RANGE, false, ["pts"]], "garbage falls back silently");
+  const all: TableView<F> = { ...baseView(TOUS), perPage: PER_PAGE_ALL };
+  eq(viewSearch(SPEC, all, TOUS, ""), `?par=${PER_PAGE_ALL}`, "« Tout afficher » in the address");
+  eq(parseView(SPEC, `?par=${PER_PAGE_ALL}`, TOUS).perPage, PER_PAGE_ALL, "… and back");
 }
 assert(sameViewSearch(SPEC, full, TOUS, `?${viewParams(SPEC, full, TOUS).reverse().map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&")}`), "same view in another key order");
 assert(!sameViewSearch(SPEC, full, TOUS, "?q=x"), "another view");

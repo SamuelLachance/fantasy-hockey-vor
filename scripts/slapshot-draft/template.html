@@ -121,7 +121,7 @@
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
-        <div id="more" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"></div>
+        <nav id="pager" aria-label="Pages du tableau" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center"></nav>
       </div>
       <p class="mut" style="margin:8px 0 0">
         Valeur dynastie : points Slapshot attendus au-dessus du remplaçant sur 12 saisons (vieillissement, progression des jeunes calibrée sur l'historique LNH, arrivée des espoirs), moins le coût de son salaire dans le plafond, qui grimpe chaque saison. Un joueur peut être caché dans les mineures (0 point, 0 salaire) ou libéré, donc un mauvais contrat coûte au plus une place.
@@ -268,11 +268,13 @@
     b.type = "button";
     b.textContent = p === "ALL" ? "Tous" : p;
     b.setAttribute("aria-pressed", String(p === pos));
-    b.addEventListener("click", () => { pos = p; for (const x of posf.children) x.setAttribute("aria-pressed", String(x === b)); render(); });
+    b.addEventListener("click", () => { pos = p; page = 1; for (const x of posf.children) x.setAttribute("aria-pressed", String(x === b)); render(); });
     posf.appendChild(b);
   }
-  for (const id of ["q", "mode", "sort", "kind", "maxcap"]) $(id).addEventListener(id === "q" || id === "maxcap" ? "input" : "change", render);
-  $("showgone").addEventListener("click", (e) => { showGone = !showGone; e.currentTarget.setAttribute("aria-pressed", String(showGone)); render(); });
+  // Any filter, search or sort change starts over at page 1 (the live reads every 20 s keep the page).
+  const refilter = () => { page = 1; render(); };
+  for (const id of ["q", "mode", "sort", "kind", "maxcap"]) $(id).addEventListener(id === "q" || id === "maxcap" ? "input" : "change", refilter);
+  $("showgone").addEventListener("click", (e) => { showGone = !showGone; e.currentTarget.setAttribute("aria-pressed", String(showGone)); refilter(); });
   $("refresh").addEventListener("click", () => load());
 
   // Opt-in alert (off by default): a notification and three beeps at my turn.
@@ -322,14 +324,21 @@
   const SORT_FR = { d: "valeur dynastie", v: "VOR cette saison", p: "points cette saison", r: "valeur dynastie par M$", c: "salaire croissant" };
   const MODE_FR = { B: "équilibré", L: "long terme", W: "gagner maintenant" };
 
-  // The table shows the first 300 rows; « Afficher 300 de plus » / « Tout afficher » raise it.
-  const PAGE_ROWS = 300;
-  let limit = PAGE_ROWS;
+  // Pages of 100 rows (the site table's pager): « Précédente » / « Suivante »,
+  // « Tout afficher » for every row at once (and back to pages); a filter,
+  // search or sort change returns to page 1.
+  const PAGE_ROWS = 100;
+  let page = 1;
+  let showAll = false;
   document.addEventListener("click", (ev) => {
-    const b = ev.target.closest && ev.target.closest("[data-more]");
-    if (!b) return;
-    limit = b.dataset.more === "all" ? Infinity : limit + PAGE_ROWS;
+    const b = ev.target.closest && ev.target.closest("[data-page]");
+    if (!b || b.getAttribute("aria-disabled") === "true") return;
+    const to = b.dataset.page;
+    if (to === "all") showAll = true;
+    else if (to === "pages") { showAll = false; page = 1; }
+    else page = Number(to) || 1;
     render();
+    $("cap").scrollIntoView({ block: "nearest" });
   });
 
   function render() {
@@ -337,8 +346,7 @@
     const kind = $("kind").value;
     const maxCap = parseFloat($("maxcap").value);
     const list = D.board.slice().sort(SORTS[$("sort").value] || SORTS.d);
-    const rows = [];
-    let shown = 0;
+    const matches = [];
     for (const p of list) {
       const gone = unavailable.has(p.i);
       if (gone && !showGone) continue;
@@ -347,12 +355,20 @@
       if (kind === "nhl" && p.ph === "prospect") continue;
       if (Number.isFinite(maxCap) && (p.c == null || p.c > maxCap)) continue;
       if (q && !fold(p.n + " " + p.t).includes(q)) continue;
-      shown++;
-      if (rows.length >= limit) continue;
+      matches.push(p);
+    }
+    const shown = matches.length;
+    const pages = showAll ? 1 : Math.max(1, Math.ceil(shown / PAGE_ROWS));
+    page = Math.min(Math.max(1, page), pages);
+    const first = showAll ? 0 : (page - 1) * PAGE_ROWS;
+    const rows = [];
+    for (let k = first; k < (showAll ? shown : Math.min(shown, first + PAGE_ROWS)); k++) {
+      const p = matches[k];
+      const gone = unavailable.has(p.i);
       const who = gone ? (ownerOf.get(p.i) || "pris") : "";
       const next = p.c2 && p.c2.length > 1 ? p.c2[1] : null;
       const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.005;
-      rows.push(`<tr class="${gone ? "gone" : ""}"><td class="n">${shown}</td>`
+      rows.push(`<tr class="${gone ? "gone" : ""}"><td class="n">${k + 1}</td>`
         + `<td>${esc(p.n)}${who ? `<span class="tag">${esc(who)}</span>` : ""}</td><td>${esc(p.t)}</td><td>${posTags(p.e)}</td>`
         + `<td class="n"><b>${num(dyn(p))}</b></td><td class="n">${rank(p) ?? "—"}</td>`
         + `<td class="ph ph-${esc(p.ph || "")}">${esc(PHASE_FR[p.ph] || "—")}</td>`
@@ -360,10 +376,16 @@
         + `<td class="n">${money(p.c)}</td><td class="n ${changes ? "up" : ""}">${next == null ? "—" : money(next)}</td><td class="n">${esc(contractEnd(p))}</td></tr>`);
     }
     $("rows").innerHTML = rows.join("") || `<tr><td colspan="12" class="mut">Aucun joueur ne correspond.</td></tr>`;
-    $("more").innerHTML = shown > limit
-      ? `<button type="button" data-more="${PAGE_ROWS}">Afficher ${PAGE_ROWS} de plus</button> <button type="button" data-more="all">Tout afficher (${shown})</button>`
-      : "";
-    $("cap").textContent = `${shown} joueurs${shown > limit ? ` (${limit} premiers affichés)` : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
+    // aria-disabled, not disabled: a disabled button drops the keyboard focus on the first or last page
+    const pageBtn = (to, label, off) => `<button type="button" data-page="${to}"${off ? ' aria-disabled="true" style="opacity:.4;cursor:not-allowed"' : ""}>${label}</button>`;
+    $("pager").innerHTML = shown <= PAGE_ROWS
+      ? ""
+      : showAll
+        ? pageBtn("pages", `Pages de ${PAGE_ROWS}`, false)
+        : pageBtn(page - 1, "‹ Précédente", page <= 1) + `<span class="mut">Page ${page} sur ${pages}</span>`
+          + pageBtn(page + 1, "Suivante ›", page >= pages) + pageBtn("all", `Tout afficher (${shown})`, false);
+    const n = `${shown} joueur${shown > 1 ? "s" : ""}`;
+    $("cap").textContent = `${pages > 1 ? `${n} · page ${page} sur ${pages}` : n}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
 
     // best available per position, by dynasty value in the chosen horizon
     const best = {};

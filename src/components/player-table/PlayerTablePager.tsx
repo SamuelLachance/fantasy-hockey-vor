@@ -1,10 +1,11 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TABLE_COPY } from "@/lib/player-table/copy";
+import { PER_PAGE_ALL } from "@/lib/player-table/model";
 
 const PAGER_BUTTON =
   "inline-flex min-h-11 items-center gap-1 rounded-xl border border-white/15 bg-white/5 px-3 font-medium hover:border-cyan-400/40 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 aria-disabled:cursor-not-allowed aria-disabled:opacity-40 aria-disabled:hover:border-white/15";
 
-/** « Précédente · Page n sur N · Suivante » and the page size. */
+/** « Précédente · Page n sur N · Suivante », « Tout afficher » and the page size (« Tous » = every row). */
 export function PlayerTablePager({
   page,
   pages,
@@ -50,6 +51,11 @@ export function PlayerTablePager({
           {TABLE_COPY.next}
           <ChevronRight className="h-4 w-4" aria-hidden="true" />
         </button>
+        {pages > 1 ? (
+          <button type="button" onClick={() => onPerPage(PER_PAGE_ALL)} className={PAGER_BUTTON}>
+            {TABLE_COPY.showAll}
+          </button>
+        ) : null}
       </div>
       <label className="flex items-center gap-2 text-slate-400">
         {TABLE_COPY.perPage}
@@ -58,9 +64,9 @@ export function PlayerTablePager({
           onChange={(e) => onPerPage(Number(e.target.value))}
           className="min-h-11 rounded-xl border border-white/15 bg-slate-900 px-3 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
         >
-          {perPageOptions.map((n) => (
+          {[...perPageOptions, PER_PAGE_ALL].map((n) => (
             <option key={n} value={n}>
-              {n}
+              {n === PER_PAGE_ALL ? TABLE_COPY.allRows : n}
             </option>
           ))}
         </select>

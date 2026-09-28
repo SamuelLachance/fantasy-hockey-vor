@@ -8,7 +8,7 @@
  * `tri`, `ordre`, `cols`, `page`, `par`, `vue`): on a tab whose base is
  * the explorer's default view, its bookmarks read the same.
  */
-import { isSortKey, sameCols, sortDefaultDir } from "./model";
+import { isSortKey, PER_PAGE_ALL, sameCols, sortDefaultDir } from "./model";
 import { ANY_RANGE, type Range, type TableBase, type TableSpec, type TableView } from "./types";
 
 /** A preset by name (links from other panels and tabs): resolved once the data is in. */
@@ -99,7 +99,7 @@ export function parseView<R, F, Caps, Ctx>(spec: TableSpec<R, F, Caps, Ctx>, sea
     sort: { key, dir },
     cols: wanted ? spec.columns.map((c) => c.key).filter((k) => wanted.has(k)) : null,
     page: Number.isFinite(page) && page > 0 ? page : 1,
-    perPage: spec.perPageOptions.includes(par) ? par : base.perPage,
+    perPage: spec.perPageOptions.includes(par) || par === PER_PAGE_ALL ? par : base.perPage,
   };
 }
 

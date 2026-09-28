@@ -235,7 +235,7 @@ const files: Record<string, string[]> = {
     "aria-disabled={atBase",
     "max-sm:hidden",
   ],
-  "src/components/player-table/PlayerTablePager.tsx": ["aria-disabled={page <= 1", "aria-disabled={page >= pages", "TABLE_COPY.pages"],
+  "src/components/player-table/PlayerTablePager.tsx": ["aria-disabled={page <= 1", "aria-disabled={page >= pages", "TABLE_COPY.pages", "onPerPage(PER_PAGE_ALL)"],
   "src/components/player-table/PlayerTableDetail.tsx": ["sticky left-3", "w-[min(48rem,calc(100vw-3.5rem))]"],
   "src/components/player-table/PlayerTableColumns.tsx": ["<legend", "TABLE_COPY.lazyColumn"],
   "src/lib/player-table/url.ts": ["ownedParams", "PRESET_PARAM", "FOCUS_PARAM", 'encodeRange(r) || "-"'],

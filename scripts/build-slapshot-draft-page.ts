@@ -125,7 +125,11 @@ export function buildSlapshotDraftPage(): { rows: number; withDynasty: number; b
     const c = dyn.zeroContracts?.[id];
     if (c) setContract(row, c);
   }
-  const board = [...rows.values()].sort((a, b) => (b.dB ?? -1e9) - (a.dB ?? -1e9) || (b.v ?? -1e9) - (a.v ?? -1e9));
+  // Null fields are left out (the page reads a missing one as « — »): with
+  // every NHL-organisation player listed, most rows have no season projection.
+  const board = [...rows.values()]
+    .sort((a, b) => (b.dB ?? -1e9) - (a.dB ?? -1e9) || (b.v ?? -1e9) - (a.v ?? -1e9))
+    .map((r) => Object.fromEntries(Object.entries(r).filter(([, x]) => x != null)) as PageRow);
   const cap = dyn.params.cap.league[0]!;
   const data = {
     builtAt: dyn.builtAt,

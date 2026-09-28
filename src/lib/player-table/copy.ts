@@ -52,6 +52,8 @@ export const TABLE_COPY = {
   previous: "Précédente",
   next: "Suivante",
   perPage: "Par page",
+  showAll: "Tout afficher",
+  allRows: "Tous",
   presets: "Vues rapides",
   columns: "Colonnes",
   columnsLegend: "Colonnes affichées",

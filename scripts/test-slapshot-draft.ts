@@ -157,17 +157,131 @@ const p = (id: string, groups: string[], fp: number, status = "ACTIVE"): MyDraft
   );
 }
 
-// ---- the stand-alone page keeps « Afficher 300 de plus » / « Tout afficher »
-// (a829d03 added them to the published page by hand; the page is now
-// regenerated from the template, so the template must carry them)
+// ---- the stand-alone page pages its table by 100 (« Précédente » / « Suivante »,
+// « Tout afficher »), back to page 1 on any filter change, « N joueurs · page X
+// sur Y » (it replaced a829d03's « Afficher 300 de plus »). Its script runs
+// here in a small fake DOM on a 250-player board.
 {
   const tpl = readFileSync(join(process.cwd(), "scripts", "slapshot-draft", "template.html"), "utf8");
-  assert(tpl.includes('<div id="more"') && tpl.includes('data-more="all"') && tpl.includes("rows.length >= limit"), "template: the table grows past 300 rows on demand");
-  assert(!/rows\.length >= 300/.test(tpl), "template: no hard 300-row cap");
+  assert(!/rows\.length >= 300/.test(tpl) && !tpl.includes("data-more"), "template: no row cap and no show-more buttons");
+  const script = /<script>\n?([\s\S]*?)<\/script>\s*<\/body>/.exec(tpl.replace(/\r\n/g, "\n"))?.[1] ?? "";
+  type El = {
+    id: string;
+    value: string;
+    textContent: string;
+    innerHTML: string;
+    children: El[];
+    dataset: Record<string, string>;
+    attrs: Record<string, string>;
+    listeners: Record<string, Array<(e: unknown) => void>>;
+    setAttribute(k: string, v: string): void;
+    getAttribute(k: string): string | null;
+    addEventListener(t: string, f: (e: unknown) => void): void;
+    appendChild(c: El): void;
+    scrollIntoView(): void;
+    classList: { add(): void; remove(): void };
+    closest(sel: string): El | null;
+  };
+  const el = (id = ""): El => {
+    const e: El = {
+      id,
+      value: "",
+      textContent: "",
+      innerHTML: "",
+      children: [],
+      dataset: {},
+      attrs: {},
+      listeners: {},
+      setAttribute(k, v) {
+        this.attrs[k] = v;
+      },
+      getAttribute(k) {
+        return this.attrs[k] ?? null;
+      },
+      addEventListener(t, f) {
+        (this.listeners[t] ??= []).push(f);
+      },
+      appendChild(c) {
+        this.children.push(c);
+      },
+      scrollIntoView() {},
+      classList: { add() {}, remove() {} },
+      closest() {
+        return this;
+      },
+    };
+    return e;
+  };
+  const board = Array.from({ length: 250 }, (_, i) => ({
+    i: `p${i}`,
+    n: i % 2 ? `Joueur ${i}` : `Espoir ${i}`,
+    t: "MTL",
+    e: i % 5 === 0 ? "D" : "C",
+    p: 250 - i,
+    v: 100 - i,
+    c2: [1, 1],
+    dB: 500 - i,
+    dL: 500 - i,
+    dW: 500 - i,
+    rB: i + 1,
+    rL: i + 1,
+    rW: i + 1,
+    ph: i % 2 ? "prime" : "prospect",
+  }));
+  const els = new Map<string, El>();
+  const get = (id: string) => {
+    if (!els.has(id)) els.set(id, el(id));
+    return els.get(id)!;
+  };
+  get("data").textContent = JSON.stringify({ builtAt: "", dynastyBuiltAt: "2026-09-27T00:00:00Z", firstSeason: 2026, cap: 105, repl: {}, teams: {}, board });
+  get("mode").value = "B";
+  get("sort").value = "d";
+  const docListeners: Record<string, Array<(e: unknown) => void>> = {};
+  const document = {
+    title: "",
+    hidden: false,
+    getElementById: get,
+    createElement: () => el(),
+    addEventListener: (t: string, f: (e: unknown) => void) => (docListeners[t] ??= []).push(f),
+  };
+  const sandbox = {
+    document,
+    window: {},
+    localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+    fetch: () => new Promise(() => {}),
+    setInterval: () => 0,
+    setTimeout: () => 0,
+    clearTimeout: () => {},
+    AbortController: class {
+      signal = {};
+      abort() {}
+    },
+  };
+  new Function(...Object.keys(sandbox), script)(...Object.values(sandbox));
+  const shownRows = () => (get("rows").innerHTML.match(/<tr/g) ?? []).length;
+  const firstNumber = () => /<td class="n">(\d+)<\/td>/.exec(get("rows").innerHTML)?.[1];
+  const click = (to: string) => {
+    const b = el();
+    b.dataset.page = to;
+    for (const f of docListeners.click ?? []) f({ target: b });
+  };
+  assert(shownRows() === 100 && firstNumber() === "1", `page 1: 100 rows from #1 (${shownRows()}, #${firstNumber()})`);
+  assert(/^250 joueurs · page 1 sur 3,/.test(get("cap").textContent), `count: « 250 joueurs · page 1 sur 3 » (${get("cap").textContent})`);
+  assert(get("pager").innerHTML.includes("Page 1 sur 3") && get("pager").innerHTML.includes('data-page="all"'), "pager: page 1 of 3 and « Tout afficher »");
+  click("3");
+  assert(shownRows() === 50 && firstNumber() === "201", `page 3: the last 50 rows from #201 (${shownRows()}, #${firstNumber()})`);
+  get("kind").value = "prospect";
+  for (const f of get("kind").listeners.change ?? []) f({});
+  assert(/^125 joueurs · page 1 sur 2,/.test(get("cap").textContent) && firstNumber() === "1", `a filter change returns to page 1 (${get("cap").textContent})`);
+  click("all");
+  assert(shownRows() === 125 && /^125 joueurs,/.test(get("cap").textContent), `« Tout afficher »: every row (${shownRows()})`);
+  assert(get("pager").innerHTML.includes('data-page="pages"'), "and back to pages");
+  click("pages");
+  assert(shownRows() === 100, "pages of 100 again");
   const page = join(process.cwd(), "public", "slapshot-draft.html");
   if (existsSync(page)) {
     const html = readFileSync(page, "utf8");
-    assert(html.includes('data-more="all"') && html.includes('<div id="more"'), "public/slapshot-draft.html keeps the show-more buttons (npm run slapshot:draft-page)");
+    assert(html.includes('<nav id="pager"') && html.includes("const PAGE_ROWS = 100"), "public/slapshot-draft.html carries the pager (npm run slapshot:draft-page)");
   }
 }
 
