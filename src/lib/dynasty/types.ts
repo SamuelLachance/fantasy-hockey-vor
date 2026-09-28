@@ -53,7 +53,9 @@ export type DynastyFlag =
   /** A current IR / injury / suspension status trims 2026-27 (not later seasons). */
   | "injuredNow"
   /** Valued on the undrafted route (segment.ts): the sentence says « non repêché ». */
-  | "undrafted";
+  | "undrafted"
+  /** No birth date and no Fantrax age: `age` is the default 25.5, and the sentence never quotes it. */
+  | "ageUnknown";
 
 export type KeeperStatus = "free" | "core" | "bubble" | "rental";
 

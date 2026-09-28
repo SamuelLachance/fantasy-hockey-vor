@@ -164,6 +164,13 @@ export function guardSide(p: DynastyParams, pro: Routed): SimPlayer | null {
  * value with more projected games: that is his minors eligibility, a real
  * cost. Without a guard (a league with no minors rule, whose guard side
  * would repeat the prospect side's later seasons) the prospect side stands in.
+ * The NHL side plays the same « 40+ games » draws as the guard in 2026-27
+ * (segment.ts `games0`), so both read one scenario, eligibility included.
+ * All of this is the model value (market off), up to Monte Carlo noise (±3%
+ * at 4,000 paths): the published value also moves with the market weight,
+ * 0.25 · (1 − P(40+ games)) for a skater (market.ts), which shrinks as the
+ * projected games rise and can lower a player whose Ros% prices him above
+ * the model (verifier 2026-09-28: Sandin Pellikka, ~2.8 of 7.6).
  */
 export function blendSides(
   nhlRes: SimResult,

@@ -975,15 +975,17 @@ const PHASE_CLAUSE: Record<DynastyRecord["phase"], string> = {
 
 /** One sentence (≤ 240 characters): who and phase, contract, time profile, upside. */
 export function explainSlapshotFr(r: SlapshotRecord, y0 = 2026, maxLen = 240): string {
-  const age = Math.floor(r.age);
+  // no birth date and no Fantrax age: the default age (and the phase it sets) is never quoted
+  const noAge = !!r.flags?.includes("ageUnknown");
+  const ofAge = noAge ? "" : ` de ${Math.floor(r.age)} ans`;
   const clauses: string[] = [];
   if (r.phase === "prospect" && r.path !== "nhl") {
     const draft = r.draft ? ` (${r.draft.pick}${r.draft.pick === 1 ? "er" : "e"} choix LNH ${r.draft.year})` : "";
     const eta = r.eta != null ? `, arrivée ${seasonLabel(r.eta)}` : "";
-    clauses.push(`${r.g === "G" ? "Gardien espoir" : "Espoir"} de ${age} ans${draft}${NBSP}: ${Math.round(r.pNhl * 100)}${NBSP}% de chances de s’établir${eta}`);
+    clauses.push(`${r.g === "G" ? "Gardien espoir" : "Espoir"}${ofAge}${draft}${NBSP}: ${Math.round(r.pNhl * 100)}${NBSP}% de chances de s’établir${eta}`);
   } else {
     const t = r.trend != null && Math.abs(r.trend) >= 0.01 ? ` (${r.trend > 0 ? "+" : "−"}${Math.round(Math.abs(r.trend) * 100)}${NBSP}%/an)` : "";
-    clauses.push(`${POS_FR[r.g]} de ${age} ans ${PHASE_CLAUSE[r.phase]}${t}`);
+    clauses.push(`${POS_FR[r.g]}${noAge ? " d’âge inconnu" : `${ofAge} ${PHASE_CLAUSE[r.phase]}`}${t}`);
   }
   const c = r.contract;
   if (c.signed > 0) {

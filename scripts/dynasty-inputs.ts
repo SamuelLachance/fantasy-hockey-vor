@@ -275,9 +275,13 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
   /**
    * Draft by trust: the profile, the organisation bio (the NHL landing, by
    * NHL id: a player it says is undrafted takes no namesake's pick), the
-   * registry by name, then the explorer pool's pick (the club's recent picks
-   * matched by name and age). The last two are name matches, trusted with an
-   * age only (segment.ts).
+   * explorer pool's pick (the club's recent picks matched by name and age),
+   * then the registry by name. The last two are name matches, trusted with an
+   * age only (segment.ts). The pool's pick comes before the registry's
+   * (verifier 2026-09-28): wherever both exist and differ, the registry's is
+   * a namesake's (the LAK Jack Hughes read the NJD one's 2019 #1, which the
+   * age guard rejects, and lost his own 2022 #51; Brent Johnson, Mats
+   * Lindgren likewise).
    */
   const draftOf = (prof: PlayerProfile | undefined, name: string, id: string, nhlId: number | undefined) => {
     if (prof?.draft?.overallPick) {
@@ -286,12 +290,17 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
     const bio = !prof && nhlId ? L.org.bios.get(nhlId) : undefined;
     if (bio?.draft) return { draft: { year: bio.draft.year, pick: bio.draft.overallPick }, source: "profile" as const };
     if (bio?.draft === null) return undefined;
-    const r = registry[normalizeDraftName(name)];
-    if (r) return { draft: { year: r.year, pick: r.overallPick }, source: "registry" as const };
     const dr = poolDraft.get(id);
-    return dr ? { draft: { year: dr[0], pick: dr[1] }, source: "registry" as const } : undefined;
+    if (dr) return { draft: { year: dr[0], pick: dr[1] }, source: "registry" as const };
+    const r = registry[normalizeDraftName(name)];
+    return r ? { draft: { year: r.year, pick: r.overallPick }, source: "registry" as const } : undefined;
   };
   const orgBirth = (nhlId: number | undefined) => (nhlId ? L.org.bios.get(nhlId)?.birthDate : undefined);
+  // Career NHL GP: the profile's, else the league-seasons count of an organisation
+  // player without one (as poolExtraInputs; verifier 2026-09-28: these loops read
+  // 0 for Sean Farrell, 6 GP, and Hunter McKown, 12, under the routes' GP limits).
+  const careerOf = (prof: PlayerProfile | undefined, nhlId: number | undefined) =>
+    prof ? careerGpBeforeSeason(prof) : nhlId ? (L.org.careerGp.get(nhlId) ?? null) : null;
   // fxpa covered him (rostered, or in the available lists): the minors flag is known.
   const flagKnown = (id: string) => rostered.has(id) || id in state.ros || id in state.icons;
   const ytdGp = (id: string) => Math.max(0, state.ytd?.[id]?.[1] ?? 0);
@@ -320,7 +329,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       ...(nhlId ? { nhlId } : {}),
       birthDate: prof?.bio?.birthDate ?? rec?.birthDate ?? prospects.birthDates?.[id] ?? orgBirth(nhlId) ?? null,
       ...(v.age !== undefined ? { fantraxAge: v.age } : {}),
-      careerGp: careerGpBeforeSeason(prof),
+      careerGp: careerOf(prof, nhlId),
       seasonGp: ytdGp(id),
       ...(state.icons[id]?.length ? { status: state.icons[id] } : {}),
       proj: {
@@ -364,7 +373,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       ...(nhlId ? { nhlId } : {}),
       birthDate: prof?.bio?.birthDate ?? rec?.birthDate ?? prospects.birthDates?.[id] ?? orgBirth(nhlId) ?? null,
       ...(pp?.age !== undefined ? { fantraxAge: pp.age } : {}),
-      careerGp: careerGpBeforeSeason(prof),
+      careerGp: careerOf(prof, nhlId),
       seasonGp: Math.max(ytdGp(id), pp?.gp ?? 0),
       ...((pp?.icons ?? state.icons[id])?.length ? { status: pp?.icons ?? state.icons[id] } : {}),
       ...(rec ? { prospect: rec, posHint: rec.pos } : {}),

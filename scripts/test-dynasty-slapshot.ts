@@ -382,6 +382,10 @@ const lgOf = (capCost: number[], over: Partial<SimLeague> = {}): SimLeague => ({
     assert(vets.length === 0, `${vets.length} players with 100+ NHL GP valued or described as prospects (${vets.slice(0, 3).map((r) => r.n).join(", ")})`);
     const und = P.filter((r) => r.flags?.includes("undrafted") && r.gp >= 20);
     assert(und.length === 0, `${und.length} undrafted-route players with 20+ NHL GP (${und.slice(0, 3).map((r) => r.n).join(", ")})`);
+    // the default age is never quoted (verifier 2026-09-28: « Espoir de 25 ans » without a birth date or a Fantrax age)
+    const noAge = P.filter((r) => r.flags?.includes("ageUnknown") && / de 25 ans/.test(r.explanation ?? ""));
+    assert(noAge.length === 0, `${noAge.length} players without an age quoted at 25 (${noAge.slice(0, 3).map((r) => r.n).join(", ")})`);
+    assert(!P.some((r) => r.path === "prospect" && r.flags?.includes("ageUnknown") && !r.draft && r.pNhl > 0.1 && r.age >= 18), "no undrafted prior valued at a default age");
     for (const m of ["winNow", "balanced", "longTerm"] as const) {
       const ranks = P.map((r) => r.rank[m]).sort((a, b) => a - b);
       assert(new Set(ranks).size === ranks.length, `unique ${m} ranks`);

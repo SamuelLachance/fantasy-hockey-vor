@@ -118,17 +118,63 @@ export interface SimPlayer {
    * side plays E[GP | GP < 40] / 82; the build's guard side (index.ts
    * blendSides) E[GP | GP ≥ 40] / 82. With `games` (the split-season rule's
    * N(gp, sd), projection basis) each path draws its games from that normal
-   * cut to [lo, hi], scaled so their mean stays `share` (the cut at 0 alone
-   * would add games): a player 15 games short of 100 keeps his eligibility
-   * on the paths where he plays fewer than 15, not on none or all of them.
+   * cut to [lo, hi], mapped so their mean stays `share` (`year0Cut`: the cut
+   * at 0 alone would add games): a player 15 games short of 100 keeps his
+   * eligibility on the paths where he plays fewer than 15, not on none or
+   * all of them.
    */
-  year0?: { theta: number; sigma: number; share: number; games?: { mu: number; sd: number; lo: number; hi: number; basis: number } } | null;
+  year0?: { theta: number; sigma: number; share: number; games?: Year0Games } | null;
+  /**
+   * NHL side of a blended route (segment.ts): season 0's games per path from
+   * the split-season normal cut to [40, basis], mean kept at `share0` (the
+   * guard side's own draw), instead of the role model, whose absent and
+   * partial seasons (20-32% of paths at these shares) are not the « 40+
+   * games » scenario the side stands for (verifier 2026-09-28: they kept a
+   * free minors spot on those paths, Oliver Moore 0.496 eligible in 2027).
+   */
+  games0?: Year0Games | null;
   /** Trajectory shift of the effective age (−1, 0, +1). */
   trajShift?: number;
   /** Share of the current regular season still to play. */
   remainingShare?: number;
   /** Share of season 0 he is expected to play given his status now (injury, suspension). */
   avail0?: number;
+}
+
+/** Season-0 games of a blended side: N(mu, sd) (projection basis) cut to [lo, hi]. */
+export interface Year0Games {
+  mu: number;
+  sd: number;
+  lo: number;
+  hi: number;
+  basis: number;
+}
+
+/**
+ * A blended side's season-0 games per path: draws of N(mu, sd) cut to [lo,
+ * hi] (`quantile(fLo + u · (fHi − fLo))`), mapped affinely onto [lo, hi] so
+ * their mean is `target` games: anchored at `lo` when the target sits below
+ * the cut's own mean (the « under 40 » side: the cut at 0 would add games),
+ * at `hi` when above (the « 40+ » side: the cut at the basis drops the
+ * normal's impossible games past 82). Verifier 2026-09-28: scaling both by
+ * target / cut mean pushed the « 40+ » draws past the basis, clamped there,
+ * so that side fell ~2% short of E[GP | GP ≥ 40] and never played under 40k.
+ */
+export function year0Cut(y: Year0Games, target: number): { fLo: number; fHi: number; games: (z: number) => number } | null {
+  if (!(y.sd > 0)) return null;
+  const [a, b] = [(y.lo - y.mu) / y.sd, (y.hi - y.mu) / y.sd];
+  const [fLo, fHi] = [normalCdf(a), normalCdf(b)];
+  if (!(fHi - fLo > 1e-9)) return null;
+  const pdf = (z: number) => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
+  const cutMean = clamp(y.mu + (y.sd * (pdf(a) - pdf(b))) / (fHi - fLo), y.lo, y.hi);
+  const t = clamp(target, y.lo, y.hi);
+  const k =
+    t <= cutMean ? (cutMean > y.lo ? (t - y.lo) / (cutMean - y.lo) : 0) : y.hi > cutMean ? (y.hi - t) / (y.hi - cutMean) : 0;
+  const games = (z: number) => {
+    const x = clamp(y.mu + y.sd * z, y.lo, y.hi);
+    return clamp(t <= cutMean ? y.lo + (x - y.lo) * k : y.hi - (y.hi - x) * k, 0, y.basis);
+  };
+  return { fLo, fHi, games };
 }
 
 export interface SimContext {
@@ -204,16 +250,9 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
   // stream (make-it, arrival, prime, later seasons) stays the one without it
   const rng0 = pl.year0 ? rngFor(`${pl.id}${ctx.seedKey}|y0`) : null;
   // a blended side's season-0 games per path: the split-season normal cut to its side of 40
-  const y0g = pl.year0?.games;
-  const y0Cut = (() => {
-    if (!y0g || !(y0g.sd > 0)) return null;
-    const [a, b] = [(y0g.lo - y0g.mu) / y0g.sd, (y0g.hi - y0g.mu) / y0g.sd];
-    const [fLo, fHi] = [normalCdf(a), normalCdf(b)];
-    if (!(fHi - fLo > 1e-9)) return null;
-    const pdf = (z: number) => Math.exp(-0.5 * z * z) / Math.sqrt(2 * Math.PI);
-    const cutMean = y0g.mu + (y0g.sd * (pdf(a) - pdf(b))) / (fHi - fLo);
-    return { fLo, fHi, k: cutMean > 0 ? (pl.year0!.share * y0g.basis) / cutMean : 0 };
-  })();
+  // (the prospect and guard sides: year0.games; the NHL side: games0)
+  const y0g = pl.year0 ? (pl.year0.games ?? null) : pl.path === "nhl" && !ctx.fixedYear0 ? (pl.games0 ?? null) : null;
+  const y0Cut = y0g ? year0Cut(y0g, (pl.year0 ? pl.year0.share : (pl.share0 ?? 0)) * y0g.basis) : null;
   const G = p.games;
   const gg = G.goalie;
   const spBase = p.sigma.persistent[g];
@@ -419,6 +458,7 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
             theta = pl.theta0! * Math.exp(s0 * rng.n() - (s0 * s0) / 2);
             const share0 = pl.share0!;
             if (ctx.fixedYear0) share = share0;
+            else if (y0Cut) share = y0Cut.games(normalQuantile(y0Cut.fLo + rng.u() * (y0Cut.fHi - y0Cut.fLo))) / y0g!.basis;
             else if (g === "G") share = clamp(share0 + p.sigma.goalieShare0 * rng.n(), 0, 1);
             else {
               const p0 = clamp((share0 - G.share0Floor) / (G.regShareMean - G.share0Floor), 0, 1);
@@ -490,10 +530,7 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       if (t === 0 && rng0 && pl.year0!.share > 0) {
         const y = pl.year0!;
         gShare = y.share;
-        if (y0g && y0Cut) {
-          const z = normalQuantile(y0Cut.fLo + rng0.u() * (y0Cut.fHi - y0Cut.fLo));
-          gShare = clamp(y0Cut.k * clamp(y0g.mu + y0g.sd * z, y0g.lo, y0g.hi), 0, y0g.basis) / y0g.basis;
-        }
+        if (y0g && y0Cut) gShare = y0Cut.games(normalQuantile(y0Cut.fLo + rng0.u() * (y0Cut.fHi - y0Cut.fLo))) / y0g.basis;
         thetaT = y.theta * Math.exp(y.sigma * rng0.n() - (y.sigma * y.sigma) / 2);
         playing = gShare > 0;
         fpgReal = thetaT * Math.exp(se * rng0.n() - (se * se) / 2);

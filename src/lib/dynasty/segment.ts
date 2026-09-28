@@ -3,10 +3,15 @@
  * segment, and the year-0 inputs of the path simulation.
  *
  *  1. a real NHL projection with an NHL role      → NHL path
- *  2. a record in the frozen prospect model       → prospect path (record)
+ *  2. a record in the frozen prospect model       → prospect path (record;
+ *     a record that is only the research's undrafted prior needs a known
+ *     age and, once he has been passed over at a draft, never beats the
+ *     undrafted route's odds at his age, route 5: verifier 2026-09-28, 43
+ *     such records skipped its cap, von Barnekow read 0.10 at 23)
  *  3. a real projection for a part-timer          → NHL path
  *  4. drafted at 17–21, minors-eligible now and  → prospect path (draft slot)
- *     under the minors GP limit (100 / 55 G)
+ *     under the minors GP limit (100 / 55 G), not
+ *     25+ with 5+ seasons since his draft
  *  5. minors-eligible now, no trusted draft, in   → prospect path (undrafted:
  *     an NHL organisation, under 20 NHL GP, a        P(make it) by age, fitted
  *     known age (birth date or Fantrax age)          on the undrafted players
@@ -35,7 +40,11 @@
  * side ignored the projection, so year-0 NHL games summed to 0.82 of the
  * projection): the NHL side at E[GP | GP ≥ 40], the prospect side E[GP |
  * GP < 40] games in 2026-27 at the projection's level, then the prospect
- * model from 2027-28 (`blendGames`; the two sum to the projection).
+ * model from 2027-28 (`blendGames`; the two sum to the projection). Each
+ * side draws its games per path from the split-season normal cut to its side
+ * of 40 (simulate.ts `year0Cut`): the NHL side too (`games0`), not the role
+ * model, whose absent and partial seasons are not the « 40+ games » scenario
+ * (verifier 2026-09-28: they kept a free minors spot on 20-32% of its paths).
  *
  * Year 0 (audit 2026-09-25): a current injury, IR stint or suspension trims
  * season 0 only (`avail0`); the goalie start share is his depth-chart share
@@ -58,7 +67,7 @@ import { ageShift, phaseByAge, trajectoryShift, type LevelFn, type Trajectory } 
 import { ageAt, birthMs, cutdownAge, isEligible, seasonAnchorMs } from "./eligibility";
 import { GROWTH_FALL, GROWTH_RISE, makeGrowth, youthBase, type GrowthModel, type GrowthPath } from "./growth";
 import type { DynastyParams } from "./params";
-import { recordProspect, slotProspect, undraftedProspect, type ProspectModel } from "./prospect";
+import { FIRST_DRAFT_AGE, recordProspect, slotProspect, undraftedCeiling, undraftedProspect, type ProspectModel } from "./prospect";
 import { clamp } from "./rng";
 import { groupOf, projectedX, realized, year0Cal } from "./scale";
 import type { SimPlayer } from "./simulate";
@@ -124,6 +133,13 @@ export interface YouthGrowth {
 
 /** A young skater's 2025-26 FP/G and projection disagree beyond this (ln) with ≥ 20 GP. */
 const CONFLICT_LN = Math.log(1.25);
+
+/**
+ * prospects.json pSource of a record whose P(make it) is only the research's
+ * prior for an undrafted player of his age (no NHL games, NHLe or draft
+ * behind it; « +snakeTier »: with a scouting-tier shift).
+ */
+export const UNDRAFTED_PRIOR = "undrafted-prior";
 
 /** Players projected for at least this share of a season count as regulars now. */
 const PROSPECT_PHASE_SHARE = 0.5;
@@ -225,7 +241,15 @@ export function routePlayer(
 
   const realProj = proj?.src === "proj" && (proj.method === "ml" || gp0 >= 20);
   if (proj?.src === "proj" && !realProj) flags.add("placeholderProjection");
-  const nhlShare = nhlRouteShare(p, inp, g, gp0, realProj);
+  const ageKnown = b != null || inp.fantraxAge != null;
+  if (!ageKnown) flags.add("ageUnknown");
+  // A record whose P(make it) is only the research's undrafted prior by age
+  // needs an age (the default 25.5 published « Espoir de 25 ans » for 14
+  // Slapshot players, verifier 2026-09-28), and never beats the undrafted
+  // route's odds at his age (prospect.ts undraftedCeiling).
+  const priorOnly = !!rec && rec.pSource.startsWith(UNDRAFTED_PRIOR);
+  const recOk = !!rec && !(priorOnly && !ageKnown);
+  const nhlShare = recOk ? nhlRouteShare(p, inp, g, gp0, realProj) : null;
   const basis = p.games.projectionBasis;
   const blendGp = nhlShare != null ? blendGames(proj!.gp, proj!.gpSd!, basis) : null;
   const nhlRole =
@@ -248,15 +272,22 @@ export function routePlayer(
     (byEst == null ? idKeyed : draft.year - byEst >= dMin - slack && draft.year - byEst <= dMax + slack);
   // the prospect models' populations: under the minors GP limit (slot), under 20 NHL GP in an NHL organisation (undrafted)
   const underGpLimit = gp0 < (g === "G" ? p.eligibility.goalieGp : p.eligibility.skaterGp);
-  const undraftedOk =
-    !!p.prospect.undrafted && inp.org === true && gp0 < undraftedMaxGp(p) && (b != null || inp.fantraxAge != null);
+  const undraftedOk = !!p.prospect.undrafted && inp.org === true && gp0 < undraftedMaxGp(p) && ageKnown;
+  // nor a minors veteran: past the minors age with the no-arrival decay's last
+  // row behind him (its odds stop falling there; Slapshot's minors take any
+  // age, and 2013-15 picks with no NHL games read « Espoir de 32 ans » on
+  // 5-season odds, verifier 2026-09-28); no age: drafted at 18
+  const draftSeasons = draftOk ? p.firstSeasonYear - draft!.year : 0;
+  const slotVeteran =
+    draftSeasons >= p.prospect.decay.length - 1 &&
+    (ageKnown ? age0 : FIRST_DRAFT_AGE + draftSeasons) >= p.eligibility.age;
   const route: Route = nhlRole
     ? "nhl"
-    : rec
+    : recOk
       ? "prospect"
       : realProj
         ? "nhl-part"
-        : draftOk && eligNow && underGpLimit
+        : draftOk && eligNow && underGpLimit && !slotVeteran
           ? "slot"
           : eligNow && !draftOk && undraftedOk
             ? "undrafted"
@@ -329,9 +360,13 @@ export function routePlayer(
       trajShift: traj.shift,
       remainingShare,
       avail0,
+      // the blend's « 40+ games » side: 40+ games on every path, as the guard side plays them
+      ...(blendGp ? { games0: { mu: proj!.gp, sd: proj!.gpSd!, lo: SKATER_ROLE_GP, hi: basis, basis } } : {}),
     };
   } else if (path === "prospect") {
     pm = route === "slot" ? slotProspect(p, g, draft!) : route === "undrafted" ? undraftedProspect(p, g, age0)! : recordProspect(rec!);
+    const ceiling = route === "prospect" && priorOnly ? undraftedCeiling(p, g, age0) : null;
+    if (ceiling != null && ceiling < pm.pMake) pm = { ...pm, pMake: ceiling };
     sim = {
       id: inp.id,
       g,

@@ -82,6 +82,27 @@ export function lateSlotPMake(p: DynastyParams, g: Group, age0: number, pick: nu
   return slotProspect(p, g, { year: draftYear, pick }, season).pMake;
 }
 
+/** Age on Oct 1 from which an undrafted player has been passed over at a draft (the one in the year he turned 18). */
+export const FIRST_DRAFT_AGE = 18;
+
+/**
+ * Ceiling of an undrafted player's P(make it) at `age0`: the undrafted
+ * route's own odds at his age (the fitted curve capped at pick `capPick`,
+ * `undraftedProspect`). Null before his first draft (a teenager nobody has
+ * passed over yet: Landon Dupont, 17) or without the params block.
+ *
+ * Research records whose P(make it) is only the research's undrafted prior
+ * (prospects.json pSource « undrafted-prior », with or without a scouting
+ * tier) take it too (segment.ts): verifier 2026-09-28, the record route ran
+ * before the undrafted one and never met its cap, so undrafted players with a
+ * record read 0.10 at 23 (William von Barnekow) against 0.006 on the
+ * undrafted route and 0.02-0.04 for 2021 2nd-rounders of his age.
+ */
+export function undraftedCeiling(p: DynastyParams, g: Group, age0: number, season = p.firstSeasonYear): number | null {
+  if (age0 < FIRST_DRAFT_AGE) return null;
+  return undraftedProspect(p, g, age0, season)?.pMake ?? null;
+}
+
 /**
  * Undrafted fallback (params.prospect.undrafted, fitted on the repo's
  * history by scripts/fit-undrafted-prospects.ts): an undrafted player with
@@ -94,6 +115,13 @@ export function lateSlotPMake(p: DynastyParams, g: Group, age0: number, pick: nu
  * age, 0.03-0.06, and inside Slapshot's roster line); the prime FP/G of the
  * undrafted skaters who made it, and his first regular season after the
  * median lag at his age. Null without the params block.
+ *
+ * The ceiling binds from 20 on (params dyn-v6: F 0.043 at 20, 0.018 at 21,
+ * 0.010 at 22, 0.0064 from 23 on, where the no-arrival decay stops; D and G
+ * a little lower): the fit, 0.14 at 21-25 for forwards, only reads at 18-19
+ * (0 at 18.5, 0.056 at 19.5, 0.078 just before 20, the route's highest).
+ * Conservative by design: the verifier's routing of every input found a
+ * median of 0.0064 on the route (2026-09-28).
  */
 export function undraftedProspect(p: DynastyParams, g: Group, age0: number, season = p.firstSeasonYear): ProspectModel | null {
   const u = p.prospect.undrafted;

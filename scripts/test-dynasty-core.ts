@@ -15,7 +15,7 @@ import { makeRetention } from "../src/lib/dynasty/retention";
 import { hashStr, mulberry32, normalQuantile } from "../src/lib/dynasty/rng";
 import { groupOf, realized, replacement, year0Cal } from "../src/lib/dynasty/scale";
 import { blendGames, depthChartShares, routePlayer, statusAvailability } from "../src/lib/dynasty/segment";
-import { mixSimResults, simulatePlayer, spliceSeason0, type SimContext, type SimPlayer } from "../src/lib/dynasty/simulate";
+import { mixSimResults, simulatePlayer, spliceSeason0, year0Cut, type SimContext, type SimPlayer } from "../src/lib/dynasty/simulate";
 import { blendSides, buildDynasty, guardSide, linkYear0 } from "../src/lib/dynasty/index";
 import { makeGrowth } from "../src/lib/dynasty/growth";
 import { modeWeights } from "../src/lib/dynasty/value";
@@ -476,6 +476,46 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
     const mix = blendSides(rNhl, rPro, nhl.nhlShare!, modes, rGuard);
     assert(near(mix.eligAt[1]!, nhl.nhlShare! * rGuard.eligAt[1]! + (1 - nhl.nhlShare!) * rPro.eligAt[1]!, 0.05), `blend eligibility: the two scenarios by P(40+) (${mix.eligAt[1]!.toFixed(3)})`);
   }
+  // The NHL side plays the « 40+ games » scenario on every path, as the guard
+  // does (verifier 2026-09-28: the role draw's absent and partial seasons, 20-32%
+  // of its paths, kept a free minors spot; Oliver Moore read 0.496 eligible).
+  {
+    const g40 = (40 * params.games.seasonGames) / params.games.projectionBasis;
+    for (const inp of fx.players.filter((x) => !(x.status ?? []).length)) {
+      for (const gp of [44, 60, 72]) {
+        const at = { ...inp, proj: { ...inp.proj!, gp } };
+        const nhl = routePlayer(params, level, at, 1, growth, "nhl");
+        const pro = routePlayer(params, level, at, 1, growth, "prospect");
+        linkYear0(params, nhl, pro);
+        assert(nhl.sim!.games0 != null, `${inp.n} ${gp}: the NHL side draws its 2026-27 games from the split-season normal`);
+        const rn = simulatePlayer(nhl.sim!, { ...cx, recordGames: true });
+        const rg = simulatePlayer(guardSide(params, pro)!, { ...cx, recordGames: true });
+        const target = (nhl.blendGp!.above * params.games.seasonGames) / params.games.projectionBasis;
+        const minN = Math.min(...rn.gamesPath![0]!);
+        assert(minN >= g40 - 1e-9 && near(rn.games[0]! / target, 1, 0.01), `${inp.n} ${gp}: NHL side 40+ games on every path (min ${minN.toFixed(1)}), mean ${rn.games[0]!.toFixed(1)} ≈ E[GP | GP ≥ 40] ${target.toFixed(1)}`);
+        assert(near(rg.games[0]! / target, 1, 0.01), `${inp.n} ${gp}: guard side ${rg.games[0]!.toFixed(1)} ≈ E[GP | GP ≥ 40] ${target.toFixed(1)} (was ~2% short: the cut draws clamped at the basis)`);
+        assert(near(rn.eligAt[1]!, rg.eligAt[1]!, 0.04), `${inp.n} ${gp}: the NHL side and the guard read one scenario's eligibility (${rn.eligAt[1]!.toFixed(3)} vs ${rg.eligAt[1]!.toFixed(3)})`);
+      }
+    }
+  }
+  // year0Cut: mean exact on either side of 40, draws inside [lo, hi]
+  for (const [gp, sd] of [[5, 22], [30, 22], [55, 22], [66, 22], [80, 22], [45, 8]] as const) {
+    const s = blendGames(gp, sd, 82);
+    for (const [lo, hi, target] of [[0, 40, s.below], [40, 82, s.above]] as const) {
+      const c = year0Cut({ mu: gp, sd, lo, hi, basis: 82 }, target)!;
+      const K = 20000;
+      let sum = 0;
+      let mn = Infinity;
+      let mx = -Infinity;
+      for (let i = 0; i < K; i++) {
+        const x = c.games(normalQuantile(c.fLo + ((i + 0.5) / K) * (c.fHi - c.fLo)));
+        sum += x;
+        mn = Math.min(mn, x);
+        mx = Math.max(mx, x);
+      }
+      assert(near(sum / K, target, 0.05) && mn >= lo - 1e-9 && mx <= hi + 1e-9, `year0Cut ${gp}±${sd} on [${lo}, ${hi}]: mean ${(sum / K).toFixed(2)} = ${target.toFixed(2)}, draws in [${mn.toFixed(1)}, ${mx.toFixed(1)}]`);
+    }
+  }
 }
 
 // ---- 6. Draft-slot prior
@@ -558,6 +598,42 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(/non repêché/.test(explainFr(v20)), `the sentence says undrafted (${explainFr(v20)})`);
   const slot = one(und({ id: "s20", birthDate: "2006-05-01", e: "D,Skt", draft: { year: 2024, pick: 48 }, draftSource: "profile" }));
   assert(slot.dv.longTerm > v20.dv.longTerm && slot.pNhl > v20.pNhl, `a 2nd-round pick of his age is worth more (${slot.dv.longTerm} vs ${v20.dv.longTerm})`);
+
+  // Research records that are only the undrafted prior (verifier 2026-09-28:
+  // the record route ran first and skipped the cap; 43 records, William von
+  // Barnekow 0.10 at 23, above 2021 2nd-rounders; 14 without an age read
+  // « Espoir de 25 ans » inside Slapshot's roster line).
+  const prior = (over: Partial<ProspectRecord> = {}) => rec({ pSource: "undrafted-prior", pMake: 0.103, eta: 2028, ...over });
+  const vb = routePlayer(params, level, und({ id: "vb", birthDate: null, fantraxAge: 23, org: undefined, prospect: prior() }));
+  assert(vb.route === "prospect" && near(vb.pm!.pMake, undraftedProspect(params, "F", vb.age0)!.pMake, 1e-12), `an undrafted-prior record takes the undrafted route's odds at his age (${vb.pm!.pMake.toFixed(4)})`);
+  for (const pick of [38, 48, 56, 63]) {
+    assert(vb.pm!.pMake < slotProspect(params, "F", { year: 2021, pick }).pMake, `von Barnekow (23) below a 2021 #${pick} of his age`);
+  }
+  assert(vb.pm!.pi.mu === 3 && vb.pm!.eta === 2028, "the record's prime and arrival stand");
+  const lowPrior = routePlayer(params, level, und({ id: "lp", birthDate: "2000-01-01", prospect: prior({ pMake: 0.004 }) }));
+  assert(lowPrior.pm!.pMake === 0.004, "a record already under the ceiling keeps its own odds");
+  const agelessRec = routePlayer(params, level, und({ id: "juhola", birthDate: null, careerGp: null, prospect: prior() }));
+  assert(agelessRec.route === "fringe" && agelessRec.pm === null && agelessRec.flags.has("ageUnknown"), `an undrafted-prior record without an age is no prior by age: fringe (${agelessRec.route})`);
+  const teen = routePlayer(params, level, und({ id: "dupont", birthDate: "2009-04-01", prospect: prior({ pSource: "undrafted-prior+snakeTier", pMake: 0.561 }) }));
+  assert(teen.route === "prospect" && teen.pm!.pMake === 0.561, "a teenager before his first draft keeps the record (nobody has passed him over)");
+  const snakeG = routePlayer(params, level, und({ id: "vz", e: "G", birthDate: "2003-02-26", prospect: prior({ pos: "G", pSource: "undrafted-prior+snakeTier", pMake: 0.366 }) }));
+  assert(snakeG.pm!.pMake <= undraftedProspect(params, "G", snakeG.age0)!.pMake + 1e-12, `the scouting-tier variant takes the ceiling too (${snakeG.pm!.pMake.toFixed(4)})`);
+  const research = routePlayer(params, level, und({ id: "nhle", prospect: rec({ pSource: "nhle(k=2)", pMake: 0.3 }) }));
+  assert(research.pm!.pMake === 0.3, "a record with real evidence (NHLe, draft, NHL games) is untouched");
+  // the explanation never quotes the default age
+  const na = one(und({ id: "na", birthDate: null, careerGp: null, eligNow: false, org: undefined }));
+  assert(na.flags?.includes("ageUnknown") === true && !/25 ans/.test(explainFr(na)) && /âge inconnu/.test(explainFr(na)), `no age: « ${explainFr(na)} »`);
+
+  // The draft-slot model stops at a minors veteran: 25+ with the no-arrival
+  // decay's last row behind him (verifier 2026-09-28: 2013-15 picks read
+  // « Espoir de 32 ans » on 5-season odds in Slapshot, whose minors take any age).
+  const kaut = routePlayer(params, level, und({ id: "kaut", birthDate: "1999-10-19", careerGp: 56, org: undefined, draft: { year: 2018, pick: 16 }, draftSource: "profile" }));
+  assert(kaut.route === "fringe" && kaut.pm === null && kaut.phase !== "prospect", `27, a 2018 pick with 56 NHL games: fringe (${kaut.route}, ${kaut.phase})`);
+  const quenneville = routePlayer(params, level, und({ id: "q", birthDate: null, careerGp: 0, org: undefined, draft: { year: 2013, pick: 195 }, draftSource: "profile" }));
+  assert(quenneville.route === "fringe", "no age, a 2013 pick: drafted at 18, a minors veteran");
+  const late = routePlayer(params, level, und({ id: "late", birthDate: "2001-06-01", draft: { year: 2022, pick: 100 }, draftSource: "profile" }));
+  const five = routePlayer(params, level, und({ id: "five", birthDate: "2003-03-01", draft: { year: 2021, pick: 56 }, draftSource: "profile" }));
+  assert(late.route === "slot" && five.route === "slot", "a 25-year-old 4 seasons after an overage pick and a 23-year-old 5 seasons after his keep the slot model");
 }
 
 // ---- 6c. Market: an undrafted prospect's Ros% of 0 is a price (verifier 2026-09-28)

@@ -83,7 +83,9 @@ export function growthClauseFr(r: Pick<DynastyRecord, "growth">): string | null 
  * « Ros » or « PJ ».
  */
 export function explainFr(r: DynastyRecord, maxLen = 220): string {
-  const age = Math.floor(r.age);
+  // no birth date and no Fantrax age: the default age (and the phase it sets) is never quoted
+  const noAge = !!r.flags?.includes("ageUnknown");
+  const ofAge = noAge ? "" : ` de ${Math.floor(r.age)} ans`;
   const clauses: string[] = [];
   // 1. who and phase
   if (r.phase === "prospect" && r.path !== "nhl") {
@@ -94,7 +96,7 @@ export function explainFr(r: DynastyRecord, maxLen = 220): string {
         : "";
     const eta = r.eta != null ? `, arrivée ${seasonLabel(r.eta)}` : "";
     const who = r.g === "G" ? "Gardien espoir" : "Espoir";
-    clauses.push(`${who} de ${age} ans${draft}${NBSP}: ${pct(r.pNhl)} de chances de s’établir dans la LNH${eta}`);
+    clauses.push(`${who}${ofAge}${draft}${NBSP}: ${pct(r.pNhl)} de chances de s’établir dans la LNH${eta}`);
   } else {
     // a young skater's growth driver carries the magnitude; others quote the yearly trend
     const growth = growthClauseFr(r);
@@ -105,8 +107,8 @@ export function explainFr(r: DynastyRecord, maxLen = 220): string {
         : "";
     // an NHL-path player who is still a part-timer and minors-eligible; a
     // rising young skater's growth clause says "progression" itself
-    const phase = growth && (r.phase === "rising" || r.phase === "entering_prime") ? "" : ` ${phaseClause(r)}`;
-    const who = r.phase === "prospect" ? `${POS_FR[r.g]} espoir de ${age} ans` : `${POS_FR[r.g]} de ${age} ans${phase}`;
+    const phase = noAge || (growth && (r.phase === "rising" || r.phase === "entering_prime")) ? "" : ` ${phaseClause(r)}`;
+    const who = r.phase === "prospect" ? `${POS_FR[r.g]} espoir${ofAge}` : `${POS_FR[r.g]}${ofAge}${phase}${noAge ? " d’âge inconnu" : ""}`;
     clauses.push(`${who}${t}`);
     if (growth) clauses.push(growth);
   }
