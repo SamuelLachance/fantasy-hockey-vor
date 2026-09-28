@@ -98,6 +98,15 @@ function lockText(iso: string): string {
 
 type FantraxHomePlan = Pick<DailyPlan, "teamName" | "dataAsOf" | "legality" | "alerts" | "draft" | "target" | "locks" | "players" | "salary">;
 
+/**
+ * Lines a Fantrax card lists at most (the draft line included). Past that,
+ * the last one says how many more wait in Aujourd'hui: an illegal, over-cap
+ * roster in the middle of a draft raises eight or nine alerts, and every line
+ * costs the home page about 2 KB (its HTML plus its share of the page data).
+ */
+export const HOME_MAX_ALERTS = 4;
+const LEVEL_ORDER: Record<HomeAlert["level"], number> = { error: 0, warn: 1, info: 2 };
+
 /** Keeper slots per team at the offseason cutdown, and the first cutdown. */
 const KEEPER_SLOTS = 10;
 const FIRST_CUTDOWN = 2027;
@@ -140,6 +149,8 @@ export function fantraxHomeCard(
     alerts.push({ level: "error", text: legalitySummary(plan.legality, minors, limits), tab: "aujourdhui", hash: "alertes" });
   }
   const empty: string[] = [];
+  // One line for every roster limit passed (a drafting team can pass three at once).
+  const limitsOver: string[] = [];
   for (const a of plan.alerts) {
     if (a.code === "illegal-roster") continue;
     const text = alertText(a, name);
@@ -148,11 +159,20 @@ export function fantraxHomeCard(
       empty.push(text.replace(/\.$/, ""));
       continue;
     }
+    if (a.code === "roster-limit") {
+      limitsOver.push(text.replace(/\.$/, ""));
+      continue;
+    }
     alerts.push({ level: a.level, text, tab: "aujourdhui", hash: "alertes" });
+  }
+  if (limitsOver.length > 0) {
+    alerts.push({ level: "error", text: `${limitsOver.join(" · ")}.`, tab: "aujourdhui", hash: "alertes" });
   }
   if (empty.length > 0) {
     alerts.push({ level: "warn", text: `${empty.join(" · ")}.`, tab: "aujourdhui", hash: "alignement" });
   }
+  // Most urgent first (stable within a level); the draft line goes on top below.
+  alerts.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
   const d = plan.draft;
   if (d && d.state === "running") {
     // Baked at the sync: the time sits in the line itself (picks move fast),
@@ -167,6 +187,16 @@ export function fantraxHomeCard(
     alerts.unshift({ level: myTurn ? "warn" : "info", text, tab: "repechage" });
   } else if (d && d.state === "not-started") {
     alerts.push({ level: "info", text: "Le repêchage de la ligue n’a pas encore commencé.", tab: "repechage" });
+  }
+  if (alerts.length > HOME_MAX_ALERTS) {
+    const rest = alerts.splice(HOME_MAX_ALERTS - 1);
+    const worst = rest.reduce((w, a) => (LEVEL_ORDER[a.level] < LEVEL_ORDER[w] ? a.level : w), "info" as HomeAlert["level"]);
+    alerts.push({
+      level: worst,
+      text: `Et ${rest.length} ${plural(rest.length, "autre alerte", "autres alertes")} dans l’onglet Aujourd’hui.`,
+      tab: "aujourdhui",
+      hash: "alertes",
+    });
   }
   // Each player locks on his own game in some leagues: the next lock is then
   // the first of my players' games still ahead, not the day's first puck drop.

@@ -8,7 +8,7 @@ import { join } from "path";
 import type { DailyPlan } from "../src/lib/fantrax/daily-plan";
 import { teamDynastySummary } from "../src/lib/fantrax/dynasty-hints";
 import { parseDynasty } from "../src/lib/fantrax/dynasty-index";
-import { categoryHomeCard, dynastyHomeNote, fantraxHomeCard, snakeHomeCard } from "../src/lib/leagues/home-summary";
+import { categoryHomeCard, dynastyHomeNote, fantraxHomeCard, HOME_MAX_ALERTS, snakeHomeCard } from "../src/lib/leagues/home-summary";
 import { getLeague } from "../src/lib/leagues/registry";
 
 let failed = 0;
@@ -101,6 +101,54 @@ const base: HomePlan = {
   eq(texts[1]?.slice(1, 3), ["aujourdhui", "alertes"], "legality → Aujourd'hui#alertes");
   assert(String(texts[2]?.[3]).includes("Chase Reid") && String(texts[2]?.[3]).includes("réserve"), "dead player named, with the move");
   eq(texts[3], ["warn", "aujourdhui", "alignement", "1 poste C vide · 2 postes D vides."], "empty slots on one line");
+}
+
+// ---- the worst case: an illegal, over-cap roster mid-draft (Slapshot past 23
+// Active + Reserve) — the card stays at HOME_MAX_ALERTS lines, so the home
+// page cannot outgrow its budget however many alerts the plan raises.
+{
+  const slapshot = getLeague("slapshot")!;
+  const card = fantraxHomeCard(
+    slapshot,
+    {
+      ...base,
+      legality: {
+        illegal: true,
+        need: 0,
+        minTotal: 0,
+        counts: { active: 26, reserve: 0, ir: 0, minors: 0, counted: 26 },
+      } as DailyPlan["legality"],
+      alerts: [
+        { level: "info", code: "fxpa-closed" },
+        { level: "error", code: "roster-limit", detail: "too-many-active", count: 26, limit: 20 },
+        { level: "error", code: "roster-limit", detail: "slot-over", slot: "C", count: 7, limit: 4 },
+        { level: "error", code: "roster-limit", detail: "slot-over", slot: "D", count: 8, limit: 6 },
+        { level: "warn", code: "empty-slot", slot: "G", count: 1 },
+        { level: "warn", code: "empty-slot", slot: "RW", count: 2 },
+        { level: "warn", code: "over-max-after-moves", count: 26, limit: 23 },
+        { level: "warn", code: "salary-over", count: 106.52, limit: 105, ids: ["p1"] },
+      ],
+      draft: {
+        state: "running",
+        current: { pick: 400, round: 13, teamId: "x" },
+        next: { pick: 404, round: 13, teamId: "me" },
+        picksBefore: 3,
+      } as unknown as DailyPlan["draft"],
+    },
+    null,
+    true,
+    slapshot.kind === "fantrax-points" ? { maxActive: 20, maxReserve: 3, maxIr: 5, maxMinors: 17, maxTotal: 40 } : undefined,
+  );
+  eq(card.alerts.length, HOME_MAX_ALERTS, `at most ${HOME_MAX_ALERTS} lines`);
+  assert(card.alerts[0]!.tab === "repechage", "the running draft stays first");
+  assert(card.alerts[1]!.level === "error" && card.alerts[1]!.text.startsWith("Alignement illégal"), "then the most urgent");
+  const limits = card.alerts.find((a) => a.text.includes("Trop de joueurs actifs"));
+  assert(!!limits && limits.text.includes("au poste C") && limits.text.includes("au poste D"), `roster limits merged into one line (${limits?.text})`);
+  const more = card.alerts.at(-1)!;
+  assert(/^Et \d+ autres alertes dans l’onglet Aujourd’hui\.$/.test(more.text) && more.tab === "aujourdhui" && more.level === "warn", `the rest folded: ${more.text}`);
+  const shown = card.alerts.slice(0, -1).map((a) => a.text).join(" ");
+  assert(!shown.includes("ne publie pas"), "the permanent fxpa notice is the first to fold");
+  assert(JSON.stringify(card).length < 2_000, `the card's data stays small (${JSON.stringify(card).length} B)`);
 }
 
 // ---- on the clock / no pick left / not started

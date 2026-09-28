@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, CircleAlert, ExternalLink, Info } from "lucide-react";
+import { ArrowRight, ExternalLink } from "lucide-react";
 import type { ReactNode } from "react";
 import { Countdown } from "@/components/site/Countdown";
 import type { HomeAlert, HomeCardData } from "@/lib/leagues/home-summary";
@@ -11,22 +11,15 @@ const ACCENT: Record<HomeCardData["accent"], string> = {
   amber: "text-amber-300",
 };
 
-const LEVEL: Record<HomeAlert["level"], { icon: ReactNode; cls: string; sr: string }> = {
-  error: {
-    icon: <CircleAlert className="h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />,
-    cls: "border-rose-500/40 bg-rose-500/10 text-rose-50",
-    sr: "Urgent : ",
-  },
-  warn: {
-    icon: <AlertTriangle className="h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />,
-    cls: "border-amber-500/30 bg-amber-500/10 text-amber-50",
-    sr: "À voir : ",
-  },
-  info: {
-    icon: <Info className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />,
-    cls: "border-white/10 bg-white/[0.03] text-slate-200",
-    sr: "",
-  },
+/**
+ * What a screen reader hears before a line. The look (colors, the level icon,
+ * the trailing arrow) is `.home-alert-<level>` in globals.css: one rule for
+ * every line instead of classes and inline SVG repeated in each.
+ */
+const LEVEL_SR: Record<HomeAlert["level"], string> = {
+  error: "Urgent : ",
+  warn: "À voir : ",
+  info: "",
 };
 
 /** One league on « Mes ligues »: what needs attention today and a link to each tab. */
@@ -102,25 +95,16 @@ export function LeagueHomeCard({ card, children }: { card: HomeCardData; childre
         <div>
           {card.syncedText ? <p className="mb-2 text-xs text-slate-400">{card.syncedText} :</p> : null}
           <ul className="space-y-2">
-            {card.alerts.map((a, i) => {
-              const lv = LEVEL[a.level];
-              return (
-                <li key={i} className={`rounded-xl border px-3 py-2 text-sm ${lv.cls}`}>
-                  <Link
-                    href={`${leagueTabPath(card.slug, a.tab, card.search)}${a.hash ? `#${a.hash}` : ""}`}
-                    prefetch={false}
-                    className="flex min-h-11 items-start gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-                  >
-                    <span className="mt-0.5">{lv.icon}</span>
-                    <span className="min-w-0 flex-1">
-                      {lv.sr ? <span className="sr-only">{lv.sr}</span> : null}
-                      {a.text}
-                    </span>
-                    <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 opacity-70" aria-hidden="true" />
-                  </Link>
-                </li>
-              );
-            })}
+            {card.alerts.map((a, i) => (
+              <li key={i} className={`home-alert home-alert-${a.level}`}>
+                <Link href={`${leagueTabPath(card.slug, a.tab, card.search)}${a.hash ? `#${a.hash}` : ""}`} prefetch={false}>
+                  <span>
+                    {LEVEL_SR[a.level] ? <span className="sr-only">{LEVEL_SR[a.level]}</span> : null}
+                    {a.text}
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       ) : card.syncedText ? (
