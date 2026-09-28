@@ -338,6 +338,23 @@ assert(rec("adp1")?.nl === 1 && rec("proj1")?.nl === undefined, "players off Fan
   eq(drs.length, new Set(drs).size, "one pool record per draft pick");
 }
 eq(pool.counts, { total: 14, projected: 2, prospects: 6, other: 6 }, "counts");
+assert(pool.orgSkipped === undefined, "no organisation list: no orgSkipped field");
+// NHL-organisation players (nhl-rosters.json, matched by the sync's second pass): in whatever else holds
+{
+  const p2 = buildPool({
+    ...input,
+    leaguePlayers: { ...input.leaguePlayers, org1: { eligiblePos: "W,F,Skt", status: "FA" }, org2: { eligiblePos: "", status: "FA" } },
+    identity: { ...input.identity, org1: { name: "Signing, Undrafted", team: "MTL" }, org2: { name: "Nopos, Rookie", team: "MTL" } },
+    nhlIds: { ...input.nhlIds, vet1: 8470001, org1: 8490001, org2: 8490002 },
+    bios: new Map([...input.bios, [8490001, { birthDate: "2004-03-01", draft: null }]]),
+    org: new Set([8470001, 8490001, 8490002]),
+  });
+  const r2 = (id: string) => p2.players.find((p) => p.id === id);
+  assert(!!r2("vet1") && r2("vet1")!.nhl === 8470001, "an organisation player is in without a projection, an ADP, a roster spot or a Ros%");
+  eq([r2("org1")?.bd, r2("org1")?.age, r2("org1")?.dr, r2("org1")?.src, r2("org1")?.nhl], ["2004-03-01", 22, undefined, "e", 8490001], "an undrafted signing: birth date and age from his bio, a prospect");
+  eq(p2.orgSkipped, ["org2"], "an organisation player without a Fantrax position is left out and listed");
+  eq(p2.counts.total, pool.counts.total + 2, "the others are unchanged");
+}
 assert(pool.players.every((p, i, a) => i === 0 || a[i - 1]!.id < p.id), "sorted by id");
 assert(!JSON.stringify(pool).includes("null") && Object.values(pool.players).every((p) => Object.values(p).every((v) => v !== undefined)), "no null / undefined fields");
 assert(isPoolSnapshot(pool) && !isPoolSnapshot({ v: 1, players: [{ id: 1 }] }) && !isPoolSnapshot(null), "shape guard");

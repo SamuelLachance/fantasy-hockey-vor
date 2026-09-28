@@ -11,6 +11,8 @@ import {
   type FantraxMatchPlayer,
   type NhlMatchCandidate,
 } from "../src/lib/fantrax/match";
+import { matchFantraxToOrg, orgMatchCandidates } from "../src/lib/fantrax/org-players";
+import type { NhlListedPlayer } from "../src/lib/nhl-rosters";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -108,6 +110,44 @@ assert(withOverride.get("hughes-njd")?.nhlId === 8481559, "override leaves NJD H
 
 const claimed = [...m.values()].map((r) => r.nhlId);
 assert(new Set(claimed).size === claimed.length, "no NHL id claimed twice");
+
+// ---- second pass: the NHL organisations' players (org-players.ts)
+{
+  const fx = (fantraxId: string, name: string, team: string, e = "C,F,Skt"): FantraxMatchPlayer => ({ fantraxId, name, team, groups: groupsFromEligible(e) });
+  const listed = (id: number, name: string, team: string, code: NhlListedPlayer["code"] = "C"): NhlListedPlayer => ({ id, name, team, code, birthDate: null, list: "org" });
+  const fantrax = [
+    fx("a", "Suzuki, Nick", "MTL"),
+    fx("b", "Gordin, Alexander", "MTL"),
+    fx("c", "Silaev, Anton", "NJD", "D,Skt"),
+    fx("d", "Rathbone, Jack", "(N/A)", "D,Skt"),
+    fx("e", "Smith, John", "BOS"),
+    fx("f", "Smith, John", "(N/A)"),
+    fx("g", "Keyser, Kyle", "ANA", "G"),
+    fx("h", "Blocked, Guy", "TOR"),
+  ];
+  const first = new Map([["a", { nhlId: 8480018, method: "name-team" as const }]]);
+  const org = orgMatchCandidates(
+    [
+      listed(8480018, "Nick Suzuki", "MTL"),
+      listed(8482000, "Alexander Gordin", "MTL", "R"),
+      listed(8484000, "Anton Silayev", "NJD", "D"),
+      listed(8480500, "Jack Rathbone", "PIT", "D"),
+      listed(8481000, "John Smith", "CHI"),
+      listed(8478000, "Kyle Keyser", "ANA", "G"),
+      listed(8486000, "Guy Blocked", "TOR"),
+    ],
+    new Set([8480018]),
+  );
+  assert(org.length === 6 && !org.some((c) => c.id === 8480018), "candidates: the organisation's players no earlier list has");
+  const om = matchFantraxToOrg(fantrax, org, first, { h: null }, { ageOf: (id) => (id === "g" ? 40 : undefined), birthYearOf: (id) => (id === 8478000 ? 1998 : undefined), year: 2026 });
+  assert(om.get("b")?.nhlId === 8482000 && om.get("b")?.method === "org-name-team", "Gordin by name + club");
+  assert(om.get("c")?.nhlId === 8484000 && om.get("c")?.method === "org-spelling", "Silaev = Silayev (same club, one edit)");
+  assert(om.get("d")?.nhlId === 8480500 && om.get("d")?.method === "org-name", "clubless Rathbone by name alone");
+  assert(!om.has("e") && !om.has("f"), "two Fantrax « John Smith »: no guess");
+  assert(!om.has("g"), "a Fantrax age 12 years off the birth year rejects the pair");
+  assert(!om.has("h"), "an override to null stays unmatched");
+  assert(!om.has("a"), "first-pass matches are left alone");
+}
 
 if (failed) process.exit(1);
 console.log("OK: fantrax match");

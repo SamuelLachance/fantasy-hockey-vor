@@ -12,7 +12,12 @@
  *   (see `assignDraftPicks`: his NHL profile, else a one-to-one name match);
  * - at least `POOL_MIN_ROS` % of Fantrax leagues roster him (catches the
  *   prospects whose name the draft lists spell differently, and undrafted
- *   signings).
+ *   signings);
+ * - he is in an NHL organisation (`org`: src/data/nhl-rosters.json, current
+ *   rosters, prospect lists and the search index's club players, unsigned
+ *   draft rights included; matched by the sync's organisation pass,
+ *   org-players.ts). Slapshot has no Ros% (fxpa is closed there), and both
+ *   leagues dropped undrafted signings and pre-2021 picks without one.
  *
  * Built by `scripts/fantrax-sync.ts` (pure function below, unit-tested);
  * read by the /league explorer in the browser. Keys are short and absent
@@ -109,6 +114,11 @@ export interface PoolSnapshot {
   recentDrafts: [number, number];
   counts: { total: number; projected: number; prospects: number; other: number };
   players: PoolRecord[];
+  /**
+   * Organisation players (`org`) left out because Fantrax gives them no
+   * position in this league (not listed there yet): check:league reads it.
+   */
+  orgSkipped?: string[];
 }
 
 /** One NHL entry draft pick. */
@@ -157,6 +167,11 @@ export interface PoolBuildInput {
    * so namesakes each keep theirs) plus the older registry picks.
    */
   draftPicks: readonly PoolDraftPick[];
+  /**
+   * NHL ids of the NHL organisations' players (nhl-rosters.json): kept
+   * whatever else holds, so the draftable universe is listed in full.
+   */
+  org?: ReadonlySet<number>;
   /** Normalizes NHL team codes (ARI → UTA…). */
   teamAlias?: (team: string) => string;
   /** The league whose eligibility vocabulary `eligiblePos` speaks. */
@@ -486,6 +501,7 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
   });
 
   const players: PoolRecord[] = [];
+  const orgSkipped: string[] = [];
   for (const [id, who] of people) {
     const value = input.values[id];
     const flags = input.flags.get(id);
@@ -498,10 +514,14 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
     const onWaivers = who.league.status === "WW";
     const recentPick = !!dr && dr[0] >= recentDrafts[0];
     const rostersWidely = (flags?.ros ?? 0) >= POOL_MIN_ROS;
-    if (!projected && adp === undefined && !rostered && !onWaivers && !recentPick && !rostersWidely) continue;
+    const inOrg = nhl !== undefined && !!input.org?.has(nhl);
+    if (!projected && adp === undefined && !rostered && !onWaivers && !recentPick && !rostersWidely && !inOrg) continue;
 
     const pos = poolGroups(value?.e ?? who.league.eligiblePos, input.config ?? CAPTAINS_DYNASTY);
-    if (!pos) continue;
+    if (!pos) {
+      if (inOrg) orgSkipped.push(id);
+      continue;
+    }
     const minorsEligible = !!flags?.minorsEligible || (flags?.icons ?? []).includes(FANTRAX_ICON.minorsEligible);
     const icons = (flags?.icons ?? []).filter((i) => POOL_ICONS.has(i));
     const prospect = minorsEligible || (who.age !== undefined && who.age <= 24) || recentPick;
@@ -544,6 +564,7 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
     recentDrafts,
     counts: { total: players.length, projected: count("p"), prospects: count("e"), other: count("n") },
     players,
+    ...(input.org ? { orgSkipped: orgSkipped.sort() } : {}),
   };
 }
 

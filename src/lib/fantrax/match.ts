@@ -155,7 +155,12 @@ export interface NhlMatchCandidate {
   groups: Set<PositionGroup>;
 }
 
-export type MatchMethod = "override" | "name-team" | "name";
+/**
+ * How a Fantrax id got its NHL id: an override, the first pass (profiles and
+ * projections: name + team, name), or the organisation pass (org-players.ts:
+ * rosters, prospect lists and the search index's club players).
+ */
+export type MatchMethod = "override" | "name-team" | "name" | "org-name-team" | "org-name" | "org-spelling";
 
 export interface MatchResult {
   nhlId: number;

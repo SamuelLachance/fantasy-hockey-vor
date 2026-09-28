@@ -12,7 +12,10 @@
  * rosters, draft, ids and ADP; two batched fxpa POSTs for caps, injury /
  * minors flags, Ros% and claims, plus one for the minors-eligible prospects
  * the explorer pool lists; NHL api-web for the schedule and the picks of
- * the recent entry drafts. Fantrax
+ * the recent entry drafts. The committed NHL organisation lists
+ * (src/data/nhl-rosters.json, with nhl-org-bios.json and league-seasons.json
+ * for their birth dates and drafts) feed a second matching pass and the
+ * pool's organisation rule (org-players.ts), no request of their own. Fantrax
  * requests are >= 1 s apart with a descriptive User-Agent. If fxpa fails the
  * sync still writes everything with `state.fxpaOk = false`; if fxea fails it
  * exits non-zero and leaves the committed snapshot untouched. A league whose
@@ -69,6 +72,9 @@ import {
 } from "../src/lib/fantrax/match";
 import { attachGoalieStartShares, valueRecord } from "../src/lib/fantrax/values-build";
 import { buildPool, RECENT_NHL_DRAFTS, type PoolDraftPick, type PoolFlags } from "../src/lib/fantrax/pool";
+import { matchFantraxToOrg, orgBios, orgMatchCandidates, type NhlOrgBiosFile } from "../src/lib/fantrax/org-players";
+import type { LeagueSeasonsCache } from "../src/lib/league-seasons";
+import type { NhlRostersFile } from "../src/lib/nhl-rosters";
 import { scoringShape, scoringTableFromInfo, unscoredCategories } from "../src/lib/fantrax/scoring";
 import type {
   CapUsage,
@@ -572,6 +578,31 @@ async function main() {
   const overridesFile = readJson<{ overrides: Array<{ fantraxId: string; nhlId: number | null }> }>(PATHS.overrides);
   const overrides = Object.fromEntries((overridesFile?.overrides ?? []).map((o) => [o.fantraxId, o.nhlId]));
   const matches = matchFantraxToNhl(fxPool, nhlPool, overrides, normalizeTeamAbbrev);
+  // Second pass: the NHL organisations' players no profile or projection
+  // covers (rosters, prospect lists, the search index's club players, unsigned
+  // draft rights), only for Fantrax ids still unmatched and NHL ids nobody
+  // claimed; a known Fantrax age more than a year off the birth year rejects a pair.
+  const nhlRosters = readJson<NhlRostersFile>(PATHS.nhlRosters);
+  if (!nhlRosters) console.warn("WARN: nhl-rosters.json missing: organisation players stay unmatched (npm run nhl:rosters)");
+  const orgPlayers = nhlRosters?.players ?? [];
+  const orgBioFile = readJson<NhlOrgBiosFile>(PATHS.nhlOrgBios);
+  const leagueSeasons = readJson<LeagueSeasonsCache>(PATHS.leagueSeasons)?.players ?? {};
+  const orgBirthYear = new Map<number, number>();
+  for (const [id, b] of orgBios(orgPlayers, { bios: orgBioFile?.players, seasons: leagueSeasons })) {
+    if (b.birthDate) orgBirthYear.set(id, Number(b.birthDate.slice(0, 4)));
+  }
+  const fantraxAge = (id: string) => {
+    const a = flags.get(id)?.age ?? prospectFlags.get(id)?.age;
+    return a !== undefined && a >= 14 && a <= 50 ? a : undefined;
+  };
+  const orgMatches = matchFantraxToOrg(
+    fxPool,
+    orgMatchCandidates(orgPlayers, new Set(nhlPool.map((c) => c.id)), normalizeTeamAbbrev),
+    matches,
+    overrides,
+    { teamAlias: normalizeTeamAbbrev, ageOf: fantraxAge, birthYearOf: (id) => orgBirthYear.get(id), year: new Date(now).getUTCFullYear() },
+  );
+  for (const [fid, m] of orgMatches) matches.set(fid, m);
   const methods: Record<string, number> = {};
   for (const m of matches.values()) methods[m.method] = (methods[m.method] ?? 0) + 1;
   const nhlIds: NhlIdsSnapshot = {
@@ -663,6 +694,18 @@ async function main() {
   for (const [id, f] of flags) poolFlags.set(id, f);
   // Same membership as state.ros (the draft and waiver helpers' "listed by Fantrax").
   const listed = fxpaOk ? new Set([...flags].filter(([, f]) => f.ros !== undefined).map(([id]) => id)) : null;
+  // Birth date and draft by NHL id: the profiles, then the organisation
+  // players' landings (nhl-org-bios.json, league-seasons.json) and lists;
+  // a draft club the source lacks comes from the entry-draft picks.
+  const pickClub = new Map(draftPicks.map((d) => [`${d.year}:${d.overallPick}`, d.team] as const));
+  const bios = new Map<number, { birthDate?: string; draft?: { year: number; overallPick: number; team: string } | null }>(
+    orgBios(orgPlayers, {
+      bios: orgBioFile?.players,
+      seasons: leagueSeasons,
+      pickTeam: (year, pick) => pickClub.get(`${year}:${pick}`),
+    }),
+  );
+  for (const p of profiles) bios.set(p.id, { birthDate: p.bio?.birthDate, draft: p.draft });
   const pool = buildPool({
     fetchedAt: nowIso,
     season: dataset.season,
@@ -675,8 +718,9 @@ async function main() {
     listed,
     adp,
     nhlIds: nhlIds.ids,
-    bios: new Map(profiles.map((p) => [p.id, { birthDate: p.bio?.birthDate, draft: p.draft }] as const)),
+    bios,
     draftPicks,
+    org: new Set(orgPlayers.map((p) => p.id)),
     teamAlias: normalizeTeamAbbrev,
     config: CFG,
   });

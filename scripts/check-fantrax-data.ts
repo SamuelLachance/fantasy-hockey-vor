@@ -376,6 +376,43 @@ if (nhlIds) {
   if (dupes.length > 0) errors.push(`NHL ids claimed twice: ${dupes.slice(0, 5).join("; ")}`);
 }
 
+// Every NHL-organisation player this league lists (a Fantrax id matched to an
+// id of nhl-rosters.json) is in the explorer pool, or named in its
+// orgSkipped (Fantrax gives him no position here yet): the pool's
+// organisation rule (investigation 2026-09-27: the draftable universe).
+const nhlRosters = load<{ players: Array<{ id: number }> }>(P.nhlRosters);
+if (nhlIds && pool && nhlRosters) {
+  const org = new Set(nhlRosters.players.map((p) => p.id));
+  const inPool = new Set(pool.players.map((p) => p.id));
+  const skipped = new Set(pool.orgSkipped ?? []);
+  const missing = Object.entries(nhlIds.ids).filter(([fid, id]) => org.has(id) && !inPool.has(fid) && !skipped.has(fid));
+  if (missing.length > 0) {
+    errors.push(`${missing.length} NHL-organisation players missing from pool.json (e.g. ${missing.slice(0, 5).map(([fid, id]) => `${fid} → ${id}`).join(", ")})`);
+  }
+}
+
+// The stand-alone live draft page (Slapshot): every rostered or drafted player has a row.
+if (CFG.slug === "slapshot" && state) {
+  const pagePath = `${ROOT}/public/slapshot-draft.html`;
+  if (existsSync(pagePath)) {
+    const m = /<script id="data" type="application\/json">([\s\S]*?)<\/script>/.exec(readFileSync(pagePath, "utf8"));
+    let rows: Set<string> | null = null;
+    try {
+      rows = m ? new Set((JSON.parse(m[1]!) as { board: Array<{ i: string }> }).board.map((r) => r.i)) : null;
+    } catch {
+      rows = null;
+    }
+    if (!rows) errors.push("public/slapshot-draft.html has no readable board");
+    else {
+      const held = new Set<string>();
+      for (const roster of Object.values(state.rosters)) for (const e of roster) held.add(e.id);
+      for (const p of state.draft?.picks ?? []) if (p.playerId) held.add(p.playerId);
+      const off = [...held].filter((id) => !rows!.has(id));
+      if (off.length > 0) errors.push(`${off.length} rostered or drafted players are not on public/slapshot-draft.html (e.g. ${off.slice(0, 5).join(", ")}): run npm run slapshot:draft-page`);
+    }
+  }
+}
+
 if (overrides) {
   const ids = overrides.overrides.map((o) => o.fantraxId);
   if (new Set(ids).size !== ids.length) errors.push("id-overrides.json lists a Fantrax id twice");

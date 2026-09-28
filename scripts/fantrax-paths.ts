@@ -42,6 +42,11 @@ export interface FantraxLeaguePaths {
   players: string;
   profiles: string;
   draftRegistry: string;
+  /** Who the NHL lists in each organisation (npm run nhl:rosters). */
+  nhlRosters: string;
+  /** Landing bios of the organisation players the profiles lack (npm run nhl:org-bios). */
+  nhlOrgBios: string;
+  leagueSeasons: string;
   dynastyParams: string;
   dynastyProspects: string;
   dynastyBenchmarks: string;
@@ -70,6 +75,9 @@ export function fantraxPaths(
     players: join(root, "src", "data", "players.json"),
     profiles: join(root, "src", "data", "player-profiles.json"),
     draftRegistry: join(root, "src", "data", "draft-registry.json"),
+    nhlRosters: join(root, "src", "data", "nhl-rosters.json"),
+    nhlOrgBios: join(root, "src", "data", "nhl-org-bios.json"),
+    leagueSeasons: join(root, "src", "data", "league-seasons.json"),
     dynastyParams: join(root, "src", "data", "dynasty", "params.json"),
     dynastyProspects: join(root, "src", "data", "dynasty", "prospects.json"),
     dynastyBenchmarks: join(root, "src", "data", "dynasty", "benchmarks.json"),
