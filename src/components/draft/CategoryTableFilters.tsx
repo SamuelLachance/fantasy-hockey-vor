@@ -8,6 +8,7 @@ import {
   type CategoryCaps,
   type CategoryCtx,
   type CategoryFilters as Filters,
+  type CategoryProjection,
   type CategoryStatus,
 } from "@/lib/draft/table";
 
@@ -24,7 +25,7 @@ const POSITION_NAME: Record<string, string> = {
 /**
  * A categories league's filters in the player table's form: status (from
  * the draft marked on this device), one position (the draft board's: F =
- * any forward), then « Plus de filtres » (VOR, ADP, age and Snake's
+ * any forward), then « Plus de filtres » (projection, VOR, ADP, age and Snake’s
  * verdict and trend). The table's own buttons (`actions`) sit next to
  * « Plus de filtres ».
  */
@@ -37,7 +38,7 @@ export function CategoryTableFilters({
   actions,
 }: FilterUiProps<Filters, CategoryCaps, CategoryCtx>) {
   const set = (r: { min: number | null; max: number | null }) => r.min !== null || r.max !== null;
-  const advancedCount = [f.vor, f.adp, f.age].filter(set).length + [f.verdict, f.trend].filter(Boolean).length;
+  const advancedCount = [f.vor, f.adp, f.age].filter(set).length + [f.proj, f.verdict, f.trend].filter(Boolean).length;
   const more = useMoreFilters(advancedCount);
   const verdicts = labels.verdicts ?? [];
   const trends = labels.trends ?? [];
@@ -92,6 +93,11 @@ export function CategoryTableFilters({
         hidden={!more.open}
         className="grid gap-3 rounded-xl border border-white/10 bg-white/[0.02] p-3 sm:grid-cols-2 lg:grid-cols-4"
       >
+        <Select label="Projection" value={f.proj} onChange={(v) => onFilters({ proj: v as CategoryProjection })}>
+          <option value="">Tous les joueurs</option>
+          <option value="avec">Avec projection</option>
+          <option value="sans">Sans projection (recrues, rappels, espoirs)</option>
+        </Select>
         <RangeField label="VOR" value={f.vor} onChange={(vor) => onFilters({ vor })} />
         <RangeField label="ADP" value={f.adp} onChange={(adp) => onFilters({ adp })} />
         <RangeField label="Âge" value={f.age} onChange={(age) => onFilters({ age })} />

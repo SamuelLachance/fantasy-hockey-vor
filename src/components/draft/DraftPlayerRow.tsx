@@ -31,6 +31,8 @@ export interface DraftPlayerRowProps {
   rowId: string;
   onMark: (id: number, mine: boolean) => void;
   onRemove: (index: number) => void;
+  /** Naming a « hors liste » pick: one « C'est lui » button instead of Pris / Moi. */
+  onName?: (id: number) => void;
 }
 
 const NBSP = String.fromCharCode(0xa0);
@@ -61,8 +63,10 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
   rowId,
   onMark,
   onRemove,
+  onName,
 }: DraftPlayerRowProps) {
   const drafted = pickNumber != null;
+  const noProj = p.noProj;
   const goalie = isGoalieBoardPlayer(p);
   const band = availability == null ? null : availabilityBand(availability);
   return (
@@ -73,7 +77,7 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
       } ${active ? "bg-cyan-500/10 ring-1 ring-inset ring-cyan-400/50" : ""}`}
     >
       <div className="row-span-2 self-start pt-0.5 text-right text-xs tabular-nums text-slate-500 xl:row-span-1 xl:self-center xl:pt-0">
-        {rankLabel}
+        {noProj ? "—" : rankLabel}
       </div>
 
       <div className="min-w-0">
@@ -83,14 +87,14 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
           >
             {p.name}
           </span>
-          <DraftPositionBadges positions={p.pos} vorPos={p.vorPos} />
+          <DraftPositionBadges positions={p.pos} vorPos={noProj ? undefined : p.vorPos} />
           <RankAdjustedBadge adjusted={p.adjusted} />
           <SnakeNhlMini id={p.id} />
         </div>
         <div className="truncate text-xs text-slate-400">
           {p.team}
           {p.age != null ? ` · ${yearsLabel(p.age)}` : ""}
-          {` · ${p.gp}${NBSP}PJ`}
+          {noProj ? "" : ` · ${p.gp}${NBSP}PJ`}
           {drafted ? (
             <span className={mine ? "text-cyan-300" : "text-slate-300"}>
               {` · ${mine ? "Mon choix" : "Repêché"} ${pickLabel(pickNumber)}`}
@@ -100,17 +104,28 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
       </div>
 
       <div className="text-right xl:col-start-3 xl:row-start-1">
-        <div className="text-base font-bold tabular-nums text-cyan-200">{formatFr(p.vor, 1)}</div>
+        <div className={`text-base font-bold tabular-nums ${noProj ? "text-slate-500" : "text-cyan-200"}`}>
+          {noProj ? "—" : formatFr(p.vor, 1)}
+        </div>
         <div className="text-[10px] uppercase tracking-wide text-slate-500 xl:hidden">VOR</div>
       </div>
 
       <div className="col-start-2 row-start-2 flex min-w-0 items-center gap-3 text-xs xl:contents">
         <div className="xl:col-start-4 xl:row-start-1">
-          <CategoryMiniBars
-            categories={goalie ? goalieCategories : skaterCategories}
-            z={groupRelativeZ({ skaterGroupOffset }, p)}
-            proj={p.proj}
-          />
+          {noProj ? (
+            <span
+              className="whitespace-nowrap text-amber-200/90"
+              title="La LNH l’inscrit, mais il n’a pas de projection : aucune valeur dans la ligue"
+            >
+              {noProj === "roster" ? "Pas de projection" : "Espoir, sans projection"}
+            </span>
+          ) : (
+            <CategoryMiniBars
+              categories={goalie ? goalieCategories : skaterCategories}
+              z={groupRelativeZ({ skaterGroupOffset }, p)}
+              proj={p.proj}
+            />
+          )}
         </div>
         <div className="tabular-nums text-slate-400 xl:col-start-5 xl:row-start-1 xl:text-right">
           <span className="xl:hidden">ADP </span>
@@ -126,7 +141,16 @@ export const DraftPlayerRow = memo(function DraftPlayerRow({
       </div>
 
       <div className="col-start-3 row-start-2 flex justify-end gap-1.5 xl:col-start-7 xl:row-start-1">
-        {drafted ? (
+        {onName && !drafted ? (
+          <button
+            type="button"
+            onClick={() => onName(p.id)}
+            className="min-h-11 rounded-lg bg-amber-400 px-3 text-xs font-semibold text-slate-950 hover:bg-amber-300 sm:min-h-9"
+            aria-label={`${p.name} : c’est le joueur du choix hors liste`}
+          >
+            C’est lui
+          </button>
+        ) : drafted ? (
           <button
             type="button"
             onClick={() => onRemove(pickIndex)}

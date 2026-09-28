@@ -11,7 +11,7 @@ import {
 } from "react";
 import { probAvailableAt } from "@/lib/draft/availability";
 import { DRAFT_FILTERS, draftRows, type DraftFilter, type DraftRow } from "@/lib/draft/board-filter";
-import type { DraftBoard } from "@/lib/draft/board-types";
+import type { DraftBoard, LeaguePool } from "@/lib/draft/board-types";
 import { pickLabel, pickOwnerMismatch } from "@/lib/draft/draft-copy";
 import {
   EMPTY_DRAFT_STATE,
@@ -21,10 +21,12 @@ import {
   removePickAt,
   setDraftSlot,
   setPickMine,
+  setPickPlayer,
   undoLastPick,
   type DraftState,
 } from "@/lib/draft/draft-state";
 import { getDraftStore } from "@/lib/draft/draft-store";
+import { leaguePlayers } from "@/lib/draft/league-pool";
 import { pickInfo } from "@/lib/draft/snake";
 import { suggestPicks } from "@/lib/draft/suggestions";
 import { categoryTargets } from "@/lib/draft/team";
@@ -79,7 +81,13 @@ function coarsePointer(): boolean {
   }
 }
 
-export function DraftHelper({ board }: { board: DraftBoard }) {
+/**
+ * `pool`: the rest of the league (`pool.json`) once fetched: its players
+ * join the list (searchable, markable), my picks are found among them, and
+ * a « hors liste » pick can be named (« Identifier »). Suggestions stay on
+ * the board's players.
+ */
+export function DraftHelper({ board, pool = null }: { board: DraftBoard; pool?: LeaguePool | null }) {
   const teams = board.league.teams;
   const store = getDraftStore(board.slug, teams);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
@@ -93,25 +101,31 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
   const [lastMarkAt, setLastMarkAt] = useState<number | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   const [historySize, setHistorySize] = useState(0);
+  /** Index of the « hors liste » pick being named (the list's buttons then name him). */
+  const [identifying, setIdentifying] = useState<number | null>(null);
   const toastTimer = useRef<number | null>(null);
   const history = useRef<HistoryEntry[]>([]);
   const searchRef = useRef<HTMLInputElement | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
 
-  const byId = useMemo(() => new Map(board.players.map((p) => [p.id, p])), [board]);
-  const knownIds = useMemo(() => new Set(board.players.map((p) => p.id)), [board]);
+  const players = useMemo(() => leaguePlayers(board, pool), [board, pool]);
+  const byId = useMemo(() => new Map(players.map((p) => [p.id, p])), [players]);
+  const knownIds = useMemo(() => new Set(players.map((p) => p.id)), [players]);
 
-  const result = useMemo(() => suggestPicks(board, state), [board, state]);
+  const result = useMemo(() => suggestPicks(board, state, 5, byId), [board, state, byId]);
   const { timeline, suggestions, lineup, strength } = result;
   const targets = useMemo(() => categoryTargets(strength), [strength]);
   const onTheClock = timeline.onTheClock;
 
   const rows = useMemo(
-    () => draftRows(board.players, state, { filter, query, showDrafted }),
-    [board, state, filter, query, showDrafted],
+    () => draftRows(players, state, { filter, query, showDrafted }),
+    [players, state, filter, query, showDrafted],
   );
-  const remaining = board.players.length - pickedIds(state).size;
+  const remaining = players.length - pickedIds(state).size;
+  // The pick being named, while it is still an unlisted pick (an undo, a
+  // removal or another tab can change that).
+  const identifyIndex = identifying != null && state.picks[identifying]?.id === UNLISTED_PLAYER_ID ? identifying : null;
   // The highlighted row is always one that can still be drafted (with
   // « Voir repêchés » on, drafted rows are skipped), so Entrée marks exactly
   // the row that is lit. -1 = nothing to mark.
@@ -128,7 +142,7 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
   const availabilityPick = onTheClock ? timeline.followingPick : timeline.targetPick;
   const availabilityFor = useCallback(
     (row: DraftRow) =>
-      availabilityPick == null || row.pickNumber != null
+      availabilityPick == null || row.pickNumber != null || row.player.noProj
         ? null
         : probAvailableAt(row.player, timeline.currentPick, availabilityPick),
     [availabilityPick, timeline.currentPick],
@@ -255,6 +269,32 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
     [store, commit, teams, showToast, undoAction],
   );
 
+  const onIdentify = useCallback(
+    (index: number) => {
+      setIdentifying(index);
+      setQuery("");
+      setLimit(PAGE);
+      // Not a frame callback: a hidden tab never runs those.
+      window.setTimeout(() => searchRef.current?.focus(), 0);
+    },
+    [],
+  );
+
+  const onCancelIdentify = useCallback(() => setIdentifying(null), []);
+
+  const onName = useCallback(
+    (id: number) => {
+      if (identifyIndex == null) return;
+      const before = store.getSnapshot();
+      const label = `${pickLabel(identifyIndex + 1)} hors liste → ${playerName(byId, id)}`;
+      setIdentifying(null);
+      if (!commit(setPickPlayer(before, identifyIndex, id), label)) return;
+      setQuery("");
+      showToast({ text: label, actions: [undoAction] });
+    },
+    [identifyIndex, store, byId, commit, showToast, undoAction],
+  );
+
   const onImport = useCallback(
     (next: DraftState) => {
       if (commit(next, `import (${next.picks.length} choix)`)) {
@@ -330,6 +370,9 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
       if (query !== "") {
         e.preventDefault();
         onQuery("");
+      } else if (identifyIndex != null) {
+        e.preventDefault();
+        onCancelIdentify();
       } else {
         e.currentTarget.blur();
       }
@@ -347,6 +390,10 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
       if (query.trim() === "" || activeIndex < 0) return;
       const target = rows[activeIndex];
       if (!target || target.pickNumber != null) return;
+      if (identifyIndex != null) {
+        onName(target.player.id);
+        return;
+      }
       // On the clock Entrée is our pick, otherwise another team's; Shift
       // inverts either way.
       onMark(target.player.id, onTheClock ? !e.shiftKey : e.shiftKey);
@@ -450,6 +497,9 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
             onRemove={onRemove}
             onUnlisted={onUnlisted}
             remaining={remaining}
+            identifying={identifyIndex != null ? { pick: identifyIndex + 1, mine: state.picks[identifyIndex]!.mine } : null}
+            onName={onName}
+            onCancelIdentify={onCancelIdentify}
           />
         </div>
 
@@ -482,6 +532,7 @@ export function DraftHelper({ board }: { board: DraftBoard }) {
               slot={state.slot}
               onRemove={onRemove}
               onToggleMine={onToggleMine}
+              onIdentify={onIdentify}
             />
           </div>
           <div className="order-5">

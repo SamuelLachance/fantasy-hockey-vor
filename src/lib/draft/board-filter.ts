@@ -29,12 +29,26 @@ function foldDraftText(text: string): string {
   return foldSearchText(text).replace(NAME_PUNCTUATION, "");
 }
 
+/** Folded "name team" per player object (the whole league is searched on every keystroke). */
+const haystacks = new WeakMap<object, string>();
+
+function queryWords(query: string): string[] {
+  return foldDraftText(query).split(/\s+/).filter(Boolean);
+}
+
+function matchesWords(p: Pick<DraftBoardPlayer, "name" | "team">, words: readonly string[]): boolean {
+  if (words.length === 0) return true;
+  let hay = haystacks.get(p);
+  if (hay === undefined) {
+    hay = `${foldDraftText(p.name)} ${foldDraftText(p.team)}`;
+    haystacks.set(p, hay);
+  }
+  return words.every((w) => hay.includes(w));
+}
+
 /** Accent- and punctuation-folded; every word must hit the name or the team ("mac col"). */
 export function matchesDraftQuery(p: Pick<DraftBoardPlayer, "name" | "team">, query: string): boolean {
-  const words = foldDraftText(query).split(/\s+/).filter(Boolean);
-  if (words.length === 0) return true;
-  const hay = `${foldDraftText(p.name)} ${foldDraftText(p.team)}`;
-  return words.every((w) => hay.includes(w));
+  return matchesWords(p, queryWords(query));
 }
 
 export interface DraftRow {
@@ -55,13 +69,14 @@ export function draftRows(
   state.picks.forEach((p, i) => {
     if (p.id !== 0) pickAt.set(p.id, i);
   });
+  const words = queryWords(opts.query);
   const rows: DraftRow[] = [];
   for (const player of players) {
     const idx = pickAt.get(player.id);
     const drafted = idx != null;
     if (drafted && !opts.showDrafted) continue;
     if (!matchesDraftFilter(player, opts.filter)) continue;
-    if (!matchesDraftQuery(player, opts.query)) continue;
+    if (!matchesWords(player, words)) continue;
     rows.push({
       player,
       pickNumber: drafted ? idx + 1 : null,

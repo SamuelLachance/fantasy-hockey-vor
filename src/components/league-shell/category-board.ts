@@ -1,7 +1,8 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import summaryJson from "@/data/snake-summary.json";
 import type { DraftBoard } from "@/lib/draft/board-types";
+import { isLeaguePool, leaguePoolCounts } from "@/lib/draft/league-pool";
 import type { LeagueEntry } from "@/lib/leagues/registry";
 import { snakeNhlSeed } from "@/lib/snake/league-seed";
 import type { SnakeNhlFile, SnakeSummaryFile } from "@/lib/snake/types";
@@ -23,6 +24,25 @@ export function categoryBoard(entry: LeagueEntry): DraftBoard {
     boards.set(slug, board);
   }
   return board;
+}
+
+const poolCounts = new Map<string, ReturnType<typeof leaguePoolCounts>>();
+
+/**
+ * How many players the league's lists hold (board + `pool.json`, read at
+ * build time for the tabs' wording only: the pool itself is fetched by the
+ * browser, never inlined). Without the file: the board alone.
+ */
+export function categoryPoolCounts(entry: LeagueEntry): ReturnType<typeof leaguePoolCounts> {
+  const slug = entry.profileSlug ?? entry.slug;
+  let counts = poolCounts.get(slug);
+  if (!counts) {
+    const path = join(process.cwd(), "public", "leagues", slug, "pool.json");
+    const raw: unknown = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null;
+    counts = leaguePoolCounts(categoryBoard(entry), isLeaguePool(raw, slug) ? raw : null);
+    poolCounts.set(slug, counts);
+  }
+  return counts;
 }
 
 /**

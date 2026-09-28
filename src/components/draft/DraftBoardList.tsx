@@ -34,6 +34,10 @@ interface DraftBoardListProps {
   onRemove: (index: number) => void;
   onUnlisted: () => void;
   remaining: number;
+  /** A « hors liste » pick being named: the rows' buttons name him instead of marking a pick. */
+  identifying?: { pick: number; mine: boolean } | null;
+  onName?: (id: number) => void;
+  onCancelIdentify?: () => void;
 }
 
 export function draftRowId(id: number): string {
@@ -63,6 +67,9 @@ export function DraftBoardList({
   onRemove,
   onUnlisted,
   remaining,
+  identifying = null,
+  onName,
+  onCancelIdentify,
 }: DraftBoardListProps) {
   const shown = rows.slice(0, limit);
   const activeRow = activeIndex >= 0 ? rows[activeIndex] : undefined;
@@ -81,6 +88,24 @@ export function DraftBoardList({
             {remaining} disponibles · {rows.length} affichés
           </p>
         </div>
+        {identifying ? (
+          <p
+            role="status"
+            className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border border-amber-300/40 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-50"
+          >
+            <span>
+              Identifier le {pickLabel(identifying.pick)} ({identifying.mine ? "mon choix" : "autre équipe"}, hors liste) : cherchez le
+              joueur, puis « C’est lui » (ou Entrée).
+            </span>
+            <button
+              type="button"
+              onClick={onCancelIdentify}
+              className="min-h-9 rounded-lg border border-amber-200/40 px-2.5 font-semibold text-amber-100 hover:bg-amber-400/15"
+            >
+              Annuler
+            </button>
+          </p>
+        ) : null}
         {availabilityPick != null ? (
           <p className="text-[11px] text-slate-500">
             Dispo = chance qu’il soit encore là à votre {pickLabel(availabilityPick)} (ADP Fantrax, approximatif).
@@ -203,6 +228,7 @@ export function DraftBoardList({
               skaterGroupOffset={skaterGroupOffset}
               onMark={onMark}
               onRemove={onRemove}
+              onName={identifying ? onName : undefined}
             />
           ))}
         </ol>

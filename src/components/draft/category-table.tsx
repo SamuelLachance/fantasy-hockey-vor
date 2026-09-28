@@ -8,7 +8,7 @@ import { SnakeDetail } from "@/components/player-table/SnakeDetail";
 import { SnakeVerdictsProvider, useSnakeNhlRows } from "@/components/snake/SnakeVerdicts";
 import { availabilityBand } from "@/lib/draft/availability";
 import { displayRank } from "@/lib/draft/board-filter";
-import type { DraftBoard } from "@/lib/draft/board-types";
+import type { DraftBoard, DraftBoardPlayer } from "@/lib/draft/board-types";
 import {
   CATEGORY_FR,
   CATEGORY_SHORT,
@@ -20,6 +20,7 @@ import {
   yearsLabel,
 } from "@/lib/draft/draft-copy";
 import { getDraftStore } from "@/lib/draft/draft-store";
+import { leaguePlayers, leagueSnakeRows } from "@/lib/draft/league-pool";
 import { draftTimeline } from "@/lib/draft/suggestions";
 import {
   boardCategories,
@@ -30,6 +31,7 @@ import {
   categoryStatusText,
   categoryTable,
   draftDone,
+  noProjectionLabel,
   oddsPickOf,
   type CategoryCaps,
   type CategoryCtx,
@@ -39,6 +41,7 @@ import {
 } from "@/lib/draft/table";
 import { LEAGUES } from "@/lib/leagues/registry";
 import { leaguePlayerPath } from "@/lib/leagues/routes";
+import { fmtInt } from "@/lib/player-table/copy";
 import { highlightMatch } from "@/lib/player-table/highlight";
 import type { SnakeNhlFile, SnakeRow } from "@/lib/snake/types";
 import { snakePlayerHref } from "@/lib/snake/url";
@@ -46,6 +49,7 @@ import { CategoryMiniBars } from "./CategoryMiniBars";
 import { CategoryTableFilters } from "./CategoryTableFilters";
 import { DraftPositionBadges } from "./DraftPositionBadges";
 import { RankAdjustedBadge } from "./RankAdjustedBadge";
+import { useLeaguePool } from "./useLeaguePool";
 
 const MUTED = "text-slate-300";
 
@@ -80,12 +84,34 @@ function elsewhere(row: SnakeRow): Array<{ href: string; label: string }> {
     : [];
 }
 
+const NONE: CellOut = { node: "—", className: "text-slate-400" };
+
+/** The « Pas de projection » / « Espoir » tag of a row the projections never saw. */
+function NoProjectionTag({ kind }: { kind: NonNullable<CategoryRow["noProj"]> }) {
+  return (
+    <span
+      className="whitespace-nowrap rounded-full px-1.5 text-[11px] font-medium text-amber-200 ring-1 ring-inset ring-amber-300/30"
+      title={
+        kind === "roster"
+          ? "Dans un effectif de la LNH, mais sans projection (recrue, rappel ou retour d’Europe ou de la LAH) : aucune valeur dans la ligue"
+          : "Sur la liste d’espoirs d’une équipe de la LNH, sans projection : aucune valeur dans la ligue"
+      }
+    >
+      {kind === "roster" ? "Pas de projection" : "Espoir"}
+    </span>
+  );
+}
+
 function cellsFor(board: DraftBoard): Record<string, (r: CategoryRow, ctx: CategoryCtx) => CellOut> {
   const out: Record<string, (r: CategoryRow, ctx: CategoryCtx) => CellOut> = {
-    rang: (r, ctx) => ({ node: displayRank(r, ctx.rankPos), className: "text-slate-400" }),
+    rang: (r, ctx) => (r.noProj ? NONE : { node: displayRank(r, ctx.rankPos), className: "text-slate-400" }),
     // A hand-moved row: its VOR is bridged to the new rank; the badge gives the reason and the model's figures.
     vor: (r) => ({
-      node: r.adjusted ? (
+      node: r.noProj ? (
+        <span className="font-normal text-slate-400" title={noProjectionLabel(r.noProj)}>
+          —<span className="sr-only"> ({noProjectionLabel(r.noProj)})</span>
+        </span>
+      ) : r.adjusted ? (
         <span className="inline-flex items-center gap-1">
           <RankAdjustedBadge adjusted={r.adjusted} />
           {formatFr(r.vor, 1)}
@@ -95,20 +121,23 @@ function cellsFor(board: DraftBoard): Record<string, (r: CategoryRow, ctx: Categ
       ),
       className: "whitespace-nowrap font-semibold text-cyan-200",
     }),
-    valeur: (r) => ({ node: formatFr(r.value, 1), className: MUTED }),
-    cats: (r, ctx) => ({
-      node: (
-        <CategoryMiniBars categories={r.goalie ? ctx.goalieCategories : ctx.skaterCategories} z={r.zRel} proj={r.proj} />
-      ),
-      className: "py-1",
-    }),
+    valeur: (r) => (r.noProj ? NONE : { node: formatFr(r.value, 1), className: MUTED }),
+    cats: (r, ctx) =>
+      r.noProj
+        ? NONE
+        : {
+            node: (
+              <CategoryMiniBars categories={r.goalie ? ctx.goalieCategories : ctx.skaterCategories} z={r.zRel} proj={r.proj} />
+            ),
+            className: "py-1",
+          },
     adp: (r) => ({ node: r.adp !== null ? formatFr(r.adp, 0) : "—", className: MUTED }),
     dispo: (r) => ({ node: r.available !== null ? formatPercentFr(r.available) : "—", className: oddsTone(r.available) }),
     statut: (r, ctx) => ({
       node: categoryStatusText(r, ctx.done),
       className: `whitespace-nowrap ${r.pick ? (r.pick.mine ? "font-medium text-cyan-200" : "text-slate-400") : "text-emerald-200/90"}`,
     }),
-    gp: (r) => ({ node: r.gp, className: MUTED }),
+    gp: (r) => (r.noProj ? NONE : { node: r.gp, className: MUTED }),
     age: (r) => ({ node: r.age ?? "—", className: MUTED }),
     verdict: (r) => {
       const s = r.snake;
@@ -159,7 +188,8 @@ function CategoryNameCell({ row: r, ctx, query, visible }: NameCellProps<Categor
       </span>
       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400">
         <span className="whitespace-nowrap">{r.team}</span>
-        <DraftPositionBadges positions={r.pos} vorPos={r.vorPos} />
+        <DraftPositionBadges positions={r.pos} vorPos={r.noProj ? undefined : r.vorPos} />
+        {r.noProj ? <NoProjectionTag kind={r.noProj} /> : null}
         {!visible.includes("statut") && r.pick ? (
           <span className={r.pick.mine ? "text-cyan-300" : "text-slate-400"}>{categoryStatusText(r, ctx.done)}</span>
         ) : null}
@@ -181,6 +211,17 @@ function ordinal(n: number): string {
 /** Details row: league facts, the projected line category by category, then Snake's take. */
 function detailFor(board: DraftBoard) {
   return function CategoryDetail({ row: r, ctx, idPrefix }: { row: CategoryRow; ctx: CategoryCtx; idPrefix: string }) {
+    const snake = r.snake ? (
+      <SnakeDetail
+        snakeKey={r.snake.key}
+        verdict={r.snake.verdict}
+        trend={r.snake.trend}
+        probable={r.snake.probable}
+        idPrefix={idPrefix}
+        elsewhere={elsewhere}
+      />
+    ) : null;
+    if (r.noProj) return <NoProjectionDetail row={r} ctx={ctx} snake={snake} />;
     const cats = r.goalie ? board.categories.goalie : board.categories.skater;
     const posRanks = Object.entries(r.posRank)
       .map(([p, n]) => `${p} ${ordinal(n)}`)
@@ -233,19 +274,38 @@ function detailFor(board: DraftBoard) {
           ))}
         </ul>
         <p className="mt-1 text-xs text-slate-400">z : écart avec ses pairs (attaquants, défenseurs ou gardiens), comme les barres.</p>
-        {r.snake ? (
-          <SnakeDetail
-            snakeKey={r.snake.key}
-            verdict={r.snake.verdict}
-            trend={r.snake.trend}
-            probable={r.snake.probable}
-            idPrefix={idPrefix}
-            elsewhere={elsewhere}
-          />
-        ) : null}
+        {snake}
       </>
     );
   };
+}
+
+/** Details of a player the projections never saw: who lists him, and why there is no value. */
+function NoProjectionDetail({ row: r, ctx, snake }: { row: CategoryRow; ctx: CategoryCtx; snake: ReactNode }) {
+  const items: Array<[string, string]> = [
+    ["Équipe", r.team || "—"],
+    ["Position", r.pos.join(", ")],
+  ];
+  if (r.age !== null) items.push(["Âge", yearsLabel(r.age)]);
+  items.push(["Repêchage (cet appareil)", categoryStatusText(r, ctx.done)]);
+  return (
+    <>
+      <p className="mb-2 max-w-3xl text-amber-100/90">
+        {r.noProj === "roster"
+          ? "Pas de projection : il est dans l’effectif actuel de son équipe, mais les projections ne l’ont pas vu (en général une recrue, ou un joueur de retour d’Europe ou de la LAH sans match dans la LNH depuis trois saisons). Il n’a donc ni valeur ni rang dans la ligue."
+          : "Pas de projection : il est sur la liste d’espoirs de son équipe, pas dans son effectif. Il n’a donc ni valeur ni rang dans la ligue."}
+      </p>
+      <dl className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        {items.map(([k, v]) => (
+          <div key={k} className="flex min-w-0 gap-2">
+            <dt className="shrink-0 text-slate-400">{k} :</dt>
+            <dd className="min-w-0 text-slate-200">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {snake}
+    </>
+  );
 }
 
 type Adapter = TableAdapter<CategoryRow, CategoryFilters, CategoryCaps, CategoryCtx>;
@@ -291,13 +351,19 @@ export interface CategoryTableSource {
   data: TableData<CategoryRow, CategoryCaps, CategoryCtx>;
   done: boolean;
   mine: number;
+  /** Everyone once the pool is in, else the board. */
+  players: readonly DraftBoardPlayer[];
+  poolStatus: TableData<CategoryRow, CategoryCaps, CategoryCtx>["status"];
 }
 
 /**
- * The table's data: the board inlined in the page, the draft marked on
- * this device (the draft helper's store and storage key, read only, kept
- * in sync with the other tabs) and Snake's verdicts from the page's seed.
- * Nothing is fetched.
+ * The table's data: the board inlined in the page, then the league's
+ * `pool.json` (every other projected player, then those the NHL lists with
+ * no projection: fetched once per page view), the draft marked on this
+ * device (the draft helper's store and storage key, read only, kept in sync
+ * with the other tabs) and Snake's verdicts (the page's seed for the board,
+ * the pool's own for the rest). Until the pool is in, the board's rows show
+ * with a note.
  */
 export function useCategoryTableData(board: DraftBoard): CategoryTableSource {
   const store = getDraftStore(board.slug, board.league.teams);
@@ -306,11 +372,17 @@ export function useCategoryTableData(board: DraftBoard): CategoryTableSource {
   const timeline = useMemo(() => draftTimeline(board, state), [board, state]);
   const done = draftDone(board.league, state, nowMs);
   const oddsPick = oddsPickOf(timeline, done);
-  const { rows: snake } = useSnakeNhlRows();
-  const rows = useMemo(
-    () => buildCategoryRows(board, { state, currentPick: timeline.currentPick, oddsPick, snake }),
-    [board, state, timeline.currentPick, oddsPick, snake],
+  const { pool, status, want, retry } = useLeaguePool(board.slug, true);
+  const { rows: seed } = useSnakeNhlRows();
+  const snake = useMemo(() => leagueSnakeRows(seed, pool), [seed, pool]);
+  const players = useMemo(() => (pool ? leaguePlayers(board, pool) : null), [board, pool]);
+  const input = useMemo(
+    () => ({ state, currentPick: timeline.currentPick, oddsPick, snake }),
+    [state, timeline.currentPick, oddsPick, snake],
   );
+  const rows = useMemo(() => (players ? buildCategoryRows(board, input, players) : []), [board, input, players]);
+  // The board's rows until the pool is in (and when it fails).
+  const fallbackRows = useMemo(() => (players ? undefined : buildCategoryRows(board, input)), [board, input, players]);
   const hasSnake = !!snake && Object.keys(snake).length > 0;
   const caps = useMemo<CategoryCaps>(() => ({ odds: oddsPick !== null, done, snake: hasSnake }), [oddsPick, done, hasSnake]);
   const ctx = useMemo<CategoryCtx>(
@@ -324,23 +396,32 @@ export function useCategoryTableData(board: DraftBoard): CategoryTableSource {
     [done, oddsPick, board],
   );
   const labels = useMemo(() => categoryLabels(snake), [snake]);
+  const fallbackNote = useMemo(
+    () => ({
+      loading: `Les ${fmtInt(board.players.length)} premiers joueurs s’affichent ; la liste complète (tous les joueurs projetés, puis ceux sans projection) se charge…`,
+      error: `La liste complète n’a pas pu être chargée : seuls les ${fmtInt(board.players.length)} premiers joueurs sont listés.`,
+    }),
+    [board],
+  );
   const data = useMemo<TableData<CategoryRow, CategoryCaps, CategoryCtx>>(
     () => ({
       rows,
-      status: "ready",
+      fallbackRows,
+      fallbackNote,
+      status,
       extras: { snake: true, dynasty: true, snakeFull: true },
       caps,
       ctx,
       labels,
-      total: board.players.length,
-      want: noop,
+      total: players ? players.length : null,
+      want,
       wantFullSnake: noop,
-      retry: noop,
+      retry,
     }),
-    [rows, caps, ctx, labels, board],
+    [rows, fallbackRows, fallbackNote, status, caps, ctx, labels, players, want, retry],
   );
-  const mine = useMemo(() => rows.filter((r) => r.pick?.mine).length, [rows]);
-  return { data, done, mine };
+  const mine = useMemo(() => (rows.length ? rows : (fallbackRows ?? [])).filter((r) => r.pick?.mine).length, [rows, fallbackRows]);
+  return { data, done, mine, players: players ?? board.players, poolStatus: status };
 }
 
 export interface CategoryPlayerTableProps {
@@ -389,7 +470,10 @@ export function CategoryPlayerTable(p: CategoryPlayerTableProps) {
   return p.source ? <TableWithData {...p} source={p.source} /> : <TableOwnData {...p} />;
 }
 
-/** Light the Lamp · Joueurs: the whole board, valued for the league (the Snake seed covers it: no fetch). */
+/**
+ * Light the Lamp · Joueurs: every player, valued for the league (the board
+ * first, then the pool; Snake's verdicts come with each: no other fetch).
+ */
 export function CategoryPlayersTable({ board, seed }: { board: DraftBoard; seed: SnakeNhlFile["rows"] }) {
   return (
     <SnakeVerdictsProvider kind="nhl" seed={seed} complete>
@@ -397,7 +481,7 @@ export function CategoryPlayersTable({ board, seed }: { board: DraftBoard; seed:
         board={board}
         id="joueurs"
         title="Liste des joueurs"
-        description="Une colonne par catégorie au besoin (Colonnes). La vue (filtres, tri, colonnes) est gardée dans l’adresse de la page."
+        description="Tous les joueurs projetés, par rang dans la ligue, puis ceux que la LNH inscrit sans projection (effectifs et listes d’espoirs). Une colonne par catégorie au besoin (Colonnes). La vue (filtres, tri, colonnes) est gardée dans l’adresse de la page."
         base="tous"
         presets={["tous", "disponibles", "equipe"]}
         perPage={50}

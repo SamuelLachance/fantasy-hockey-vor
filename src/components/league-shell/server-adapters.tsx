@@ -21,7 +21,8 @@ import type { LeagueSnapshot } from "@/lib/fantrax/snapshot-types";
 import { TAB_META, type LeagueEntry, type LeagueKind, type LeagueTab } from "@/lib/leagues/registry";
 import { snakeFantraxSeed } from "@/lib/snake/league-seed";
 import type { SnakeSummaryFile } from "@/lib/snake/types";
-import { categoryBoard, categorySnakeSeed } from "./category-board";
+import { fmtInt } from "@/lib/player-table/copy";
+import { categoryBoard, categoryPoolCounts, categorySnakeSeed } from "./category-board";
 import {
   CategoryDraftPart,
   CategoryPlayersPart,
@@ -142,10 +143,14 @@ function CategoryTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
   }
 }
 
-/** Joueurs lists the draft board, not every player: say how deep it goes. */
+/** Joueurs lists every player (the board, then the fetched pool): say how many. */
 function categoryLead(entry: LeagueEntry, tab: LeagueTab): string {
   if (tab === "joueurs") {
-    return `Les ${categoryBoard(entry).players.length} premiers joueurs de la liste du repêchage, valorisés pour les catégories de cette ligue : filtres, tris, colonnes.`;
+    const c = categoryPoolCounts(entry);
+    const unprojected = c.roster + c.prospect;
+    return `Les ${fmtInt(c.projected)} joueurs projetés, valorisés pour les catégories de cette ligue${
+      unprojected > 0 ? `, puis ${fmtInt(unprojected)} joueurs des effectifs et listes d’espoirs de la LNH sans projection` : ""
+    } : filtres, tris, colonnes.`;
   }
   return TAB_META[tab].description;
 }

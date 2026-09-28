@@ -156,8 +156,17 @@ const files: Record<string, string[]> = {
     'base="equipe"',
     "Effectif au repêchage",
   ],
-  // Repêchage: the draft helper as is, inside a complete Snake seed (no fetch during the draft).
-  "src/components/draft/CategoryDraftTab.tsx": ["<SnakeVerdictsProvider kind=\"nhl\" seed={seed} complete>", "<DraftHelper board={board} />"],
+  // Repêchage: the draft helper on the inlined board inside a complete Snake
+  // seed (works offline mid-draft); the league's pool joins it once fetched.
+  "src/components/draft/CategoryDraftTab.tsx": [
+    "<SnakeVerdictsProvider kind=\"nhl\" seed={rows} complete>",
+    "<DraftHelper board={board} pool={pool} />",
+    "useLeaguePool(board.slug, true)",
+    "leagueSnakeRows(seed, pool)",
+  ],
+  // The league's full list: board first, pool.json on demand (never inlined).
+  "src/lib/draft/league-pool-client.ts": ['leagueDataHref(slug, "pool.json")', "isLeaguePool(raw, slug)", 'credentials: "omit"'],
+  "src/lib/draft/league-pool.ts": ["export function leaguePlayers", "unprojectedRow", "noProj"],
   "src/components/draft/DraftPlayerRow.tsx": ["<SnakeNhlMini id={p.id} />", "memo(function DraftPlayerRow"],
   "src/components/draft/CategoryPlayersTab.tsx": ["<DraftMethodNote", "shortcuts={false}", "{table}"],
   "src/components/draft/category-table.tsx": [
@@ -170,6 +179,9 @@ const files: Record<string, string[]> = {
     "SnakeDetail",
     "sm:hidden",
     'base="tous"',
+    "useLeaguePool(board.slug, true)",
+    "leaguePlayers(board, pool)",
+    "fallbackRows",
   ],
   "src/components/draft/CategoryTableFilters.tsx": ["FilterUiProps", "{actions}", "DRAFT_FILTERS", "<legend", "more.button"],
   "src/lib/draft/table.ts": ["displayRank", "matchesDraftFilter", "probAvailableAt", "DRAFT_DONE_AFTER_MS", "viewCtx", "oddsPickOf"],
@@ -369,9 +381,11 @@ const forbidden: Array<{ file: string; needle: string; why: string }> = [
   { file: "src/lib/fantrax/dynasty-hints.ts", needle: "roster-hint", why: "the hint sentences load with the details row" },
   { file: "src/lib/fantrax/table.ts", needle: "roster-hint", why: "the hint sentences load with the details row" },
   { file: "src/lib/dynasty/keeper-view.ts", needle: "rosterHintFr", why: "the owner's hint lives in roster-hint.ts (lazy)" },
-  // Categories leagues' pages inline their board and a complete Snake seed: nothing to fetch.
-  { file: "src/components/draft/category-table.tsx", needle: "loadSnake", why: "the seed is complete" },
-  { file: "src/components/draft/category-table.tsx", needle: "fetch(", why: "the board is inlined" },
+  // Categories leagues' pages inline their board and a complete Snake seed;
+  // the rest of the league comes from pool.json (its own loader), with its verdicts.
+  { file: "src/components/draft/category-table.tsx", needle: "loadSnake", why: "the seed and the pool's verdicts are complete" },
+  { file: "src/components/draft/category-table.tsx", needle: "fetch(", why: "the pool loads through league-pool-client.ts" },
+  { file: "src/components/league-shell/category-board.ts", needle: "pool.players", why: "pool.json is fetched by the browser, never inlined" },
 ];
 
 let failed = 0;

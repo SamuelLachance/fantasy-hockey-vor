@@ -6,7 +6,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import { SnakeVerdictsProvider } from "@/components/snake/SnakeVerdicts";
 import type { DraftBoard, DraftBoardPlayer } from "@/lib/draft/board-types";
 import { formatDraftStartFr } from "@/lib/draft/draft-copy";
-import { myPickIds } from "@/lib/draft/draft-state";
+import { myPickIds, UNLISTED_PLAYER_ID } from "@/lib/draft/draft-state";
 import { getDraftStore } from "@/lib/draft/draft-store";
 import { draftTimeline } from "@/lib/draft/suggestions";
 import { buildLineup, categoryTargets, teamCategoryStrength } from "@/lib/draft/team";
@@ -17,10 +17,11 @@ import { DraftMyTeam } from "./DraftMyTeam";
 
 /**
  * A categories league · Mon équipe: the players marked « Moi » in the
- * draft helper (same browser storage, kept in sync with other tabs), their
- * lineup and category strengths, then the same players in the league's
- * player table. Device-local, and frozen at the draft (no Yahoo
- * integration yet: trades and waivers are not seen).
+ * draft helper (same browser storage, kept in sync with other tabs), found
+ * in the whole league list (board, then the fetched pool), their lineup
+ * and category strengths, then the same players in the league's player
+ * table. Device-local, and frozen at the draft (no Yahoo integration yet:
+ * trades and waivers are not seen).
  */
 export function CategoryTeamTab({ board, slug, seed }: { board: DraftBoard; slug: string; seed: SnakeNhlFile["rows"] }) {
   return (
@@ -34,15 +35,26 @@ function TeamBody({ board, slug }: { board: DraftBoard; slug: string }) {
   const store = getDraftStore(board.slug, board.league.teams);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getServerSnapshot);
   const source = useCategoryTableData(board);
+  const { players, poolStatus } = source;
   const view = useMemo(() => {
-    const byId = new Map(board.players.map((p) => [p.id, p]));
-    const mine = myPickIds(state)
-      .map((id) => byId.get(id))
-      .filter((p): p is DraftBoardPlayer => p != null);
+    const byId = new Map(players.map((p) => [p.id, p]));
+    const ids = myPickIds(state);
+    const found = ids.map((id) => byId.get(id)).filter((p): p is DraftBoardPlayer => p != null);
+    // No projection, no value: listed under the lineup, never seated in it.
+    const mine = found.filter((p) => !p.noProj);
     const lineup = buildLineup(board, mine);
     const strength = teamCategoryStrength(board, lineup);
-    return { mine, lineup, strength, targets: categoryTargets(strength), timeline: draftTimeline(board, state) };
-  }, [board, state]);
+    return {
+      picks: ids.length,
+      notFound: ids.length - found.length,
+      unlisted: state.picks.filter((p) => p.mine && p.id === UNLISTED_PLAYER_ID).length,
+      unprojected: found.filter((p) => p.noProj),
+      lineup,
+      strength,
+      targets: categoryTargets(strength),
+      timeline: draftTimeline(board, state),
+    };
+  }, [board, state, players]);
 
   const draftLink = (
     <Link
@@ -55,7 +67,7 @@ function TeamBody({ board, slug }: { board: DraftBoard; slug: string }) {
     </Link>
   );
 
-  if (view.mine.length === 0) {
+  if (view.picks === 0 && view.unlisted === 0) {
     return (
       <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300 sm:p-6">
         <p>Votre équipe apparaîtra ici à mesure que vous marquez vos choix dans l’onglet Repêchage.</p>
@@ -81,6 +93,27 @@ function TeamBody({ board, slug }: { board: DraftBoard; slug: string }) {
           myPicks={view.timeline.myPicks}
           currentPick={view.timeline.currentPick}
         />
+        {view.unprojected.length > 0 ? (
+          <p className="text-xs text-amber-100/90">
+            Sans projection, donc hors de l’alignement ci-dessus : {view.unprojected.map((p) => p.name).join(", ")}.
+          </p>
+        ) : null}
+        {view.notFound > 0 ? (
+          <p className="text-xs text-slate-400">
+            {poolStatus === "error"
+              ? `${view.notFound} de vos choix ne sont pas dans les ${board.players.length} premiers joueurs et la liste complète n’a pas pu être chargée.`
+              : poolStatus === "ready"
+                ? `${view.notFound} de vos choix ne sont plus dans la liste des joueurs de la ligue.`
+                : `Chargement de la liste complète pour ${view.notFound} de vos choix…`}
+          </p>
+        ) : null}
+        {view.unlisted > 0 ? (
+          <p className="text-xs text-slate-400">
+            {view.unlisted === 1 ? "Un de vos choix est marqué" : `${view.unlisted} de vos choix sont marqués`} « hors liste » :
+            tous les joueurs sont maintenant dans l’onglet Repêchage, où vous pouvez nommer le bon joueur (bouton « Identifier »
+            de « Derniers choix ») ; le numéro du choix ne change pas.
+          </p>
+        ) : null}
         <p className="text-xs text-slate-400">
           {done
             ? "Effectif au repêchage, d’après les choix marqués sur cet appareil : les échanges et le ballottage de la saison n’y sont pas (il faudrait l’API de Yahoo)."

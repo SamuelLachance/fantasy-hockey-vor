@@ -1,7 +1,9 @@
 /**
  * A Yahoo categories league's player table (the unified PlayerTable's
- * category adapter, model side): the draft board's players valued for the
- * league (VOR, z per category), their draft marks as saved on this device
+ * category adapter, model side): every player of the league's list (the
+ * draft board inlined in the page, then its `pool.json`: the other
+ * projected players and those the NHL lists with no projection) valued for
+ * the league (VOR, z per category), their draft marks as saved on this device
  * (the draft helper's store, read only), the odds they last to my next
  * pick, and Snake's verdicts. Filters (parse / serialize / test), columns,
  * presets and the tabs' views. No React, no DOM: unit-tested.
@@ -19,7 +21,13 @@ import { readRange, sameRange, writeRange } from "@/lib/player-table/url";
 import type { SnakeNhlEntry } from "@/lib/snake/types";
 import { probAvailableAt } from "./availability";
 import { DRAFT_FILTERS, displayRank, matchesDraftFilter, type DraftFilter } from "./board-filter";
-import { groupRelativeZ, isGoalieBoardPlayer, type DraftBoard, type DraftBoardPlayer } from "./board-types";
+import {
+  groupRelativeZ,
+  isGoalieBoardPlayer,
+  type DraftBoard,
+  type DraftBoardPlayer,
+  type NoProjectionKind,
+} from "./board-types";
 import { CATEGORY_FR, CATEGORY_SHORT, pickLabel } from "./draft-copy";
 import { UNLISTED_PLAYER_ID, type DraftState } from "./draft-state";
 
@@ -74,20 +82,20 @@ export interface CategoryRow extends DraftBoardPlayer {
 }
 
 type BaseRow = Omit<CategoryRow, "pick" | "available" | "snake">;
-const baseRowsCache = new WeakMap<DraftBoard, BaseRow[]>();
+const baseRowsCache = new WeakMap<readonly DraftBoardPlayer[], BaseRow[]>();
 
-/** The parts of the rows that never change for a board (built once). */
-function baseRows(board: DraftBoard): BaseRow[] {
-  let rows = baseRowsCache.get(board);
+/** The parts of the rows that never change for a list (built once per list). */
+function baseRows(board: DraftBoard, players: readonly DraftBoardPlayer[]): BaseRow[] {
+  let rows = baseRowsCache.get(players);
   if (!rows) {
-    rows = board.players.map((p) => ({
+    rows = players.map((p) => ({
       ...p,
       key: String(p.id),
       goalie: isGoalieBoardPlayer(p),
       search: searchHaystack(p.name, p.team),
-      zRel: groupRelativeZ(board, p),
+      zRel: p.noProj ? [] : groupRelativeZ(board, p),
     }));
-    baseRowsCache.set(board, rows);
+    baseRowsCache.set(players, rows);
   }
   return rows;
 }
@@ -101,19 +109,27 @@ export interface CategoryRowsInput {
   snake: Readonly<Record<string, SnakeNhlEntry>> | null;
 }
 
-export function buildCategoryRows(board: DraftBoard, input: CategoryRowsInput): CategoryRow[] {
+/**
+ * The table's rows: `players` is the board (the default) or the whole list
+ * (`leaguePlayers`, once the pool is in).
+ */
+export function buildCategoryRows(
+  board: DraftBoard,
+  input: CategoryRowsInput,
+  players: readonly DraftBoardPlayer[] = board.players,
+): CategoryRow[] {
   const picks = new Map<number, { number: number; mine: boolean }>();
   input.state.picks.forEach((p, i) => {
     if (p.id !== UNLISTED_PLAYER_ID) picks.set(p.id, { number: i + 1, mine: p.mine });
   });
   const { currentPick, oddsPick, snake } = input;
-  return baseRows(board).map((r) => {
+  return baseRows(board, players).map((r) => {
     const pick = picks.get(r.id) ?? null;
     const e = snake?.[r.key];
     return {
       ...r,
       pick,
-      available: pick || oddsPick === null ? null : probAvailableAt(r, currentPick, oddsPick),
+      available: pick || r.noProj || oddsPick === null ? null : probAvailableAt(r, currentPick, oddsPick),
       snake: e ? { key: e[0], verdict: e[1], trend: e[2], probable: e[3] === 1 } : null,
     };
   });
@@ -124,11 +140,16 @@ export function buildCategoryRows(board: DraftBoard, input: CategoryRowsInput): 
 export const CATEGORY_STATUSES = ["tous", "dispo", "pris", "moi"] as const;
 export type CategoryStatus = (typeof CATEGORY_STATUSES)[number];
 
+/** Projection filter: everyone (""), projected players only, or only those without a projection. */
+export const CATEGORY_PROJECTIONS = ["", "avec", "sans"] as const;
+export type CategoryProjection = (typeof CATEGORY_PROJECTIONS)[number];
+
 export interface CategoryFilters {
   q: string;
   /** One position (the draft board's filters: F = any forward). */
   pos: DraftFilter;
   status: CategoryStatus;
+  proj: CategoryProjection;
   adp: Range;
   age: Range;
   vor: Range;
@@ -140,6 +161,7 @@ export const DEFAULT_CATEGORY_FILTERS: CategoryFilters = {
   q: "",
   pos: "ALL",
   status: "tous",
+  proj: "",
   adp: ANY_RANGE,
   age: ANY_RANGE,
   vor: ANY_RANGE,
@@ -179,7 +201,10 @@ export function matchesCategoryFilters(r: CategoryRow, f: CategoryFilters): bool
   if (f.status === "dispo" && r.pick) return false;
   if (f.status === "pris" && !r.pick) return false;
   if (f.status === "moi" && !r.pick?.mine) return false;
-  if (!inRange(r.adp, f.adp) || !inRange(r.age, f.age) || !inRange(r.vor, f.vor)) return false;
+  if (f.proj === "avec" && r.noProj) return false;
+  if (f.proj === "sans" && !r.noProj) return false;
+  // No projection, no VOR: a VOR range leaves him out.
+  if (!inRange(r.adp, f.adp) || !inRange(r.age, f.age) || !inRange(r.noProj ? null : r.vor, f.vor)) return false;
   if (f.verdict) {
     if (f.verdict === VERDICT_POSITIVE) {
       const rank = verdictRank(r.snake?.verdict);
@@ -207,6 +232,7 @@ function activeCount(f: CategoryFilters, base: CategoryFilters): number {
   if (f.q.trim() !== base.q.trim()) n++;
   if (f.pos !== base.pos) n++;
   if (f.status !== base.status) n++;
+  if (f.proj !== base.proj) n++;
   for (const k of Object.values(RANGE_PARAMS)) if (!sameRange(f[k], base[k])) n++;
   if (f.verdict !== base.verdict) n++;
   if (f.trend !== base.trend) n++;
@@ -214,7 +240,7 @@ function activeCount(f: CategoryFilters, base: CategoryFilters): number {
 }
 
 export const CATEGORY_FILTERS: FilterModel<CategoryFilters, CategoryRow, CategoryCaps, CategoryCtx> = {
-  params: ["q", "pos", "statut", "adp", "age", "vor", "verdict", "tendance"],
+  params: ["q", "pos", "statut", "projection", "adp", "age", "vor", "verdict", "tendance"],
   parse(params, base) {
     const f: CategoryFilters = { ...base };
     const q = params.get("q");
@@ -223,6 +249,8 @@ export const CATEGORY_FILTERS: FilterModel<CategoryFilters, CategoryRow, Categor
     if (pos !== null) f.pos = readPos(pos) ?? base.pos;
     const status = params.get("statut");
     if ((CATEGORY_STATUSES as readonly (string | null)[]).includes(status)) f.status = status as CategoryStatus;
+    const proj = params.get("projection");
+    if (proj !== null) f.proj = (CATEGORY_PROJECTIONS as readonly string[]).includes(proj) ? (proj as CategoryProjection) : base.proj;
     for (const [param, key] of Object.entries(RANGE_PARAMS)) f[key] = readRange(params, param, base[key]);
     const verdict = params.get("verdict");
     if (verdict !== null) f.verdict = cleanText(verdict);
@@ -235,6 +263,7 @@ export const CATEGORY_FILTERS: FilterModel<CategoryFilters, CategoryRow, Categor
     if (f.q.trim() !== base.q.trim()) out.push(["q", f.q.trim().slice(0, MAX_TEXT)]);
     if (f.pos !== base.pos) out.push(["pos", f.pos === "ALL" ? "tous" : f.pos]);
     if (f.status !== base.status) out.push(["statut", f.status]);
+    if (f.proj !== base.proj) out.push(["projection", f.proj]);
     for (const [param, key] of Object.entries(RANGE_PARAMS)) writeRange(out, param, f[key], base[key]);
     if (f.verdict !== base.verdict) out.push(["verdict", f.verdict]);
     if (f.trend !== base.trend) out.push(["tendance", f.trend]);
@@ -294,10 +323,19 @@ export function boardCategories(board: DraftBoard): LeagueCategory[] {
   return [...board.categories.skater, ...board.categories.goalie];
 }
 
-/** The projected stat and z of a row in a category (null when not his line). */
+/** The projected stat and z of a row in a category (null when not his line, or no projection). */
 export function categoryCell(board: DraftBoard, r: CategoryRow, c: LeagueCategory): { proj: number; z: number } | null {
+  if (r.noProj) return null;
   const i = catIndex(board, r, c);
   return i < 0 ? null : { proj: r.proj[i] ?? 0, z: r.z[i] ?? 0 };
+}
+
+/** A projected figure for sorts: null without a projection (sorted last either way). */
+const projected = (r: Pick<CategoryRow, "noProj">, x: number | null): number | null => (r.noProj ? null : x);
+
+/** « Pas de projection » (on an NHL roster) / « Espoir sans projection » (prospect list only). */
+export function noProjectionLabel(kind: NoProjectionKind): string {
+  return kind === "roster" ? "Pas de projection" : "Espoir sans projection";
 }
 
 function columns(board: DraftBoard): Col[] {
@@ -321,7 +359,7 @@ function columns(board: DraftBoard): Col[] {
           : `Rang parmi les joueurs admissibles au poste ${ctx.rankPos} (${POS_NAME[ctx.rankPos]}), selon la VOR à ce poste`,
       align: "right",
       group: GROUP.rank,
-      sort: { value: (r, ctx) => displayRank(r, ctx.rankPos), defaultDir: "asc", label: "Rang" },
+      sort: { value: (r, ctx) => projected(r, displayRank(r, ctx.rankPos)), defaultDir: "asc", label: "Rang" },
     },
     {
       key: "vor",
@@ -331,7 +369,7 @@ function columns(board: DraftBoard): Col[] {
       }`,
       align: "right",
       group: GROUP.rank,
-      sort: { value: (r) => r.vor, defaultDir: "desc" },
+      sort: { value: (r) => projected(r, r.vor), defaultDir: "desc" },
     },
     // Right after the ranking, not past the category columns where the
     // table's scroll box cut it off.
@@ -361,7 +399,7 @@ function columns(board: DraftBoard): Col[] {
       }`,
       align: "right",
       group: GROUP.rank,
-      sort: { value: (r) => r.value, defaultDir: "desc" },
+      sort: { value: (r) => projected(r, r.value), defaultDir: "desc" },
     },
     {
       key: "cats",
@@ -404,7 +442,7 @@ function columns(board: DraftBoard): Col[] {
       title: "Matchs joués projetés",
       align: "right",
       group: GROUP.profile,
-      sort: { value: (r) => r.gp, defaultDir: "desc" },
+      sort: { value: (r) => projected(r, r.gp), defaultDir: "desc" },
     },
     {
       key: "age",
@@ -447,7 +485,7 @@ export const CATEGORY_PRESETS: readonly PresetDef<CategoryFilters, CategoryCaps>
   {
     id: "tous",
     label: "Tous les joueurs",
-    description: "Les joueurs de la liste du repêchage, par rang (VOR).",
+    description: "Tous les joueurs, par rang (VOR) ; ceux sans projection à la fin.",
     filters: {},
     sort: { key: "rang", dir: "asc" },
     cols: TOUS_COLUMNS,
@@ -457,7 +495,7 @@ export const CATEGORY_PRESETS: readonly PresetDef<CategoryFilters, CategoryCaps>
     label: (caps) => (caps.done ? "Non repêchés" : "Meilleurs disponibles"),
     description: (caps) =>
       caps.done
-        ? "Les joueurs que personne n’a repêchés (d’après les choix marqués sur cet appareil)."
+        ? "Les joueurs que personne n’a repêchés (d’après les choix marqués sur cet appareil) : le bassin du ballottage."
         : "Les joueurs pas encore repêchés, par rang, avec leurs chances d’être là à votre prochain choix.",
     filters: { status: "dispo" },
     sort: { key: "rang", dir: "asc" },

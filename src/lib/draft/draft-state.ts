@@ -64,6 +64,18 @@ export function setPickMine(state: DraftState, index: number, mine: boolean): Dr
   return { ...state, picks: state.picks.map((p, i) => (i === index ? { ...p, mine } : p)) };
 }
 
+/**
+ * Name the player of a « hors liste » pick (marked while he was not on the
+ * board): the pick keeps its number and owner. Only an unlisted pick, and
+ * only a player not already drafted.
+ */
+export function setPickPlayer(state: DraftState, index: number, id: number): DraftState {
+  const pick = state.picks[index];
+  if (!pick || pick.id !== UNLISTED_PLAYER_ID) return state;
+  if (!Number.isInteger(id) || id <= 0 || state.picks.some((p) => p.id === id)) return state;
+  return { ...state, picks: state.picks.map((p, i) => (i === index ? { ...p, id } : p)) };
+}
+
 export function setDraftSlot(state: DraftState, slot: number | null, teams: number): DraftState {
   const next = slot != null && Number.isInteger(slot) && slot >= 1 && slot <= teams ? slot : null;
   if (next === state.slot) return state;
