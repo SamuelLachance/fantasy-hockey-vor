@@ -501,6 +501,8 @@ export interface FantraxCtx {
   cutdown?: boolean;
   /** First season of the contract columns (start year), for their labels. */
   capSeason?: number;
+  /** Pick number of each player drafted in the league's current draft (live picks included). */
+  pickOf?: ReadonlyMap<string, number>;
 }
 
 /** Cap hit of season t (0 = this season) from his contract, M$; null without one. */

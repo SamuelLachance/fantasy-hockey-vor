@@ -39,13 +39,17 @@ import {
   statusLabel,
 } from "../src/lib/fantrax/league-copy";
 import {
+  carryLiveDraft,
+  draftFreshness,
   draftFromFxea,
   liveOverlay,
+  pickOnTheClock,
   recentPicks,
   rostersFromFxea,
   withLiveOverlay,
   type LiveOverlay,
 } from "../src/lib/fantrax/live";
+import { TURN_PREFIX, turnCueMaxAgeMs, withTurnPrefix } from "../src/lib/fantrax/turn-cue";
 import type {
   LeagueSnapshot,
   ScheduleSnapshot,
@@ -201,6 +205,7 @@ const overlay: LiveOverlay = {
   rosterPeriod: 3,
   rosters: { a: [{ id: "p", slot: "C", status: "ACTIVE" }] },
   draft: null,
+  draftAt: null,
   recent: [],
 };
 const raw = JSON.stringify(overlay);
@@ -209,6 +214,11 @@ eq(parseLiveCache(raw, t0 + 10 * 60_000, 3), null, "stale cache ignored");
 eq(parseLiveCache(raw, t0 + 60_000, 4), null, "other lineup period ignored");
 eq(parseLiveCache("{not json", t0, 3), null, "garbage ignored");
 eq(parseLiveCache(null, t0, 3), null, "empty storage");
+{
+  // An entry written before `draftAt` existed: its draft is dated by its read.
+  const { draftAt: _omit, ...old } = { ...overlay, draft: { state: "IN_PROGRESS", picks: [] } };
+  eq(parseLiveCache(JSON.stringify(old), t0 + 1_000, 3)?.draftAt ?? null, overlay.fetchedAt, "old cache entry: draft dated by its read");
+}
 
 const prevBase = process.env.NEXT_PUBLIC_BASE_PATH;
 const prevBuild = process.env.NEXT_PUBLIC_BUILD_TIME;
@@ -246,6 +256,45 @@ assert(draft.picks.length === 3 && !("playerId" in draft.picks[2]!), "open picks
 eq(recentPicks(fxDraft).map((p) => p.pick).join(","), "2,1", "recent picks newest first, made only");
 eq(liveOverlay(fxRosters, null, t0, 9).rosterPeriod, 2, "overlay keeps the period fxea answered for");
 
+// ---- a failed draft read never brings the baked draft back (issue: stale
+// baked picks shown as live, with a false « C'EST À TOI »)
+{
+  const good = liveOverlay(fxRosters, fxDraft, t0, 2);
+  eq(good.draftAt, good.fetchedAt, "a live draft is dated by its read");
+  const failedDraft = liveOverlay(fxRosters, null, t0 + 20_000, 2);
+  eq(failedDraft.draft, null, "draft half failed: no draft in the new read");
+  const carried = carryLiveDraft(good, failedDraft);
+  eq(JSON.stringify(carried.draft), JSON.stringify(good.draft), "the previous LIVE draft is kept");
+  eq(carried.draftAt, good.fetchedAt, "…dated by its own read");
+  eq(carried.fetchedAt, failedDraft.fetchedAt, "…while the rosters are the new read's");
+  eq(carried.recent.length, good.recent.length, "…with its latest picks");
+  eq(carryLiveDraft(null, failedDraft), failedDraft, "no earlier live draft: nothing to carry");
+  const newer = liveOverlay(fxRosters, fxDraft, t0 + 40_000, 2);
+  eq(carryLiveDraft(carried, newer), newer, "a successful read replaces the carried draft");
+  // Not written to the session cache (fetchLiveOverlay: `if (overlay.draft)`), and flagged on screen:
+  const poll = 20_000;
+  const max = turnCueMaxAgeMs(poll);
+  eq(max, 120_000, "cue max age: at least two minutes");
+  const f1 = draftFreshness(good, "ready", t0 + 1_000, max);
+  assert(f1.current && f1.cue && f1.at === good.fetchedAt, "latest read has the draft: current, cue on");
+  const f2 = draftFreshness(carried, "ready", t0 + 30_000, max);
+  assert(!f2.current && f2.cue && f2.at === good.fetchedAt, "draft half failed 30 s later: not current, cue still on");
+  const f3 = draftFreshness(carried, "ready", t0 + 10 * 60_000, max);
+  assert(!f3.current && !f3.cue, "draft read 10 min ago: no turn cue");
+  const f4 = draftFreshness(failedDraft, "ready", t0 + 30_000, max);
+  assert(!f4.current && !f4.cue && f4.at === null, "no live draft at all (baked): never current, never a cue");
+  const f5 = draftFreshness(good, "error", t0 + 30_000, max);
+  assert(!f5.current && f5.cue, "whole read failed 30 s after a good one: not current, cue kept");
+  eq(draftFreshness(null, "loading", null, max).cue, false, "before any read: no cue");
+  // The pick on the clock.
+  eq(pickOnTheClock(good.draft)?.pick ?? null, 3, "on the clock: first pick without a player");
+  eq(pickOnTheClock({ state: "x", picks: [{ pick: 1, round: 1, teamId: "a", playerId: "p" }] }), null, "draft over: nobody");
+  // The tab title: added once, removed from whatever title is current.
+  eq(withTurnPrefix("Repêchage — Slapshot | X", true), `${TURN_PREFIX}Repêchage — Slapshot | X`, "title cue added");
+  eq(withTurnPrefix(`${TURN_PREFIX}Repêchage — Slapshot | X`, true), `${TURN_PREFIX}Repêchage — Slapshot | X`, "added once");
+  eq(withTurnPrefix(`${TURN_PREFIX}Joueurs — Slapshot | X`, false), "Joueurs — Slapshot | X", "removed from the CURRENT title, not restored from an old one");
+}
+
 const load = <T>(...parts: string[]) => JSON.parse(readFileSync(join(process.cwd(), ...parts), "utf8")) as T;
 const state = load<StateSnapshot>("public", "fantrax", "state.json");
 eq(withLiveOverlay(state, null), state, "no overlay = baked state");
@@ -268,6 +317,7 @@ const roundTrip = buildDailyPlan({
     rosterPeriod: state.rosterPeriod,
     rosters: state.rosters,
     draft: state.draft,
+    draftAt: state.fetchedAt,
     recent: [],
   }),
 });
@@ -303,7 +353,10 @@ const contracts: Record<string, string[]> = {
     "History.prototype.replaceState",
     "setNowMs",
     "LIVE_DRAFT_POLL_MS",
-    'document.visibilityState !== "visible"',
+    // A running draft polls in a background tab too (its title is the cue).
+    'document.visibilityState !== "visible" && !draftRunning',
+    "prev: liveRef.current",
+    "liveInFlight.current",
     "fetchLiveOverlay",
     "TabSearchContext.Provider",
     'SnakeVerdictsProvider kind="fx"',
@@ -336,7 +389,8 @@ const contracts: Record<string, string[]> = {
   "src/lib/fantrax/league-client.ts": [
     "fetchSnapshotFile",
     "sessionStorage",
-    "`fantrax-live:v1:${cfg.slug}`",
+    "`fantrax-live:v2:${cfg.slug}`",
+    "if (overlay.draft) writeSession",
     '"fantrax-team"',
     "bundlePromises",
   ],

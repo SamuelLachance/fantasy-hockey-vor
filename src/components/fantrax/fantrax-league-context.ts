@@ -11,7 +11,7 @@ import type { FantraxLeagueConfig, RosterLimits } from "@/lib/fantrax/config";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import type { DynastyMode } from "@/lib/fantrax/dynasty-mode";
 import type { LeagueSnapshotBundle } from "@/lib/fantrax/league-client";
-import type { LiveOverlay } from "@/lib/fantrax/live";
+import type { DraftFreshness, LiveOverlay } from "@/lib/fantrax/live";
 import type { StateSnapshot } from "@/lib/fantrax/snapshot-types";
 import type { PlayerLookup } from "./LeagueCard";
 
@@ -35,10 +35,18 @@ export interface FantraxLeagueValue {
   plan: DailyPlan | null;
   bundle: LeagueSnapshotBundle | null;
   bundleState: LoadState;
+  /** A salary-cap league's contracts.json (read apart from the bundle); "ready" in a league without a cap. */
+  contractsState: LoadState;
   /** Rosters and draft picks: the snapshot's, with the live Fantrax read over them (null until the snapshot is in). */
   state: StateSnapshot | null;
   live: LiveOverlay | null;
   liveState: LoadState;
+  /**
+   * The draft on screen: from the latest live read, from an older one (the
+   * last read's draft half failed: « données du dernier succès à … »), or the
+   * build's. « C’EST À TOI » only shows on a live one (`cue`).
+   */
+  draftLive: DraftFreshness;
   /** A request really in flight (the refresh button's aria-busy). */
   busy: boolean;
   /**

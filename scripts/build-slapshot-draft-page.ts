@@ -5,9 +5,14 @@
  * SAME numbers the site's Repêchage tab shows: season points and points
  * over replacement from the league's values.json (`seasonFp`, `leagueVor`),
  * the dynasty value per horizon, rank, phase and contract seasons from its
- * dynasty.json. Run after a Slapshot sync / dynasty build:
+ * dynasty.json. `npm run build:pages` runs it before `next build` (so the
+ * deployed page always matches the deployed dynasty.json), and so does the
+ * Slapshot sync; by hand:
  *
  *   npx tsx scripts/build-slapshot-draft-page.ts
+ *
+ * Deterministic: the same committed inputs give the same bytes (check-export
+ * compares the embedded build time with the published dynasty.json).
  */
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -18,6 +23,7 @@ import { leagueVor } from "../src/lib/fantrax/points-vor";
 import type { PoolSnapshot } from "../src/lib/fantrax/pool";
 import type { LeagueSnapshot, ValuesSnapshot } from "../src/lib/fantrax/snapshot-types";
 import type { SlapshotRecord } from "../src/lib/dynasty/slapshot";
+import type { SlapZeroContract } from "./dynasty-slapshot";
 import { fantraxPaths } from "./fantrax-paths";
 
 const ROOT = process.cwd();
@@ -28,6 +34,8 @@ const OUT = join(ROOT, "public", "slapshot-draft.html");
 
 const read = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8")) as T;
 const r1 = (x: number | null | undefined) => (x == null ? null : Math.round(x * 10) / 10);
+/** Cap hits keep their two decimals (the page prints 2 below 10 M$, like the tab). */
+const r2 = (x: number | null | undefined) => (x == null ? null : Math.round(x * 100) / 100);
 
 interface PageRow {
   i: string;
@@ -36,25 +44,42 @@ interface PageRow {
   e: string;
   p: number | null;
   v: number | null;
-  c?: number | null;
-  c4?: Array<number | null> | null;
+  /** Cap hit 2026-27 and 2027-28 (M$, 2 dp: what the page shows; the page reads `c` = the first). */
+  c2?: Array<number | null> | null;
+  /** Signed seasons from 2026-27, first unsigned season (null: signed through the horizon), status then (U / R). */
   y?: number | null;
   x?: number | null;
+  st?: "U" | "R" | null;
   dB?: number | null;
   dL?: number | null;
   dW?: number | null;
   rB?: number | null;
   rL?: number | null;
+  rW?: number | null;
   ph?: string;
+}
+
+type Contract = Pick<SlapshotRecord["contract"], "cap" | "signed" | "expiry" | "status">;
+
+function setContract(row: PageRow, c: Contract): void {
+  row.c2 = c.cap.slice(0, 2).map((x) => r2(x));
+  row.y = c.signed;
+  row.x = c.expiry;
+  row.st = c.status === "UFA" ? "U" : c.status === "RFA" ? "R" : null;
 }
 
 export function buildSlapshotDraftPage(): { rows: number; withDynasty: number; bytes: number } {
   const league = read<LeagueSnapshot>(P.league);
   const values = read<ValuesSnapshot>(P.values);
   const pool = read<PoolSnapshot>(P.pool);
-  const dyn = read<{ builtAt: string; params: { cap: { league: number[] }; repl: { season: Record<string, number> } }; players: Record<string, SlapshotRecord> }>(
-    P.dynasty,
-  );
+  const dyn = read<{
+    builtAt: string;
+    season: string;
+    params: { cap: { league: number[] }; repl: { season: Record<string, number> } };
+    players: Record<string, SlapshotRecord>;
+    zero?: string[];
+    zeroContracts?: Record<string, SlapZeroContract>;
+  }>(P.dynasty);
   const vor = leagueVor(CFG, values.players, (id) => seasonFp(values.players[id]!, CFG), league.slotCounts);
 
   const rows = new Map<string, PageRow>();
@@ -80,23 +105,32 @@ export function buildSlapshotDraftPage(): { rows: number; withDynasty: number; b
       row = { i: id, n: d.n, t: "", e, p: null, v: null };
       rows.set(id, row);
     }
-    const c = d.contract;
-    row.c = c.cap[0] ?? null;
-    row.c4 = c.cap.slice(0, 4).map((x) => r1(x));
-    row.y = c.signed;
-    row.x = c.expiry;
+    setContract(row, d.contract);
     row.dB = r1(d.dv.balanced);
     row.dL = r1(d.dv.longTerm);
     row.dW = r1(d.dv.winNow);
     row.rB = d.rank.balanced;
     row.rL = d.rank.longTerm;
+    row.rW = d.rank.winNow;
     row.ph = d.phase;
+  }
+  // Zero-value players (modeled, below the published threshold): value 0,
+  // no rank, and their real cap hit (a late pick still counts it).
+  for (const id of dyn.zero ?? []) {
+    const row = rows.get(id);
+    if (!row) continue;
+    row.dB = 0;
+    row.dL = 0;
+    row.dW = 0;
+    const c = dyn.zeroContracts?.[id];
+    if (c) setContract(row, c);
   }
   const board = [...rows.values()].sort((a, b) => (b.dB ?? -1e9) - (a.dB ?? -1e9) || (b.v ?? -1e9) - (a.v ?? -1e9));
   const cap = dyn.params.cap.league[0]!;
   const data = {
     builtAt: dyn.builtAt,
     dynastyBuiltAt: dyn.builtAt,
+    firstSeason: Number(dyn.season.slice(0, 4)),
     cap,
     repl: dyn.params.repl.season,
     teams: Object.fromEntries(league.teams.map((t) => [t.id, t.name])),

@@ -1,14 +1,16 @@
 "use client";
 
 import { BellRing, Coins, LayoutGrid, ListChecks, Users } from "lucide-react";
-import { useEffect, useMemo } from "react";
-import { ordinal, pickLabel } from "@/lib/fantrax/league-copy";
+import { useMemo } from "react";
+import { fmtTime, ordinal, pickLabel } from "@/lib/fantrax/league-copy";
 import { capSeasonLabel, fmtMoney } from "@/lib/fantrax/salary-copy";
+import type { SeatCount } from "@/lib/fantrax/seat-needs";
 import { draftBoardView } from "@/lib/fantrax/slapshot-draft";
 import { contractEndLabel, salaryCell } from "@/lib/fantrax/table-copy";
 import { rowDynastyValue, rowSalary } from "@/lib/fantrax/table";
 import { DYNASTY_MODE_LABEL } from "@/lib/fantrax/dynasty-mode";
 import { fmtInt } from "@/lib/player-table/copy";
+import { TurnAlertToggle } from "./DraftTurnWatcher";
 import { useFantraxLeague } from "./fantrax-league-context";
 import { useFantraxTableData } from "./fantrax-table";
 import { LeagueCard, Tag } from "./LeagueCard";
@@ -23,22 +25,16 @@ const STATUS_SHORT: Record<string, string> = {
 };
 
 /**
- * « C’EST À TOI » while the live read says the chosen team is on the clock:
- * a loud banner, and the browser tab's title (a background tab shows it).
+ * « C’EST À TOI » while a LIVE read says the chosen team is on the clock (a
+ * loud banner; never from the draft baked into the build, and dated when the
+ * last read's draft half failed). The browser tab's title carries the same
+ * cue on every tab of the league (`DraftTurnWatcher`).
  */
 export function SlapshotTurnCue() {
-  const { teamId, defaultTeamId, teamName, plan } = useFantraxLeague();
+  const { teamId, defaultTeamId, teamName, plan, draftLive } = useFantraxLeague();
   const d = plan?.teamId === teamId ? plan.draft : null;
-  const myTurn = !!d?.current && !!d?.next && d.current.pick === d.next.pick;
+  const myTurn = draftLive.cue && !!d?.current && !!d?.next && d.current.pick === d.next.pick;
   const mine = teamId === defaultTeamId;
-  useEffect(() => {
-    if (!myTurn || !mine) return;
-    const before = document.title;
-    document.title = `C’EST À TOI · ${before}`;
-    return () => {
-      document.title = before;
-    };
-  }, [myTurn, mine]);
   return (
     <>
       {myTurn && d?.next ? (
@@ -51,22 +47,47 @@ export function SlapshotTurnCue() {
           <span className="text-sm sm:text-base">
             Choix {pickLabel(d.next.pick)} ({ordinal(d.next.round)} ronde)
             {d.following ? `; ensuite ${pickLabel(d.following.pick)}` : ""}.
+            {!draftLive.current && draftLive.at ? ` (Données du dernier succès à ${fmtTime(draftLive.at)}.)` : ""}
           </span>
         </p>
       ) : null}
+      {mine && d?.state === "running" ? <TurnAlertToggle /> : null}
     </>
+  );
+}
+
+/** One tile of the needs card. */
+function NeedTile({ label, title, c, sub }: { label: string; title?: string; c: SeatCount; sub?: string | null }) {
+  return (
+    <li
+      className={`rounded-xl border px-2 py-2 text-center ${
+        c.empty > 0 ? "border-amber-400/40 bg-amber-500/10" : "border-emerald-500/30 bg-emerald-500/10"
+      }`}
+    >
+      <span className="block text-xs font-semibold text-slate-300" title={title}>
+        {label}
+      </span>
+      <span className="block text-lg font-bold tabular-nums text-white">
+        {c.filled}/{c.max}
+      </span>
+      <span className={`block text-xs ${c.empty > 0 ? "text-amber-200" : "text-emerald-200"}`}>
+        {c.empty > 0 ? `${c.empty} à combler` : "complet"}
+      </span>
+      {sub ? <span className="mt-0.5 block text-xs tabular-nums text-slate-300">{sub}</span> : null}
+    </li>
   );
 }
 
 /**
  * Slapshot · Repêchage, below the draft panel: my roster so far with its cap use over the 23 counted
  * spots (Active + Reserve) and the room per season, the empty starting seats
- * against C4 LW4 RW4 D6 G2, and the best available at each position by
- * dynasty value in the page's mode. Everything follows the live read of
- * rosters and picks (every 20 s while the draft runs).
+ * against C4 LW4 RW4 D6 G2 (the wings as one pool: a LW/RW player sits on
+ * either side; the same fill as the stand-alone page), and the best available
+ * at each position by dynasty value in the page's mode. Everything follows
+ * the live read of rosters and picks (every 20 s while the draft runs).
  */
 export function SlapshotDraftBoard() {
-  const { config, teamId, defaultTeamId, teamName, state, bundle, mode } = useFantraxLeague();
+  const { config, teamId, defaultTeamId, teamName, state, bundle, contractsState, mode } = useFantraxLeague();
   const { data } = useFantraxTableData({ autoLoad: true, fallback: "draft" });
   const mine = teamId === defaultTeamId;
 
@@ -89,8 +110,10 @@ export function SlapshotDraftBoard() {
   }, [data.rows, data.fallbackRows, state, teamId, mode, config, bundle]);
 
   const s = view.salary;
-  const seats = view.needs.reduce((n, x) => n + x.max, 0);
-  const filled = view.needs.reduce((n, x) => n + x.filled, 0);
+  const slots = Object.values(view.needs.slots);
+  const seats = slots.reduce((n, x) => n + x.max, 0);
+  const filled = slots.reduce((n, x) => n + x.filled, 0);
+  const w = view.needs.wing;
 
   return (
     <div className="space-y-4">
@@ -107,6 +130,8 @@ export function SlapshotDraftBoard() {
                 <strong className={s.room[0]! < 0 ? "text-rose-200" : "text-white"}>{fmtMoney(s.room[0]!)}</strong>
                 {` (${s.counted} joueurs comptés sur ${s.spots}; mineures et blessés hors plafond).`}
               </>
+            ) : contractsState === "error" ? (
+              <span className="text-amber-200">Salaires indisponibles : le fichier des contrats n’a pas pu être lu (Actualiser pour réessayer).</span>
             ) : (
               "Salaires en chargement…"
             )
@@ -174,26 +199,28 @@ export function SlapshotDraftBoard() {
           icon={<LayoutGrid className="h-5 w-5" />}
           title="Besoins par position"
           accentClass="text-cyan-300"
-          description={`${filled} des ${seats} postes partants remplis (C4 LW4 RW4 D6 G2, joueurs à positions multiples placés au mieux).`}
+          description={`${filled} des ${seats} postes partants remplis par les Actifs, la Réserve et les choix (C4 LW4 RW4 D6 G2; mineures et blessés à part).`}
         >
-          <ul className="grid grid-cols-5 gap-2">
-            {view.needs.map((n) => (
-              <li
-                key={n.slot}
-                className={`rounded-xl border px-2 py-2 text-center ${
-                  n.empty > 0 ? "border-amber-400/40 bg-amber-500/10" : "border-emerald-500/30 bg-emerald-500/10"
-                }`}
-              >
-                <span className="block text-xs font-semibold text-slate-300">{n.slot}</span>
-                <span className="block text-lg font-bold tabular-nums text-white">
-                  {n.filled}/{n.max}
-                </span>
-                <span className={`block text-xs ${n.empty > 0 ? "text-amber-200" : "text-emerald-200"}`}>
-                  {n.empty > 0 ? `${n.empty} à combler` : "complet"}
-                </span>
-              </li>
-            ))}
+          <ul className="grid grid-cols-4 gap-2">
+            {view.needs.slots.C ? <NeedTile label="C" c={view.needs.slots.C} /> : null}
+            {w ? (
+              <NeedTile
+                label="Ailiers"
+                title="4 LW et 4 RW : un joueur LW/RW compte d’un côté ou de l’autre"
+                c={w}
+                sub={w.empty > 0 ? `LW ≤ ${w.lw} · RW ≤ ${w.rw}` : null}
+              />
+            ) : null}
+            {view.needs.slots.D ? <NeedTile label="D" c={view.needs.slots.D} /> : null}
+            {view.needs.slots.G ? <NeedTile label="G" c={view.needs.slots.G} /> : null}
           </ul>
+          {w ? (
+            <p className="mt-2 text-xs text-slate-400">
+              {w.flex > 0
+                ? `Ailiers : ${w.flex} des vôtres jouent à gauche comme à droite, donc un LW ou un RW comble un poste (au plus ${w.lw} LW et ${w.rw} RW de plus).`
+                : "Ailiers : 4 LW et 4 RW; « LW ≤ n » = combien de LW de plus trouveraient un poste."}
+            </p>
+          ) : null}
         </LeagueCard>
 
         <LeagueCard
@@ -207,12 +234,13 @@ export function SlapshotDraftBoard() {
             <ul className="divide-y divide-white/5 text-sm">
               {view.mine.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 py-1.5">
-                  <span className="min-w-0 flex-1 truncate font-medium text-white" title={p.name}>
+                  {/* Phones: the whole name on its own line (no hover to read a cut one). */}
+                  <span className="min-w-0 basis-full break-words font-medium text-white sm:basis-auto sm:flex-1 sm:truncate" title={p.name}>
                     {p.name}
                   </span>
                   <span className="text-xs text-slate-400">{p.groups.join("/") || "—"}</span>
                   <Tag tone={p.status === "MINORS" || p.status === "INJURED_RESERVE" ? "slate" : "cyan"}>{STATUS_SHORT[p.status] ?? p.status}</Tag>
-                  <span className="w-16 text-right tabular-nums text-cyan-100" title="Valeur dynastie et rang">
+                  <span className="ml-auto w-16 text-right tabular-nums text-cyan-100 sm:ml-0" title="Valeur dynastie et rang">
                     {p.dyn === null ? "—" : fmtInt(p.dyn)}
                     {p.rank ? <span className="block text-xs text-slate-400">{rankLabel(p.rank)}</span> : null}
                   </span>
@@ -249,7 +277,7 @@ export function SlapshotDraftBoard() {
                     const c = r.dynasty?.contract;
                     return (
                       <li key={r.id} className="flex items-baseline gap-2">
-                        <span className="min-w-0 flex-1 truncate text-slate-100" title={r.name}>
+                        <span className="min-w-0 flex-1 break-words text-slate-100 sm:truncate" title={r.name}>
                           {r.name}
                           {r.src === "e" ? <span className="ml-1 text-xs text-violet-300">Espoir</span> : null}
                         </span>

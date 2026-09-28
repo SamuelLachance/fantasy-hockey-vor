@@ -6,6 +6,7 @@ import {
   fmtAgo,
   fmtNum,
   fmtOdds,
+  fmtDateTime,
   fmtSigned,
   fmtTime,
   ordinal,
@@ -22,8 +23,6 @@ interface DraftPanelProps {
   teamName: (teamId: string) => string;
   /** Latest picks read live from Fantrax (null until the first live read). */
   recent: RecentPick[] | null;
-  /** When the live picks were read, ISO. */
-  liveAt: string | null;
   nowMs: number | null;
 }
 
@@ -36,16 +35,19 @@ const familyName = (n: string) => n.split(" ").slice(1).join(" ") || n;
  * picks (folded, so the best available table right below the panel stays
  * near the top). Picks refresh live from Fantrax in the browser.
  */
-export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: DraftPanelProps) {
+export function DraftPanel({ plan, player, teamName, recent, nowMs }: DraftPanelProps) {
   // The league's own groups: one « W » card in Captains, LW and RW apart in a
   // league whose lineup has four seats of each. A baked plan from before a
   // vocabulary change has the old keys, so a missing card is skipped rather
   // than crashing the tab during a live draft.
-  const { config } = useFantraxLeague();
+  const { config, draftLive, liveState } = useFantraxLeague();
   const d = plan.draft;
   if (!d) return null;
   const { next, following } = d;
-  const myTurn = !!d.current && !!next && d.current.pick === next.pick;
+  // « C'est votre tour » only from a live read: the draft baked into the
+  // build is hours old in a draft that moves every few minutes.
+  const myTurn = draftLive.cue && !!d.current && !!next && d.current.pick === next.pick;
+  const pollS = Math.round((config.cadence.draftPollMs ?? 90_000) / 1000);
 
   return (
     <LeagueCard
@@ -191,10 +193,20 @@ export function DraftPanel({ plan, player, teamName, recent, liveAt, nowMs }: Dr
           </ol>
         </details>
       ) : null}
-      {liveAt ? (
+      {draftLive.current && draftLive.at ? (
         <p className="mt-2 text-xs text-slate-400">
-          Choix lus en direct sur Fantrax à {fmtTime(liveAt)}; mise à jour automatique aux{" "}
-          {Math.round((config.cadence.draftPollMs ?? 90_000) / 1000)} secondes pendant le repêchage.
+          Choix lus en direct sur Fantrax à {fmtTime(draftLive.at)}; mise à jour automatique aux {pollS} secondes pendant le
+          repêchage.
+        </p>
+      ) : draftLive.at ? (
+        <p role="status" className="mt-2 text-xs text-amber-200">
+          Lecture du repêchage impossible : données du dernier succès à {fmtTime(draftLive.at)} (nouvel essai aux {pollS}{" "}
+          secondes).
+        </p>
+      ) : liveState !== "loading" ? (
+        <p role="status" className="mt-2 text-xs text-amber-200">
+          Repêchage lu à la synchronisation du {fmtDateTime(plan.dataAsOf)}, pas en direct : les choix faits depuis n’y sont
+          pas (nouvel essai aux {pollS} secondes).
         </p>
       ) : null}
     </LeagueCard>

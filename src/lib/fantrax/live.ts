@@ -27,8 +27,17 @@ export interface LiveOverlay {
   /** Lineup period the rosters were read for. */
   rosterPeriod: number;
   rosters: StateSnapshot["rosters"];
-  /** Null when getDraftResults failed: the baked draft stays. */
+  /**
+   * Null when getDraftResults failed and no earlier live read had it (the
+   * baked draft then stays, flagged as such by `draftAt`).
+   */
   draft: DraftState | null;
+  /**
+   * When `draft` was read from Fantrax, ISO: `fetchedAt` when this read got
+   * it, earlier when getDraftResults failed and the last good live draft was
+   * carried over (`carryLiveDraft`), null when there is no live draft at all.
+   */
+  draftAt: string | null;
   /** Latest picks first (live only; the snapshot carries no pick times). */
   recent: RecentPick[];
 }
@@ -69,13 +78,58 @@ export function liveOverlay(
   fetchedAtMs: number,
   rosterPeriod: number,
 ): LiveOverlay {
+  const fetchedAt = new Date(fetchedAtMs).toISOString();
   return {
-    fetchedAt: new Date(fetchedAtMs).toISOString(),
+    fetchedAt,
     rosterPeriod: rosters.period ?? rosterPeriod,
     rosters: rostersFromFxea(rosters),
     draft: draft ? draftFromFxea(draft) : null,
+    draftAt: draft ? fetchedAt : null,
     recent: draft ? recentPicks(draft) : [],
   };
+}
+
+/**
+ * A read whose getDraftResults failed (rosters fine) keeps the previous
+ * LIVE draft and its latest picks, dated by their own read: falling back to
+ * the draft baked into the build would jump several picks back in a draft
+ * that moves every few minutes, and present that as live.
+ */
+export function carryLiveDraft(prev: LiveOverlay | null | undefined, next: LiveOverlay): LiveOverlay {
+  if (next.draft || !prev?.draft) return next;
+  return { ...next, draft: prev.draft, draftAt: prev.draftAt ?? prev.fetchedAt, recent: prev.recent };
+}
+
+/** How the draft on screen was read. */
+export interface DraftFreshness {
+  /** From the latest live read, which succeeded. */
+  current: boolean;
+  /** When the draft shown was read live (ISO), null when it is the build's. */
+  at: string | null;
+  /**
+   * Recent enough to say « it is your turn » (within `maxAgeMs` of now, or
+   * from the latest read): never on the baked draft.
+   */
+  cue: boolean;
+}
+
+export function draftFreshness(
+  live: LiveOverlay | null,
+  liveState: "loading" | "ready" | "error",
+  nowMs: number | null,
+  maxAgeMs: number,
+): DraftFreshness {
+  const at = live?.draft ? (live.draftAt ?? null) : null;
+  const current = !!at && liveState === "ready" && at === live!.fetchedAt;
+  const age = at && nowMs !== null ? nowMs - Date.parse(at) : null;
+  return { current, at, cue: !!at && (current || (age !== null && age <= maxAgeMs)) };
+}
+
+/** The pick on the clock: the first one without a player (null once the draft is over). */
+export function pickOnTheClock(draft: DraftState | null | undefined): DraftState["picks"][number] | null {
+  let cur: DraftState["picks"][number] | null = null;
+  for (const p of draft?.picks ?? []) if (!p.playerId && (!cur || p.pick < cur.pick)) cur = p;
+  return cur;
 }
 
 /**

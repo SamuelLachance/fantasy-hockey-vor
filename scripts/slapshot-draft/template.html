@@ -17,6 +17,8 @@
   .mut { color:var(--mut); }
   .grid { display:grid; gap:16px; grid-template-columns:minmax(0,1fr); }
   @media (min-width:1100px) { .grid.main { grid-template-columns:minmax(0,1fr) 24rem; align-items:start; } }
+  /* Phones and narrow windows: my team, the cap and the needs before the long table. */
+  @media (max-width:1099px) { .grid.main > aside { order:-1; } }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; }
   .card h2 { font-size:15px; margin:0 0 8px; }
   .status { display:flex; flex-wrap:wrap; gap:8px 20px; }
@@ -35,9 +37,11 @@
   tr.gone td { color:#64748b; text-decoration:line-through; }
   .pos { display:inline-block; min-width:2.2em; text-align:center; border-radius:6px; padding:0 4px; font-size:12px; font-weight:700; background:#1e293b; }
   .pos-G { color:#f0abfc; } .pos-D { color:#fbbf24; } .pos-C { color:#67e8f9; } .pos-LW { color:#86efac; } .pos-RW { color:#a5b4fc; }
-  .need { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; text-align:center; }
+  .need { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; text-align:center; }
   .need div { background:#111c33; border-radius:8px; padding:6px 2px; }
   .need b { display:block; font-size:16px; }
+  .need small { display:block; font-size:11px; color:var(--mut); }
+  .stale { color:var(--warn); }
   ul { margin:0; padding-left:18px; }
   li { margin:2px 0; }
   .err { color:var(--bad); }
@@ -67,6 +71,8 @@
       <div><span class="mut">Mon prochain choix</span><div class="big mine" id="next">—</div></div>
       <div><span class="mut">Mes choix suivants</span><div id="later">—</div></div>
     </div>
+    <p style="margin:10px 0 0" class="mut"><button type="button" id="alert" aria-pressed="false">M’avertir quand c’est mon tour</button>
+      <span id="alertnote">Le titre de l’onglet affiche « C’EST À TOI » à votre tour, même en arrière-plan.</span></p>
   </section>
 
   <div class="grid main">
@@ -119,7 +125,7 @@
       <p class="mut" style="margin:8px 0 0">
         Valeur dynastie : points Slapshot attendus au-dessus du remplaçant sur 12 saisons (vieillissement, progression des jeunes calibrée sur l'historique LNH, arrivée des espoirs), moins le coût de son salaire dans le plafond, qui grimpe chaque saison. Un joueur peut être caché dans les mineures (0 point, 0 salaire) ou libéré, donc un mauvais contrat coûte au plus une place.
         Pts saison : sur la saison régulière de la ligue (périodes 1 à 82, jusqu’au 25 février, environ 75 % des matchs de la LNH), barème de la ligue (B 3,5 · P 2,5 · PPP 0,5 · BCN 1 · Tirs 0,25 ; gardiens V 3 · Arrêts 0,25 · BC −1 · Blanchissage 5 · P 3). Mises en échec et tirs bloqués : 0 (mis à 0 à chaque position).
-        Salaire : impact réel sur le plafond LNH, saison par saison (une prolongation compte à partir de sa première saison ; après la fin du contrat, le prochain contrat projeté) ; en jaune, un salaire qui change en 27-28. Mêmes données que l’onglet Repêchage du site (__BUILT__).
+        Salaire : impact réel sur le plafond LNH, saison par saison (une prolongation compte à partir de sa première saison ; après la fin du contrat, le prochain contrat projeté) ; en jaune, un salaire qui change en 27-28. Fin : dernière saison du contrat signé (JAS / JAC : autonome sans / avec compensation). Mêmes données que l’onglet Repêchage du site (__BUILT__), régénérées à chaque mise en ligne.
       </p>
     </section>
 
@@ -128,6 +134,7 @@
         <h2 id="me-h">Mon équipe</h2>
         <p id="capline" style="margin:0 0 8px"></p>
         <div class="need" id="need"></div>
+        <p class="mut" id="needline" style="margin:6px 0 0;font-size:12px"></p>
         <ul id="mine" style="margin-top:10px"></ul>
       </section>
       <section class="card" aria-labelledby="best-h">
@@ -144,23 +151,98 @@
   const LEAGUE = "glxjunc7mtxdqi8x";
   const MY = "lz1ka65mmuh16mtf";
   const SLOTS = { C: 4, LW: 4, RW: 4, D: 6, G: 2 };
+  const POLL_MS = 20000;
+  const TIMEOUT_MS = 8000;
+  const CUE_MAX_AGE_MS = 120000;
+  const TITLE = "Repêchage Slapshot en direct | Fantasy Hockey VOR";
+  const TURN = "C’EST À TOI · ";
+  const ALERT_KEY = "slapshot-draft-alert";
   const PHASE_FR = { prospect: "espoir", rising: "en progression", entering_prime: "entre dans son prime", prime: "dans son prime", plateau: "plateau", declining: "en déclin", late_career: "fin de carrière" };
   const D = JSON.parse(document.getElementById("data").textContent);
+  for (const p of D.board) p.c = p.c2 ? p.c2[0] : null; // this season's cap hit
   const byId = new Map(D.board.map((p) => [p.i, p]));
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
   const posTags = (e) => e.split("/").map((x) => `<span class="pos pos-${x}">${x}</span>`).join(" ");
   const num = (x, d = 0) => (x == null ? "—" : Number(x).toFixed(d).replace(".", ","));
-  const money = (m) => (m == null ? "—" : `${Number(m).toFixed(2).replace(".", ",")} M$`);
+  // The site's format: one decimal from 10 M$, two below, from the unrounded cap hits.
+  const money = (m) => {
+    if (m == null) return "—";
+    const d = Math.abs(m) >= 10 ? 1 : 2;
+    return `${m < 0 ? "−" : ""}${(Math.round(Math.abs(m) * 10 ** d) / 10 ** d).toFixed(d).replace(".", ",")} M$`;
+  };
+  const seasonOf = (y) => `${y}-${String((y + 1) % 100).padStart(2, "0")}`;
+  // The tab's « Fin » : the last signed season, then the status after it.
+  const contractEnd = (p) => {
+    if (p.y == null) return "—";
+    if (p.y === 0) return "sans contrat";
+    const last = seasonOf(D.firstSeason + p.y - 1);
+    const st = p.st === "R" ? "JAC" : p.st === "U" ? "JAS" : "";
+    return p.x == null ? `${last}+` : st ? `${last} · ${st}` : last;
+  };
   const dyn = (p) => p["d" + $("mode").value];
-  const rank = (p) => ($("mode").value === "L" ? p.rL : p.rB);
+  const rank = (p) => p["r" + $("mode").value];
   const fold = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  const clock = (d) => d.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
+  // Starting seats still open: the SAME function as src/lib/fantrax/seat-needs.ts
+  // (test-slapshot-draft.ts runs both on the same rosters). A maximum fill in
+  // priority order; the wings also as one pool, with how many one-sided
+  // players each side could still take.
+  function seatNeeds(players, slots) {
+    const names = Object.keys(slots);
+    const posOf = {};
+    const fill = (list) => {
+      const holders = {};
+      for (const s of names) holders[s] = [];
+      const seatOf = {};
+      const tryPlace = (id, pos, seen) => {
+        for (const s of pos) {
+          if (!seen[s] && holders[s].length < slots[s]) { holders[s].push(id); seatOf[id] = s; return true; }
+        }
+        for (const s of pos) {
+          if (seen[s]) continue;
+          seen[s] = true;
+          const hs = holders[s];
+          for (let k = 0; k < hs.length; k++) {
+            const h = hs[k];
+            if (tryPlace(h, posOf[h].filter((x) => x !== s), seen)) { hs[k] = id; seatOf[id] = s; return true; }
+          }
+        }
+        return false;
+      };
+      for (const p of list) {
+        if (!posOf[p.id]) posOf[p.id] = names.filter((s) => p.pos.includes(s));
+        tryPlace(p.id, posOf[p.id], {});
+      }
+      return { holders, seatOf };
+    };
+    const base = fill(players);
+    const out = {};
+    for (const s of names) { const filled = base.holders[s].length; out[s] = { filled, max: slots[s], empty: slots[s] - filled }; }
+    let wing = null;
+    if (slots.LW !== undefined && slots.RW !== undefined) {
+      const room = (side) => {
+        const extra = [];
+        for (let k = 0; k < slots.LW + slots.RW; k++) extra.push({ id: "\u0000" + side + k, pos: [side] });
+        const f = fill(players.concat(extra));
+        return extra.filter((x) => f.seatOf[x.id]).length;
+      };
+      const seated = base.holders.LW.concat(base.holders.RW);
+      const max = slots.LW + slots.RW;
+      wing = { filled: seated.length, max, empty: max - seated.length, lw: room("LW"), rw: room("RW"),
+        flex: seated.filter((id) => posOf[id].includes("LW") && posOf[id].includes("RW")).length };
+    }
+    return { slots: out, wing, seatOf: base.seatOf };
+  }
   let unavailable = new Set();
   let ownerOf = new Map();
   let mineStatus = new Map(); // my players -> Fantrax status (ACTIVE, RESERVE, MINORS, INJURED_RESERVE, "PICK")
   let pos = "ALL";
   let showGone = false;
+  let lastOk = 0; // last successful read (ms)
+  let onClockPick = null; // my pick on the clock at the last successful read
+  let alerted = null;
 
   const posf = $("posf");
   for (const p of ["ALL", "C", "LW", "RW", "D", "G"]) {
@@ -174,6 +256,42 @@
   for (const id of ["q", "mode", "sort", "kind", "maxcap"]) $(id).addEventListener(id === "q" || id === "maxcap" ? "input" : "change", render);
   $("showgone").addEventListener("click", (e) => { showGone = !showGone; e.currentTarget.setAttribute("aria-pressed", String(showGone)); render(); });
   $("refresh").addEventListener("click", () => load());
+
+  // Opt-in alert (off by default): a notification and three beeps at my turn.
+  const readAlert = () => { try { return localStorage.getItem(ALERT_KEY) === "1"; } catch { return false; } };
+  let alertOn = readAlert();
+  let audio = null;
+  const unlockAudio = () => { try { const C = window.AudioContext || window.webkitAudioContext; if (C) { audio = audio || new C(); audio.resume(); } } catch { audio = null; } };
+  const beep = () => {
+    try {
+      unlockAudio();
+      if (!audio) return;
+      [660, 880, 1100].forEach((hz, i) => {
+        const t = audio.currentTime + i * 0.22, o = audio.createOscillator(), g = audio.createGain();
+        o.frequency.value = hz;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+        o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 0.2);
+      });
+    } catch { /* the title still says it */ }
+  };
+  const showAlertState = () => {
+    $("alert").setAttribute("aria-pressed", String(alertOn));
+    $("alert").textContent = alertOn ? "Alerte de tour activée (notification et son)" : "M’avertir quand c’est mon tour";
+    const denied = typeof Notification === "undefined" || Notification.permission === "denied";
+    $("alertnote").textContent = alertOn
+      ? (denied ? "Notifications refusées ou non offertes par ce navigateur : le son et le titre de l’onglet vous préviendront. " : "") + "Gardez la page ouverte, même en arrière-plan."
+      : "Le titre de l’onglet affiche « C’EST À TOI » à votre tour, même en arrière-plan.";
+  };
+  $("alert").addEventListener("click", async () => {
+    alertOn = !alertOn;
+    if (alertOn) {
+      unlockAudio();
+      if (typeof Notification !== "undefined" && Notification.permission === "default") { try { await Notification.requestPermission(); } catch { /* sound and title remain */ } }
+    }
+    try { if (alertOn) localStorage.setItem(ALERT_KEY, "1"); else localStorage.removeItem(ALERT_KEY); } catch { /* this page only */ }
+    showAlertState();
+  });
+  showAlertState();
 
   const perM = (p) => (dyn(p) == null || p.c == null ? null : dyn(p) / Math.max(p.c, 0.85));
   const SORTS = {
@@ -204,14 +322,14 @@
       shown++;
       if (rows.length >= 300) continue;
       const who = gone ? (ownerOf.get(p.i) || "pris") : "";
-      const next = p.c4 && p.c4.length > 1 ? p.c4[1] : null;
-      const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.05;
+      const next = p.c2 && p.c2.length > 1 ? p.c2[1] : null;
+      const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.005;
       rows.push(`<tr class="${gone ? "gone" : ""}"><td class="n">${shown}</td>`
         + `<td>${esc(p.n)}${who ? `<span class="tag">${esc(who)}</span>` : ""}</td><td>${esc(p.t)}</td><td>${posTags(p.e)}</td>`
         + `<td class="n"><b>${num(dyn(p))}</b></td><td class="n">${rank(p) ?? "—"}</td>`
         + `<td class="ph ph-${esc(p.ph || "")}">${esc(PHASE_FR[p.ph] || "—")}</td>`
         + `<td class="n">${num(p.p)}</td><td class="n">${num(p.v)}</td>`
-        + `<td class="n">${money(p.c)}</td><td class="n ${changes ? "up" : ""}">${next == null ? "—" : money(next)}</td><td class="n">${p.x ?? "—"}</td></tr>`);
+        + `<td class="n">${money(p.c)}</td><td class="n ${changes ? "up" : ""}">${next == null ? "—" : money(next)}</td><td class="n">${esc(contractEnd(p))}</td></tr>`);
     }
     $("rows").innerHTML = rows.join("") || `<tr><td colspan="12" class="mut">Aucun joueur ne correspond.</td></tr>`;
     $("cap").textContent = `${shown} joueurs${shown > 300 ? " (300 premiers affichés)" : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
@@ -229,16 +347,17 @@
     // my team
     const mine = [...mineStatus.keys()].map((id) => byId.get(id) || { i: id, n: "Joueur " + id, t: "", e: "", c: null, ph: "" });
     const active = mine.filter((p) => { const s = mineStatus.get(p.i); return s !== "MINORS" && s !== "INJURED_RESERVE"; });
-    const count = Object.fromEntries(Object.keys(SLOTS).map((k) => [k, 0]));
-    for (const p of active) {
-      const opts = p.e.split("/").filter((e) => SLOTS[e]);
-      opts.sort((a, b) => count[a] / SLOTS[a] - count[b] / SLOTS[b]);
-      if (opts[0]) count[opts[0]]++;
-    }
-    $("need").innerHTML = Object.keys(SLOTS).map((k) => {
-      const miss = SLOTS[k] - count[k];
-      return `<div><span class="pos pos-${k}">${k}</span><b class="${miss > 0 ? "clock" : "mine"}">${count[k]}/${SLOTS[k]}</b></div>`;
-    }).join("");
+    // Seats: my Active + Reserve players and picks, season points first (the site's order).
+    const prio = active.slice().sort((a, b) => (b.p ?? -1) - (a.p ?? -1) || (b.dB ?? -1) - (a.dB ?? -1) || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0));
+    const need = seatNeeds(prio.map((p) => ({ id: p.i, pos: p.e ? p.e.split("/") : [] })), SLOTS);
+    const tile = (label, cls, c, sub) => `<div><span class="pos ${cls}">${label}</span><b class="${c.empty > 0 ? "clock" : "mine"}">${c.filled}/${c.max}</b>`
+      + `<small>${c.empty > 0 ? `${c.empty} à combler` : "complet"}</small>${sub ? `<small>${sub}</small>` : ""}</div>`;
+    const w = need.wing;
+    $("need").innerHTML = tile("C", "pos-C", need.slots.C) + tile("Ailiers", "pos-LW", w, w.empty > 0 ? `LW ≤ ${w.lw} · RW ≤ ${w.rw}` : "")
+      + tile("D", "pos-D", need.slots.D) + tile("G", "pos-G", need.slots.G);
+    $("needline").textContent = w.flex > 0
+      ? `Ailiers : ${w.flex} des vôtres jouent à gauche comme à droite, donc un LW ou un RW comble un poste (au plus ${w.lw} LW et ${w.rw} RW de plus).`
+      : "Ailiers : 4 LW et 4 RW; « LW ≤ n » = combien de LW de plus trouveraient un poste.";
     // Only 23 spots count. Every pick lands in Active, so past 23 the cap reads
     // the 23 with the most points this season (the site's rule); the others
     // are expected in the minors, cap-free.
@@ -247,7 +366,7 @@
     const used = counted.reduce((s, p) => s + (p.c || 0), 0);
     const left = D.cap - used;
     const spots = Math.max(0, 23 - active.length);
-    $("capline").innerHTML = `Plafond (actifs + réserve) : <b>${money(used)}</b> / ${D.cap} M$ · reste <b class="${left < 0 ? "err" : "mine"}">${money(left)}</b>`
+    $("capline").innerHTML = `Plafond (actifs + réserve) : <b>${money(used)}</b> / ${money(D.cap)} · reste <b class="${left < 0 ? "err" : "mine"}">${money(left)}</b>`
       + (spots ? ` <span class="mut">(≈ ${money(left / spots)} par poste pour ${spots} postes libres sur 23)</span>` : "")
       + (extra > 0 ? ` <span class="mut">(${extra} de plus que les 23 places : les moins productifs cette saison, laissés hors du calcul et supposés aux mineures)</span>` : "")
       + `<br><span class="mut">Les mineures et la liste des blessés ne comptent pas dans le plafond.</span>`;
@@ -258,21 +377,49 @@
   }
 
   // Fantrax asks for public calls at least 1.1 s apart: every read books its
-  // own slot (the poll, the button and a tab coming back can overlap).
+  // own slot. Each read gives up after 8 s (a hung connection must not stall
+  // the page), and one load runs at a time.
   let nextCallAt = 0;
   let loading = false;
+  let lastTry = 0;
   async function getJson(url) {
     const at = Math.max(Date.now(), nextCallAt);
     nextCallAt = at + 1100;
     if (at > Date.now()) await new Promise((r) => setTimeout(r, at - Date.now()));
-    const r = await fetch(url, { credentials: "omit", cache: "no-store" });
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
+    try {
+      const r = await fetch(url, { credentials: "omit", cache: "no-store", signal: ctl.signal });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } catch (e) {
+      throw new Error(e && e.name === "AbortError" ? "délai de 8 s dépassé" : (e && e.message) || "réseau");
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // The title: « C'EST À TOI » only from a read at most 2 min old.
+  function showTurn() {
+    const fresh = lastOk > 0 && Date.now() - lastOk <= CUE_MAX_AGE_MS;
+    const mineNow = fresh && onClockPick != null;
+    document.title = mineNow ? TURN + TITLE : TITLE;
+    if (mineNow && alertOn && alerted !== onClockPick) {
+      alerted = onClockPick;
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          const n = new Notification("C’EST À TOI", { body: `Slapshot : choix n° ${onClockPick}.`, tag: "slapshot-turn" });
+          n.onclick = () => { window.focus(); n.close(); };
+        }
+      } catch { /* the title and the sound remain */ }
+      beep();
+    }
   }
 
   async function load() {
     if (loading) return;
     loading = true;
+    lastTry = Date.now();
     try {
       const base = "https://www.fantrax.com/fxea/general/";
       const draft = await getJson(`${base}getDraftResults?leagueId=${LEAGUE}`);
@@ -300,30 +447,37 @@
       const open = picks.filter((p) => !p.playerId);
       const cur = open[0];
       const minePicks = open.filter((p) => p.teamId === MY);
+      const onClock = !!(cur && minePicks[0] && minePicks[0].pick === cur.pick);
       $("made").textContent = `${made} / ${picks.length}`;
       $("clock").textContent = cur ? `${D.teams[cur.teamId] || "?"} (n° ${cur.pick}, ronde ${cur.round})` : "Repêchage terminé";
-      const onClock = cur && minePicks[0] && minePicks[0].pick === cur.pick;
       if (minePicks[0]) {
         const away = cur ? minePicks[0].pick - cur.pick : 0;
         $("next").textContent = onClock ? `n° ${minePicks[0].pick} : C'EST À TOI` : `n° ${minePicks[0].pick} (dans ${away} choix)`;
       } else $("next").textContent = "aucun";
       $("later").textContent = minePicks.slice(1, 7).map((p) => `n° ${p.pick}`).join(" · ") || "—";
-      document.title = onClock ? "À TOI ! Repêchage Slapshot | Fantasy Hockey VOR" : "Repêchage Slapshot en direct | Fantasy Hockey VOR";
-      $("sync").textContent = `Lu en direct sur Fantrax à ${new Date().toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit", second: "2-digit" })} · actualisation automatique toutes les 20 s · valeurs dynastie calculées le ${new Date(D.dynastyBuiltAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}.`;
+      lastOk = Date.now();
+      onClockPick = onClock ? minePicks[0].pick : null;
+      $("sync").textContent = `Lu en direct sur Fantrax à ${clock(new Date(lastOk))} · actualisation automatique toutes les 20 s, onglet en arrière-plan compris · valeurs dynastie calculées le ${new Date(D.dynastyBuiltAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}.`;
       $("sync").classList.remove("err");
+      $("st-h").textContent = "Où en est le repêchage";
     } catch (e) {
-      $("sync").textContent = `Lecture Fantrax impossible (${e.message}). Nouvel essai dans 20 s.`;
+      const since = lastOk ? `données du dernier succès à ${clock(new Date(lastOk))}` : "aucune lecture réussie depuis l’ouverture de la page";
+      $("sync").textContent = `Lecture Fantrax impossible (${e.message}) : ${since}. Nouvel essai dans 20 s.`;
       $("sync").classList.add("err");
+      if (lastOk) $("st-h").innerHTML = `Où en est le repêchage <span class="stale">(à ${esc(clock(new Date(lastOk)))}, pas à jour)</span>`;
     } finally {
       loading = false;
     }
+    showTurn();
     render();
   }
 
   render();
   load();
-  setInterval(() => { if (!document.hidden) load(); }, 20000);
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(); });
+  // Keeps polling in a background tab (browsers stretch it to about once a
+  // minute there): the tab's title is how a background tab says it is my turn.
+  setInterval(load, POLL_MS);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && Date.now() - lastTry > 5000) load(); });
 })();
 </script>
 </body>

@@ -7,13 +7,13 @@ import type { CellOut, NameCellProps, TableAdapter, TableData } from "@/componen
 import { PlayerTable } from "@/components/player-table/PlayerTable";
 import { SnakeLeagueNote, useSnakeFantraxRows } from "@/components/snake/SnakeVerdicts";
 import type { Phase } from "@/lib/dynasty/types";
+import { canRankByPoints } from "@/lib/fantrax/config";
 import { bandOf, dynastyHint, hintSide, keeperOutlook, phaseLabel } from "@/lib/fantrax/dynasty-hints";
 import type { DynastyIndex } from "@/lib/fantrax/dynasty-index";
 import { mergeSnakeIndex, parseSnakeIndex, type SnakeIndex } from "@/lib/fantrax/extras";
 import { fmtOdds, fmtSigned, pickLabel } from "@/lib/fantrax/league-copy";
 import type { PoolSnapshot } from "@/lib/fantrax/pool";
 import { loadDynasty, loadFantraxPool, peekDynasty, peekFantraxPool } from "@/lib/fantrax/pool-client";
-import { canRankByPoints } from "@/lib/fantrax/points-vor";
 import {
   buildFantraxRows,
   FANTRAX_TABLE,
@@ -44,6 +44,7 @@ import {
   pctCell,
   seasonLabel,
   statusCopy,
+  takenTag,
   trendCell,
 } from "@/lib/fantrax/table-copy";
 import { fmtInt } from "@/lib/player-table/copy";
@@ -239,13 +240,23 @@ function salaryOut(r: FantraxRow, t: number): CellOut {
 /** Name, club and positions (the row header), with the few flags worth a glance. */
 function FantraxNameCell({ row: r, ctx, query, visible }: NameCellProps<FantraxRow, FantraxCtx>) {
   const tags = iconTags(r.icons);
-  // Without the Statut column (views of available players), the few on waivers get a tag.
+  // Without the Statut column (views of available players), the few on waivers get a tag,
+  // and a taken player (« Tous les joueurs », « Pris par une équipe ») says who has him.
   const statusShown = visible.includes("statut");
+  const taken = statusShown ? null : takenTag(r, ctx);
   return (
     <>
-      <span className="block max-w-[9rem] break-words font-medium text-white sm:max-w-[16rem] sm:truncate" title={r.name}>
+      <span
+        className={`block max-w-[9rem] break-words font-medium sm:max-w-[16rem] sm:truncate ${
+          taken && !taken.mine ? "text-slate-400 line-through decoration-slate-500" : "text-white"
+        }`}
+        title={r.name}
+      >
         {highlightMatch(r.name, query)}
       </span>
+      {taken ? (
+        <span className={`block text-xs ${taken.mine ? "text-cyan-200" : "text-amber-200"}`}>{taken.text}</span>
+      ) : null}
       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400">
         <span className="whitespace-nowrap">
           {r.team || "Sans équipe"}
@@ -456,6 +467,10 @@ export function useFantraxTableData({
     [draftCap, config, hasDynastyData, hasDynasty, hasSnake, hasOpinions],
   );
   const teamIds = useMemo(() => teams.map((t) => t.id), [teams]);
+  const pickOf = useMemo(
+    () => new Map((state?.draft?.picks ?? []).flatMap((p) => (p.playerId ? [[p.playerId, p.pick] as const] : []))),
+    [state],
+  );
   const draftOpen = !!draft || !!planDraft;
   const nextPick = draft?.next?.pick ?? planDraft?.next?.pick ?? null;
   const ctx = useMemo<FantraxCtx>(
@@ -474,8 +489,9 @@ export function useFantraxTableData({
       cutdown: config.features.keeperCutdown,
       ...(config.salaryCap ? { capSeason: config.salaryCap.firstSeason } : {}),
       ...(config.cadence.seasonShare !== undefined ? { seasonShare: config.cadence.seasonShare } : {}),
+      pickOf,
     }),
-    [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config],
+    [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config, pickOf],
   );
   const labels = useMemo(() => fantraxLabels(rows, dynasty, snake), [rows, dynasty, snake]);
 
@@ -565,6 +581,7 @@ export function FantraxPlayerTable({
         vor: data.caps.vor,
         fxpa: data.caps.fxpa,
         brief: !!footer,
+        cutdown: config.features.keeperCutdown,
       })
     : null;
   return (

@@ -13,7 +13,9 @@ import { join } from "path";
 import { SLAPSHOT } from "../src/lib/fantrax/config";
 import { parseDynasty } from "../src/lib/fantrax/dynasty-index";
 import type { ContractsFile } from "../src/lib/fantrax/salary-cap";
-import { bestAvailable, draftBoardView, seatNeeds, stashCandidates, type MyDraftPlayer } from "../src/lib/fantrax/slapshot-draft";
+import { slapshotContracts, type SlapshotSnapshotLike } from "../src/lib/dynasty/slapshot-client";
+import { seatNeeds, type SeatNeedsResult } from "../src/lib/fantrax/seat-needs";
+import { bestAvailable, draftBoardView, draftSeatNeeds, myDraftPlayers, stashCandidates, type MyDraftPlayer } from "../src/lib/fantrax/slapshot-draft";
 import type { FantraxRow } from "../src/lib/fantrax/table";
 import type { DynastyRecord } from "../src/lib/dynasty/types";
 
@@ -66,31 +68,93 @@ const row = (id: string, groups: string[], over: Partial<FantraxRow> = {}): Fant
     ...over,
   }) as FantraxRow;
 
-// ---- seats: a C/LW goes where he opens room
+// ---- seats: a C/LW goes where he opens room; LW/RW wingers make the wings one pool
+const p = (id: string, groups: string[], fp: number, status = "ACTIVE"): MyDraftPlayer => ({
+  id,
+  name: id,
+  groups,
+  status,
+  dyn: fp,
+  rank: null,
+  cap: [null, null],
+  signed: 0,
+  src: "p",
+  fp,
+  dynB: fp,
+});
 {
-  const p = (id: string, groups: string[], dyn: number): MyDraftPlayer => ({
-    id,
-    name: id,
-    groups,
-    status: "ACTIVE",
-    dyn,
-    rank: null,
-    cap: [null, null],
-    signed: 0,
-    src: "p",
-  });
-  const mine = [
-    p("c1", ["C"], 900),
-    p("c2", ["C"], 800),
-    p("c3", ["C"], 700),
-    p("c4", ["C"], 600),
-    p("flex", ["C", "LW"], 500),
-    p("d1", ["D"], 400),
-  ];
-  const n = seatNeeds(mine, SLAPSHOT.slots.order, SLAPSHOT.slots.counts);
-  const by = Object.fromEntries(n.map((x) => [x.slot, x]));
-  assert(by.C!.filled === 4 && by.LW!.filled === 1 && by.LW!.ids.includes("flex"), "the C/LW fills LW once C is full");
-  assert(by.RW!.empty === 4 && by.D!.empty === 5 && by.G!.empty === 2, "empty seats per position");
+  const mine = [p("c1", ["C"], 900), p("c2", ["C"], 800), p("c3", ["C"], 700), p("c4", ["C"], 600), p("flex", ["C", "LW"], 500), p("d1", ["D"], 400)];
+  const n = draftSeatNeeds(mine, SLAPSHOT.slots.order, SLAPSHOT.slots.counts);
+  assert(n.slots.C!.filled === 4 && n.slots.LW!.filled === 1 && n.seatOf.flex === "LW", "the C/LW fills LW once C is full");
+  assert(n.slots.RW!.empty === 4 && n.slots.D!.empty === 5 && n.slots.G!.empty === 2, "empty seats per position");
+  assert(n.wing!.filled === 1 && n.wing!.empty === 7 && n.wing!.lw === 3 && n.wing!.rw === 4, `wings 1/8, 3 more LW, 4 more RW (${JSON.stringify(n.wing)})`);
+}
+{
+  // The roster of the issue: two LW/RW wingers (Gauthier, Neighbours) and two
+  // LW-only. The old card said « LW 4/4 complet, RW 0/4 »; the page, LW 3/4 RW 1/4.
+  const mine = [p("gauthier", ["LW", "RW"], 250), p("neighbours", ["LW", "RW"], 180), p("lw1", ["LW"], 200), p("lw2", ["LW"], 150), p("pros", ["C"], 0, "MINORS"), p("hurt", ["RW"], 90, "INJURED_RESERVE")];
+  const n = draftSeatNeeds(mine, SLAPSHOT.slots.order, SLAPSHOT.slots.counts);
+  const w = n.wing!;
+  assert(w.filled === 4 && w.max === 8 && w.empty === 4, `wings 4/8, 4 to fill (${JSON.stringify(w)})`);
+  assert(w.flex === 2 && w.lw === 2 && w.rw === 4, `a LW still fits twice (the LW/RW move right), a RW four times (${JSON.stringify(w)})`);
+  assert(n.slots.C!.filled === 0 && n.slots.RW!.filled + n.slots.LW!.filled === 4, "minors and IR hold no starting seat");
+  // Four LW-only and two LW/RW: the LW/RW go right, and a fifth LW-only has no seat.
+  const full = draftSeatNeeds([...mine, p("lw3", ["LW"], 140), p("lw4", ["LW"], 130)], SLAPSHOT.slots.order, SLAPSHOT.slots.counts);
+  assert(full.wing!.filled === 6 && full.wing!.lw === 0 && full.wing!.rw === 2, `LW full once four LW-only sit there (${JSON.stringify(full.wing)})`);
+}
+
+// ---- the stand-alone page runs the SAME seat fill (its plain-JS copy in the template)
+{
+  const html = readFileSync(join(process.cwd(), "scripts", "slapshot-draft", "template.html"), "utf8").replace(/\r\n/g, "\n");
+  const start = html.indexOf("  function seatNeeds(players, slots) {");
+  const end = html.indexOf("\n  }\n", start);
+  assert(start > 0 && end > start, "the template carries function seatNeeds");
+  const pageSeatNeeds = new Function(`${html.slice(start, end + 4)}; return seatNeeds;`)() as (
+    players: Array<{ id: string; pos: string[] }>,
+    slots: Record<string, number>,
+  ) => SeatNeedsResult;
+  let seed = 12345;
+  const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const SHAPES = [["C"], ["LW"], ["RW"], ["D"], ["G"], ["LW", "RW"], ["C", "LW"], ["C", "RW"], ["C", "LW", "RW"], ["D", "LW"]];
+  const slots = Object.fromEntries(SLAPSHOT.slots.order.map((s) => [s, SLAPSHOT.slots.counts[s] ?? 0]));
+  assert(JSON.stringify(Object.keys(slots)) === JSON.stringify(["C", "LW", "RW", "D", "G"]), "the site's slot order is the page's");
+  let same = 0;
+  for (let k = 0; k < 400; k++) {
+    const n = 1 + Math.floor(rnd() * 30);
+    const players = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, pos: SHAPES[Math.floor(rnd() * SHAPES.length)]! }));
+    const a = JSON.stringify(seatNeeds(players, slots));
+    const b = JSON.stringify(pageSeatNeeds(players, { C: 4, LW: 4, RW: 4, D: 6, G: 2 }));
+    if (a === b) same++;
+    else if (same === k) console.error(`first difference: ${JSON.stringify(players)}\n site ${a}\n page ${b}`);
+  }
+  assert(same === 400, `site and page seat fills agree on 400 random rosters (${same})`);
+}
+
+// ---- a zero-value player's cap hit comes from the contracts file
+{
+  const file: ContractsFile = {
+    builtAt: "",
+    firstSeason: 2026,
+    cap: [105],
+    min: [0.85],
+    nhl: [104],
+    growthAfter: 0.05,
+    announced: [2026],
+    lambda: [1],
+    players: { z: { c: [1.5, 1.5], s: 2, x: null, st: "UFA" } },
+  };
+  const m = myDraftPlayers([row("z", ["C"], { dynZero: true })], [{ id: "z", status: "ACTIVE" }], [], "balanced", 2, file);
+  assert(m[0]!.cap[0] === 1.5 && m[0]!.cap[1] === 1.5 && m[0]!.signed === 2, `zero-value: cap from contracts.json (${JSON.stringify(m[0]!.cap)})`);
+  const full = {
+    builtAt: "t",
+    season: "2026-27",
+    params: { cap: { league: [105], nhl: [104], min: [0.85], growthAfter: 0.05 }, lambda: [1] },
+    players: { v: { contract: { cap: [2, 2], signed: 2, expiry: null, status: "UFA", elc: false } } },
+    zero: ["z"],
+    zeroContracts: { z: { cap: [1.5, 1.5], signed: 1, expiry: 2027, status: "RFA", elc: false } },
+  } as unknown as SlapshotSnapshotLike;
+  const c = slapshotContracts(full, 2026, [2026]);
+  assert(!!c.players.v && !!c.players.z && c.players.z.c[0] === 1.5 && c.players.z.x === 2027, "contracts.json: valued and zero-value players alike");
 }
 
 // ---- best available: nobody's, by dynasty value in the mode

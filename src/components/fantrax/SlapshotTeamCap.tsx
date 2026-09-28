@@ -17,7 +17,7 @@ const STATUS_SHORT: Record<string, string> = { ACTIVE: "Actif", RESERVE: "Réser
  * cost in points (IR and Minors do not count against the cap).
  */
 export function SlapshotTeamCap() {
-  const { config, plan, teamId, state, bundle } = useFantraxLeague();
+  const { config, plan, teamId, state, bundle, contractsState } = useFantraxLeague();
   const { data } = useFantraxTableData({ autoLoad: true, fallback: "team" });
   const s = plan?.teamId === teamId ? (plan.salary ?? null) : null;
   const stash = useMemo(() => {
@@ -35,7 +35,13 @@ export function SlapshotTeamCap() {
         icon={<Coins className="h-5 w-5" />}
         title="Masse salariale par saison"
         accentClass={s?.over ? "text-rose-400" : "text-amber-300"}
-        description={s ? salaryLine(s) : "Salaires en chargement…"}
+        description={
+          s
+            ? salaryLine(s)
+            : contractsState === "error"
+              ? "Salaires indisponibles : le fichier des contrats n’a pas pu être lu (Actualiser pour réessayer)."
+              : "Salaires en chargement…"
+        }
       >
         {s ? (
           <table className="w-full text-sm">

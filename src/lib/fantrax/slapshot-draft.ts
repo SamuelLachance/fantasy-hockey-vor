@@ -1,15 +1,16 @@
 /**
  * The live draft board of a salary-cap dynasty league (Slapshot): my roster so
  * far with its cap use over the counted spots, the empty starting seats by
- * position (an optimal fill of C4 LW4 RW4 D6 G2, multi-eligible players
- * where they help most), and the best available players per position by
- * dynasty value. Pure: the component feeds it the table's rows (pool +
- * live rosters and picks + dynasty copy) and the contracts file.
+ * position (`seat-needs.ts`, the same fill as the stand-alone draft page: C,
+ * the wings as one pool of LW/RW seats, D, G), and the best available
+ * players per position by dynasty value. Pure: the component feeds it the
+ * table's rows (pool + live rosters and picks + dynasty copy) and the
+ * contracts file.
  */
-import { fillSlots } from "@/lib/leagues/slot-fill";
 import type { SalaryCapConfig, SlotCounts, SlotId } from "./config";
 import type { DynastyMode } from "./dynasty-mode";
 import { salaryUsage, type ContractsFile, type SalaryUsage } from "./salary-cap";
+import { seatNeeds, type SeatNeedsResult } from "./seat-needs";
 import { rowDynastyValue, rowSalary, type FantraxRow } from "./table";
 
 export interface MyDraftPlayer {
@@ -26,15 +27,10 @@ export interface MyDraftPlayer {
   /** Seasons of `cap` that are signed. */
   signed: number;
   src: FantraxRow["src"];
-}
-
-export interface SeatNeed {
-  slot: SlotId;
-  max: number;
-  filled: number;
-  empty: number;
-  /** Who sits there in the fill (best first). */
-  ids: string[];
+  /** Season points (league season), the seats' priority; null without a projection. */
+  fp: number | null;
+  /** Balanced dynasty value, the seats' tie-break (whatever the page's mode). */
+  dynB: number | null;
 }
 
 export interface DraftBoardView {
@@ -43,7 +39,8 @@ export interface DraftBoardView {
   salary: SalaryUsage | null;
   /** Cap room left per counted spot still open this season (null when every spot is filled or no cap). */
   roomPerSpot: number | null;
-  needs: SeatNeed[];
+  /** Starting seats: C, the wings as one pool (LW/RW players count on either side), D, G. */
+  needs: SeatNeedsResult;
   /** Best available by position, `perGroup` each, by dynasty value in the page's mode (season value without one). */
   best: Array<{ group: string; rows: FantraxRow[] }>;
 }
@@ -51,7 +48,9 @@ export interface DraftBoardView {
 /**
  * My players: the live roster's entries, then my picks that are not on it yet
  * (a pick lands on the roster a moment later); named and valued from the
- * table's rows. `seasons` cap columns (this season first).
+ * table's rows. `seasons` cap columns (this season first): the dynasty
+ * record's contract, else the contracts file (a zero-value player has no
+ * record but a real cap hit).
  */
 export function myDraftPlayers(
   rows: readonly FantraxRow[],
@@ -59,6 +58,7 @@ export function myDraftPlayers(
   myPicks: readonly string[],
   mode: DynastyMode,
   seasons = 2,
+  contracts: ContractsFile | null = null,
 ): MyDraftPlayer[] {
   const byId = new Map(rows.map((r) => [r.id, r]));
   const seen = new Set<string>();
@@ -68,6 +68,7 @@ export function myDraftPlayers(
     seen.add(id);
     const r = byId.get(id);
     const c = r?.dynasty?.contract;
+    const file = c ? null : (contracts?.players[id] ?? null);
     out.push({
       id,
       name: r?.name ?? r?.dynasty?.n ?? id,
@@ -75,9 +76,11 @@ export function myDraftPlayers(
       status,
       dyn: r ? rowDynastyValue(r, mode) : null,
       rank: r?.dynasty?.rank[mode] ?? null,
-      cap: Array.from({ length: seasons }, (_, t) => (r ? rowSalary(r, t) : null)),
-      signed: c?.signed ?? 0,
+      cap: Array.from({ length: seasons }, (_, t) => (r && c ? rowSalary(r, t) : (file?.c[t] ?? null))),
+      signed: c?.signed ?? file?.s ?? 0,
       src: r?.src ?? "n",
+      fp: r?.fp ?? null,
+      dynB: r ? rowDynastyValue(r, "balanced") : null,
     });
   };
   for (const e of roster) add(e.id, e.status);
@@ -85,32 +88,20 @@ export function myDraftPlayers(
   return out.sort((a, b) => (b.dyn ?? -1) - (a.dyn ?? -1) || a.name.localeCompare(b.name, "fr-CA"));
 }
 
+/** Statuses that hold no starting seat this season. */
+const OFF_SEAT = new Set(["MINORS", "INJURED_RESERVE"]);
+
 /**
- * Empty starting seats: an optimal fill (slot-fill.ts, the same transversal
- * greedy as the league's replacement levels) of the league's slots by my
- * players, best dynasty value first, a multi-eligible player where he opens
- * the most room. Minors and IR players are counted too: during the draft
- * every pick is a candidate starter, and the question is « which positions
- * are still thin », not « who plays tonight ».
+ * The starting seats my players fill (`seat-needs.ts`): Active and Reserve
+ * players and picks not placed yet — not the minors or IR — by season points,
+ * then balanced dynasty value, then id: the stand-alone page's order.
  */
-export function seatNeeds(
-  mine: readonly MyDraftPlayer[],
-  order: readonly SlotId[],
-  counts: SlotCounts,
-): SeatNeed[] {
-  const players = [...mine]
-    .filter((p) => p.groups.length)
-    .sort((a, b) => (b.dyn ?? -1) - (a.dyn ?? -1) || a.id.localeCompare(b.id))
-    .map((p) => ({ id: p.id, positions: p.groups }));
-  const fill = fillSlots<string, { id: string; positions: readonly string[] }, SlotId>(
-    players,
-    order.map((slot) => ({ slot, capacity: counts[slot] ?? 0, accepts: [slot] })),
-  );
-  return order.map((slot) => {
-    const ids = (fill.bySlot.get(slot) ?? []).map((p) => p.id);
-    const max = counts[slot] ?? 0;
-    return { slot, max, filled: ids.length, empty: Math.max(0, max - ids.length), ids };
-  });
+export function draftSeatNeeds(mine: readonly MyDraftPlayer[], order: readonly SlotId[], counts: SlotCounts): SeatNeedsResult {
+  const players = mine
+    .filter((p) => !OFF_SEAT.has(p.status))
+    .sort((a, b) => (b.fp ?? -1) - (a.fp ?? -1) || (b.dynB ?? -1) - (a.dynB ?? -1) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    .map((p) => ({ id: p.id, pos: p.groups }));
+  return seatNeeds(players, Object.fromEntries(order.map((s) => [s, counts[s] ?? 0])));
 }
 
 /** Best available at each group: no owner, by dynasty value in the mode (season value to break ties or without one). */
@@ -147,7 +138,7 @@ export function draftBoardView(input: {
   rules: SalaryCapConfig | null;
   perGroup?: number;
 }): DraftBoardView {
-  const mine = myDraftPlayers(input.rows, input.roster, input.myPicks, input.mode);
+  const mine = myDraftPlayers(input.rows, input.roster, input.myPicks, input.mode, 2, input.contracts);
   const entries = [
     ...input.roster,
     ...input.myPicks.filter((id) => !input.roster.some((e) => e.id === id)).map((id) => ({ id, status: "ACTIVE" })),
@@ -164,7 +155,7 @@ export function draftBoardView(input: {
     mine,
     salary,
     roomPerSpot: salary && open > 0 ? Math.round((salary.room[0]! / open) * 100) / 100 : null,
-    needs: seatNeeds(mine, input.order, input.counts),
+    needs: draftSeatNeeds(mine, input.order, input.counts),
     best: bestAvailable(input.rows, input.groups, input.mode, input.perGroup ?? 3),
   };
 }

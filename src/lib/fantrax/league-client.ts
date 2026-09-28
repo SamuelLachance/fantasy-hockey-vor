@@ -25,10 +25,9 @@ import {
   fantraxScheduleFile,
   type FantraxLeagueConfig,
 } from "./config";
-import { liveOverlay, type LiveOverlay } from "./live";
+import { carryLiveDraft, liveOverlay, type LiveOverlay } from "./live";
 import { isContractsFile, type ContractsFile } from "./salary-cap";
-import { fetchOptionalJson, fetchSnapshotFile } from "./snapshot-fetch";
-import { fantraxDataHref } from "@/lib/site";
+import { fetchSnapshotFile } from "./snapshot-fetch";
 import type {
   DynastySnapshot,
   LeagueSnapshot,
@@ -44,8 +43,9 @@ export interface LeagueSnapshotBundle {
   schedule: ScheduleSnapshot;
   /**
    * A salary-cap league's contracts (`<public>/contracts.json`, derived from
-   * its dynasty.json at build time); null elsewhere, or when unreadable (the
-   * plan then has no cap line rather than failing).
+   * its dynasty.json at build time), read apart (`loadContracts`: the plan
+   * and the live picks never wait for it); null until then, elsewhere, or
+   * when unreadable (the plan then has no cap line rather than failing).
    */
   contracts: ContractsFile | null;
 }
@@ -64,14 +64,11 @@ async function loadBundleOnce(cfg: FantraxLeagueConfig): Promise<LeagueSnapshotB
   const loadLeagueJson = LEAGUE_JSON[cfg.slug];
   if (!loadLeagueJson) throw new Error(`no league.json chunk for ${cfg.slug}`);
   const file = (name: string) => fantraxPublicFile(cfg, name);
-  const [leagueModule, values, state, schedule, contracts] = await Promise.all([
+  const [leagueModule, values, state, schedule] = await Promise.all([
     loadLeagueJson(),
     fetchSnapshotFile<ValuesSnapshot>(file("values.json")),
     fetchSnapshotFile<StateSnapshot>(file("state.json")),
     fetchSnapshotFile<ScheduleSnapshot>(file(fantraxScheduleFile(cfg))),
-    cfg.salaryCap
-      ? fetchOptionalJson(fantraxDataHref(file("contracts.json"))).then((c) => (isContractsFile(c) ? c : null))
-      : Promise.resolve(null),
   ]);
   const league = (leagueModule.default ?? leagueModule) as unknown as LeagueSnapshot;
   if (!values?.players || !state?.rosters || !Array.isArray(schedule?.games)) {
@@ -81,7 +78,7 @@ async function loadBundleOnce(cfg: FantraxLeagueConfig): Promise<LeagueSnapshotB
     // A wrong chunk would show another league's settings under this name.
     throw new Error(`league.json is league ${league.leagueId}, expected ${cfg.leagueId}`);
   }
-  return { league, state, values, schedule, contracts };
+  return { league, state, values, schedule, contracts: null };
 }
 
 const bundlePromises = new Map<string, Promise<LeagueSnapshotBundle>>();
@@ -95,6 +92,31 @@ export function loadLeagueSnapshot(cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY):
     throw err;
   });
   bundlePromises.set(cfg.slug, p);
+  return p;
+}
+
+const contractsPromises = new Map<string, Promise<ContractsFile | null>>();
+
+/**
+ * A salary-cap league's contracts.json, once per page view (8 s timeout, one
+ * retry); null for a league without a cap. Rejects when unreadable or
+ * malformed, so the page can say that the salaries are unavailable instead
+ * of loading forever; a later call retries.
+ */
+export function loadContracts(cfg: FantraxLeagueConfig): Promise<ContractsFile | null> {
+  if (!cfg.salaryCap) return Promise.resolve(null);
+  const cached = contractsPromises.get(cfg.slug);
+  if (cached) return cached;
+  const p = fetchSnapshotFile<unknown>(fantraxPublicFile(cfg, "contracts.json"))
+    .then((c) => {
+      if (!isContractsFile(c)) throw new Error("contracts.json is malformed");
+      return c;
+    })
+    .catch((err: unknown) => {
+      if (contractsPromises.get(cfg.slug) === p) contractsPromises.delete(cfg.slug);
+      throw err;
+    });
+  contractsPromises.set(cfg.slug, p);
   return p;
 }
 
@@ -122,14 +144,20 @@ export function loadDynastySnapshot(): Promise<DynastySnapshot | null> {
 
 /** Re-read Fantrax at most this often unless the user asks for a refresh. */
 export const LIVE_CACHE_TTL_MS = 2 * 60_000;
-/** Draft picks are polled this often while the draft runs and the tab is visible (a league may poll faster: `cadence.draftPollMs`). */
+/**
+ * Draft picks are polled this often while the draft runs (a league may poll
+ * faster: `cadence.draftPollMs`), in a background tab too: a hidden tab is
+ * the one that must learn it is the user's turn (browsers stretch its timers
+ * to about once a minute, which still delivers the cue).
+ */
 export const LIVE_DRAFT_POLL_MS = 90_000;
 
 /** The live-draft poll of one league. */
 export function draftPollMs(cfg: FantraxLeagueConfig): number {
   return cfg.cadence.draftPollMs ?? LIVE_DRAFT_POLL_MS;
 }
-const liveCacheKey = (cfg: FantraxLeagueConfig) => `fantrax-live:v1:${cfg.slug}`;
+// v2: overlays carry `draftAt`, and a read whose draft failed is never cached.
+const liveCacheKey = (cfg: FantraxLeagueConfig) => `fantrax-live:v2:${cfg.slug}`;
 
 /** Cached overlay if it is for the same lineup period and still fresh. */
 export function parseLiveCache(
@@ -145,7 +173,8 @@ export function parseLiveCache(
     if (!v.rosters || typeof v.rosters !== "object") return null;
     if (v.rosterPeriod !== rosterPeriod) return null;
     if (!Number.isFinite(age) || age < 0 || age > ttlMs) return null;
-    return { ...v, recent: Array.isArray(v.recent) ? v.recent : [] };
+    const draftAt = typeof v.draftAt === "string" ? v.draftAt : v.draft ? v.fetchedAt : null;
+    return { ...v, draftAt, recent: Array.isArray(v.recent) ? v.recent : [] };
   } catch {
     return null;
   }
@@ -172,10 +201,14 @@ const BROWSER_REQUEST = { retries: 2, timeoutMs: 8_000 };
 /**
  * Live rosters (fatal if unreadable) and draft picks (optional) for the
  * lineup period that locks next. Two GETs, >= 1.1 s apart (client throttle).
+ *
+ * A failed draft read keeps `prev`'s live draft (`carryLiveDraft`, dated by
+ * its own read) rather than letting the baked one show through; an overlay
+ * with no live draft at all is not cached, so a reload asks Fantrax again.
  */
 export async function fetchLiveOverlay(
   rosterPeriod: number,
-  opts: { force?: boolean; config?: FantraxLeagueConfig } = {},
+  opts: { force?: boolean; config?: FantraxLeagueConfig; prev?: LiveOverlay | null } = {},
 ): Promise<LiveOverlay> {
   const cfg = opts.config ?? CAPTAINS_DYNASTY;
   const key = liveCacheKey(cfg);
@@ -193,8 +226,8 @@ export async function fetchLiveOverlay(
     { leagueId: cfg.leagueId },
     BROWSER_REQUEST,
   ).catch(() => null);
-  const overlay = liveOverlay(rosters, draft, Date.now(), rosterPeriod);
-  writeSession(key, JSON.stringify(overlay));
+  const overlay = carryLiveDraft(opts.prev, liveOverlay(rosters, draft, Date.now(), rosterPeriod));
+  if (overlay.draft) writeSession(key, JSON.stringify(overlay));
   return overlay;
 }
 

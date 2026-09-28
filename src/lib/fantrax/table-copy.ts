@@ -233,6 +233,22 @@ export function statusCopy(
   return row.free === "WW" ? { text: "Ballottage", tone: "amber" } : { text: "Autonome", tone: "emerald" };
 }
 
+/**
+ * The tag a taken player carries in a view without the Statut column
+ * (« Tous les joueurs » or « Pris par une équipe » on Repêchage): who has
+ * him and, during a draft, at which pick. Null for an available player.
+ */
+export function takenTag(
+  row: Pick<FantraxRow, "id" | "owner">,
+  ctx: { teamId: string; teamName: (id: string) => string; pickOf?: ReadonlyMap<string, number> },
+): { text: string; mine: boolean } | null {
+  if (!row.owner) return null;
+  const pick = ctx.pickOf?.get(row.id);
+  const at = pick ? ` · ${pickLabel(pick)}` : "";
+  if (row.owner === ctx.teamId) return { text: `Mon équipe${at}`, mine: true };
+  return { text: `Pris${at} · ${ctx.teamName(row.owner)}`, mine: false };
+}
+
 /** Short tags for the icons worth a glance (injury, suspension, contract). */
 export function iconTags(icons: readonly string[]): Array<{ text: string; title: string; tone: "rose" | "amber" | "slate" }> {
   const out: Array<{ text: string; title: string; tone: "rose" | "amber" | "slate" }> = [];
@@ -314,6 +330,11 @@ export function fantraxTableNote(opts: {
   fxpa?: boolean;
   /** Under the Repêchage tab's own note (value, VONA and odds already explained there). */
   brief?: boolean;
+  /**
+   * The league has the Captains cutdown, hence the « Conseil » column and the
+   * 2027 écrémage. False (Slapshot): the sentence about them is left out.
+   */
+  cutdown?: boolean;
 }): string {
   const parts = [
     `${fmtInt(opts.counts.projected)} joueurs projetés et ${fmtInt(opts.counts.prospects)} espoirs${NBSP}: les joueurs que nous projetons, ceux qui ont un ADP Fantrax, ceux d'une équipe de la ligue ou au ballottage, les choix des repêchages de la LNH ${opts.recentDrafts[0]} à ${opts.recentDrafts[1]} et ceux pris dans au moins 1${NBSP}% des ligues Fantrax.`,
@@ -340,7 +361,9 @@ export function fantraxTableNote(opts: {
   );
   if (opts.dynasty) {
     parts.push(
-      `Valeur dyn. = ${DYNASTY_UNITS}${opts.mode ? ` (mode ${DYNASTY_MODE_LABEL[opts.mode]})` : ""}; une autre unité que la valeur de la saison, à ne pas additionner. «${NBSP}—${NBSP}»${NBSP}: joueur absent des données du modèle (non évalué); 0${NBSP}: évalué, sous le seuil de la liste publiée. Conseil${NBSP}: indice automatique d’après la valeur dynastie, la phase et l’écrémage de 2027, à vérifier.`,
+      `Valeur dyn. = ${DYNASTY_UNITS}${opts.mode ? ` (mode ${DYNASTY_MODE_LABEL[opts.mode]})` : ""}; une autre unité que la valeur de la saison, à ne pas additionner. «${NBSP}—${NBSP}»${NBSP}: joueur absent des données du modèle (non évalué); 0${NBSP}: évalué, sous le seuil de la liste publiée.${
+        opts.cutdown === false ? "" : ` Conseil${NBSP}: indice automatique d’après la valeur dynastie, la phase et l’écrémage de 2027, à vérifier.`
+      }`,
     );
   }
   if (opts.snake) parts.push("Snake : synthèse des opinions de Simon « Snake » Boisvert (paraphrases générées automatiquement).");

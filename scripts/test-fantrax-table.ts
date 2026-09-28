@@ -53,7 +53,7 @@ import {
   type FantraxRow,
   type PresetId,
 } from "../src/lib/fantrax/table";
-import { columnCopy, dynastyDraftNote, fantraxTableNote, iconTags, nhlDraftLabel, statusCopy, trendCell } from "../src/lib/fantrax/table-copy";
+import { columnCopy, dynastyDraftNote, fantraxTableNote, iconTags, nhlDraftLabel, statusCopy, takenTag, trendCell } from "../src/lib/fantrax/table-copy";
 import { parseDynasty, type DynastyIndex } from "../src/lib/fantrax/dynasty-index";
 import { lookupExtra, mergeSnakeIndex, parseSnakeIndex } from "../src/lib/fantrax/extras";
 import { counterText, fmtInt, resultsText, sortButtonLabel } from "../src/lib/player-table/copy";
@@ -441,6 +441,7 @@ if (plan.draft && draft) {
     rosterPeriod: state.rosterPeriod,
     rosters: state.rosters,
     draft: { state: state.draft!.state, picks: livePicks },
+    draftAt: state.fetchedAt,
     recent: [],
   });
   const liveDraft = fantraxDraftOdds(liveState, values, teamId, plan.baseLineup);
@@ -953,6 +954,17 @@ eq(sortButtonLabel("ADP", true, "asc"), "ADP, tri croissant (cliquer pour invers
   const dyn = fantraxTableNote({ draftOpen: false, nextPick: null, poolAsOf: "", counts: { projected: 1, prospects: 1 }, recentDrafts: [2021, 2026], dynasty: true, mode: "longTerm", snake: false });
   assert(dyn.includes("au-dessus du remplacement sur les 12 prochaines saisons") && dyn.includes("Long terme") && dyn.includes("ne pas additionner"), "dynasty note: units, mode, not additive");
   assert(dyn.includes("non évalué") && dyn.includes("sous le seuil"), "dynasty note: « — » (not modeled) vs 0 (below the published list)");
+  assert(dyn.includes("Conseil") && dyn.includes("écrémage de 2027"), "Captains: the « Conseil » column and the cutdown explained");
+  const slap = fantraxTableNote({ draftOpen: true, nextPick: 27, poolAsOf: "", counts: { projected: 1, prospects: 1 }, recentDrafts: [2021, 2026], dynasty: true, mode: "balanced", snake: false, cutdown: false });
+  assert(!slap.includes("Conseil") && !slap.includes("écrémage"), "a league without the cutdown (Slapshot): no « Conseil », no 2027 écrémage");
+}
+{
+  // « Tous les joueurs » / « Pris par une équipe » without the Statut column: a taken player says who has him.
+  const tctx = { teamId: "me", teamName: (id: string) => (id === "t1" ? "Seattle Kraken" : id), pickOf: new Map([["x", 12]]) };
+  eq(takenTag({ id: "x", owner: "t1" }, tctx)?.text ?? null, `Pris · n°${NB}12 · Seattle Kraken`, "taken: pick and owner");
+  eq(takenTag({ id: "y", owner: "t1" }, tctx)?.text ?? null, "Pris · Seattle Kraken", "taken before the draft: owner only");
+  eq(takenTag({ id: "x", owner: "me" }, tctx)?.mine ?? null, true, "mine");
+  eq(takenTag({ id: "z", owner: null }, tctx), null, "available: no tag");
 }
 const valeurLabel = sortLabel(FANTRAX_TABLE, "valeur", ctxOf([]));
 eq(counterText(880, 1, 18, { label: valeurLabel, dir: "desc" }), `880 joueurs · page 1 sur 18 · trié par Valeur saison, décroissant`, "counter names the sort");

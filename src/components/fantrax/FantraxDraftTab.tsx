@@ -4,11 +4,10 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TabLink } from "@/components/league-shell/TabLink";
 import { withBasePath } from "@/lib/site";
-import { parseGroups } from "@/lib/fantrax/config";
+import { canRankByPoints, parseGroups } from "@/lib/fantrax/config";
 import { draftBoardNote } from "@/lib/fantrax/league-copy";
 import type { PoolSnapshot } from "@/lib/fantrax/pool";
 import { loadFantraxPool, peekFantraxPool } from "@/lib/fantrax/pool-client";
-import { canRankByPoints } from "@/lib/fantrax/points-vor";
 import type { PresetId } from "@/lib/fantrax/table";
 import { dynastyDraftNote } from "@/lib/fantrax/table-copy";
 import { DraftPanel } from "./DraftPanel";
@@ -97,7 +96,6 @@ export function FantraxDraftTab({ slug }: { slug: string }) {
               player={lookup}
               teamName={teamName}
               recent={live?.recent ?? null}
-              liveAt={live?.fetchedAt ?? null}
               nowMs={nowMs}
             />
           ) : (

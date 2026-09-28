@@ -604,6 +604,17 @@ export const FANTRAX_LEAGUES: Record<string, FantraxLeagueConfig> = {
 /** The league every script works on unless `--league` says otherwise. */
 export const DEFAULT_FANTRAX_SLUG = CAPTAINS_DYNASTY.slug;
 
+/**
+ * True when one value per player is enough to rank the league, i.e. no slot
+ * pays a skater differently from another (`points-vor.ts` models it then). A
+ * captain slot breaks it (the seat multiplies the offense), which is why
+ * Captains Dynasty is not ranked by points over replacement. Here rather than
+ * in points-vor.ts so the tabs can ask without loading the model.
+ */
+export function canRankByPoints(cfg: FantraxLeagueConfig): boolean {
+  return !cfg.features.captainSlot;
+}
+
 export const FANTRAX_SLUGS: readonly string[] = Object.keys(FANTRAX_LEAGUES);
 
 /** Config of one league; throws on an unknown slug (never silently league 1). */

@@ -58,6 +58,7 @@
  * not the right model. `canRankByPoints` is that gate.
  */
 import {
+  canRankByPoints,
   eligibleGroups,
   eligibleSlots,
   slotTokens,
@@ -135,14 +136,8 @@ export interface PointsVor {
   untaken: number;
 }
 
-/**
- * True when one value per player is enough to rank the league, i.e. no slot
- * pays a skater differently from another. A captain slot breaks it (the seat
- * multiplies the offense), which is why Captains Dynasty is not ranked here.
- */
-export function canRankByPoints(cfg: FantraxLeagueConfig): boolean {
-  return !cfg.features.captainSlot;
-}
+// Defined with the config (the tabs read it without loading this model).
+export { canRankByPoints };
 
 /**
  * Points over replacement by Fantrax id for every projected player of a

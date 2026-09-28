@@ -15,9 +15,12 @@ import { useFantraxLeague } from "./fantrax-league-context";
  * « Snake : … » chip), so each tab starts near the top.
  */
 export function FantraxLeagueHeader() {
-  const { teams, teamId, defaultTeamId, chooseTeam, plan, bundleState, live, liveState, busy, refresh, teamName } =
+  const { teams, teamId, defaultTeamId, chooseTeam, plan, bundleState, state, live, liveState, draftLive, busy, refresh, teamName } =
     useFantraxLeague();
   const mine = teamId === defaultTeamId;
+  // Rosters read fine but the draft half failed (or never came): say which
+  // picks are shown instead of calling them live.
+  const draftBehind = !!state?.draft && liveState === "ready" && !!live && !draftLive.current;
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -88,7 +91,7 @@ export function FantraxLeagueHeader() {
               {"Données détaillées indisponibles : plan de la dernière synchronisation (Actualiser pour réessayer)."}
             </span>
           ) : liveState === "ready" && live ? (
-            <span className="text-cyan-300">Effectifs et repêchage en direct de Fantrax</span>
+            <span className="text-cyan-300">{draftBehind ? "Effectifs en direct de Fantrax" : "Effectifs et repêchage en direct de Fantrax"}</span>
           ) : liveState === "error" ? (
             <span className="text-amber-200">
               {live
@@ -104,6 +107,18 @@ export function FantraxLeagueHeader() {
             {liveState === "ready" ? " : " : ", "}
             <time dateTime={live.fetchedAt}>{fmtTime(live.fetchedAt)}</time>
             {liveState === "error" ? "." : null}
+          </span>
+        ) : null}
+        {bundleState !== "error" && draftBehind ? (
+          <span className="text-amber-200">
+            {" · repêchage : "}
+            {draftLive.at ? (
+              <>
+                lecture impossible, données du dernier succès à <time dateTime={draftLive.at}>{fmtTime(draftLive.at)}</time>
+              </>
+            ) : (
+              "lecture impossible, choix de la dernière synchronisation"
+            )}
           </span>
         ) : null}
       </p>
