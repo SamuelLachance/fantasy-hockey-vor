@@ -244,7 +244,18 @@ assert(degraded.cap?.known === false, "cap usage unknown");
   const evening = buildDailyPlan({ ...sInput, nowMs: Date.parse("2026-09-29T21:30:00Z") });
   assert(evening.target?.rosterPeriod === 1, `still tonight's lineup after the first game (target ${evening.target?.rosterPeriod})`);
   assert(evening.locks!.locked.includes(car) && evening.locks!.locked.includes(fla), "the first game's players are locked");
-  assert(evening.locks!.next === new Date(lastLock).toISOString(), `next lock = the VGK game − 5 min (${evening.locks!.next})`);
+  // The next lock is my next player's game of the night − 5 min: the VGK game
+  // at the latest, earlier once the (live-drafted, committed) roster has a
+  // player in a game between the first and the last one.
+  const eveningMs = Date.parse("2026-09-29T21:30:00Z");
+  const rosterTeams = new Set(roster.map((r) => sValues.players[r.id]?.t).filter((t): t is string => !!t));
+  const aheadLocks = sSchedule.games
+    .filter(([at, a, h]) => (rosterTeams.has(a) || rosterTeams.has(h)) && Date.parse(at) >= Date.parse(first[0]) && Date.parse(at) <= Date.parse(last[0]))
+    .map(([at]) => Date.parse(at) - lead)
+    .filter((t) => t > eveningMs);
+  const nextExpected = Math.min(...aheadLocks);
+  assert(nextExpected <= lastLock, "the VGK game is on my roster's night");
+  assert(evening.locks!.next === new Date(nextExpected).toISOString(), `next lock = my next player's game − 5 min (${evening.locks!.next})`);
   const slots = evening.lineup!.slots;
   assert(slots.some((x) => x.slot === "C" && x.id === car), "a locked Active player keeps his slot");
   assert(!slots.some((x) => x.id === fla), "a locked Reserve player cannot come in");
