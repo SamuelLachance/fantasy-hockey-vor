@@ -355,6 +355,16 @@ assert(pool.orgSkipped === undefined, "no organisation list: no orgSkipped field
   eq(p2.orgSkipped, ["org2"], "an organisation player without a Fantrax position is left out and listed");
   eq(p2.counts.total, pool.counts.total + 2, "the others are unchanged");
 }
+// A league-wide waiver period (every free agent on waivers around opening night): the waiver rule steps aside
+{
+  const ww = buildPool({
+    ...input,
+    leaguePlayers: Object.fromEntries(Object.entries(input.leaguePlayers).map(([id, p]) => [id, { ...p, status: p.status === "FA" ? "WW" : p.status }])),
+  });
+  const r3 = (id: string) => ww.players.find((p) => p.id === id);
+  assert(!r3("ww1") && !r3("vet1") && !r3("nobody"), "waivers alone bring nobody in when nearly everyone is on them");
+  assert(r3("proj1")?.st === "WW" && r3("kid1")?.st === "WW", "the others keep their waiver status");
+}
 assert(pool.players.every((p, i, a) => i === 0 || a[i - 1]!.id < p.id), "sorted by id");
 assert(!JSON.stringify(pool).includes("null") && Object.values(pool.players).every((p) => Object.values(p).every((v) => v !== undefined)), "no null / undefined fields");
 assert(isPoolSnapshot(pool) && !isPoolSnapshot({ v: 1, players: [{ id: 1 }] }) && !isPoolSnapshot(null), "shape guard");

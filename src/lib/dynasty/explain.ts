@@ -89,7 +89,7 @@ export function explainFr(r: DynastyRecord, maxLen = 220): string {
   if (r.phase === "prospect" && r.path !== "nhl") {
     const draft = r.draft
       ? ` (${ordinal(r.draft.pick)} choix LNH ${r.draft.year})`
-      : r.seg === "prospect_undrafted"
+      : r.flags?.includes("undrafted")
         ? " (non repêché)"
         : "";
     const eta = r.eta != null ? `, arrivée ${seasonLabel(r.eta)}` : "";

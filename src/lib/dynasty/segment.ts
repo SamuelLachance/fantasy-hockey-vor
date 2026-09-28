@@ -336,7 +336,10 @@ export function routePlayer(
 
   let seg: MarketSeg;
   if (path === "fringe") seg = "fringe";
-  else if (route === "undrafted") seg = "prospect_undrafted";
+  else if (route === "undrafted") {
+    seg = "prospect_undrafted";
+    flags.add("undrafted");
+  }
   else if (g === "G") seg = path === "prospect" ? "G_prospect" : gp0 >= p.eligibility.goalieGp ? "G_est" : "G_young";
   else if (route === "slot") seg = "prospect_slot";
   else if (path === "prospect") seg = gp0 > 0 ? "prospect_nhl" : "prospect";

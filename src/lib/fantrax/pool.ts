@@ -7,7 +7,8 @@
  * A player is in the pool when any of these holds:
  * - we project him (values.json `src: "proj"`);
  * - he has a Fantrax ADP (fxea getAdp; every draftable player with one);
- * - a team of this league rosters him, or Fantrax lists him on waivers here;
+ * - a team of this league rosters him, or Fantrax lists him on waivers here
+ *   (while waivers are the exception: `WAIVERS_RULE_MAX_SHARE`);
  * - he was picked in one of the last `RECENT_NHL_DRAFTS` NHL entry drafts
  *   (see `assignDraftPicks`: his NHL profile, else a one-to-one name match);
  * - at least `POOL_MIN_ROS` % of Fantrax leagues roster him (catches the
@@ -50,6 +51,8 @@ export const POOL_GROUPS: readonly PoolGroup[] = FANTRAX_GROUPS;
 export const RECENT_NHL_DRAFTS = 6;
 /** Rostered in at least this % of Fantrax leagues: relevant whoever he is. */
 export const POOL_MIN_ROS = 1;
+/** Above this share of the league on waivers, being on waivers no longer brings a player in. */
+export const WAIVERS_RULE_MAX_SHARE = 0.2;
 
 /** Roster status on a fantasy team, one letter (Fantrax ACTIVE / RESERVE / INJURED_RESERVE / MINORS). */
 export type PoolRosterStatus = "A" | "R" | "I" | "M";
@@ -119,6 +122,8 @@ export interface PoolSnapshot {
    * position in this league (not listed there yet): check:league reads it.
    */
   orgSkipped?: string[];
+  /** A league-wide waiver period (most players on waivers): being on waivers brought nobody in. */
+  waiverPeriod?: true;
 }
 
 /** One NHL entry draft pick. */
@@ -460,6 +465,12 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
   const lastDraft = latestDraftYear(input.draftPicks, syncYear);
   const recentDrafts: [number, number] = [lastDraft - RECENT_NHL_DRAFTS + 1, lastDraft];
 
+  // Waivers say something about a player only while they are the exception:
+  // around opening night Captains puts every free agent on waivers (7,918 of
+  // 8,747 players on 2026-09-28), and the rule then took the whole universe
+  // in (a 1 MB pool.json).
+  const leagueIds = Object.values(input.leaguePlayers);
+  const waiversMean = leagueIds.filter((p) => p.status === "WW").length <= WAIVERS_RULE_MAX_SHARE * leagueIds.length;
   const onTeam = new Map<string, { teamId: string; status: string }>();
   for (const [teamId, roster] of Object.entries(input.rosters)) {
     for (const r of roster) onTeam.set(r.id, { teamId, status: r.status });
@@ -512,10 +523,11 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
     const adp = input.adp[id];
     const rostered = onTeam.get(id);
     const onWaivers = who.league.status === "WW";
+    const waiverRule = onWaivers && waiversMean;
     const recentPick = !!dr && dr[0] >= recentDrafts[0];
     const rostersWidely = (flags?.ros ?? 0) >= POOL_MIN_ROS;
     const inOrg = nhl !== undefined && !!input.org?.has(nhl);
-    if (!projected && adp === undefined && !rostered && !onWaivers && !recentPick && !rostersWidely && !inOrg) continue;
+    if (!projected && adp === undefined && !rostered && !waiverRule && !recentPick && !rostersWidely && !inOrg) continue;
 
     const pos = poolGroups(value?.e ?? who.league.eligiblePos, input.config ?? CAPTAINS_DYNASTY);
     if (!pos) {
@@ -565,6 +577,7 @@ export function buildPool(input: PoolBuildInput): PoolSnapshot {
     counts: { total: players.length, projected: count("p"), prospects: count("e"), other: count("n") },
     players,
     ...(input.org ? { orgSkipped: orgSkipped.sort() } : {}),
+    ...(waiversMean ? {} : { waiverPeriod: true as const }),
   };
 }
 

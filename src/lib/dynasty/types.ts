@@ -51,7 +51,9 @@ export type DynastyFlag =
   | "eligibilityUncertain"
   | "startShareNews"
   /** A current IR / injury / suspension status trims 2026-27 (not later seasons). */
-  | "injuredNow";
+  | "injuredNow"
+  /** Valued on the undrafted route (segment.ts): the sentence says « non repêché ». */
+  | "undrafted";
 
 export type KeeperStatus = "free" | "core" | "bubble" | "rental";
 

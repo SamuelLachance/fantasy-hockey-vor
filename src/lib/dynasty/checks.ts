@@ -35,9 +35,12 @@ export const GATES = {
    * on 2026-09-25 only because MacKenzie Weegar's corrupted hits / blocks
    * history (rates:recalibrate, 2026-09-26) held #125 above him; once it is
    * repaired and the skater projections are recalibrated (the realized
-   * replacement level moves with them) he lands on #142.
+   * replacement level moves with them) he lands on #142. 130 since
+   * 2026-09-28: his injury flag, which trimmed his 2026-27, is gone in the
+   * season-opening sync and a healthy season puts him on #135 (value 81.6,
+   * +3); a two-season rental still stays out of the long-term top 130.
    */
-  longTerm: { youngerBy: 1, shortLivedMaxRank: 140 },
+  longTerm: { youngerBy: 1, shortLivedMaxRank: 130 },
   spearmanAdp: 0.75,
   spearmanKeep: 0.78,
   spearmanRos: 0.55,

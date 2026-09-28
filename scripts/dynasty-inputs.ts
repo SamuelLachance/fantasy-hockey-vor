@@ -359,12 +359,15 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       rostered: rostered.has(id),
     });
   }
-  // The league's NHL-organisation players nothing above covers (investigation
+  // The league's NHL-organisation players and pool prospects (recent picks
+  // whose rights lapsed included) nothing above covers (investigation
   // 2026-09-27: 239 of the draftable universe never valued), under this
   // league's own minors rule: Fantrax's minors-eligible flag, « not eligible »
   // when fxpa listed him without it, else the rule by age and games.
   const covered = new Set(players.map((x) => x.id));
-  const orgRows = (L.explorer?.players ?? []).filter((r) => r.nhl != null && L.org.ids.has(r.nhl) && !covered.has(r.id));
+  const orgRows = (L.explorer?.players ?? []).filter(
+    (r) => !covered.has(r.id) && ((r.nhl != null && L.org.ids.has(r.nhl)) || r.src === "e"),
+  );
   players.push(
     ...poolExtraInputs(orgRows, {
       cfg: CAPTAINS_DYNASTY,

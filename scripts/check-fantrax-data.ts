@@ -339,7 +339,13 @@ if (pool) {
     if (adpIds.length > 0 && adpIn / adpIds.length < 0.9) {
       errors.push(`only ${adpIn}/${adpIds.length} players with a Fantrax ADP are in the pool`);
     }
-    const waiversOut = state.waivers.filter((id) => inPool.get(id)?.st !== "WW" && !Object.values(state.rosters).some((r) => r.some((x) => x.id === id)));
+    // During a league-wide waiver period (pool.waiverPeriod) waivers bring nobody in: those listed still read WW.
+    const waiversOut = state.waivers.filter(
+      (id) =>
+        (pool.waiverPeriod ? inPool.has(id) : true) &&
+        inPool.get(id)?.st !== "WW" &&
+        !Object.values(state.rosters).some((r) => r.some((x) => x.id === id)),
+    );
     if (waiversOut.length > 0) errors.push(`${waiversOut.length} players on waivers missing from the pool as WW (e.g. ${waiversOut[0]})`);
     // The explorer's « actifs » rule reads `nl`; it must say what state.ros says.
     const nlWrong = state.fxpaOk
