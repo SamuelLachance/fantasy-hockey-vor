@@ -13,9 +13,11 @@ import { slotPMakeRaw, slotProspect } from "../src/lib/dynasty/prospect";
 import { makeRetention } from "../src/lib/dynasty/retention";
 import { hashStr, mulberry32 } from "../src/lib/dynasty/rng";
 import { groupOf, realized, replacement, year0Cal } from "../src/lib/dynasty/scale";
-import { depthChartShares, routePlayer, statusAvailability } from "../src/lib/dynasty/segment";
+import { blendGames, depthChartShares, routePlayer, statusAvailability } from "../src/lib/dynasty/segment";
 import { mixSimResults, simulatePlayer, type SimContext, type SimPlayer } from "../src/lib/dynasty/simulate";
-import { buildDynasty } from "../src/lib/dynasty/index";
+import { blendSides, buildDynasty, linkYear0 } from "../src/lib/dynasty/index";
+import { makeGrowth } from "../src/lib/dynasty/growth";
+import { modeWeights } from "../src/lib/dynasty/value";
 import { normalCdf } from "../src/lib/fantrax/draft";
 import type { DynastyInput, ProspectRecord, SeasonLine } from "../src/lib/dynasty/types";
 
@@ -325,6 +327,14 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(m.gain[0]![49] === a.gain[0]![49] && m.gain[0]![50] === b.gain[0]![50], "per-path gains: 50 NHL paths, then prospect paths");
   assert(near(m.eligAt[1]!, 0.25 * a.eligAt[1]! + 0.75 * b.eligAt[1]!, 1e-12), "path shares mix with the same weight");
   assert(near(m.pMade, 0.25 * a.pMade + 0.75 * b.pMade, 1e-12), "P(made) mixes");
+  // the expectations use BOTH sides' N paths (the stratified rows only carry bands and keep indices)
+  const avgOf = (x: Float64Array) => x.reduce((s, v) => s + v, 0) / x.length;
+  assert(
+    m.means!.gain.every((g, t) => near(g, 0.25 * avgOf(a.gain[t]!) + 0.75 * avgOf(b.gain[t]!), 1e-9)),
+    "expected gains are the weighted means of both full simulations",
+  );
+  const split = mixSimResults(a, b, 0.25, 0);
+  assert(near(split.means!.gain[0]!, 0.25 * avgOf(a.gain[0]!) + 0.75 * avgOf(b.gain[0]!), 1e-9) && near(split.means!.gain[3]!, avgOf(b.gain[3]!), 1e-9), "season 0 and later seasons can mix differently");
 
   // No cliff: a game either side of 40 moves the value by a few percent, not 4×.
   const build = (gp: number, gpSd?: number) =>
@@ -365,6 +375,56 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const factor = (r: typeof m39) => r.dv.balanced / (r.dvModel ?? r.dv).balanced;
   assert(Math.abs(Math.log(factor(m41) / factor(m39))) < 0.03, `market factor continuous across 40 (${factor(m39).toFixed(3)} → ${factor(m41).toFixed(3)})`);
   assert(m41.dv.balanced > m39.dv.balanced && m41.dv.balanced < 1.15 * m39.dv.balanced, `published: 39 → 41 games moves a little (${m39.dv.balanced} → ${m41.dv.balanced})`);
+}
+
+// ---- 5c. Blended route: each side plays its half of the games; value monotone in the projected games
+{
+  // E[GP | GP ≥ 40] and E[GP | GP < 40] of N(gp, sd) recombine to gp
+  for (const [gp, sd] of [[20, 22], [41, 22], [66, 22], [30, 10]] as const) {
+    const s = blendGames(gp, sd, 82);
+    const w = normalCdf((gp - 40) / sd);
+    assert(s.above >= 40 && s.below <= 40 && s.below >= 0, `split on either side of 40 (${gp}: ${s.below.toFixed(1)} / ${s.above.toFixed(1)})`);
+    assert(near(w * s.above + (1 - w) * s.below, gp, 0.05), `P(40+) · above + (1 − P) · below = ${gp} (${(w * s.above + (1 - w) * s.below).toFixed(2)})`);
+  }
+  // Real players frozen from the 2026-09-26 Captains snapshot (scripts/fixtures/dynasty-blend-players.json).
+  const fx = JSON.parse(readFileSync(join(process.cwd(), "scripts", "fixtures", "dynasty-blend-players.json"), "utf8")) as {
+    params: { K: number; Kgate: number };
+    players: DynastyInput[];
+  };
+  const byName = (n: string) => fx.players.find((x) => x.n === n)!;
+  // Year-0 NHL games: the blend sums to the projection (was 0.82 of it: the
+  // NHL side ran at the unconditional games with its own demotion draw).
+  const growth = makeGrowth(params, level);
+  const cx = ctx({ N: 2000, K: fx.params.K, Kgate: fx.params.Kgate, growth });
+  const modes = modeWeights(params);
+  for (const inp of fx.players) {
+    const nhl = routePlayer(params, level, inp, 1, growth, "nhl");
+    const pro = routePlayer(params, level, inp, 1, growth, "prospect");
+    linkYear0(params, nhl, pro);
+    assert(pro.sim?.year0 != null && near(pro.sim.year0.share * 82, pro.blendGp!.below, 1e-9), `${inp.n}: the prospect side plays E[GP | GP < 40] in 2026-27`);
+    assert(near(nhl.sim!.share0! * 82, nhl.blendGp!.above, 1e-9), `${inp.n}: the NHL side plays E[GP | GP ≥ 40]`);
+    const mix = blendSides(simulatePlayer(nhl.sim!, cx), simulatePlayer(pro.sim!, cx), nhl.nhlShare!, modes);
+    const projGames = (inp.proj!.gp * params.games.seasonGames) / params.games.projectionBasis;
+    assert(near(mix.games[0]! / projGames, 1, 0.03), `${inp.n}: blended 2026-27 games ${mix.games[0]!.toFixed(1)} ≈ projection ${projGames.toFixed(1)}`);
+  }
+  // Monotone: Sandin Pellikka's NHL route is worth far less than his prospect
+  // route (verifier: 9.7 → 3.5 from 5 to 69 projected games); Fisker
+  // Molgaard's too (8.1 → 1.0); Helenius's is worth more.
+  const sweep = (inp: DynastyInput) =>
+    [5, 17, 29, 41, 53, 65, 77].map(
+      (gp) =>
+        buildDynasty(
+          { players: [{ ...inp, proj: { ...inp.proj!, gp } }], meta: { valuesFetchedAt: "", stateFetchedAt: "", projectionsAt: "", prospectsBuiltAt: "" } },
+          params,
+          { paths: 2000, K: fx.params.K, Kgate: fx.params.Kgate, market: false },
+        ).all[inp.id]!.dv.balanced,
+    );
+  for (const n of ["Axel Sandin Pellikka", "Oscar Fisker Molgaard", "Konsta Helenius"]) {
+    const v = sweep(byName(n));
+    const worst = Math.min(...v.slice(1).map((x, i) => x - v[i]!));
+    assert(worst >= -Math.max(0.3, 0.03 * v[0]!), `${n}: balanced value never falls as projected games rise (${v.map((x) => x.toFixed(1)).join(" → ")})`);
+    assert(v[v.length - 1]! >= v[0]! - 0.2, `${n}: 77 projected games worth at least 5 (${v[0]!.toFixed(1)} → ${v[v.length - 1]!.toFixed(1)})`);
+  }
 }
 
 // ---- 6. Draft-slot prior

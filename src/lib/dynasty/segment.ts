@@ -21,6 +21,12 @@
  * or two (Konsta Helenius, 40.5 raw games: NHL route 123, prospect 30).
  * The route shown (path, phase, segment) is the likelier one; the market
  * layer mixes the two sides' weights by the same shares (market.ts).
+ * Each side plays its half of the games (verifier 2026-09-27: the NHL side
+ * ran at the unconditional games with its own demotion draw and the prospect
+ * side ignored the projection, so year-0 NHL games summed to 0.82 of the
+ * projection): the NHL side at E[GP | GP ≥ 40], the prospect side E[GP |
+ * GP < 40] games in 2026-27 at the projection's level, then the prospect
+ * model from 2027-28 (`blendGames`; the two sum to the projection).
  *
  * Year 0 (audit 2026-09-25): a current injury, IR stint or suspension trims
  * season 0 only (`avail0`); the goalie start share is his depth-chart share
@@ -79,6 +85,8 @@ export interface Routed {
    * rest on the prospect route); null when one route decides.
    */
   nhlShare: number | null;
+  /** Blended route: each side's year-0 games (82-game basis, `blendGames`); null otherwise. */
+  blendGp: { above: number; below: number } | null;
 }
 
 export interface YouthGrowth {
@@ -161,6 +169,23 @@ export function nhlRouteShare(
   return normalCdf((inp.proj!.gp - SKATER_ROLE_GP) / sd);
 }
 
+const normalPdf = (x: number) => Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+
+/**
+ * Year-0 games of each side of a blended route, the split-season games read
+ * as N(gp, sd) cut at 40: the NHL side E[GP | GP ≥ 40], the prospect side
+ * E[GP | GP < 40], so P(40+) · above + (1 − P(40+)) · below = gp (before the
+ * clamps to [40, basis] and [0, 40], which only bind in the far tails).
+ */
+export function blendGames(gp: number, sd: number, basis: number): { above: number; below: number } {
+  const a = (SKATER_ROLE_GP - gp) / sd;
+  const pBelow = normalCdf(a);
+  const phi = normalPdf(a);
+  const above = pBelow < 1 - 1e-9 ? gp + (sd * phi) / (1 - pBelow) : SKATER_ROLE_GP;
+  const below = pBelow > 1e-9 ? gp - (sd * phi) / pBelow : SKATER_ROLE_GP;
+  return { above: clamp(above, SKATER_ROLE_GP, basis), below: clamp(below, 0, SKATER_ROLE_GP) };
+}
+
 export function routePlayer(
   p: DynastyParams,
   level: LevelFn,
@@ -187,6 +212,8 @@ export function routePlayer(
   const realProj = proj?.src === "proj" && (proj.method === "ml" || gp0 >= 20);
   if (proj?.src === "proj" && !realProj) flags.add("placeholderProjection");
   const nhlShare = nhlRouteShare(p, inp, g, gp0, realProj);
+  const basis = p.games.projectionBasis;
+  const blendGp = nhlShare != null ? blendGames(proj!.gp, proj!.gpSd!, basis) : null;
   const nhlRole =
     nhlShare != null && force
       ? force === "nhl"
@@ -222,7 +249,6 @@ export function routePlayer(
   let share0 = 0;
   let elite = false;
   const avail0 = statusAvailability(p, inp.status);
-  const basis = p.games.projectionBasis;
   let traj: Trajectory = { shift: 0, toiDelta: null, fpgRatio: null };
   const pick = draftOk ? draft!.pick : null;
   if (path === "nhl") {
@@ -253,8 +279,9 @@ export function routePlayer(
         flags.add("projectionConflict");
       }
     } else theta0 = Math.max(0.3, projLevel * year0Cal(p, g, calAge));
-    // pS is the depth-chart share (injured partners kept in): real tandem news only
-    const starts = g === "G" && proj!.pS != null ? Math.min(proj!.gp, proj!.pS * basis) : proj!.gp;
+    // pS is the depth-chart share (injured partners kept in): real tandem news only;
+    // a blended skater's NHL side plays E[GP | GP ≥ 40] (its half of the split)
+    const starts = g === "G" && proj!.pS != null ? Math.min(proj!.gp, proj!.pS * basis) : (blendGp?.above ?? proj!.gp);
     if (g === "G" && proj!.pS != null && proj!.pS * basis < 0.85 * proj!.gp) flags.add("startShareNews");
     share0 = clamp(starts / basis, 0, 1);
     const s0 = p.sigma.sigma0;
@@ -342,5 +369,6 @@ export function routePlayer(
     growth,
     pm,
     nhlShare,
+    blendGp,
   };
 }

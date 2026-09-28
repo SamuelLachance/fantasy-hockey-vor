@@ -1,0 +1,191 @@
+{
+ "source": "scripts/dynasty-inputs.ts assembleDynastyInputs on the 2026-09-26 Captains snapshot (market fields and status dropped): real blended players (a prospect record and split-season games, gpSd). Sandin Pellikka and Fisker Molgaard: NHL route below the prospect route (verifier 2026-09-27); Helenius: above.",
+ "params": {
+  "K": 41.2,
+  "Kgate": 34
+ },
+ "players": [
+  {
+   "id": "067xz",
+   "n": "Axel Sandin Pellikka",
+   "e": "D,Skt",
+   "team": "DET",
+   "nhlId": 8484223,
+   "birthDate": "2005-03-11",
+   "fantraxAge": 21,
+   "careerGp": 68,
+   "seasonGp": 0,
+   "proj": {
+    "src": "proj",
+    "gp": 66,
+    "off": 1.404,
+    "dx": 0.441,
+    "method": "ml",
+    "gpSd": 22
+   },
+   "prospect": {
+    "nhlId": 8484223,
+    "n": "Axel Sandin Pellikka",
+    "pos": "D",
+    "birthDate": "2005-03-11",
+    "draft": {
+     "year": 2023,
+     "pick": 17
+    },
+    "nhlGP": 68,
+    "pMake": 0.952,
+    "pSource": "nhl-gp-so-far",
+    "fpgIfMake": {
+     "mu": 2.267,
+     "sd": 0.619
+    },
+    "eta": 2026,
+    "comp": {
+     "fpDraft": 2.361,
+     "fpNhle": 2.676,
+     "fpSnake": 2.428
+    }
+   },
+   "draft": {
+    "year": 2023,
+    "pick": 17
+   },
+   "draftSource": "profile",
+   "eligNow": true,
+   "history": [
+    {
+     "season": 2025,
+     "gp": 68,
+     "toi": 972.647,
+     "goals": 7,
+     "assists": 14,
+     "shots": 68,
+     "hits": 17,
+     "blocks": 54,
+     "takeaways": 8
+    }
+   ]
+  },
+  {
+   "id": "06axt",
+   "n": "Oscar Fisker Molgaard",
+   "e": "C,F,Skt",
+   "team": "SEA",
+   "nhlId": 8484168,
+   "birthDate": "2005-02-18",
+   "fantraxAge": 21,
+   "careerGp": 13,
+   "seasonGp": 0,
+   "proj": {
+    "src": "proj",
+    "gp": 25,
+    "off": 1.131,
+    "dx": 0,
+    "method": "ml",
+    "gpSd": 22
+   },
+   "prospect": {
+    "nhlId": 8484168,
+    "n": "Oscar Fisker Molgaard",
+    "pos": "F",
+    "birthDate": "2005-02-18",
+    "draft": {
+     "year": 2023,
+     "pick": 52
+    },
+    "nhlGP": 13,
+    "pMake": 0.442,
+    "pSource": "nhle(k=2)",
+    "fpgIfMake": {
+     "mu": 2.253,
+     "sd": 0.555
+    },
+    "eta": 2027,
+    "comp": {
+     "fpDraft": 2.291,
+     "fpNhle": 2.253
+    }
+   },
+   "draft": {
+    "year": 2023,
+    "pick": 52
+   },
+   "draftSource": "profile",
+   "eligNow": true,
+   "history": [
+    {
+     "season": 2025,
+     "gp": 13,
+     "toi": 554.1538,
+     "goals": 0,
+     "assists": 2,
+     "shots": 6,
+     "hits": 9,
+     "blocks": 8,
+     "takeaways": 1
+    }
+   ]
+  },
+  {
+   "id": "066q4",
+   "n": "Konsta Helenius",
+   "e": "C,F,Skt",
+   "team": "BUF",
+   "nhlId": 8484797,
+   "birthDate": "2006-05-11",
+   "fantraxAge": 20,
+   "careerGp": 9,
+   "seasonGp": 0,
+   "proj": {
+    "src": "proj",
+    "gp": 41,
+    "off": 2.325,
+    "dx": 0,
+    "method": "ml",
+    "gpSd": 22
+   },
+   "prospect": {
+    "nhlId": 8484797,
+    "n": "Konsta Helenius",
+    "pos": "F",
+    "birthDate": "2006-05-11",
+    "draft": {
+     "year": 2024,
+     "pick": 14
+    },
+    "nhlGP": 9,
+    "pMake": 0.905,
+    "pSource": "nhle(k=1)",
+    "fpgIfMake": {
+     "mu": 2.586,
+     "sd": 0.619
+    },
+    "eta": 2027,
+    "comp": {
+     "fpDraft": 2.689,
+     "fpNhle": 2.586,
+     "fpSnake": 2.588
+    }
+   },
+   "draft": {
+    "year": 2024,
+    "pick": 14
+   },
+   "draftSource": "profile",
+   "eligNow": true,
+   "history": [
+    {
+     "season": 2025,
+     "gp": 9,
+     "toi": 714.5555,
+     "goals": 1,
+     "assists": 3,
+     "shots": 15,
+     "hits": 10,
+     "blocks": 3,
+     "takeaways": 1
+    }
+   ]
+  }
+ ]
+}

@@ -105,6 +105,15 @@ export interface SimPlayer {
   /** NHL draft pick (a prospect's growth after arrival); null = undrafted. */
   pick?: number | null;
   pm?: ProspectModel | null;
+  /**
+   * Prospect path of a blended route (segment.ts, the « under 40 games »
+   * side): season 0 is `share` of a season (E[GP | GP < 40] / 82) at the
+   * projection's level (the NHL side's θ0 and σ0) on every path, made or
+   * not (valued, not counted toward the minors-eligibility clock; its draws
+   * come from a stream of their own), and the first regular season comes no
+   * earlier than 2027-28.
+   */
+  year0?: { theta: number; sigma: number; share: number } | null;
   /** Trajectory shift of the effective age (−1, 0, +1). */
   trajShift?: number;
   /** Share of the current regular season still to play. */
@@ -165,6 +174,12 @@ export interface SimResult {
   ki1: Float64Array | null;
   /** NHL games per season and path (season 0: the part still played); only with ctx.recordGames. */
   gamesPath: Float64Array[] | null;
+  /**
+   * A mixture's exact expectations (mixSimResults): the weighted means of
+   * both full simulations. The per-path rows are a stratified draw of the
+   * same mixture, for the bands, medians and keep indices only.
+   */
+  means?: { gain: number[]; fp: number[] };
 }
 
 const PRE = 2; // level table offset: lv[k] = c̃(age0 + k − PRE)
@@ -176,6 +191,9 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
   const g = pl.g;
   const R = g === "G" ? 0 : repl[g];
   const rng = rngFor(pl.id + ctx.seedKey);
+  // season 0 of a blended prospect side draws from its own stream: the main
+  // stream (make-it, arrival, prime, later seasons) stays the one without it
+  const rng0 = pl.year0 ? rngFor(`${pl.id}${ctx.seedKey}|y0`) : null;
   const G = p.games;
   const gg = G.goalie;
   const spBase = p.sigma.persistent[g];
@@ -348,7 +366,7 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
             break;
           }
         }
-        arrival = Math.max(Y0, pm.eta + jit);
+        arrival = Math.max(pl.year0 ? Y0 + 1 : Y0, pm.eta + jit);
         arrivals.push(arrival);
         zPrime = rng.n();
         pi = Math.max(primeFloor, pm.pi.mu + pm.pi.sd * zPrime);
@@ -447,14 +465,23 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
           fpgReal = theta * Math.exp(se * rng.n() - (se * se) / 2);
         }
       }
+      // the share his games come from this season (a blended prospect side's season 0: its own)
+      let gShare = share;
+      if (t === 0 && rng0 && pl.year0!.share > 0) {
+        const y = pl.year0!;
+        thetaT = y.theta * Math.exp(y.sigma * rng0.n() - (y.sigma * y.sigma) / 2);
+        gShare = y.share;
+        playing = true;
+        fpgReal = thetaT * Math.exp(se * rng0.n() - (se * se) / 2);
+      }
       // season 0: the part still to play, less a current injury / suspension
       const seasonScale = t === 0 ? remaining * avail0 : 1;
-      const games = playing ? SG * share : 0;
+      const games = playing ? SG * gShare : 0;
       // in-season: the owner benches or drops him when the level is below replacement
       // (league profile: play him — value less the cap charge — or stash him in the minors for 0)
       const inSeason = playing
         ? lg
-          ? Math.max(0, seasonValue(thetaT, games) - capCharge(t, share)) * seasonScale
+          ? Math.max(0, seasonValue(thetaT, games) - capCharge(t, gShare)) * seasonScale
           : Math.max(0, seasonValue(thetaT, games)) * seasonScale
         : 0;
       vorPre[t]![n] = alive ? inSeason : 0;
@@ -483,7 +510,11 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
         }
       }
       gain[t]![n] = gt;
-      careerGp += (g === "G" ? games * gg.appearancesPerStart : games) * seasonScale;
+      // A blended prospect side's season-0 games are valued but leave the
+      // minors-eligibility clock alone: its make-it odds (the research record)
+      // cannot see them, and counting their cost without their evidence made
+      // value fall as projected games rose (index.ts blendSides).
+      if (!(t === 0 && rng0)) careerGp += (g === "G" ? games * gg.appearancesPerStart : games) * seasonScale;
       lastFpg = playing ? fpgReal : null;
     }
   }
@@ -511,18 +542,40 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
 
 /**
  * A mixture of two simulations of the same player on N paths each (the
- * blended NHL / prospect route, segment.ts): the first round(wA · N) paths
- * of `a`, then paths of `b` up to N, so per-path quantities (gains, bands,
- * keep indices) are an exact stratified draw from the mixture. Shares
- * already averaged over paths (eligibility, keeper, NHL presence, games,
- * P(made)) mix with the same weight. The level path (`lvlRel`) and the
- * arrivals follow the side that carries them.
+ * blended NHL / prospect route, segment.ts). Its expectations (`means`:
+ * per-season gains and FP) and every share already averaged over paths
+ * (eligibility, keeper, NHL presence, games, P(made)) are the wA-weighted
+ * means of BOTH full simulations: each side keeps its N paths (verifier
+ * 2026-09-27: using only round(wA · N) paths of one side and the rest of the
+ * other halved each side's sample and cost the seed-stability gate a rank,
+ * long-term P95 12 → 13). The per-path rows (bands, medians, keep indices)
+ * are a stratified draw of the mixture: the first round(w · N) paths of
+ * `a`, then paths of `b` up to N. The level path (`lvlRel`) and the arrivals
+ * follow the side that carries them.
+ *
+ * `wLater` (default wA) weighs seasons 1 … T − 1 (and the path rows) when
+ * they mix differently from season 0: the blended route's season 0 always
+ * splits by P(40+ games), its later seasons may keep the prospect side only
+ * (index.ts).
  */
-export function mixSimResults(a: SimResult, b: SimResult, wA: number): SimResult {
+export function mixSimResults(a: SimResult, b: SimResult, wA: number, wLater = wA): SimResult {
   const N = a.N;
   if (b.N !== N || b.T !== a.T) throw new Error("mixSimResults: simulations of different shapes");
-  const kA = Math.max(0, Math.min(N, Math.round(wA * N)));
-  const w = kA / N;
+  const w0 = Math.max(0, Math.min(1, wA));
+  const w = Math.max(0, Math.min(1, wLater));
+  const wt = (t: number) => (t === 0 ? w0 : w);
+  const kA = Math.round(w * N);
+  const meanRow = (row: Float64Array) => {
+    let s = 0;
+    for (let n = 0; n < row.length; n++) s += row[n]!;
+    return s / row.length;
+  };
+  const expect = (x: SimResult, key: "gain" | "fp") => x.means?.[key] ?? x[key].map(meanRow);
+  const mixMean = (key: "gain" | "fp") => {
+    const ea = expect(a, key);
+    const eb = expect(b, key);
+    return ea.map((v, t) => wt(t) * v + (1 - wt(t)) * eb[t]!);
+  };
   const perPath = (x: Float64Array, y: Float64Array) => {
     const out = new Float64Array(N);
     out.set(x.subarray(0, kA), 0);
@@ -530,7 +583,7 @@ export function mixSimResults(a: SimResult, b: SimResult, wA: number): SimResult
     return out;
   };
   const rows = (x: Float64Array[], y: Float64Array[]) => x.map((row, t) => perPath(row, y[t]!));
-  const avg = (x: number[], y: number[]) => x.map((v, t) => w * v + (1 - w) * y[t]!);
+  const avg = (x: number[], y: number[]) => x.map((v, t) => wt(t) * v + (1 - wt(t)) * y[t]!);
   // arrivals are listed per arriving path: keep each side's share of them
   const take = (xs: number[], share: number) => xs.slice(0, Math.round(xs.length * share));
   return {
@@ -553,5 +606,6 @@ export function mixSimResults(a: SimResult, b: SimResult, wA: number): SimResult
     lvlRel: a.lvlRel ?? b.lvlRel,
     ki1: a.ki1 && b.ki1 ? perPath(a.ki1, b.ki1) : (a.ki1 ?? b.ki1),
     gamesPath: a.gamesPath && b.gamesPath ? rows(a.gamesPath, b.gamesPath) : null,
+    means: { gain: mixMean("gain"), fp: mixMean("fp") },
   };
 }

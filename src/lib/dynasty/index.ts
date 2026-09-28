@@ -21,10 +21,19 @@ import type { DynastyParams } from "./params";
 import { makeRetention } from "./retention";
 import { replacement } from "./scale";
 import { routePlayer, type Route, type Routed } from "./segment";
-import { mixSimResults, simulatePlayer, type SimContext } from "./simulate";
+import { mixSimResults, simulatePlayer, type SimContext, type SimResult } from "./simulate";
 import type { DynastyBuildInputs, DynastyRecord, DynastySnapshot, KeeperStatus, Mode } from "./types";
 import { MODES } from "./types";
-import { calibrateK, discount, modeWeights, summarize, type KCalibration, type PlayerValue } from "./value";
+import {
+  calibrateK,
+  discount,
+  modeWeight,
+  modeWeights,
+  summarize,
+  type KCalibration,
+  type ModeWeights,
+  type PlayerValue,
+} from "./value";
 
 export * from "./types";
 export { parseParams, type DynastyParams } from "./params";
@@ -108,6 +117,30 @@ export function goalieStarts0(p: DynastyParams, routed: readonly Routed[]): Reco
   );
 }
 
+/** Blended route: the prospect side plays E[GP | GP < 40] games in 2026-27 at the NHL side's level. */
+export function linkYear0(p: DynastyParams, nhl: Routed, pro: Routed): void {
+  if (nhl.sim?.path !== "nhl" || pro.sim?.path !== "prospect" || !pro.blendGp) return;
+  pro.sim.year0 = { theta: nhl.sim.theta0!, sigma: nhl.sim.sigma0!, share: pro.blendGp.below / p.games.projectionBasis };
+}
+
+/**
+ * The blended route's value (segment.ts) from its two simulations: the NHL
+ * side's and the prospect side's (whose season 0 is E[GP | GP < 40] games).
+ * Monotone in the projected games (verifier 2026-09-27: a player whose NHL
+ * route is worth less than his prospect route lost value with every
+ * projected game, Sandin Pellikka 9.7 → 3.5 from 5 to 69 GP). Season 0
+ * always splits by P(40+ games), each side playing its half of the projected
+ * games, so the two sum to the projection (the prospect side's do not
+ * advance its minors-eligibility clock: simulate.ts `year0`). From 2027-28
+ * the NHL route counts for at least the prospect route (balanced value):
+ * below it, the prospect side's later seasons alone.
+ */
+export function blendSides(nhlRes: SimResult, proRes: SimResult, nhlShare: number, modes: ModeWeights): SimResult {
+  const later = (v: PlayerValue) => v.dv.balanced - modeWeight(modes.balanced, 0) * v.eG[0]!;
+  const nhlBelow = later(summarize(nhlRes, modes)) < later(summarize(proRes, modes));
+  return mixSimResults(nhlRes, proRes, nhlShare, nhlBelow ? 0 : nhlShare);
+}
+
 export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts: BuildOptions = {}): BuildResult {
   const level = makeLevel(p);
   const growth = makeGrowth(p, level);
@@ -131,7 +164,11 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
     routed.push(r);
     if (r.nhlShare != null && r.sim) {
       const alt = routePlayer(p, level, inp, rem, growth, r.route === "nhl" ? "prospect" : "nhl");
-      if (alt.sim) otherSide.set(inp.id, alt);
+      if (alt.sim) {
+        otherSide.set(inp.id, alt);
+        if (r.route === "nhl") linkYear0(p, r, alt);
+        else linkYear0(p, alt, r);
+      }
     }
   }
   const routes = { nhl: 0, prospect: 0, "nhl-part": 0, slot: 0, fringe: 0 } as Record<Route, number>;
@@ -166,7 +203,8 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
     const alt = otherSide.get(r.input.id);
     if (res && alt?.sim) {
       const altRes = simulatePlayer(alt.sim, ctx);
-      res = r.route === "nhl" ? mixSimResults(res, altRes, r.nhlShare!) : mixSimResults(altRes, res, r.nhlShare!);
+      const [nhlRes, proRes] = r.route === "nhl" ? [res, altRes] : [altRes, res];
+      res = blendSides(nhlRes, proRes, r.nhlShare!, modes);
     }
     const v = res ? summarize(res, modes) : null;
     if (res?.ki1 && res.eligAt[1]! < 1) ki27.set(r.input.id, res.ki1);

@@ -137,8 +137,9 @@ function median(xs: number[]): number | null {
 
 export function summarize(res: SimResult, modes: ModeWeights): PlayerValue {
   const { N, T } = res;
-  const eG = res.gain.map((a) => mean(a));
-  const eFP = res.fp.map((a) => mean(a));
+  // a mixture (blended route) carries its exact expectations; its rows are a stratified draw
+  const eG = res.means?.gain ?? res.gain.map((a) => mean(a));
+  const eFP = res.means?.fp ?? res.fp.map((a) => mean(a));
   const p50G = res.gain.map((a) => sortedQuantile(Float64Array.from(a).sort(), 0.5));
   const dv = {} as Record<Mode, number>;
   for (const m of MODES) dv[m] = discount(eG, modes[m]);
