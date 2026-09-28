@@ -150,6 +150,12 @@ export interface DynastyInput {
   draftSource?: "profile" | "registry";
   /** Fantrax minors-eligible icon now; null = unknown (rule-based). */
   eligNow: boolean | null;
+  /**
+   * In an NHL organisation today (src/data/nhl-rosters.json: a club's roster
+   * or prospect list, or the search index's club), by NHL id. The undrafted
+   * route (segment.ts) takes only these: its odds were fitted on them.
+   */
+  org?: boolean;
   /** Regular seasons, most recent last (trajectory modifier). */
   history?: SeasonLine[];
   /** Position hint when `e` is empty (prospect records). */

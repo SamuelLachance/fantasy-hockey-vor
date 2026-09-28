@@ -1,4 +1,16 @@
 {
-  "description": "Hand-kept Fantrax id -> NHL id overrides for fantrax-sync, Slapshot Fantasy League. They win over automatic matching; nhlId null forces 'no match' (player gets the prior). Fantrax ids are platform-wide, so an override that belongs in every league belongs in src/data/fantrax/id-overrides.json too — keep them apart on purpose: a match is only wrong in the league whose eligibility vocabulary produced it.",
-  "overrides": []
+  "description": "Hand-kept Fantrax id -> NHL id overrides for fantrax-sync, Slapshot Fantasy League. They win over automatic matching; nhlId null forces 'no match' (player gets the prior). Fantrax ids are platform-wide: a name variant (the NHL spells the player differently) or a namesake is wrong in every league, so those are kept here AND in src/data/fantrax/id-overrides.json (verifier 2026-09-28: with this file empty, Groulx and Zhilkin, both on NHL rosters, and the LAK prospect Jack Hughes had no NHL id here). A match that is only wrong in one league's eligibility vocabulary stays in that league's file alone.",
+  "overrides": [
+    { "fantraxId": "05ws3", "name": "Kokko, Niklas", "nhlId": 8483668, "note": "NHL lists him as Nikke Kokko" },
+    { "fantraxId": "04qzh", "name": "St. Ivany, John", "nhlId": 8481030, "note": "NHL lists him as Jack St. Ivany" },
+    { "fantraxId": "03rjc", "name": "Imama, Boko", "nhlId": 8478147, "note": "NHL lists him as Bokondji Imama" },
+    { "fantraxId": "04ajl", "name": "Groulx, Benoit-Olivier", "nhlId": 8480870, "note": "NHL lists him as Bo Groulx" },
+    { "fantraxId": "05wwb", "name": "Zhilkin, Danny", "nhlId": 8483526, "note": "NHL lists him as Danil Zhilkin" },
+    { "fantraxId": "06hrl", "name": "Mooney, L.J.", "nhlId": 8485598, "note": "NHL lists him as John Mooney" },
+    { "fantraxId": "02nq8", "name": "Murray, Matt", "nhlId": 8476899, "note": "Clubless veteran (ex-SEA); Fantrax also has the NSH Matthew Murray" },
+    { "fantraxId": "05rin", "name": "Hughes, Jack", "nhlId": 8483456, "note": "LAK prospect, never the NJD star 8481559" },
+    { "fantraxId": "06hcp", "name": "Silayev, Anton", "nhlId": 8484987, "note": "NHL lists him as Anton Silaev" },
+    { "fantraxId": "05tpw", "name": "Vyazovoy, Semyon", "nhlId": 8482884, "note": "NHL lists him as Semyon Vyazovoi" },
+    { "fantraxId": "06r6e", "name": "Huovila, Santeri", "nhlId": null, "note": "No NHL id found" }
+  ]
 }

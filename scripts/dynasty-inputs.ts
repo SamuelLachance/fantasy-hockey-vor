@@ -153,7 +153,8 @@ export function poolExtraInputs(
     cfg: FantraxLeagueConfig;
     profiles: ReadonlyMap<number, PlayerProfile>;
     org: OrgData;
-    eligNow: (r: PoolRecord) => boolean | null;
+    /** Minors-eligible now; `x`: what the input knows of him (positions, NHL games). */
+    eligNow: (r: PoolRecord, x: { e: string; careerGp: number | null; seasonGp: number }) => boolean | null;
     rostered: (id: string) => boolean;
     leaguePick?: (id: string) => number | undefined;
     seasonGp?: (id: string) => number;
@@ -184,6 +185,7 @@ export function poolExtraInputs(
     const e = ctx.eligiblePos?.(r.id) || parseGroups(r.pos, ctx.cfg).map((g) => (g === "LW" || g === "RW" ? "W" : g)).join(",");
     const careerGp = prof ? careerGpBeforeSeason(prof) : r.nhl != null ? (ctx.org.careerGp.get(r.nhl) ?? null) : null;
     const leaguePick = ctx.leaguePick?.(r.id);
+    const seasonGp = ctx.seasonGp?.(r.id) ?? 0;
     out.push({
       id: r.id,
       n: r.n,
@@ -193,9 +195,10 @@ export function poolExtraInputs(
       birthDate,
       ...(r.age !== undefined ? { fantraxAge: r.age } : {}),
       careerGp,
-      seasonGp: ctx.seasonGp?.(r.id) ?? 0,
+      seasonGp,
       ...(draft ? { draft, draftSource } : {}),
-      eligNow: ctx.eligNow(r),
+      eligNow: ctx.eligNow(r, { e, careerGp, seasonGp }),
+      ...(r.nhl != null && ctx.org.ids.has(r.nhl) ? { org: true } : {}),
       history: historyOf(prof),
       ...(r.ros !== undefined ? { ros: r.ros } : {}),
       ...(r.adp !== undefined ? { adp: r.adp } : {}),
@@ -333,6 +336,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       ...(rec ? { prospect: rec } : {}),
       ...(draft ? { draft: draft.draft, draftSource: draft.source } : {}),
       eligNow: minorsEligible.has(id) ? true : state.fxpaOk && flagKnown(id) ? false : null,
+      ...(nhlId && L.org.ids.has(nhlId) ? { org: true } : {}),
       history: historyOf(prof),
       ...(state.ros[id] !== undefined ? { ros: state.ros[id] } : {}),
       ...(state.adp[id] !== undefined ? { adp: state.adp[id] } : {}),
@@ -366,6 +370,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       ...(rec ? { prospect: rec, posHint: rec.pos } : {}),
       ...(draft ? { draft: draft.draft, draftSource: draft.source } : {}),
       eligNow: pp || minorsEligible.has(id) ? true : null,
+      ...(nhlId && L.org.ids.has(nhlId) ? { org: true } : {}),
       history: historyOf(prof),
       ...(ros !== undefined ? { ros } : {}),
       ...(adp !== undefined ? { adp } : {}),

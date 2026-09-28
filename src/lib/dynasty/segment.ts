@@ -5,12 +5,16 @@
  *  1. a real NHL projection with an NHL role      → NHL path
  *  2. a record in the frozen prospect model       → prospect path (record)
  *  3. a real projection for a part-timer          → NHL path
- *  4. drafted at 17–21 and minors-eligible now    → prospect path (draft slot)
- *  5. minors-eligible now, no trusted draft, a    → prospect path (undrafted:
- *     known age (birth date or Fantrax age)          P(make it) by age, fitted
- *     on the undrafted players who made it; was fringe, so every undrafted
- *     signing read 0; without an age the default 25.5 valued retired
- *     veterans with no NHL id, Carey Price among them)
+ *  4. drafted at 17–21, minors-eligible now and  → prospect path (draft slot)
+ *     under the minors GP limit (100 / 55 G)
+ *  5. minors-eligible now, no trusted draft, in   → prospect path (undrafted:
+ *     an NHL organisation, under 20 NHL GP, a        P(make it) by age, fitted
+ *     known age (birth date or Fantrax age)          on the undrafted players
+ *     who made it; was fringe, so every undrafted signing read 0; without an
+ *     age the default 25.5 valued retired veterans with no NHL id, Carey
+ *     Price among them; the organisation and games conditions are the fit's
+ *     own population, verifier 2026-09-28: Slapshot's minors take anyone,
+ *     and Torey Krug, 778 GP and no projection, read « Espoir de 35 ans »)
  *  6. otherwise                                   → fringe (market only, or 0)
  *
  * "Real" projection: an ML projection, or a contextual one with ≥ 20 NHL GP.
@@ -191,6 +195,11 @@ export function blendGames(gp: number, sd: number, basis: number): { above: numb
   return { above: clamp(above, SKATER_ROLE_GP, basis), below: clamp(below, 0, SKATER_ROLE_GP) };
 }
 
+/** The undrafted route's population: fewer NHL games than this (params.prospect.undrafted.maxGp, default 20). */
+export function undraftedMaxGp(p: DynastyParams): number {
+  return p.prospect.undrafted?.maxGp ?? 20;
+}
+
 export function routePlayer(
   p: DynastyParams,
   level: LevelFn,
@@ -237,15 +246,19 @@ export function routePlayer(
   const draftOk =
     !!draft &&
     (byEst == null ? idKeyed : draft.year - byEst >= dMin - slack && draft.year - byEst <= dMax + slack);
+  // the prospect models' populations: under the minors GP limit (slot), under 20 NHL GP in an NHL organisation (undrafted)
+  const underGpLimit = gp0 < (g === "G" ? p.eligibility.goalieGp : p.eligibility.skaterGp);
+  const undraftedOk =
+    !!p.prospect.undrafted && inp.org === true && gp0 < undraftedMaxGp(p) && (b != null || inp.fantraxAge != null);
   const route: Route = nhlRole
     ? "nhl"
     : rec
       ? "prospect"
       : realProj
         ? "nhl-part"
-        : draftOk && eligNow
+        : draftOk && eligNow && underGpLimit
           ? "slot"
-          : eligNow && p.prospect.undrafted && (b != null || inp.fantraxAge != null)
+          : eligNow && !draftOk && undraftedOk
             ? "undrafted"
             : "fringe";
   const path: PathKind = route === "nhl" || route === "nhl-part" ? "nhl" : route === "fringe" ? "fringe" : "prospect";
@@ -348,8 +361,10 @@ export function routePlayer(
   else seg = age0 < 24 ? "young_nhl" : age0 < 31 ? "established" : age0 < 34 ? "veteran" : "late";
 
   const effAge = Math.floor(age0 + 0.25) + ageShift(p, g, age0, elite, traj.shift);
-  let phase: Phase =
-    path === "prospect" || (eligNow && share0 < PROSPECT_PHASE_SHARE) ? "prospect" : phaseByAge(p, g, effAge);
+  // a fringe player (no model) reads as a prospect only at a prospect's age: Slapshot's
+  // minors take anyone (verifier 2026-09-28: Belzile, 35, 44 GP, read « Espoir de 35 ans »)
+  const prospectNow = eligNow && share0 < PROSPECT_PHASE_SHARE && (path !== "fringe" || age0 < p.eligibility.age);
+  let phase: Phase = path === "prospect" || prospectNow ? "prospect" : phaseByAge(p, g, effAge);
   // A young skater's phase follows his own expected path, not his age alone
   // (G_3, three seasons after the base, as the growth clause quotes it): an
   // elite teenager whose level is expected to hold is already "in his

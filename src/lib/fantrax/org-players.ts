@@ -65,15 +65,31 @@ export function serializeOrgBios(file: NhlOrgBiosFile): string {
   return `${JSON.stringify(head).slice(0, -1)},"players":{\n${rows.join(",\n")}\n}}\n`;
 }
 
-/** The organisation's players no earlier candidate list has, as match candidates (club normalized). */
+/**
+ * An organisation player as a match candidate. `known`: an earlier candidate
+ * list (profiles, projections) has him, so the first pass already tried his
+ * exact name; only the spelling step (3) may still take him.
+ */
+export type OrgMatchCandidate = NhlMatchCandidate & { known?: true };
+
+/**
+ * The organisation's players as match candidates (club normalized); those an
+ * earlier candidate list has are flagged `known` (verifier 2026-09-28:
+ * dropping them lost Nikita Okhotiuk, a profile player the first pass missed
+ * on a spelling, Fantrax « Okhotyuk », in both leagues).
+ */
 export function orgMatchCandidates(
   players: readonly NhlListedPlayer[],
   known: ReadonlySet<number>,
   teamAlias: (team: string) => string = (t) => t,
-): NhlMatchCandidate[] {
-  return players
-    .filter((p) => !known.has(p.id))
-    .map((p) => ({ id: p.id, name: p.name, team: teamAlias(p.team), groups: new Set([groupOfPosition(p.code)]) }));
+): OrgMatchCandidate[] {
+  return players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    team: teamAlias(p.team),
+    groups: new Set([groupOfPosition(p.code)]),
+    ...(known.has(p.id) ? { known: true as const } : {}),
+  }));
 }
 
 /** "Last, First" (Fantrax) → first and family names. */
@@ -102,13 +118,15 @@ export interface OrgMatchOptions {
  * 2. same name alone: one unclaimed candidate sharing a group, and the name
  *    unique on Fantrax in that group (the whole pool, matched or not);
  * 3. same club, a family name one or two letters away (transliterations:
- *    Silaev / Silayev; five letters or more) and a compatible first name,
- *    one-to-one both ways.
+ *    Silaev / Silayev, Okhotyuk / Okhotiuk; five letters or more) and a
+ *    compatible first name, one-to-one both ways.
+ * Steps 1-2 skip `known` candidates (the first pass tried their exact names
+ * with its own rules); step 3 takes them too while nobody claimed them.
  * A known Fantrax age more than a year off the NHL birth year rejects a pair.
  */
 export function matchFantraxToOrg(
   fantrax: readonly FantraxMatchPlayer[],
-  candidates: readonly NhlMatchCandidate[],
+  candidates: readonly OrgMatchCandidate[],
   first: ReadonlyMap<string, MatchResult>,
   overrides: Readonly<Record<string, number | null>>,
   opts: OrgMatchOptions = {},
@@ -117,6 +135,7 @@ export function matchFantraxToOrg(
   const claimed = new Set([...first.values()].map((m) => m.nhlId));
   const open = fantrax.filter((f) => !first.has(f.fantraxId) && !(f.fantraxId in overrides));
   const cands = candidates.filter((c) => !claimed.has(c.id));
+  const fresh = (c: OrgMatchCandidate) => !c.known;
   const overlaps = (a: ReadonlySet<string>, b: ReadonlySet<string>) => [...a].some((g) => b.has(g));
   const ageOk = (f: FantraxMatchPlayer, c: NhlMatchCandidate) => {
     const age = opts.ageOf?.(f.fantraxId);
@@ -131,18 +150,19 @@ export function matchFantraxToOrg(
     const k = nameKey(fantraxDisplayName(f.name));
     for (const g of f.groups) fxKeyCount.set(`${k}|${g}`, (fxKeyCount.get(`${k}|${g}`) ?? 0) + 1);
   }
-  const byNameTeam = new Map<string, NhlMatchCandidate[]>();
-  const byName = new Map<string, NhlMatchCandidate[]>();
-  const byTeam = new Map<string, NhlMatchCandidate[]>();
+  const byNameTeam = new Map<string, OrgMatchCandidate[]>();
+  const byName = new Map<string, OrgMatchCandidate[]>();
+  const byTeam = new Map<string, OrgMatchCandidate[]>();
   for (const c of cands) {
+    byTeam.set(c.team, [...(byTeam.get(c.team) ?? []), c]);
+    if (!fresh(c)) continue;
     const k = nameKey(c.name);
     byNameTeam.set(`${k}|${c.team}`, [...(byNameTeam.get(`${k}|${c.team}`) ?? []), c]);
     byName.set(k, [...(byName.get(k) ?? []), c]);
-    byTeam.set(c.team, [...(byTeam.get(c.team) ?? []), c]);
   }
   const out = new Map<string, MatchResult>();
   const taken = new Set<number>();
-  const take = (f: FantraxMatchPlayer, c: NhlMatchCandidate, method: MatchResult["method"]) => {
+  const take = (f: FantraxMatchPlayer, c: OrgMatchCandidate, method: MatchResult["method"]) => {
     out.set(f.fantraxId, { nhlId: c.id, method });
     taken.add(c.id);
   };
@@ -166,7 +186,7 @@ export function matchFantraxToOrg(
     take(f, c[0]!, "org-name");
   }
   // 3. spelling, one-to-one within the club
-  const wants = new Map<string, NhlMatchCandidate[]>();
+  const wants = new Map<string, OrgMatchCandidate[]>();
   const wantedBy = new Map<number, string[]>();
   for (const f of open) {
     if (out.has(f.fantraxId)) continue;

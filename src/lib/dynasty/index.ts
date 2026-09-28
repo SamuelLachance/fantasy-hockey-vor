@@ -20,8 +20,8 @@ import { applyMarket, MODEL_FLOOR, type MarketMember, type MarketPool } from "./
 import type { DynastyParams } from "./params";
 import { makeRetention } from "./retention";
 import { replacement } from "./scale";
-import { routePlayer, type Route, type Routed } from "./segment";
-import { mixSimResults, simulatePlayer, type SimContext, type SimResult } from "./simulate";
+import { routePlayer, SKATER_ROLE_GP, type Route, type Routed } from "./segment";
+import { mixSimResults, simulatePlayer, spliceSeason0, type SimContext, type SimPlayer, type SimResult } from "./simulate";
 import type { DynastyBuildInputs, DynastyRecord, DynastySnapshot, KeeperStatus, Mode } from "./types";
 import { MODES } from "./types";
 import {
@@ -120,25 +120,61 @@ export function goalieStarts0(p: DynastyParams, routed: readonly Routed[]): Reco
 /** Blended route: the prospect side plays E[GP | GP < 40] games in 2026-27 at the NHL side's level. */
 export function linkYear0(p: DynastyParams, nhl: Routed, pro: Routed): void {
   if (nhl.sim?.path !== "nhl" || pro.sim?.path !== "prospect" || !pro.blendGp) return;
-  pro.sim.year0 = { theta: nhl.sim.theta0!, sigma: nhl.sim.sigma0!, share: pro.blendGp.below / p.games.projectionBasis };
+  const basis = p.games.projectionBasis;
+  const proj = pro.input.proj!;
+  pro.sim.year0 = {
+    theta: nhl.sim.theta0!,
+    sigma: nhl.sim.sigma0!,
+    share: pro.blendGp.below / basis,
+    games: { mu: proj.gp, sd: proj.gpSd!, lo: 0, hi: SKATER_ROLE_GP, basis },
+  };
 }
 
 /**
- * The blended route's value (segment.ts) from its two simulations: the NHL
- * side's and the prospect side's (whose season 0 is E[GP | GP < 40] games).
- * Monotone in the projected games (verifier 2026-09-27: a player whose NHL
- * route is worth less than his prospect route lost value with every
- * projected game, Sandin Pellikka 9.7 → 3.5 from 5 to 69 GP). Season 0
- * always splits by P(40+ games), each side playing its half of the projected
- * games, so the two sum to the projection (the prospect side's do not
- * advance its minors-eligibility clock: simulate.ts `year0`). From 2027-28
- * the NHL route counts for at least the prospect route (balanced value):
- * below it, the prospect side's later seasons alone.
+ * The blended route's guard side: the prospect route after the NHL side's
+ * 2026-27 (E[GP | GP ≥ 40] games at the projection's level, counted toward
+ * the minors-eligibility clock), i.e. the « 40+ games » scenario read by the
+ * prospect model. Null when the prospect side is not linked.
  */
-export function blendSides(nhlRes: SimResult, proRes: SimResult, nhlShare: number, modes: ModeWeights): SimResult {
+export function guardSide(p: DynastyParams, pro: Routed): SimPlayer | null {
+  const y = pro.sim?.year0;
+  if (pro.sim?.path !== "prospect" || !y || !pro.blendGp) return null;
+  const basis = p.games.projectionBasis;
+  return {
+    ...pro.sim,
+    year0: { ...y, share: pro.blendGp.above / basis, ...(y.games ? { games: { ...y.games, lo: SKATER_ROLE_GP, hi: basis } } : {}) },
+  };
+}
+
+/**
+ * The blended route's value (segment.ts): P(40+ games) of the « 40+ games »
+ * scenario, the rest of the « under 40 » one (the prospect side: E[GP | GP
+ * < 40] games in 2026-27, then the prospect model), one weight for every
+ * season, value, eligibility and keeper share alike.
+ *
+ * Guard (monotone in the projected games, verifier 2026-09-27: Sandin
+ * Pellikka's NHL route was worth less than his prospect route, so every
+ * projected game cost him value): the « 40+ games » scenario's seasons from
+ * 2027-28 are worth at least what the prospect model makes of the same
+ * scenario (`guard`: the prospect route after the NHL side's 2026-27
+ * games, eligibility clock included); below it, the NHL side's 2026-27 and
+ * the guard's later seasons (spliceSeason0). The guard is never the « under
+ * 40 » side (verifier 2026-09-28: it published a player certain to pass
+ * 100 GP as « free » through 2027-28), so a Captains player may still lose
+ * value with more projected games: that is his minors eligibility, a real
+ * cost. Without a guard (a league with no minors rule, whose guard side
+ * would repeat the prospect side's later seasons) the prospect side stands in.
+ */
+export function blendSides(
+  nhlRes: SimResult,
+  proRes: SimResult,
+  nhlShare: number,
+  modes: ModeWeights,
+  guard: SimResult = proRes,
+): SimResult {
   const later = (v: PlayerValue) => v.dv.balanced - modeWeight(modes.balanced, 0) * v.eG[0]!;
-  const nhlBelow = later(summarize(nhlRes, modes)) < later(summarize(proRes, modes));
-  return mixSimResults(nhlRes, proRes, nhlShare, nhlBelow ? 0 : nhlShare);
+  const above = later(summarize(nhlRes, modes)) < later(summarize(guard, modes)) ? spliceSeason0(nhlRes, guard) : nhlRes;
+  return mixSimResults(above, proRes, nhlShare);
 }
 
 export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts: BuildOptions = {}): BuildResult {
@@ -204,7 +240,10 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
     if (res && alt?.sim) {
       const altRes = simulatePlayer(alt.sim, ctx);
       const [nhlRes, proRes] = r.route === "nhl" ? [res, altRes] : [altRes, res];
-      res = blendSides(nhlRes, proRes, r.nhlShare!, modes);
+      const pro = r.route === "nhl" ? alt : r;
+      // the guard side differs from the prospect side only through the minors clock
+      const g = pro.sim!.lg?.noEligibility ? null : guardSide(p, pro);
+      res = blendSides(nhlRes, proRes, r.nhlShare!, modes, g ? simulatePlayer(g, ctx) : proRes);
     }
     const v = res ? summarize(res, modes) : null;
     if (res?.ki1 && res.eligAt[1]! < 1) ki27.set(r.input.id, res.ki1);

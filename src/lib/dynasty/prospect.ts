@@ -72,18 +72,34 @@ export function interpPairs(pairs: ReadonlyArray<readonly [number, number]>, x: 
 }
 
 /**
+ * The draft-slot model's P(make it) for pick `pick` of the draft an
+ * undrafted player of `age0` (Oct 1 of `season`) went through unpicked: the
+ * one in the year he turned 18, so as many completed post-draft seasons
+ * (no-arrival decay) as a drafted player of his age.
+ */
+export function lateSlotPMake(p: DynastyParams, g: Group, age0: number, pick: number, season = p.firstSeasonYear): number {
+  const draftYear = season - Math.max(0, Math.floor(age0) - 18);
+  return slotProspect(p, g, { year: draftYear, pick }, season).pMake;
+}
+
+/**
  * Undrafted fallback (params.prospect.undrafted, fitted on the repo's
  * history by scripts/fit-undrafted-prospects.ts): an undrafted player with
- * no research record and no NHL role, in an NHL organisation. P(make it) by
- * his age on Oct 1 (a 22-year-old signing is worth more than a 26-year-old
- * one, as the no-arrival decay does for draft picks), the prime FP/G of the
+ * no research record and no NHL role, in an NHL organisation, under 20 NHL
+ * games (segment.ts). P(make it) by his age on Oct 1 (a 22-year-old signing
+ * is worth more than a 26-year-old one, as the no-arrival decay does for
+ * draft picks), never above the draft-slot model's for a late-round pick
+ * (`capPick`) of his age (verifier 2026-09-28: the fitted odds, 0.15-0.34
+ * at 20-26, put undrafted AHL players above real 2nd-round picks of their
+ * age, 0.03-0.06, and inside Slapshot's roster line); the prime FP/G of the
  * undrafted skaters who made it, and his first regular season after the
  * median lag at his age. Null without the params block.
  */
 export function undraftedProspect(p: DynastyParams, g: Group, age0: number, season = p.firstSeasonYear): ProspectModel | null {
   const u = p.prospect.undrafted;
   if (!u) return null;
-  const pMake = Math.max(0, Math.min(1, interpPairs(u.pMake[g], age0)));
+  let pMake = Math.max(0, Math.min(1, interpPairs(u.pMake[g], age0)));
+  if (u.capPick != null) pMake = Math.min(pMake, lateSlotPMake(p, g, age0, u.capPick, season));
   const lag = Math.max(0, Math.round(interpPairs(u.etaLag, age0)));
   const pi = g === "G" ? { ...p.prospect.slotPrime.G } : { ...u.prime[g] };
   return { pMake, pi, eta: season + lag };

@@ -38,7 +38,7 @@ import {
   type SlapshotProfile,
   type SlapshotRecord,
 } from "../src/lib/dynasty/slapshot";
-import { knownContract, parseSigned } from "./dynasty-slapshot";
+import { knownContract, parseSigned, slapshotProspectNow } from "./dynasty-slapshot";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -294,6 +294,15 @@ const lgOf = (capCost: number[], over: Partial<SimLeague> = {}): SimLeague => ({
   got.forEach((x, i) => assert(x === golden[i], `league-1 simulation unchanged for golden player ${i + 1}`));
 }
 
+// ---------------------------------------------------------------- « minors-eligible » here: a prospect by games
+{
+  const pp = params;
+  assert(slapshotProspectNow(pp, { e: "W,F,Skt", careerGp: 0 }) && slapshotProspectNow(pp, { e: "D,Skt", careerGp: 90, seasonGp: 9 }), "no projection, under 100 NHL GP: a prospect, any age");
+  assert(!slapshotProspectNow(pp, { e: "D,Skt", careerGp: 778 }) && !slapshotProspectNow(pp, { e: "W,F,Skt", careerGp: 95, seasonGp: 5 }), "100+ GP (Krug 778): not a prospect (verifier 2026-09-28: « Espoir de 35 ans »)");
+  assert(slapshotProspectNow(pp, { e: "G", careerGp: 54 }) && !slapshotProspectNow(pp, { e: "G", careerGp: 55 }), "goalies: 55 GP");
+  assert(slapshotProspectNow(pp, { e: "", posHint: "G", careerGp: null }), "unknown games: a prospect");
+}
+
 // ---------------------------------------------------------------- sentence
 {
   const rec = {
@@ -368,6 +377,11 @@ const lgOf = (capCost: number[], over: Partial<SimLeague> = {}): SimLeague => ({
         !r.explanation,
     );
     assert(bad.length === 0, `${bad.length} malformed records (${bad.slice(0, 3).map((r) => r.n).join(", ")})`);
+    // veterans without a projection are never prospects (verifier 2026-09-28: Couture 933 GP, Krug 778)
+    const vets = P.filter((r) => ((r.path === "prospect" || r.phase === "prospect") && r.gp >= 100) || (r.path === "fringe" && r.phase === "prospect" && r.age >= 25));
+    assert(vets.length === 0, `${vets.length} players with 100+ NHL GP valued or described as prospects (${vets.slice(0, 3).map((r) => r.n).join(", ")})`);
+    const und = P.filter((r) => r.flags?.includes("undrafted") && r.gp >= 20);
+    assert(und.length === 0, `${und.length} undrafted-route players with 20+ NHL GP (${und.slice(0, 3).map((r) => r.n).join(", ")})`);
     for (const m of ["winNow", "balanced", "longTerm"] as const) {
       const ranks = P.map((r) => r.rank[m]).sort((a, b) => a - b);
       assert(new Set(ranks).size === ranks.length, `unique ${m} ranks`);

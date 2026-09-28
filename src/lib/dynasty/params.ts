@@ -105,6 +105,13 @@ export interface DynastyParams {
       pMake: Record<Group, Array<[number, number]>>;
       etaLag: Array<[number, number]>;
       prime: Record<"F" | "D", { mu: number; sd: number }>;
+      /** The route's population: fewer NHL games than this (default 20). */
+      maxGp?: number;
+      /**
+       * Ceiling: P(make it) never above the draft-slot model's for this pick
+       * with as many seasons since his draft year (prospect.ts).
+       */
+      capPick?: number;
     };
   };
   /**

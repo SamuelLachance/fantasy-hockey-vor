@@ -18,6 +18,7 @@ import { seatNeeds, wingSentence, type SeatNeedsResult, type WingNeed } from "..
 import { bestAvailable, draftBoardView, draftSeatNeeds, myDraftPlayers, stashCandidates, type MyDraftPlayer } from "../src/lib/fantrax/slapshot-draft";
 import type { FantraxRow } from "../src/lib/fantrax/table";
 import type { DynastyRecord } from "../src/lib/dynasty/types";
+import { pageTeam } from "./build-slapshot-draft-page";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -383,6 +384,15 @@ const contracts: ContractsFile = {
     assert(!!any?.contract && Array.isArray(any.contract.cap) && !!any.explanation, "records carry the contract and the sentence");
     assert(any?.elig.now === false, "no minors eligibility in a league without a cutdown");
   }
+}
+
+// ---- the stand-alone page's club column (verifier 2026-09-28: organisation players read blank)
+{
+  assert(pageTeam("", { team: "TOR", list: "roster" }) === "TOR", "no Fantrax club: the NHL list's (Groulx)");
+  assert(pageTeam("(N/A)", { team: "PIT", list: "org" }) === "PIT", "(N/A): even the search index's club");
+  assert(pageTeam("CAR", { team: "WPG", list: "roster" }) === "WPG", "a club's own roster beats a stale Fantrax club (Thrun)");
+  assert(pageTeam("TBL", { team: "EDM", list: "org" }) === "TBL", "the search index alone never overrides Fantrax");
+  assert(pageTeam("MTL", undefined) === "MTL" && pageTeam("", undefined) === "", "no NHL entry: Fantrax's club, or none");
 }
 
 if (failed) process.exit(1);

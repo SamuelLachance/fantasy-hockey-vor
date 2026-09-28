@@ -14,8 +14,11 @@
  * prospect down.) Fringe players (no model) are placed on the prospect
  * ladder of their kind (skater or goalie), and so are undrafted prospects
  * (segment.ts: a flat prior by age; weight 1 like fringe, so an undrafted
- * signing the crowd rosters keeps the market's price, one it does not gets
- * the prior instead of 0).
+ * signing the crowd rosters keeps the market's price). An undrafted
+ * prospect's Ros% of 0 is a price too, the ladder's last (verifier
+ * 2026-09-28: read as « no signal », it left undrafted 20-year-old goalies
+ * nobody rosters on the prior, long-term #341); it only ever lowers his
+ * value. Without a Ros% at all (Slapshot: fxpa is closed) he keeps the prior.
  *
  * Blend in u = ln(DV + 10): u_post = u_M + w·(u_K − u_M), the move capped at
  * ×/÷2.5 when w < 0.5. One posterior factor (the balanced one) scales every
@@ -76,12 +79,17 @@ const MISSING_KEY = 300;
 type Signal = "ros" | "adp";
 
 /** Pool-wide signal (information: market rank and gap). */
-export function hasSignal(p: DynastyParams, m: Pick<MarketMember, "pool" | "ros" | "adp">): boolean {
+export function hasSignal(p: DynastyParams, m: Pick<MarketMember, "pool" | "ros" | "adp"> & { seg?: MarketSeg }): boolean {
   return has(p, m, m.pool === "P" ? "ros" : "adp");
 }
 
-function has(p: DynastyParams, m: Pick<MarketMember, "ros" | "adp">, s: Signal): boolean {
-  return s === "ros" ? m.ros != null && m.ros > 0 : m.adp != null && m.adp < p.market.adpMissing;
+/** An undrafted-route prospect nobody rosters: Ros% 0 is the crowd's price, not a missing one. */
+function zeroPrice(m: Pick<MarketMember, "ros"> & { seg?: MarketSeg }): boolean {
+  return m.seg === "prospect_undrafted" && m.ros === 0;
+}
+
+function has(p: DynastyParams, m: Pick<MarketMember, "ros" | "adp"> & { seg?: MarketSeg }, s: Signal): boolean {
+  return s === "ros" ? m.ros != null && (m.ros > 0 || zeroPrice(m)) : m.adp != null && m.adp < p.market.adpMissing;
 }
 
 /** Smaller is better: Ros% descending with ADP as the tie-break, or ADP ascending. */
@@ -227,6 +235,8 @@ export function applyMarket(
     } else {
       for (const mode of MODES) o.dv[mode] = blend(p, m.dvModel[mode], ladder.dv[mode][at]!, w);
     }
+    // a zero price only lowers: the ladder's last anchor may sit above a tiny prior
+    if (zeroPrice(m)) for (const mode of MODES) o.dv[mode] = Math.min(o.dv[mode], m.dvModel[mode]);
     o.moved = MODES.some((mode) => Math.abs(o.dv[mode] - m.dvModel[mode]) > 1e-9);
   }
   return out;

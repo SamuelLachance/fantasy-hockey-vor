@@ -9,8 +9,8 @@
     { "fantraxId": "06hrl", "name": "Mooney, L.J.", "nhlId": 8485598, "note": "NHL lists him as John Mooney (not in the repo pool; prior)" },
     { "fantraxId": "02nq8", "name": "Murray, Matt", "nhlId": 8476899, "note": "Clubless veteran (ex-SEA); Fantrax also has the NSH Matthew Murray" },
     { "fantraxId": "05rin", "name": "Hughes, Jack", "nhlId": 8483456, "note": "LAK prospect, never the NJD star 8481559" },
-    { "fantraxId": "06hcp", "name": "Silayev, Anton", "nhlId": null, "note": "No NHL id found" },
-    { "fantraxId": "05tpw", "name": "Vyazovoy, Semyon", "nhlId": null, "note": "No NHL id found" },
+    { "fantraxId": "06hcp", "name": "Silayev, Anton", "nhlId": 8484987, "note": "NHL lists him as Anton Silaev (NJD 2024 #10; was null before the NHL lists were in the repo)" },
+    { "fantraxId": "05tpw", "name": "Vyazovoy, Semyon", "nhlId": 8482884, "note": "NHL lists him as Semyon Vyazovoi (SEA 2021 #163; was null before the NHL lists were in the repo)" },
     { "fantraxId": "06r6e", "name": "Huovila, Santeri", "nhlId": null, "note": "No NHL id found" }
   ]
 }

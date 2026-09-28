@@ -20,6 +20,7 @@ import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { makeLevel } from "../src/lib/dynasty/aging";
 import { buildDynasty, DEFAULT_PATHS, type BuildResult, type DynastyRecord, type Group, type Mode } from "../src/lib/dynasty/index";
+import type { DynastyParams } from "../src/lib/dynasty/params";
 import { projectedX } from "../src/lib/dynasty/scale";
 import type { Routed } from "../src/lib/dynasty/segment";
 import {
@@ -241,6 +242,20 @@ export interface SlapshotBuild {
   ms: number;
 }
 
+/**
+ * « Minors-eligible now » in Slapshot, for a player without a projection:
+ * under Captains' NHL GP limits (100, goalies 55), career plus this season
+ * (unknown career games: 0). Any age: Slapshot's minors have no age rule.
+ */
+export function slapshotProspectNow(
+  p: DynastyParams,
+  x: { e: string; posHint?: Group; careerGp: number | null; seasonGp?: number },
+): boolean {
+  const goalie = /(^|,)G(,|$)/.test(x.e) || (!x.e && x.posHint === "G");
+  const gp = (x.careerGp ?? 0) + Math.max(0, x.seasonGp ?? 0);
+  return gp < (goalie ? p.eligibility.goalieGp : p.eligibility.skaterGp);
+}
+
 export function runSlapshotBuild(
   opts: {
     paths?: number;
@@ -268,14 +283,18 @@ export function runSlapshotBuild(
   const base = assembleDynastyInputs(L);
   const rosteredIds = new Set(Object.values(pool.rosters).flat());
   const leaguePick = new Map(pool.picks.map(([pick, , id]) => [id, pick]));
-  // Slapshot's 17 minors spots take any player: whoever has no projection is
-  // minors-eligible here, whatever Captains' rule says (slot / undrafted route).
+  // Slapshot's 17 minors spots take any player, so « minors-eligible » here
+  // reads as « a prospect »: no projection and under Captains' GP limits
+  // (100 NHL games, 55 for goalies), whatever the age (slot / undrafted
+  // route, prospect ladder). Verifier 2026-09-28: every player without a
+  // projection was eligible, and veterans without one (long-term injured,
+  // unsigned) read « Espoir de 37 ans » (Couture 933 GP, Krug 778).
   const universe = base.players.map((x) => {
     const { leaguePick: _lp, ...rest } = x;
     void _lp;
     return {
       ...rest,
-      ...(x.proj?.src === "proj" ? {} : { eligNow: true }),
+      ...(x.proj?.src === "proj" ? {} : { eligNow: slapshotProspectNow(p, x) }),
       rostered: rosteredIds.has(x.id),
       ...(leaguePick.has(x.id) ? { leaguePick: leaguePick.get(x.id)! } : {}),
     };
@@ -296,7 +315,7 @@ export function runSlapshotBuild(
         cfg: SLAPSHOT,
         profiles,
         org: L.org,
-        eligNow: () => true,
+        eligNow: (_r, x) => slapshotProspectNow(p, x),
         rostered: (id) => rosteredIds.has(id),
         leaguePick: (id) => leaguePick.get(id),
         eligiblePos: (id) => pool.pos[id],

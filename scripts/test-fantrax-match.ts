@@ -124,6 +124,8 @@ assert(new Set(claimed).size === claimed.length, "no NHL id claimed twice");
     fx("f", "Smith, John", "(N/A)"),
     fx("g", "Keyser, Kyle", "ANA", "G"),
     fx("h", "Blocked, Guy", "TOR"),
+    fx("i", "Okhotyuk, Nikita", "CGY", "D,Skt"),
+    fx("j", "Known, Karl", "EDM"),
   ];
   const first = new Map([["a", { nhlId: 8480018, method: "name-team" as const }]]);
   const org = orgMatchCandidates(
@@ -135,10 +137,15 @@ assert(new Set(claimed).size === claimed.length, "no NHL id claimed twice");
       listed(8481000, "John Smith", "CHI"),
       listed(8478000, "Kyle Keyser", "ANA", "G"),
       listed(8486000, "Guy Blocked", "TOR"),
+      listed(8481537, "Nikita Okhotiuk", "CGY", "D"),
+      listed(8487000, "Karl Known", "VAN"),
     ],
-    new Set([8480018]),
+    new Set([8480018, 8481537, 8487000]),
   );
-  assert(org.length === 6 && !org.some((c) => c.id === 8480018), "candidates: the organisation's players no earlier list has");
+  assert(
+    org.length === 9 && org.filter((c) => c.known).map((c) => c.id).join() === "8480018,8481537,8487000",
+    "candidates: every organisation player, those an earlier list has flagged known",
+  );
   const om = matchFantraxToOrg(fantrax, org, first, { h: null }, { ageOf: (id) => (id === "g" ? 40 : undefined), birthYearOf: (id) => (id === 8478000 ? 1998 : undefined), year: 2026 });
   assert(om.get("b")?.nhlId === 8482000 && om.get("b")?.method === "org-name-team", "Gordin by name + club");
   assert(om.get("c")?.nhlId === 8484000 && om.get("c")?.method === "org-spelling", "Silaev = Silayev (same club, one edit)");
@@ -147,6 +154,9 @@ assert(new Set(claimed).size === claimed.length, "no NHL id claimed twice");
   assert(!om.has("g"), "a Fantrax age 12 years off the birth year rejects the pair");
   assert(!om.has("h"), "an override to null stays unmatched");
   assert(!om.has("a"), "first-pass matches are left alone");
+  // verifier 2026-09-28: a profile player the first pass missed on a spelling was lost in both leagues
+  assert(om.get("i")?.nhlId === 8481537 && om.get("i")?.method === "org-spelling", "Okhotyuk = Okhotiuk: a known candidate nobody claimed, by spelling");
+  assert(!om.has("j"), "a known candidate is never taken by name alone (the first pass had that call), only by spelling within his club");
 }
 
 if (failed) process.exit(1);

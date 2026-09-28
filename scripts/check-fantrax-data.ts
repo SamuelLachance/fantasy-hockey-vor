@@ -386,14 +386,23 @@ if (nhlIds) {
 // id of nhl-rosters.json) is in the explorer pool, or named in its
 // orgSkipped (Fantrax gives him no position here yet): the pool's
 // organisation rule (investigation 2026-09-27: the draftable universe).
-const nhlRosters = load<{ players: Array<{ id: number }> }>(P.nhlRosters);
+// Fatal only when the pool was built from these lists or newer ones: an
+// nhl-rosters.json refreshed after the last sync (the daily workflow
+// refreshes it after both syncs; a hand-run `npm run nhl:rosters` commit)
+// can list players the pool never saw, e.g. a veteran signed off the street,
+// and only warns until the league is re-synced (verifier 2026-09-28: it
+// stopped both deploy workflows).
+const nhlRosters = load<{ fetchedAt?: string; players: Array<{ id: number }> }>(P.nhlRosters);
 if (nhlIds && pool && nhlRosters) {
   const org = new Set(nhlRosters.players.map((p) => p.id));
   const inPool = new Set(pool.players.map((p) => p.id));
   const skipped = new Set(pool.orgSkipped ?? []);
   const missing = Object.entries(nhlIds.ids).filter(([fid, id]) => org.has(id) && !inPool.has(fid) && !skipped.has(fid));
   if (missing.length > 0) {
-    errors.push(`${missing.length} NHL-organisation players missing from pool.json (e.g. ${missing.slice(0, 5).map(([fid, id]) => `${fid} → ${id}`).join(", ")})`);
+    const listsNewer = Date.parse(nhlRosters.fetchedAt ?? "") > Date.parse(pool.fetchedAt);
+    const msg = `${missing.length} NHL-organisation players missing from pool.json (e.g. ${missing.slice(0, 5).map(([fid, id]) => `${fid} → ${id}`).join(", ")})`;
+    if (listsNewer) warnings.push(`${msg}: nhl-rosters.json (${nhlRosters.fetchedAt}) is newer than the pool (${pool.fetchedAt}), re-sync the league`);
+    else errors.push(msg);
   }
 }
 

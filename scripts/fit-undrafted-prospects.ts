@@ -6,18 +6,26 @@
  *
  * P(make it | undrafted, age a, < 20 NHL GP) — make it = 200 NHL GP for a
  * skater, one 40-game season for a goalie (the research's pMake) — as a
- * steady-state ratio of two counts:
+ * steady-state ratio of two counts over the same population, undrafted
+ * players on an NHL club's books at age a:
  *  - M_a: undrafted players per birth cohort (1985-1996: all past 30, so
  *    their careers are known) who made it, had fewer than 20 NHL games
- *    before the season they played at age a, and were in an organisation by
- *    then (a North American pro season: NHL, AHL or ECHL, that season or
- *    earlier; an undrafted college or junior player is in nobody's system)
+ *    before the season they played at age a, and played NHL games that
+ *    season: the only sign of an NHL contract the history carries
  *    (src/data/league-seasons.json: every NHL player since 2005-06, from
- *    the NHL landings);
+ *    the NHL landings). Verifier 2026-09-28: counting every player with a
+ *    North American pro season by then (AHL and ECHL deals included) and an
+ *    NHL game up to 2 seasons later put more players in M_a than the
+ *    population U_a counts (age 21 F: 1.83 per cohort for 2 today), and the
+ *    odds came out at 0.19-0.34. This M_a misses the players on an NHL deal
+ *    at age a who first played a season or two later: a lower bound;
  *  - U_a: undrafted players of age a in NHL organisations today with fewer
  *    than 20 NHL games (src/data/nhl-rosters.json, their draft status from
  *    the profiles, league-seasons.json and nhl-org-bios.json), scaled by
  *    the league's size then (30.5 clubs) over now (32).
+ * Either way the route caps the odds at the draft-slot model's for a
+ * late-round pick of his age (`capPick`, prospect.ts): an undrafted player
+ * is never worth more than a drafted one who has not arrived either.
  * The age curve is pooled over skaters (F and D share its shape; their level
  * is each group's own pooled ratio) and made non-increasing with age; goalies
  * are too few for a curve and take their pooled ratio times the skater shape.
@@ -35,6 +43,7 @@ import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { seasonFpgLeague } from "../src/lib/dynasty/growth";
 import { parseParams } from "../src/lib/dynasty/params";
+import { interpPairs, lateSlotPMake } from "../src/lib/dynasty/prospect";
 import type { NhlOrgBiosFile } from "../src/lib/fantrax/org-players";
 import type { LeagueSeasonsCache } from "../src/lib/league-seasons";
 import type { NhlRostersFile } from "../src/lib/nhl-rosters";
@@ -57,14 +66,11 @@ const BANDS = [
   [27, 28, 29, 30],
 ];
 const MAX_GP = 20;
-/** North American pro leagues: a season there means a contract in an organisation. */
-const PRO = new Set(["NHL", "AHL", "ECHL"]);
 /**
- * On an NHL contract at age a (what puts him on today's lists): an undrafted
- * player's first NHL game came at most this many seasons later (an entry
- * deal is 2-3 seasons; an AHL contract is not an NHL one).
+ * The ceiling's draft slot: the last pick of round 5, the middle of the late
+ * rounds (4-7) of a 32-club draft.
  */
-const LEAD = Number(process.env.LEAD ?? 2);
+const CAP_PICK = 160;
 const CLUBS_THEN = 30.5;
 const CLUBS_NOW = 32;
 const NOW = 2026;
@@ -100,12 +106,11 @@ for (const p of Object.values(seasons)) {
   if (!didMake) continue;
   madeTotal[g]++;
   const arrival = years.find((y) => nhl.get(y)! >= 40) ?? years[years.length - 1]!;
-  // in an organisation by then: a North American pro season (NHL, AHL, ECHL)
-  const proFrom = Math.min(...p.seasons.filter((l) => PRO.has(l[1])).map((l) => Math.floor(l[0] / 10000)));
   for (const a of AGES) {
     // the season he plays at age a starts in the year where ageOn(...) = a
     const y = by + a + (p.birth.slice(5) > "10-01" ? 1 : 0);
-    if (!(proFrom <= y) || years[0]! - y > LEAD) continue;
+    // on an NHL deal at age a: NHL games that season
+    if (!nhl.has(y)) continue;
     const before = years.filter((s) => s < y).reduce((s, x) => s + nhl.get(x)!, 0);
     if (before >= MAX_GP) continue;
     made[g].set(a, (made[g].get(a) ?? 0) + 1);
@@ -234,12 +239,21 @@ const pd = stats(prime.D);
 console.log(`prime FP/G (seasons at 24-27, 40+ GP, undrafted with 200+ GP in the current profiles): F ${JSON.stringify(pf)} D ${JSON.stringify(pd)}; params undraftedPrior F ${params.prospect.undraftedPrior.F} D ${params.prospect.undraftedPrior.D}`);
 
 const block = {
-  source: `scripts/fit-undrafted-prospects.ts (${new Date().toISOString().slice(0, 10)}): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < ${MAX_GP} NHL GP) = M_a / U_a, M_a = undrafted players per birth cohort ${COHORTS.join("-")} who made it with < ${MAX_GP} NHL GP before their age-a season, on an NHL deal by then (a North American pro season that season or earlier, first NHL game at most ${LEAD} seasons later) (league-seasons.json: F ${madeTotal.F}, D ${madeTotal.D}, G ${madeTotal.G} made it), U_a = today's undrafted organisation players of age a with < ${MAX_GP} NHL GP (nhl-rosters.json × ${CLUBS_THEN}/${CLUBS_NOW} clubs); ages pooled in bands 18-19, 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one skater shape non-increasing from 20 on (weighted PAVA; 18-19, still draft-eligible, stand apart), each group's level its pooled ratio. Ages outside the table take its end values. eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n ${pf.n} mean ${pf.mean} sd ${pf.sd}; D n ${pd.n} mean ${pd.mean} sd ${pd.sd}), goalies the slot prior.`,
+  source: `scripts/fit-undrafted-prospects.ts (${new Date().toISOString().slice(0, 10)}): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < ${MAX_GP} NHL GP, on an NHL club's books) = M_a / U_a over that one population, M_a = undrafted players per birth cohort ${COHORTS.join("-")} who made it with < ${MAX_GP} NHL GP before their age-a season and NHL games in it (on an NHL deal then: a lower bound, it misses those who first played later) (league-seasons.json: F ${madeTotal.F}, D ${madeTotal.D}, G ${madeTotal.G} made it), U_a = today's undrafted organisation players of age a with < ${MAX_GP} NHL GP (nhl-rosters.json × ${CLUBS_THEN}/${CLUBS_NOW} clubs); ages pooled in bands 18-19, 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one skater shape non-increasing from 20 on (weighted PAVA; 18-19, still draft-eligible, stand apart), each group's level its pooled ratio. Ages outside the table take its end values. The route (segment.ts) takes organisation players under maxGp NHL GP only, and caps these odds at the draft-slot model's for pick capPick (the last of round 5, mid late rounds) with as many post-draft seasons as his age (prospect.ts lateSlotPMake): an undrafted player never outranks a drafted one of his age who has not arrived either (verifier 2026-09-28). eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n ${pf.n} mean ${pf.mean} sd ${pf.sd}; D n ${pd.n} mean ${pd.mean} sd ${pd.sd}), goalies the slot prior.`,
   pMake: { F: curve("F"), D: curve("D"), G: curve("G") },
   etaLag: lagCurve,
   prime: { F: { mu: pf.mean, sd: pf.sd }, D: { mu: pd.mean, sd: pd.sd } },
+  maxGp: MAX_GP,
+  capPick: CAP_PICK,
 };
 console.log(JSON.stringify(block, null, 1));
+console.log("age | fitted F D G | late-slot cap F D G | used F D G");
+for (const a of [18.5, 19.5, 20.5, 21.5, 22.5, 23.5, 24.5, 26.5, 28.5]) {
+  const f = (g: G3) => interpPairs(block.pMake[g], a);
+  const c = (g: G3) => lateSlotPMake(params, g, a, CAP_PICK, NOW);
+  const row = (fn: (g: G3) => number) => (["F", "D", "G"] as const).map((g) => fn(g).toFixed(3)).join(" ");
+  console.log(`${a} | ${row(f)} | ${row(c)} | ${row((g) => Math.min(f(g), c(g)))}`);
+}
 if (process.argv.includes("--write")) {
   const prospect = rawParams.prospect as Record<string, unknown>;
   prospect.undrafted = block;
