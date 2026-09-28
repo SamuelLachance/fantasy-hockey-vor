@@ -28,6 +28,7 @@ import { fxeaGet } from "../src/lib/fantrax/client";
 import { SYNC_USER_AGENT } from "../src/lib/fantrax/config";
 import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
 import { buildDailyPlan, type DailyPlan, type PlanAlert, type PlanLineup, type TeamGame } from "../src/lib/fantrax/daily-plan";
+import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
 import { liveOverlay, withLiveOverlay } from "../src/lib/fantrax/live";
 import { dynastyBoard, dynastyDropProtection } from "../src/lib/dynasty/board";
 import { explainFr, KEEPER_FR, KEEPER_TEAM_FR, keeperView, MODE_FR, PHASE_FR, rosterHintFr } from "../src/lib/dynasty/explain";
@@ -600,7 +601,7 @@ function printLineup(
   if (args.includes("--live")) await refreshLive(input);
   // The board's value model, same as the sync's and the browser's.
   const vor = leagueVor(CFG, input.values.players, (id) => seasonFp(input.values.players[id]!, CFG), input.league.slotCounts);
-  const plan = buildDailyPlan({ ...input, config: CFG, vor });
+  const plan = buildDailyPlan({ ...input, config: CFG, vor, kit: PLAN_KIT });
   print(plan, input);
 })().catch((e) => {
   console.error(`FAIL: league:report — ${e instanceof Error ? e.message : String(e)}`);

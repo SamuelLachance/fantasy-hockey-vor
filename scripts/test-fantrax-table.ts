@@ -54,6 +54,7 @@ import {
   type PresetId,
 } from "../src/lib/fantrax/table";
 import { columnCopy, dynastyDraftNote, fantraxTableNote, iconTags, nhlDraftLabel, statusCopy, takenTag, trendCell } from "../src/lib/fantrax/table-copy";
+import { CAP_LEAGUE_COPY } from "../src/lib/fantrax/cap-league-copy";
 import { parseDynasty, type DynastyIndex } from "../src/lib/fantrax/dynasty-index";
 import { lookupExtra, mergeSnakeIndex, parseSnakeIndex } from "../src/lib/fantrax/extras";
 import { counterText, fmtInt, resultsText, sortButtonLabel } from "../src/lib/player-table/copy";
@@ -765,9 +766,12 @@ eq(presets.map((p) => p.id), ["tous", "repechage", "dynastie", "espoirs", "auton
   eq(presetOf(SLAPSHOT_CAPS, "repechage").sort, { key: "vona", dir: "desc" }, "a live VOR draft opens on VONA");
   eq(presetOf({ ...SLAPSHOT_CAPS, draft: false }, "repechage").sort.key, "valeur", "no draft, no VONA: back to « Valeur »");
   eq(columnCopy("valeur", { nextPick: null }).label, "Valeur saison", "raw season points by default");
-  eq(columnCopy("valeur", { nextPick: null, vor: true }).label, "Valeur (VOR)", "points over replacement where modelled");
+  // The VOR league's pack names its « Valeur » (the table's ctx carries `column`).
+  const vorCtx = { nextPick: null, vor: true, column: CAP_LEAGUE_COPY.column };
+  eq(columnCopy("valeur", vorCtx).label, "Valeur (VOR)", "points over replacement where modelled");
+  eq(columnCopy("sal", { ...vorCtx, capSeason: 2026 }).label, "Salaire 26-27", "the pack names the salary columns by season");
   assert(
-    columnCopy("valeur", { nextPick: null, vor: true }).title.includes("au-dessus du remplacement"),
+    columnCopy("valeur", vorCtx).title.includes("au-dessus du remplacement"),
     "and the header says what it is",
   );
 }

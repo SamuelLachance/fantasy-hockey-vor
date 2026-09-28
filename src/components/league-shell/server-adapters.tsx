@@ -17,8 +17,11 @@ import { fantraxBaked, fantraxHasDynasty } from "@/lib/fantrax/baked";
 import { FORMAT_LABEL, TAB_META, type LeagueEntry, type LeagueKind, type LeagueTab } from "@/lib/leagues/registry";
 import { snakeFantraxSeed } from "@/lib/snake/league-seed";
 import type { SnakeSummaryFile } from "@/lib/snake/types";
-import { categoryBoard, categorySnakeSeed } from "./category-board";
+import { fmtInt } from "@/lib/player-table/copy";
+import { categoryBoard, categoryPoolCounts, categorySnakeSeed } from "./category-board";
+import { needsLeaguePack } from "@/lib/fantrax/league-pack";
 import {
+  CapLeagueShellPart,
   CategoryDraftPart,
   CategoryPlayersPart,
   CategoryTeamPart,
@@ -66,8 +69,11 @@ function FantraxShell({ entry, children }: { entry: LeagueEntry; children: React
     .map((t) => ({ id: t.id, name: t.name }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr-CA"));
   const defaultTeamId = teams.some((t) => t.id === entry.myTeamId) ? entry.myTeamId : baked.today.teamId;
+  // A league whose rules or words live in the cap-league pack gets the shell
+  // that carries it (its own chunk); the others never load it.
+  const Shell = needsLeaguePack(fantraxLeague(entry.slug)) ? CapLeagueShellPart : FantraxShellPart;
   return (
-    <FantraxShellPart
+    <Shell
       slug={entry.slug}
       initialPlan={baked.today}
       teams={teams}
@@ -78,7 +84,7 @@ function FantraxShell({ entry, children }: { entry: LeagueEntry; children: React
       hasDynasty={fantraxHasDynasty(entry.slug)}
     >
       {children}
-    </FantraxShellPart>
+    </Shell>
   );
 }
 
@@ -164,6 +170,8 @@ function CategoryTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
       return (
         <CategoryPlayersTab
           board={categoryBoard(entry)}
+          slug={entry.slug}
+          counts={categoryPoolCounts(entry)}
           table={<CategoryPlayersPart board={categoryBoard(entry)} seed={categorySnakeSeed(entry)} />}
         />
       );
@@ -176,10 +184,13 @@ function CategoryTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
   }
 }
 
-/** Joueurs lists the draft board, not every player: say how deep it goes. */
+/** Joueurs lists every player (the board, then the fetched pool): say how many. */
 function categoryLead(entry: LeagueEntry, tab: LeagueTab): string {
   if (tab === "joueurs") {
-    return `Les ${categoryBoard(entry).players.length} premiers joueurs de la liste du repêchage, valorisés pour les catégories de cette ligue : filtres, tris, colonnes.`;
+    const c = categoryPoolCounts(entry);
+    return `Les ${fmtInt(c.projected)} joueurs projetés, valorisés pour les catégories de cette ligue${
+      c.unprojected > 0 ? `, puis ${fmtInt(c.unprojected)} joueurs rattachés à une équipe de la LNH, sans projection (effectifs, espoirs, club-école, junior, Europe)` : ""
+    } : filtres, tris, colonnes.`;
   }
   return TAB_META[tab].description;
 }

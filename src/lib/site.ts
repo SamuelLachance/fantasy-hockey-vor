@@ -30,7 +30,15 @@ export function withBasePath(suffix: string): string {
  * `src/lib/fantrax/config.ts`.
  */
 export function fantraxDataHref(file: string): string {
-  const path = withBasePath(`/fantrax/${file}`);
+  return withBuildVersion(withBasePath(`/fantrax/${file}`));
+}
+
+/** A categories league's file under `public/leagues/<slug>/` (basePath + the same cache buster). */
+export function leagueDataHref(slug: string, file: string): string {
+  return withBuildVersion(withBasePath(`/leagues/${slug}/${file}`));
+}
+
+function withBuildVersion(path: string): string {
   const v = process.env.NEXT_PUBLIC_BUILD_TIME?.trim();
   if (!v) return path;
   return `${path}?v=${encodeURIComponent(v)}`;

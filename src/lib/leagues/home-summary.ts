@@ -6,6 +6,7 @@
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import type { TeamDynastySummary } from "@/lib/fantrax/dynasty-hints";
 import { salaryLine } from "@/lib/fantrax/salary-copy";
+import { CAP_LEAGUE_COPY } from "@/lib/fantrax/cap-league-copy";
 import type { RosterLimits } from "@/lib/fantrax/config";
 import {
   alertText,
@@ -153,7 +154,8 @@ export function fantraxHomeCard(
   const limitsOver: string[] = [];
   for (const a of plan.alerts) {
     if (a.code === "illegal-roster") continue;
-    const text = alertText(a, name);
+    // A salary-cap league's own alerts are worded by its pack (server side: imported directly).
+    const text = alertText(a, name) ?? CAP_LEAGUE_COPY.alertText(a, name);
     if (!text) continue;
     if (a.code === "empty-slot") {
       empty.push(text.replace(/\.$/, ""));

@@ -124,17 +124,23 @@ export interface SuggestionResult {
   strength: CategoryStrength[];
 }
 
+/**
+ * `players`: where my picks are looked up (the whole league list once its
+ * pool is in; the board by default). Candidates always come from the board
+ * (every plausible pick), and a pick without a projection is never seated.
+ */
 export function suggestPicks(
   board: DraftBoard,
   state: DraftState,
   limit = 5,
+  players: ReadonlyMap<number, DraftBoardPlayer> | null = null,
 ): SuggestionResult {
   const timeline = draftTimeline(board, state);
   const taken = pickedIds(state);
-  const byId = new Map(board.players.map((p) => [p.id, p]));
+  const byId = players ?? new Map(board.players.map((p) => [p.id, p]));
   const mine = myPickIds(state)
     .map((id) => byId.get(id))
-    .filter((p): p is DraftBoardPlayer => p != null);
+    .filter((p): p is DraftBoardPlayer => p != null && !p.noProj);
   const lineup = buildLineup(board, mine);
   const strength = teamCategoryStrength(board, lineup);
   if (timeline.draftOver) return { timeline, suggestions: [], lineup, strength };

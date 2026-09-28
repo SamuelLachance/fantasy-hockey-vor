@@ -51,18 +51,9 @@ export interface ContractsFile {
   players: Record<string, ContractRow>;
 }
 
-export function isContractsFile(x: unknown): x is ContractsFile {
-  if (!x || typeof x !== "object") return false;
-  const f = x as Partial<ContractsFile>;
-  return (
-    typeof f.firstSeason === "number" &&
-    Array.isArray(f.cap) &&
-    f.cap.length > 0 &&
-    f.cap.every((v) => typeof v === "number" && Number.isFinite(v)) &&
-    !!f.players &&
-    typeof f.players === "object"
-  );
-}
+// The file's shape check lives with its browser read (the cap league's shell
+// loads that, not this arithmetic).
+export { isContractsFile } from "./contracts-client";
 
 /** A team's cap use over its counted players, season by season. */
 export interface SalaryUsage {

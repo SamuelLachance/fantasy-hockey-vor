@@ -1,9 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { TabLink } from "@/components/league-shell/TabLink";
-import { withBasePath } from "@/lib/site";
 import { canRankByPoints, parseGroups } from "@/lib/fantrax/config";
 import { draftBoardNote } from "@/lib/fantrax/league-copy";
 import type { PoolSnapshot } from "@/lib/fantrax/pool";
@@ -16,11 +14,6 @@ import { useFantraxLeague } from "./fantrax-league-context";
 import { FantraxPlayerTable } from "./fantrax-table";
 import type { PlayerLookup } from "./LeagueCard";
 
-// A salary-cap league's own pieces (the cue, the cap / needs / best-by-position
-// board, the method note): their own chunk, so Captains' tab never ships them.
-const SlapshotTurnCue = dynamic(() => import("./SlapshotDraftBoard").then((m) => m.SlapshotTurnCue));
-const SlapshotDraftBoard = dynamic(() => import("./SlapshotDraftBoard").then((m) => m.SlapshotDraftBoard));
-const SlapshotMethodNote = dynamic(() => import("./SlapshotMethodNote").then((m) => m.SlapshotMethodNote));
 
 /** A dynasty startup draft (every player carries over) opens on dynasty value, prospects included. */
 const DYNASTY_DRAFT_PRESETS: readonly PresetId[] = ["dynastie", "repechage", "espoirs"];
@@ -77,17 +70,22 @@ function usePoolLookup(player: PlayerLookup): PlayerLookup {
  * (prospects included, with salaries and contract ends).
  */
 export function FantraxDraftTab({ slug }: { slug: string }) {
-  const { config, player, teamName, live, nowMs, plan, hasDynasty, mode } = useFantraxLeague();
+  const { config, pack, player, teamName, live, nowMs, plan, hasDynasty, mode } = useFantraxLeague();
   const lookup = usePoolLookup(player);
   const d = plan?.draft ?? null;
   const cap = !!config.salaryCap;
+  // A salary-cap league's own pieces (the cue, the cap / needs / best-by-position
+  // board, the method note) come with its league pack: Captains never loads them.
+  const parts = pack?.parts;
   const notes = [
-    d ? draftBoardNote(d.next?.pick ?? null, d.following?.pick ?? null, d.poolShare, hasDynasty, canRankByPoints(config)) : null,
-    hasDynasty ? dynastyDraftNote(mode, config.features.keeperCutdown) : null,
+    d
+      ? draftBoardNote(d.next?.pick ?? null, d.following?.pick ?? null, d.poolShare, hasDynasty, canRankByPoints(config) ? pack?.copy.vorBoardNote : undefined)
+      : null,
+    hasDynasty ? (!config.features.keeperCutdown && pack ? pack.copy.dynastyDraftNote(mode) : dynastyDraftNote(mode)) : null,
   ].filter(Boolean);
   return (
     <div className="space-y-6">
-      {cap ? <SlapshotTurnCue /> : null}
+      {parts ? <parts.DraftCue /> : null}
       <FantraxPlanGate>
         {(p) =>
           p.draft ? (
@@ -108,7 +106,7 @@ export function FantraxDraftTab({ slug }: { slug: string }) {
           )
         }
       </FantraxPlanGate>
-      {cap ? <SlapshotDraftBoard /> : null}
+      {parts ? <parts.DraftBoard /> : null}
       <FantraxPlayerTable
         id="disponibles"
         title={d ? "Meilleurs disponibles" : "Meilleurs joueurs disponibles"}
@@ -119,21 +117,7 @@ export function FantraxDraftTab({ slug }: { slug: string }) {
         compactFilters
         footer={notes.length ? notes.join(" ") : null}
       />
-      {cap ? (
-        <>
-          <SlapshotMethodNote />
-          <p className="text-xs text-slate-400">
-            Sur un téléphone lent ou pendant une longue séance :{" "}
-            <a
-              href={withBasePath("/slapshot-draft.html")}
-              className="text-cyan-300 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
-            >
-              la page légère du repêchage en direct
-            </a>{" "}
-            (mêmes valeurs, relue toutes les 20 secondes).
-          </p>
-        </>
-      ) : null}
+      {parts ? <parts.DraftFooter /> : null}
     </div>
   );
 }

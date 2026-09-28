@@ -1,4 +1,5 @@
 import { ArrowRight, CircleCheck, Info, ShieldAlert, ShieldCheck, TriangleAlert } from "lucide-react";
+import dynamic from "next/dynamic";
 import type { DailyPlan, PlanAlert } from "@/lib/fantrax/daily-plan";
 import {
   alertText,
@@ -9,9 +10,12 @@ import {
   statusLabel,
 } from "@/lib/fantrax/league-copy";
 import type { RosterLimits } from "@/lib/fantrax/config";
+import type { LeagueCopy } from "@/lib/fantrax/league-pack";
 import { deadReason } from "@/lib/fantrax/roster-rules";
-import { salaryLine } from "@/lib/fantrax/salary-copy";
 import { LeagueCard, PlayerName, Tag, type PlayerLookup } from "./LeagueCard";
+
+// A salary-cap league's cap line: its own chunk (Captains never renders it).
+const SalaryLineNote = dynamic(() => import("./SalaryLineNote").then((m) => m.SalaryLineNote));
 
 interface RosterAlertsProps {
   plan: DailyPlan;
@@ -22,6 +26,8 @@ interface RosterAlertsProps {
   limits?: Pick<RosterLimits, "maxActive" | "maxReserve" | "maxIr" | "maxMinors" | "maxTotal">;
   /** A per-game lineup lock (« 5 minutes avant son match »), said under the line. */
   lockNote?: string | null;
+  /** The league pack's own alerts (salary-over, fxpa-closed), asked after the common ones. */
+  extraAlertText?: LeagueCopy["alertText"];
 }
 
 /**
@@ -31,7 +37,7 @@ interface RosterAlertsProps {
  * other alert. The dead-player advice in the alerts comes from the same
  * after-moves count, so following all of it leaves a legal roster.
  */
-export function RosterAlerts({ plan, player, minors, limits, lockNote }: RosterAlertsProps) {
+export function RosterAlerts({ plan, player, minors, limits, lockNote, extraAlertText }: RosterAlertsProps) {
   const L = plan.legality;
   const name = (id: string | null | undefined) => (id ? (player(id)?.n ?? "Nouveau joueur") : "—");
   const others = L.movableFromMinors.filter((id) => !L.fixes.includes(id) && !L.reserveFills.includes(id));
@@ -47,7 +53,7 @@ export function RosterAlerts({ plan, player, minors, limits, lockNote }: RosterA
             level: "info",
             text: `Un joueur ajouté depuis la dernière synchronisation occupe un poste ${a.slot ?? ""} : ses données arriveront à la prochaine synchro.`,
           }
-        : { ...a, text: alertText(a, name) ?? "" };
+        : { ...a, text: alertText(a, name) ?? extraAlertText?.(a, name) ?? "" };
     })
     .filter((a) => a.text);
   const clean = !L.illegal && alerts.length === 0;
@@ -68,17 +74,7 @@ export function RosterAlerts({ plan, player, minors, limits, lockNote }: RosterA
       >
         {legalitySummary(L, minors, limits)}
       </p>
-      {plan.salary ? (
-        <p
-          className={`mt-2 rounded-xl px-4 py-2 text-sm ${
-            plan.salary.over
-              ? "border border-amber-500/40 bg-amber-500/10 text-amber-100"
-              : "border border-white/10 bg-white/[0.03] text-slate-200"
-          }`}
-        >
-          {salaryLine(plan.salary)}
-        </p>
-      ) : null}
+      {plan.salary ? <SalaryLineNote salary={plan.salary} /> : null}
       {lockNote ? <p className="mt-2 text-xs text-slate-400">{lockNote}</p> : null}
 
       {L.fixes.length + L.reserveFills.length > 0 ? (

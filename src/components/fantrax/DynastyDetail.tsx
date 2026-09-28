@@ -8,7 +8,8 @@ import { bandOf, keeperOutlook, phaseLabel } from "@/lib/fantrax/dynasty-hints";
 import type { DynastyHintText } from "@/lib/fantrax/dynasty-hint-text";
 import { DYNASTY_MODE_LABEL, DYNASTY_MODES, type DynastyMode } from "@/lib/fantrax/dynasty-mode";
 import { fmtNum, pickLabel } from "@/lib/fantrax/league-copy";
-import { contractEndLabel, pctCell, seasonLabel, trendCell } from "@/lib/fantrax/table-copy";
+import { contractEndLabel } from "@/lib/fantrax/contract-copy";
+import { pctCell, seasonLabel, trendCell } from "@/lib/fantrax/table-copy";
 import { fmtInt } from "@/lib/player-table/copy";
 
 const FIRST_SEASON = 2026;

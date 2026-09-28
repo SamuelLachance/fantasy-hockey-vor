@@ -9,8 +9,14 @@
  * categories league of the registry)
  */
 import { existsSync, readFileSync } from "fs";
-import { leagueBoardPath, loadBoardInputs, rankAdjustmentsPath } from "../src/lib/leagues/board-inputs";
-import { buildLeagueBoard, serializeBoard } from "../src/lib/leagues/league-board";
+import {
+  leagueBoardPath,
+  leaguePoolPath,
+  loadBoardInputs,
+  NHL_ROSTERS_FILE,
+  rankAdjustmentsPath,
+} from "../src/lib/leagues/board-inputs";
+import { buildLeagueBoard, serializeBoard, serializePool } from "../src/lib/leagues/league-board";
 import type { DraftBoard } from "../src/lib/draft/board-types";
 import { rankAdjustmentErrors } from "../src/lib/leagues/rank-adjustments";
 import { LEAGUES } from "../src/lib/leagues/registry";
@@ -21,6 +27,10 @@ const slugs = process.argv[2]
 const errors: string[] = [];
 const warnings: string[] = [];
 const summaries: string[] = [];
+/** pool.json is fetched by the tables (~280 KB raw, ~56 KB gzipped at 1,400 players). */
+const MAX_POOL_BYTES = 400_000;
+/** The NHL lists move all season (call-ups, trades): refresh at least weekly. */
+const NHL_ROSTERS_STALE_DAYS = 7;
 
 for (const slug of slugs) {
   const path = leagueBoardPath(slug);
@@ -34,7 +44,7 @@ for (const slug of slugs) {
   }
 
   const inputs = loadBoardInputs(slug);
-  const { board: fresh, enginePlayers, adjustmentsMissing } = buildLeagueBoard(inputs);
+  const { board: fresh, enginePlayers, adjustmentsMissing, pool, vor } = buildLeagueBoard(inputs);
   if (!existsSync(path)) {
     // The page imports the file: typecheck and build need it.
     errors.push(`${path} missing — run npm run draft:board`);
@@ -42,6 +52,72 @@ for (const slug of slugs) {
     warnings.push(
       "committed board.json lags behind its inputs (build:pages regenerates it; run npm run draft:board and commit to keep git in step)",
     );
+  }
+  const poolPath = leaguePoolPath(slug);
+  const poolText = serializePool(pool);
+  if (!existsSync(poolPath)) {
+    warnings.push(`${poolPath} missing (build:pages writes it; run npm run draft:board and commit to keep git in step)`);
+  } else if (poolText !== readFileSync(poolPath, "utf8").replace(/\r\n/g, "\n")) {
+    warnings.push("committed pool.json lags behind its inputs (build:pages regenerates it; run npm run draft:board and commit)");
+  }
+
+  // The pool (fetched by the tables, all season): every projected player is
+  // on the board or in the pool, once, at his engine rank (board + pool =
+  // 1..N, no gap); the unprojected are nobody projected; the file stays
+  // small enough to fetch on a phone.
+  const poolBytes = Buffer.byteLength(poolText);
+  if (poolBytes > MAX_POOL_BYTES) errors.push(`pool.json is ${poolBytes} B (budget ${MAX_POOL_BYTES} B)`);
+  const projectedIds = new Set<number>();
+  const allRanks: number[] = [];
+  for (const p of [...fresh.players, ...pool.players]) {
+    if (projectedIds.has(p.id)) errors.push(`pool: ${p.name} (${p.id}) is listed twice`);
+    projectedIds.add(p.id);
+    allRanks.push(p.rank);
+  }
+  if (projectedIds.size !== vor.players.length) {
+    errors.push(`board + pool list ${projectedIds.size} projected players, the engine ranked ${vor.players.length}`);
+  }
+  allRanks.sort((a, b) => a - b);
+  if (allRanks.some((r, i) => r !== i + 1)) errors.push("board + pool ranks are not 1..N without a gap");
+  pool.players.forEach((p, i) => {
+    if (i > 0 && pool.players[i - 1]!.rank >= p.rank) errors.push(`pool rank order at ${p.name}`);
+    if (p.adjusted) errors.push(`pool: ${p.name} carries a hand move (moves stay on the board)`);
+    const n = p.pos.includes("G") ? fresh.categories.goalie.length : fresh.categories.skater.length;
+    if (p.proj.length !== n || p.z.length !== n) errors.push(`pool: ${p.name}: stat arrays ≠ ${n}`);
+    if (![...p.proj, ...p.z, p.value, p.vor].every(Number.isFinite)) errors.push(`pool: ${p.name}: non-finite number`);
+  });
+  for (const key of ["C", "LW", "RW", "F", "D", "G"] as const) {
+    const ranks = [...fresh.players, ...pool.players].flatMap((p) => (p.posRank[key] != null ? [p.posRank[key]!] : []));
+    ranks.sort((a, b) => a - b);
+    if (ranks.some((r, i) => r !== i + 1)) errors.push(`board + pool position ranks ${key} are not 1..N without a gap`);
+  }
+  const unprojectedIds = new Set<number>();
+  for (const u of pool.unprojected) {
+    if (projectedIds.has(u.id)) errors.push(`pool: unprojected ${u.name} (${u.id}) has a projection`);
+    if (unprojectedIds.has(u.id)) errors.push(`pool: unprojected ${u.name} (${u.id}) listed twice`);
+    unprojectedIds.add(u.id);
+    if (u.pos.length === 0) errors.push(`pool: unprojected ${u.name}: no position`);
+    if (u.noProj !== "roster" && u.noProj !== "prospect" && u.noProj !== "org") {
+      errors.push(`pool: unprojected ${u.name}: ${String(u.noProj)}`);
+    }
+  }
+  if (!inputs.nhlRosters) warnings.push(`${NHL_ROSTERS_FILE} missing: the pool lists no unprojected player (run npm run nhl:rosters)`);
+  else {
+    const ageDays = (Date.now() - Date.parse(inputs.nhlRosters.fetchedAt)) / 86_400_000;
+    if (ageDays > NHL_ROSTERS_STALE_DAYS) {
+      warnings.push(`${NHL_ROSTERS_FILE} is ${Math.floor(ageDays)} days old (run npm run nhl:rosters)`);
+    }
+    // Everyone the NHL ties to a club (roster, prospect list, organisation)
+    // is somewhere in the league's lists.
+    for (const r of inputs.nhlRosters.players) {
+      if (!projectedIds.has(r.id) && !unprojectedIds.has(r.id)) {
+        errors.push(`${r.name} (${r.team}, ${r.id}, ${r.list}) is listed by the NHL but in neither the board nor the pool`);
+      }
+    }
+    // The search index fills the thin prospect lists (DET, UTA, VAN came back empty in September 2026).
+    if (!inputs.nhlRosters.players.some((r) => r.list === "org")) {
+      warnings.push(`${NHL_ROSTERS_FILE} has no organisation players (search index): run npm run nhl:rosters`);
+    }
   }
 
   // Sanity checks run on the fresh build — the board that will be deployed.
@@ -98,17 +174,18 @@ for (const slug of slugs) {
     }
   }
   // Hand rank moves: every listed id is on the board under that name and
-  // carries its reason; the moves only reorder rows (the rank slots, overall
-  // and per position, are the engine's); the published VOR never rises down
-  // the board (a VOR sort agrees with the rank).
-  // An id that has left the board (engine rank past BOARD_DEPTH after a
-  // retrain, or dropped from players.json) only warns, like the builder that
-  // skips it: this check gates every Pages deploy and the daily refresh of
-  // the other leagues, which a stale Light the Lamp move must not block.
+  // carries its reason (a projected player past BOARD_DEPTH is pulled onto
+  // the board by the builder); the moves only reorder rows (the rank slots,
+  // overall and per position, are the engine's); the published VOR never
+  // rises down the board (a VOR sort agrees with the rank).
+  // An id nobody projects any more (dropped from players.json) only warns,
+  // like the builder that skips it: this check gates every Pages deploy and
+  // the daily refresh of the other leagues, which a stale Light the Lamp
+  // move must not block.
   const adjustments = inputs.rankAdjustments?.adjustments ?? [];
   for (const id of adjustmentsMissing) {
     const a = adjustments.find((x) => x.id === id);
-    warnings.push(`adjusted id ${id}${a ? ` (${a.name})` : ""} is not on the board — move skipped; review ${adjPath}`);
+    warnings.push(`adjusted id ${id}${a ? ` (${a.name})` : ""} has no projection (not in players.json) — move skipped; review ${adjPath}`);
   }
   const byId = new Map(board.players.map((p) => [p.id, p]));
   for (const a of adjustments) {
@@ -159,7 +236,7 @@ for (const slug of slugs) {
     errors.push(`expected 216 picks, got ${board.league.teams * rounds}`);
   }
   summaries.push(
-    `${slug}: ${board.players.length} players, ${goalies} G, goalie weight ${w}, ADP ${withAdp}/150, ${adjustedRows.length} hand moves`,
+    `${slug}: ${board.players.length} players, ${goalies} G, goalie weight ${w}, ADP ${withAdp}/150, ${adjustedRows.length} hand moves; pool ${pool.players.length} projected + ${pool.unprojected.length} unprojected (${Math.round(poolBytes / 1000)} KB)`,
   );
 }
 

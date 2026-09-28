@@ -39,12 +39,30 @@ export class FantraxApiError extends Error {
 /** Fantrax's public API asks for calls at least 1.1 s apart. */
 export const MIN_INTERVAL_MS = 1_100;
 
-let lastRequestAt = 0;
+/** Earliest time the next request may start: each caller books its slot BEFORE sleeping. */
+let nextSlotAt = 0;
+/** When the last request actually left (a timer can fire a few ms late). */
+let lastSentAt = Number.NEGATIVE_INFINITY;
+/** Date.now() counts whole milliseconds: this keeps a measured gap at or above the minimum. */
+const SLOT_MARGIN_MS = 2;
 
+/**
+ * Waits for this request's slot. The slot is reserved before the wait, so
+ * two reads that overlap (a poll and « Actualiser ») get slots 1.1 s apart
+ * instead of both waking at the same moment; and each waits at least the
+ * minimum after the previous request really left, however late its timer
+ * fired.
+ */
 async function throttle(minIntervalMs: number): Promise<void> {
-  const wait = lastRequestAt + minIntervalMs - Date.now();
-  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastRequestAt = Date.now();
+  const at = Math.max(Date.now(), nextSlotAt);
+  nextSlotAt = at + minIntervalMs;
+  for (;;) {
+    const wait = Math.max(at, lastSentAt + minIntervalMs + SLOT_MARGIN_MS) - Date.now();
+    if (wait <= 0) break;
+    await new Promise((r) => setTimeout(r, wait));
+  }
+  lastSentAt = Date.now();
+  nextSlotAt = Math.max(nextSlotAt, lastSentAt + minIntervalMs + SLOT_MARGIN_MS);
 }
 
 async function requestText(

@@ -1,7 +1,8 @@
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import summaryJson from "@/data/snake-summary.json";
-import type { DraftBoard } from "@/lib/draft/board-types";
+import type { DraftBoard, LeaguePool } from "@/lib/draft/board-types";
+import { isLeaguePool, leaguePoolCounts, type LeaguePoolCounts } from "@/lib/draft/league-pool";
 import type { LeagueEntry } from "@/lib/leagues/registry";
 import { snakeNhlSeed } from "@/lib/snake/league-seed";
 import type { SnakeNhlFile, SnakeSummaryFile } from "@/lib/snake/types";
@@ -23,6 +24,50 @@ export function categoryBoard(entry: LeagueEntry): DraftBoard {
     boards.set(slug, board);
   }
   return board;
+}
+
+const pools = new Map<string, LeaguePool | null>();
+
+/**
+ * The league's committed `pool.json` (build time, for wording and links
+ * only: the browser fetches the pool itself, it is never inlined). Null
+ * without a valid file.
+ */
+function categoryPool(entry: LeagueEntry): LeaguePool | null {
+  const slug = entry.profileSlug ?? entry.slug;
+  if (!pools.has(slug)) {
+    const path = join(process.cwd(), "public", "leagues", slug, "pool.json");
+    const raw: unknown = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : null;
+    pools.set(slug, isLeaguePool(raw, slug) ? raw : null);
+  }
+  return pools.get(slug) ?? null;
+}
+
+const poolCounts = new Map<string, LeaguePoolCounts>();
+
+/**
+ * How many players the league's lists hold (board + `pool.json`, read at
+ * build time for the tabs' wording only). Without the file: the board alone.
+ */
+export function categoryPoolCounts(entry: LeagueEntry): LeaguePoolCounts {
+  const slug = entry.profileSlug ?? entry.slug;
+  let counts = poolCounts.get(slug);
+  if (!counts) {
+    counts = leaguePoolCounts(categoryBoard(entry), categoryPool(entry));
+    poolCounts.set(slug, counts);
+  }
+  return counts;
+}
+
+/**
+ * NHL ids of every player Snake discussed who is anywhere in the league's
+ * lists (the board's seed, then the pool's verdicts): the Snake page's
+ * « Dans vos ligues » link to the league's Joueurs tab.
+ */
+export function categoryListedSnakeIds(entry: LeagueEntry): string[] {
+  const ids = new Set(Object.keys(categorySnakeSeed(entry)));
+  for (const id of Object.keys(categoryPool(entry)?.snake ?? {})) ids.add(id);
+  return [...ids];
 }
 
 /**

@@ -121,6 +121,7 @@
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
+        <div id="more" style="margin:8px 0;display:flex;gap:8px;flex-wrap:wrap"></div>
       </div>
       <p class="mut" style="margin:8px 0 0">
         Valeur dynastie : points Slapshot attendus au-dessus du remplaçant sur 12 saisons (vieillissement, progression des jeunes calibrée sur l'historique LNH, arrivée des espoirs), moins le coût de son salaire dans le plafond, qui grimpe chaque saison. Un joueur peut être caché dans les mineures (0 point, 0 salaire) ou libéré, donc un mauvais contrat coûte au plus une place.
@@ -235,6 +236,22 @@
     }
     return { slots: out, wing, seatOf: base.seatOf };
   }
+
+  // The wings' sentence under the tiles: the SAME function as wingSentence in
+  // src/lib/fantrax/seat-needs.ts (test-slapshot-draft.ts compares them). « un
+  // LW ou un RW » only while both sides still seat one.
+  function wingSentence(w) {
+    if (w.empty <= 0) return `Ailiers : les ${w.max} postes sont pris; un ailier de plus ne serait pas partant.`;
+    if (w.lw > 0 && w.rw > 0) {
+      return w.flex > 0
+        ? `Ailiers : ${w.flex} des vôtres jouent à gauche comme à droite, donc un LW ou un RW comble un poste (au plus ${w.lw} LW et ${w.rw} RW de plus).`
+        : "Ailiers : 4 LW et 4 RW; « LW ≤ n » = combien de LW de plus trouveraient un poste.";
+    }
+    const side = w.lw > 0 ? "LW" : "RW";
+    const full = side === "LW" ? "RW" : "LW";
+    return `Ailiers : plus de poste pour un ${full} seul; seul un ${side} (ou un LW/RW) comble encore un poste, ${side === "LW" ? w.lw : w.rw} au plus.`;
+  }
+
   let unavailable = new Set();
   let ownerOf = new Map();
   let mineStatus = new Map(); // my players -> Fantrax status (ACTIVE, RESERVE, MINORS, INJURED_RESERVE, "PICK")
@@ -242,6 +259,7 @@
   let showGone = false;
   let lastOk = 0; // last successful read (ms)
   let onClockPick = null; // my pick on the clock at the last successful read
+  let nextPick = undefined; // my next pick at the last successful read: { pick, away } or null (none left)
   let alerted = null;
 
   const posf = $("posf");
@@ -304,6 +322,16 @@
   const SORT_FR = { d: "valeur dynastie", v: "VOR cette saison", p: "points cette saison", r: "valeur dynastie par M$", c: "salaire croissant" };
   const MODE_FR = { B: "équilibré", L: "long terme", W: "gagner maintenant" };
 
+  // The table shows the first 300 rows; « Afficher 300 de plus » / « Tout afficher » raise it.
+  const PAGE_ROWS = 300;
+  let limit = PAGE_ROWS;
+  document.addEventListener("click", (ev) => {
+    const b = ev.target.closest && ev.target.closest("[data-more]");
+    if (!b) return;
+    limit = b.dataset.more === "all" ? Infinity : limit + PAGE_ROWS;
+    render();
+  });
+
   function render() {
     const q = fold($("q").value.trim());
     const kind = $("kind").value;
@@ -320,7 +348,7 @@
       if (Number.isFinite(maxCap) && (p.c == null || p.c > maxCap)) continue;
       if (q && !fold(p.n + " " + p.t).includes(q)) continue;
       shown++;
-      if (rows.length >= 300) continue;
+      if (rows.length >= limit) continue;
       const who = gone ? (ownerOf.get(p.i) || "pris") : "";
       const next = p.c2 && p.c2.length > 1 ? p.c2[1] : null;
       const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.005;
@@ -332,7 +360,10 @@
         + `<td class="n">${money(p.c)}</td><td class="n ${changes ? "up" : ""}">${next == null ? "—" : money(next)}</td><td class="n">${esc(contractEnd(p))}</td></tr>`);
     }
     $("rows").innerHTML = rows.join("") || `<tr><td colspan="12" class="mut">Aucun joueur ne correspond.</td></tr>`;
-    $("cap").textContent = `${shown} joueurs${shown > 300 ? " (300 premiers affichés)" : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
+    $("more").innerHTML = shown > limit
+      ? `<button type="button" data-more="${PAGE_ROWS}">Afficher ${PAGE_ROWS} de plus</button> <button type="button" data-more="all">Tout afficher (${shown})</button>`
+      : "";
+    $("cap").textContent = `${shown} joueurs${shown > limit ? ` (${limit} premiers affichés)` : ""}, triés par ${SORT_FR[$("sort").value]} (horizon ${MODE_FR[$("mode").value]})`;
 
     // best available per position, by dynasty value in the chosen horizon
     const best = {};
@@ -341,7 +372,7 @@
       for (const e of p.e.split("/")) if (!best[e]) best[e] = p;
     }
     $("best").innerHTML = Object.keys(SLOTS).map((k) => best[k]
-      ? `<li>${posTags(k)} ${esc(best[k].n)} <span class="mut">(${esc(best[k].t)}) · ${esc(PHASE_FR[best[k].ph] || "")}</span> · dyn. <b>${num(dyn(best[k]))}</b> · ${money(best[k].c)}</li>`
+      ? `<li>${posTags(k)} ${esc(best[k].n)} <span class="mut">${best[k].t ? `(${esc(best[k].t)}) · ` : ""}${esc(PHASE_FR[best[k].ph] || "")}</span> · dyn. <b>${num(dyn(best[k]))}</b> · ${money(best[k].c)}</li>`
       : `<li>${posTags(k)} <span class="mut">aucun</span></li>`).join("");
 
     // my team
@@ -355,9 +386,7 @@
     const w = need.wing;
     $("need").innerHTML = tile("C", "pos-C", need.slots.C) + tile("Ailiers", "pos-LW", w, w.empty > 0 ? `LW ≤ ${w.lw} · RW ≤ ${w.rw}` : "")
       + tile("D", "pos-D", need.slots.D) + tile("G", "pos-G", need.slots.G);
-    $("needline").textContent = w.flex > 0
-      ? `Ailiers : ${w.flex} des vôtres jouent à gauche comme à droite, donc un LW ou un RW comble un poste (au plus ${w.lw} LW et ${w.rw} RW de plus).`
-      : "Ailiers : 4 LW et 4 RW; « LW ≤ n » = combien de LW de plus trouveraient un poste.";
+    $("needline").textContent = wingSentence(w);
     // Only 23 spots count. Every pick lands in Active, so past 23 the cap reads
     // the 23 with the most points this season (the site's rule); the others
     // are expected in the minors, cap-free.
@@ -377,15 +406,17 @@
   }
 
   // Fantrax asks for public calls at least 1.1 s apart: every read books its
-  // own slot. Each read gives up after 8 s (a hung connection must not stall
-  // the page), and one load runs at a time.
+  // own slot, and the next slot counts from when this one really left (a
+  // timer can fire a few ms late). Each read gives up after 8 s (a hung
+  // connection must not stall the page), and one load runs at a time.
   let nextCallAt = 0;
   let loading = false;
   let lastTry = 0;
   async function getJson(url) {
     const at = Math.max(Date.now(), nextCallAt);
     nextCallAt = at + 1100;
-    if (at > Date.now()) await new Promise((r) => setTimeout(r, at - Date.now()));
+    while (at > Date.now()) await new Promise((r) => setTimeout(r, at - Date.now()));
+    nextCallAt = Math.max(nextCallAt, Date.now() + 1102);
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
     try {
@@ -399,11 +430,19 @@
     }
   }
 
-  // The title: « C'EST À TOI » only from a read at most 2 min old.
+  // The title and « Mon prochain choix » : « C'EST À TOI » only from a read at
+  // most 2 min old; an older one is dated and says so.
   function showTurn() {
     const fresh = lastOk > 0 && Date.now() - lastOk <= CUE_MAX_AGE_MS;
     const mineNow = fresh && onClockPick != null;
     document.title = mineNow ? TURN + TITLE : TITLE;
+    if (nextPick === null) $("next").textContent = "aucun";
+    else if (nextPick) {
+      const at = clock(new Date(lastOk));
+      $("next").textContent = nextPick.away === 0
+        ? (fresh ? `n° ${nextPick.pick} : C'EST À TOI` : `n° ${nextPick.pick} (à votre tour à la lecture de ${at}, pas à jour)`)
+        : `n° ${nextPick.pick} (dans ${nextPick.away} choix${fresh ? "" : ` à la lecture de ${at}, pas à jour`})`;
+    }
     if (mineNow && alertOn && alerted !== onClockPick) {
       alerted = onClockPick;
       try {
@@ -450,10 +489,7 @@
       const onClock = !!(cur && minePicks[0] && minePicks[0].pick === cur.pick);
       $("made").textContent = `${made} / ${picks.length}`;
       $("clock").textContent = cur ? `${D.teams[cur.teamId] || "?"} (n° ${cur.pick}, ronde ${cur.round})` : "Repêchage terminé";
-      if (minePicks[0]) {
-        const away = cur ? minePicks[0].pick - cur.pick : 0;
-        $("next").textContent = onClock ? `n° ${minePicks[0].pick} : C'EST À TOI` : `n° ${minePicks[0].pick} (dans ${away} choix)`;
-      } else $("next").textContent = "aucun";
+      nextPick = minePicks[0] ? { pick: minePicks[0].pick, away: onClock ? 0 : Math.max(1, cur ? minePicks[0].pick - cur.pick : 0) } : null;
       $("later").textContent = minePicks.slice(1, 7).map((p) => `n° ${p.pick}`).join(" · ") || "—";
       lastOk = Date.now();
       onClockPick = onClock ? minePicks[0].pick : null;

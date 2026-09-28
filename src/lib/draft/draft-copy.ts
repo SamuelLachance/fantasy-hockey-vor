@@ -1,4 +1,5 @@
 import type { LeagueCategory, StartingSlot } from "../leagues/types";
+import type { NoProjectionKind } from "./board-types";
 
 /**
  * French (Québec) copy and number formatting for the draft helper. Stat
@@ -190,4 +191,25 @@ export function rankAdjustmentModelText(a: { fromRank: number; vorModel: number 
  */
 export function rankAdjustmentText(a: { fromRank: number; vorModel: number; reason: string }): string {
   return `Rang ajusté à la main (${rankAdjustmentModelText(a)}). ${a.reason}`;
+}
+
+const NO_PROJECTION_LABEL: Record<NoProjectionKind, string> = {
+  roster: "Pas de projection",
+  prospect: "Espoir sans projection",
+  org: "Hors effectif, sans projection",
+};
+
+/**
+ * A player the projections never saw: « Pas de projection » (on an NHL
+ * roster) / « Espoir sans projection » (prospect list only) / « Hors
+ * effectif, sans projection » (only in an organisation: AHL, junior,
+ * college, Europe, long-term injured).
+ */
+export function noProjectionLabel(kind: NoProjectionKind): string {
+  return NO_PROJECTION_LABEL[kind];
+}
+
+/** The short tag next to his name: « Pas de projection » / « Espoir » / « Hors effectif ». */
+export function noProjectionTag(kind: NoProjectionKind): string {
+  return kind === "prospect" ? "Espoir" : kind === "org" ? "Hors effectif" : "Pas de projection";
 }

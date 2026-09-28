@@ -9,6 +9,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT } from "../src/lib/fantrax/config";
 import { buildDailyPlan, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
+import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
 import { torontoDateOfIso } from "../src/lib/fantrax/dates";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
 import type { RosterEntry } from "../src/lib/fantrax/roster-rules";
@@ -235,7 +236,16 @@ assert(degraded.cap?.known === false, "cap usage unknown");
     teamId: team,
     nowMs: Date.parse("2026-09-29T12:00:00Z"),
     config: SLAPSHOT,
+    kit: PLAN_KIT,
   };
+  // Without the kit a game-lock league is refused, never planned without its locks.
+  let refused = false;
+  try {
+    buildDailyPlan({ ...sInput, kit: undefined });
+  } catch {
+    refused = true;
+  }
+  assert(refused, "game lock without the plan kit: an error, not a plan without locks");
   const morning = buildDailyPlan(sInput);
   assert(morning.target?.rosterPeriod === 1 && !!morning.locks, "game lock: the plan carries the per-game locks");
   assert(morning.locks!.next === new Date(Date.parse(first[0]) - lead).toISOString(), `next lock = my first player's game − 5 min (${morning.locks!.next})`);

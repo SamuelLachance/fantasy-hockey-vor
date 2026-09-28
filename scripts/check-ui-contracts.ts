@@ -156,10 +156,20 @@ const files: Record<string, string[]> = {
     'base="equipe"',
     "Effectif au repêchage",
   ],
-  // Repêchage: the draft helper as is, inside a complete Snake seed (no fetch during the draft).
-  "src/components/draft/CategoryDraftTab.tsx": ["<SnakeVerdictsProvider kind=\"nhl\" seed={seed} complete>", "<DraftHelper board={board} />"],
+  // Repêchage: the draft helper on the inlined board inside a complete Snake
+  // seed (works offline mid-draft); the league's pool joins it once fetched.
+  "src/components/draft/CategoryDraftTab.tsx": [
+    "<SnakeVerdictsProvider kind=\"nhl\" seed={rows} complete>",
+    "<DraftHelper board={board} pool={pool} />",
+    "useLeaguePool(board.slug, true)",
+    "leagueSnakeRows(seed, pool)",
+  ],
+  // The league's full list: board first, pool.json on demand (never inlined).
+  "src/lib/draft/league-pool-client.ts": ['leagueDataHref(slug, "pool.json")', "isLeaguePool(raw, slug)", 'credentials: "omit"'],
+  "src/lib/draft/league-pool.ts": ["export function leaguePlayers", "unprojectedRow", "noProj"],
   "src/components/draft/DraftPlayerRow.tsx": ["<SnakeNhlMini id={p.id} />", "memo(function DraftPlayerRow"],
-  "src/components/draft/CategoryPlayersTab.tsx": ["<DraftMethodNote", "shortcuts={false}", "{table}"],
+  // The players without a projection sort after everyone projected: the tab says so and links them alone.
+  "src/components/draft/CategoryPlayersTab.tsx": ["<DraftMethodNote", "shortcuts={false}", "{table}", '"?projection=sans"'],
   "src/components/draft/category-table.tsx": [
     "categoryAdapter",
     "getDraftStore",
@@ -170,6 +180,9 @@ const files: Record<string, string[]> = {
     "SnakeDetail",
     "sm:hidden",
     'base="tous"',
+    "useLeaguePool(board.slug, true)",
+    "leaguePlayers(board, pool)",
+    "fallbackRows",
   ],
   "src/components/draft/CategoryTableFilters.tsx": ["FilterUiProps", "{actions}", "DRAFT_FILTERS", "<legend", "more.button"],
   "src/lib/draft/table.ts": ["displayRank", "matchesDraftFilter", "probAvailableAt", "DRAFT_DONE_AFTER_MS", "viewCtx", "oddsPickOf"],
@@ -183,6 +196,8 @@ const files: Record<string, string[]> = {
     "useDeferredValue",
     "IntersectionObserver",
     "TABLE_COPY.notInPool",
+    // `?joueur=` looks in the rows on screen (the fallback rows when the full list failed).
+    "const focusRows = source ?? data.rows",
     "wantFullSnake",
     "aria-labelledby",
     // A page setting the rows follow (the dynasty mode) is said in the one live region.
@@ -284,6 +299,8 @@ const files: Record<string, string[]> = {
     "SnakeMethodology",
     "SnakeDisclaimerShort",
     'canonical: "/snake"',
+    // « Dans vos ligues »: every categories league player Snake discussed, board and pool.
+    "categoryListedSnakeIds(l)",
     "robots: { index: false",
     "safe-area-inset-bottom",
   ],
@@ -369,9 +386,40 @@ const forbidden: Array<{ file: string; needle: string; why: string }> = [
   { file: "src/lib/fantrax/dynasty-hints.ts", needle: "roster-hint", why: "the hint sentences load with the details row" },
   { file: "src/lib/fantrax/table.ts", needle: "roster-hint", why: "the hint sentences load with the details row" },
   { file: "src/lib/dynasty/keeper-view.ts", needle: "rosterHintFr", why: "the owner's hint lives in roster-hint.ts (lazy)" },
-  // Categories leagues' pages inline their board and a complete Snake seed: nothing to fetch.
-  { file: "src/components/draft/category-table.tsx", needle: "loadSnake", why: "the seed is complete" },
-  { file: "src/components/draft/category-table.tsx", needle: "fetch(", why: "the board is inlined" },
+  // Categories leagues' pages inline their board and a complete Snake seed;
+  // the rest of the league comes from pool.json (its own loader), with its verdicts.
+  { file: "src/components/draft/category-table.tsx", needle: "loadSnake", why: "the seed and the pool's verdicts are complete" },
+  { file: "src/components/draft/category-table.tsx", needle: "fetch(", why: "the pool loads through league-pool-client.ts" },
+  { file: "src/components/league-shell/category-board.ts", needle: "pool.players", why: "pool.json is fetched by the browser, never inlined" },
+  // A salary-cap / game-lock league's own code (Slapshot) stays out of the
+  // chunks every Fantrax tab loads, Captains' included (check-export budget).
+  { file: "src/lib/fantrax/daily-plan.ts", needle: "import { salaryUsage", why: "the salary cap reaches the planner through the plan kit (plan-kit.ts)" },
+  { file: "src/lib/fantrax/daily-plan.ts", needle: '"./plan-kit"', why: "the plan kit is passed in, never imported by the planner" },
+  { file: "src/components/fantrax/FantraxLeagueProvider.tsx", needle: 'from "@/lib/fantrax/plan-kit"', why: "the plan kit is loaded with import() by a league that needs it" },
+  { file: "src/lib/fantrax/league-client.ts", needle: "import { isContractsFile", why: "salary-cap.ts loads together with contracts.json" },
+  { file: "src/components/fantrax/RosterAlerts.tsx", needle: '@/lib/fantrax/salary-copy"', why: "the cap line is its own chunk (SalaryLineNote)" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: '@/lib/fantrax/contract-copy"', why: "the contract cells and the cap legend are their own chunk (ContractCells)" },
+  { file: "src/lib/fantrax/table-copy.ts", needle: "SLAPSHOT_LEGEND", why: "the cap legend lives in contract-copy.ts" },
+  { file: "src/components/fantrax/FantraxDraftTab.tsx", needle: "slapshot-draft.html", why: "the light page link ships with the lazy method note" },
+  // Its words and rules come with the league pack, which only CapLeagueShell
+  // (that league's shell chunk) imports.
+  { file: "src/lib/fantrax/league-copy.ts", needle: "Masse salariale dépassée", why: "the cap alert is worded by the cap-league pack" },
+  { file: "src/lib/fantrax/league-copy.ts", needle: "Valeur (VOR)", why: "the VOR sentences live in cap-league-copy.ts" },
+  { file: "src/lib/fantrax/table-copy.ts", needle: "Valeur (VOR)", why: "the VOR headers and notes live in cap-league-copy.ts" },
+  { file: "src/lib/fantrax/table-copy.ts", needle: "moyenne annuelle de son contrat", why: "the salary headers live in cap-league-copy.ts" },
+  { file: "src/components/fantrax/FantraxLeagueProvider.tsx", needle: "/fantrax/cap-league-", why: "the pack and the model are handed in by CapLeagueShell" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: "/fantrax/cap-league-", why: "the pack is read from the league context" },
+  { file: "src/components/fantrax/FantraxDraftTab.tsx", needle: "/fantrax/cap-league-", why: "the pack is read from the league context" },
+  { file: "src/components/fantrax/FantraxTodayTab.tsx", needle: "/fantrax/cap-league-", why: "the pack is read from the league context" },
+  { file: "src/components/fantrax/RosterAlerts.tsx", needle: "/fantrax/cap-league-", why: "the pack's alerts come in as a prop" },
+  { file: "src/components/fantrax/FantraxDraftTab.tsx", needle: "./SlapshotDraftBoard", why: "the cap league's pieces come with its pack (cap-league-parts.tsx)" },
+  { file: "src/components/fantrax/FantraxDraftTab.tsx", needle: "./SlapshotMethodNote", why: "the cap league's pieces come with its pack (cap-league-parts.tsx)" },
+  { file: "src/components/fantrax/FantraxTeamTab.tsx", needle: "./SlapshotTeamCap", why: "the cap league's pieces come with its pack (cap-league-parts.tsx)" },
+  { file: "src/components/fantrax/FantraxTeamTab.tsx", needle: "./SlapshotMethodNote", why: "the cap league's pieces come with its pack (cap-league-parts.tsx)" },
+  { file: "src/components/fantrax/fantrax-table.tsx", needle: "./ContractCells", why: "the contract cells come with the pack (cap-league-parts.tsx)" },
+  { file: "src/components/fantrax/FantraxLeagueProvider.tsx", needle: "@/lib/fantrax/points-vor", why: "the VOR model comes in the lazy cap-league model" },
+  { file: "src/components/fantrax/FantraxLeagueProvider.tsx", needle: "contracts-client", why: "the contracts are read by CapLeagueShell" },
+  { file: "src/components/fantrax/CapLeagueShell.tsx", needle: 'from "@/lib/fantrax/cap-league-model"', why: "the model is fetched with import(), never bundled into the shell" },
 ];
 
 let failed = 0;
@@ -457,8 +505,10 @@ for (const { rel, text } of sources) {
 
   // Captains tab chunks: each tab is its own chunk next to the provider's
   // (both loaded by the page), so a tab that imported the provider's module,
-  // the planner or the live reads would ship them a second time.
-  if (/^src\/components\//.test(rel) && rel !== "src/components/league-shell/client-parts.tsx" && /from "[^"]*FantraxLeagueProvider"/.test(text)) {
+  // the planner or the live reads would ship them a second time. CapLeagueShell
+  // IS a shell: the provider with the cap-league pack, loaded instead of it.
+  const shells = ["src/components/league-shell/client-parts.tsx", "src/components/fantrax/CapLeagueShell.tsx"];
+  if (/^src\/components\//.test(rel) && !shells.includes(rel) && /from "[^"]*FantraxLeagueProvider"/.test(text)) {
     fail(`${rel} imports FantraxLeagueProvider (use ./fantrax-league-context)`);
   }
   const tabSide = [

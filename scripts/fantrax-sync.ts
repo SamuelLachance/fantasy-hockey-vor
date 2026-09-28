@@ -48,6 +48,7 @@ import {
 } from "../src/lib/fantrax/config";
 import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
 import { buildDailyPlan, indexSchedule, lineupTarget, seasonFp } from "../src/lib/fantrax/daily-plan";
+import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
 import { leagueVor } from "../src/lib/fantrax/points-vor";
 import {
   addDays,
@@ -354,7 +355,7 @@ async function main() {
   const knownSchedule = readJson<ScheduleSnapshot>(PATHS.schedule);
   const target =
     (knownSchedule
-      ? lineupTarget(rosterPeriods, indexSchedule(knownSchedule, rosterPeriods), now, CFG)
+      ? lineupTarget(rosterPeriods, indexSchedule(knownSchedule, rosterPeriods), now, CFG, PLAN_KIT)
       : targetRosterPeriod(rosterPeriods, now)) ?? rosterPeriods[rosterPeriods.length - 1]!;
   const sp = scoringPeriodAt(scoringPeriods, Date.parse(target.start)) ?? scoringPeriods[scoringPeriods.length - 1]!;
   const rosters = await fxeaGet<FxeaTeamRosters>(
@@ -755,6 +756,7 @@ async function main() {
     config: CFG,
     vor,
     contracts,
+    kit: PLAN_KIT,
   });
 
   // All fetched: write everything (each file atomically).

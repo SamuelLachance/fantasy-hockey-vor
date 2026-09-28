@@ -4,7 +4,7 @@
  * assumption. Apart from the arithmetic so the planner's chunk (which every
  * tab of a Fantrax league loads) carries none of these words.
  */
-import { fmtMoney } from "./league-copy";
+import { fmtMoney } from "./money";
 import type { ContractsFile, SalaryUsage } from "./salary-cap";
 
 export { fmtMoney };

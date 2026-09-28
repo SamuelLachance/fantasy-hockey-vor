@@ -94,6 +94,11 @@ for (const cfg of Object.values(FANTRAX_LEAGUES)) {
 {
   const page = join(OUT, "slapshot-draft.html");
   const dyn = join(OUT, "fantrax", "slapshot", "dynasty.json");
+  // The table grows past its first 300 rows on demand (« Afficher 300 de
+  // plus » / « Tout afficher », a829d03): the regenerated page must keep them.
+  if (existsSync(page) && !/data-more="all"/.test(readFileSync(page, "utf8"))) {
+    fail("slapshot-draft.html lost its « Tout afficher » button (scripts/slapshot-draft/template.html)");
+  }
   if (existsSync(page) && existsSync(dyn)) {
     const m = /<script id="data" type="application\/json">([\s\S]*?)<\/script>/.exec(readFileSync(page, "utf8"));
     let embedded: string | null = null;
@@ -355,22 +360,44 @@ const BUDGETS: Budget[] = [
     // draft kept and dated, the background poll, the taken players' tags).
     // What remains Slapshot-only here is inline in synchronous paths (the
     // planner's per-game locks and cap line, the table's contract columns).
-    js: 74.5,
+    //
+    // Then those moved out (deploy build, measured against master e932c7a,
+    // where Captains is the only Fantrax league: Repêchage 64.5, Mon équipe
+    // 63.1, Ballottage 63.0, Joueurs 61.8, Aujourd’hui 39.6). Slapshot's
+    // rules and words now reach its tabs through its OWN shell chunk
+    // (CapLeagueShell, picked per league by the server adapter): the league
+    // pack (cap-league-copy.ts: « Valeur (VOR) », the salary columns, the cap
+    // alert, the closed-fxpa notice; cap-league-parts.tsx: the draft board,
+    // the cap card, the contract cells), the contracts read, and the model
+    // chunk it fetches (points-vor.ts with plan-kit.ts: the cap over the
+    // counted spots, the per-game locks). Captains' tabs load none of it:
+    // Repêchage 73.5 → 70.5, Mon équipe 70.8 → 68.9, Ballottage 70.3 → 68.4,
+    // Joueurs 69.0 → 67.2, Aujourd’hui 45.2 → 43.9 (the local build: the same). The ~6 KB left over master is what every Fantrax
+    // league shares: the config-driven slots and eligibility, per-league
+    // caches, the live-draft states (background poll, dated last good read,
+    // taken tags, the pool's names for the latest picks), the table's
+    // per-league caps and presets. 73 keeps 2.5 KB of room and still catches
+    // a Slapshot piece that slips back into a shared chunk.
+    js: 73,
     htmlRaw: 200,
     htmlGz: 35,
   },
-  // Slapshot (full dynasty with a salary cap, points): the same client code
-  // as Captains (one dynamic route) — no cutdown card, but its own cap board,
-  // stash list and method note in lazy chunks — so the same number. Its HTML is
-  // smaller too: 20 lineup slots but a 1-to-2-day matchup panel instead of a
-  // 7-to-14-day one.
+  // Slapshot (full dynasty with a salary cap, points): the Captains tabs'
+  // chunks plus its own shell chunk (the league pack above: its words and
+  // pieces, the contracts read). Its HTML is smaller: 20 lineup slots but a
+  // 1-to-2-day matchup panel instead of a 7-to-14-day one.
   { label: "Slapshot · Aujourd’hui", match: isTab("slapshot", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
   {
     label: "Slapshot · autres onglets",
     match: isTab("slapshot", ["repechage", "joueurs", "mon-equipe"]),
-    // The same chunks as the Captains tabs (one dynamic route), so the same
-    // number (see the Captains entry for the measurement).
-    js: 74.5,
+    // Its own number since its shell chunk is its own. Deploy build: Repêchage
+    // 72.8, Mon équipe 71.2, Joueurs 69.5 (local 72.8 / 71.2 / 69.4), i.e.
+    // Captains + ~2.3 KB for the pack (cap-league-copy.ts ~3 KB raw of words,
+    // CapLeagueShell, cap-league-parts.tsx, contracts-client.ts). Its model
+    // (points over replacement, plan kit) and every piece's body stay lazy
+    // chunks outside this count. 75.5 leaves about the room Captains has
+    // (2.7 KB); over it, look for a shared import first.
+    js: 75.5,
     htmlRaw: 200,
     htmlGz: 35,
   },

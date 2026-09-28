@@ -13,6 +13,9 @@ import dynamic from "next/dynamic";
 export const FantraxShellPart = dynamic(() =>
   import("@/components/fantrax/FantraxLeagueProvider").then((m) => m.FantraxLeagueProvider),
 );
+// The same provider with the cap-league pack (Slapshot's rules and words):
+// its own chunk, so a league without them (Captains) never loads it.
+export const CapLeagueShellPart = dynamic(() => import("@/components/fantrax/CapLeagueShell").then((m) => m.CapLeagueShell));
 export const FantraxHeaderPart = dynamic(() =>
   import("@/components/fantrax/FantraxLeagueHeader").then((m) => m.FantraxLeagueHeader),
 );

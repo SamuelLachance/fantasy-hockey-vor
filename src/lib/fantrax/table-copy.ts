@@ -9,6 +9,7 @@ import { FANTRAX_ICON } from "./config";
 import { DEFAULT_DYNASTY_MODE, DYNASTY_MODE_LABEL, type DynastyMode } from "./dynasty-mode";
 import type { ColumnKey, FantraxRow, FantraxType, SortKey } from "./table";
 import { fmtNum, fmtOdds, pickLabel } from "./league-copy";
+import type { LeagueCopy } from "./league-pack";
 
 /** No-break space (U+00A0), as league-copy uses. */
 const NBSP = " ";
@@ -30,10 +31,12 @@ export interface ColumnCopyCtx {
   capSeason?: number;
   /** Share of the NHL season the league's fantasy season covers (below 1: it ends early). */
   seasonShare?: number;
+  /**
+   * The league pack's own headers (`cap-league-copy.ts`: « Valeur » as VOR, the
+   * league-season FP, salaries, contract end), asked first.
+   */
+  column?: LeagueCopy["column"];
 }
-
-/** « 26-27 » (short season label of the contract columns). */
-const shortSeason = (y: number) => `${String(y % 100).padStart(2, "0")}-${String((y + 1) % 100).padStart(2, "0")}`;
 
 /** « Valeur dynastie » units, said once wherever it sits next to season points. */
 const DYNASTY_UNITS = "points au-dessus du remplacement sur les 12 prochaines saisons, les plus lointaines comptant moins selon le mode";
@@ -44,29 +47,18 @@ const DYNASTY_UNITS = "points au-dessus du remplacement sur les 12 prochaines sa
  */
 export const DYNASTY_LEGEND = `Valeur dyn.${NBSP}: points au-dessus du remplacement sur 12 saisons, pas des points de la saison (ne pas additionner). Fourchette${NBSP}: 8 chances sur 10 que la valeur finisse entre ces bornes. Chances LNH${NBSP}: devenir un régulier. Tendance${NBSP}: évolution attendue de sa production par an. Conseil${NBSP}: indice automatique, à vérifier.`;
 
-/**
- * The legend of a salary-cap dynasty league (Slapshot): no cutdown, no
- * « Conseil », but the cap charge inside the value and the salary columns.
- */
-export const SLAPSHOT_LEGEND = `Valeur dyn.${NBSP}: points au-dessus du remplacement sur 12 saisons, nets du coût de son salaire sous le plafond, pas des points de la saison (ne pas additionner). Salaire${NBSP}: moyenne annuelle de son contrat LNH réel (en italique, un contrat projeté). Fourchette${NBSP}: 8 chances sur 10 que la valeur finisse entre ces bornes. Chances LNH${NBSP}: devenir un régulier.`;
-
 export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
+  const own = ctx.column?.(col, ctx);
+  if (own) return own;
   const nextPick = ctx.nextPick;
   const mode = ctx.mode ?? DEFAULT_DYNASTY_MODE;
   switch (col) {
     case "statut":
       return { label: "Statut", title: "Où il est : disponible, au ballottage ou dans quelle équipe" };
     case "valeur":
-      // Two different numbers, so two different names: in a league where every
-      // poste scores a skater the same way, « Valeur » is points over
-      // replacement (the only number that compares a gardien to a centre);
-      // elsewhere it stays the raw season total with the empty-slot bonus.
-      return ctx.vor
-        ? {
-            label: "Valeur (VOR)",
-            title: `Points au-dessus du remplacement${NBSP}: ses points projetés de la saison moins ceux du dernier partant de la ligue qui pourrait prendre son poste (remplissage optimal de tous les postes partants de la ligue, positions multiples comprises). Ajoutez la colonne « FP saison » pour le total brut`,
-          }
-        : { label: "Valeur saison", title: `Points projetés sur la saison 2026-27, jusqu'à +50${NBSP}% si vos postes D ou G sont vides` };
+      // The raw season total with the empty-slot bonus. Where « Valeur » is
+      // points over replacement the league pack names it (`ctx.column`).
+      return { label: "Valeur saison", title: `Points projetés sur la saison 2026-27, jusqu'à +50${NBSP}% si vos postes D ou G sont vides` };
     case "vona":
       return { label: "VONA", title: "Valeur moins le meilleur attendu à sa position à votre choix suivant" };
     case "dispo":
@@ -75,13 +67,7 @@ export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
         title: "Chance qu'il soit encore disponible à votre prochain choix",
       };
     case "fp":
-      return {
-        label: "FP saison",
-        title:
-          ctx.seasonShare !== undefined && ctx.seasonShare < 1
-            ? `Points de fantasy projetés sur la saison régulière de la ligue (environ ${Math.round(ctx.seasonShare * 100)}${NBSP}% des matchs de la LNH)`
-            : "Points de fantasy projetés sur la saison",
-      };
+      return { label: "FP saison", title: "Points de fantasy projetés sur la saison" };
     case "fpm":
       return { label: "FP/match", title: "Points de fantasy projetés par match joué (par départ pour un gardien)" };
     case "age":
@@ -131,19 +117,13 @@ export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
       return { label: "Opinions", title: "Nombre d'opinions de Snake publiées" };
     case "synthese":
       return { label: "Avis de Snake", title: "Verdict et synthèse d'une ligne de Simon « Snake » Boisvert" };
+    // Contract columns: shown only in a salary-cap league, whose pack words
+    // them (`ctx.column`); a bare fallback anywhere else.
     case "sal":
-    case "sal2": {
-      const y = (ctx.capSeason ?? 2026) + (col === "sal2" ? 1 : 0);
-      return {
-        label: `Salaire ${shortSeason(y)}`,
-        title: `Salaire ${shortSeason(y)} (moyenne annuelle de son contrat LNH réel pour cette saison, M$)${NBSP}: ce qui compte au plafond de la ligue s’il est parmi les 23 Actifs + Réserve (mineures et blessés ne comptent pas). Après la fin de son contrat, son prochain contrat projeté (en italique)${NBSP}; un espoir sans contrat LNH ne compte rien avant son arrivée prévue, puis un contrat d’entrée supposé`,
-      };
-    }
+    case "sal2":
+      return { label: "Salaire", title: "Salaire (M$)" };
     case "contrat":
-      return {
-        label: "Fin de contrat",
-        title: "Dernière saison de son contrat LNH signé, et son statut à l’échéance (JAS : joueur autonome sans compensation, JAC : avec compensation)",
-      };
+      return { label: "Fin de contrat", title: "Fin de contrat" };
     case "conseil":
       return {
         label: "Conseil",
@@ -176,22 +156,6 @@ export const SORT_LABEL: Record<SortKey, string> = {
   sal2: "Salaire de la saison prochaine",
   contrat: "Fin de contrat",
 };
-
-/** « 2031-32 · JAS » (the contract column), « sans contrat » for a player with no signed season. */
-export function contractEndLabel(c: { signed: number; expiry: number | null; status: "UFA" | "RFA" | null; elc: boolean }, firstSeason = 2026): string {
-  if (c.signed === 0) return "sans contrat";
-  const last = firstSeason + c.signed - 1;
-  const season = `${last}-${String((last + 1) % 100).padStart(2, "0")}`;
-  const st = c.status === "RFA" ? "JAC" : c.status === "UFA" ? "JAS" : null;
-  return c.expiry === null ? `${season}+` : st ? `${season} · ${st}` : season;
-}
-
-/** « 12,5 » (M$ in a salary cell: one decimal from 10, two below). */
-export function salaryCell(m: number | null): string {
-  if (m === null) return "—";
-  const d = m >= 10 ? 1 : 2;
-  return (Math.round(m * 10 ** d) / 10 ** d).toFixed(d).replace(".", ",");
-}
 
 export const TYPE_LABEL: Record<FantraxType, string> = {
   tous: "Tous",
@@ -320,8 +284,8 @@ export function fantraxTableNote(opts: {
   /** The page's dynasty mode (named in the note). */
   mode?: DynastyMode;
   snake: boolean;
-  /** « Valeur » is points over replacement here, not raw season points. */
-  vor?: boolean;
+  /** The value sentence where « Valeur » is points over replacement (the league pack's `vorTableNote`). */
+  vorNote?: string;
   /**
    * fxpa answers for this league, so « % Fantrax » exists. Where it does not,
    * the sentence that tells the reader how to rank prospects must not send him
@@ -341,9 +305,7 @@ export function fantraxTableNote(opts: {
   ];
   if (!opts.brief) {
     parts.push(
-      opts.vor
-        ? `Valeur (VOR) = points projetés au-dessus du remplacement à sa position (comme au repêchage)${NBSP}: le seul chiffre qui compare un gardien à un centre. Ajoutez la colonne «${NBSP}FP saison${NBSP}» (Colonnes → Projection) pour le total brut.`
-        : `Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides (comme au repêchage).`,
+      opts.vorNote ?? `Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides (comme au repêchage).`,
     );
     if (opts.draftOpen && opts.nextPick !== null) {
       parts.push(
@@ -372,12 +334,9 @@ export function fantraxTableNote(opts: {
 
 /**
  * Repêchage: what the season columns and the dynasty value each measure
- * (one line, under the board note).
+ * (one line, under the board note). A dynasty league without the cutdown
+ * (Slapshot) has its own, in its league pack (`dynastyDraftNote`).
  */
-export function dynastyDraftNote(mode: DynastyMode, cutdown = true): string {
-  if (!cutdown) {
-    // A dynasty league without a cutdown but with a salary cap (Slapshot).
-    return `Valeur (VOR), VONA et Dispo. comptent les points de la saison 2026-27 de la ligue (saison régulière jusqu’à la fin février, comme un repêchage d’un an); Valeur dyn. (mode ${DYNASTY_MODE_LABEL[mode]}) compte les 12 prochaines saisons, nettes du coût de chaque salaire sous le plafond${NBSP}: deux unités différentes, à ne pas additionner.`;
-  }
+export function dynastyDraftNote(mode: DynastyMode): string {
   return `Valeur saison, VONA et Dispo. comptent les points de la saison 2026-27 (comme un repêchage d’un an); Valeur dyn. (mode ${DYNASTY_MODE_LABEL[mode]}) compte les 12 prochaines saisons, écrémages et mineures compris${NBSP}: deux unités différentes, à ne pas additionner.`;
 }

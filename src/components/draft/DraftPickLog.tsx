@@ -12,6 +12,8 @@ interface DraftPickLogProps {
   slot: number | null;
   onRemove: (index: number) => void;
   onToggleMine: (index: number) => void;
+  /** Name the player of a « hors liste » pick (the board list then looks for him). */
+  onIdentify?: (index: number) => void;
 }
 
 const SHOWN = 12;
@@ -19,13 +21,18 @@ const SHOWN = 12;
 /**
  * Latest picks first. « moi / autre » flips who made the pick; × removes a
  * mis-marked pick anywhere in the draft. Both are undoable (Annuler /
- * Ctrl + Z restore the previous state, whatever the action).
+ * Ctrl + Z restore the previous state, whatever the action). Every
+ * « hors liste » pick, however old, can be named (« Identifier »): the
+ * list now holds every player.
  */
-export function DraftPickLog({ picks, byId, teams, slot, onRemove, onToggleMine }: DraftPickLogProps) {
-  const recent = picks
-    .map((pick, index) => ({ pick, index }))
-    .slice(-SHOWN)
-    .reverse();
+export function DraftPickLog({ picks, byId, teams, slot, onRemove, onToggleMine, onIdentify }: DraftPickLogProps) {
+  const indexed = picks.map((pick, index) => ({ pick, index }));
+  const recent = indexed.slice(-SHOWN).reverse();
+  // Older « hors liste » picks (mine first): the recent list shows the others.
+  const olderUnlisted = indexed
+    .slice(0, Math.max(0, picks.length - SHOWN))
+    .filter(({ pick }) => pick.id === UNLISTED_PLAYER_ID)
+    .sort((a, b) => Number(b.pick.mine) - Number(a.pick.mine) || a.index - b.index);
   return (
     <section aria-labelledby="draft-log-heading" className="rounded-2xl border border-white/10 bg-white/5 p-3 sm:p-4">
       <h2 id="draft-log-heading" className="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-200">
@@ -48,6 +55,9 @@ export function DraftPickLog({ picks, byId, teams, slot, onRemove, onToggleMine 
                   {name}
                   {p ? <span className="text-xs text-slate-500"> {p.pos.join("/")}</span> : null}
                 </span>
+                {pick.id === UNLISTED_PLAYER_ID && onIdentify ? (
+                  <IdentifyButton label={pickLabel(n)} onClick={() => onIdentify(index)} />
+                ) : null}
                 <button
                   type="button"
                   onClick={() => onToggleMine(index)}
@@ -83,11 +93,44 @@ export function DraftPickLog({ picks, byId, teams, slot, onRemove, onToggleMine 
           })}
         </ol>
       )}
+      {onIdentify && olderUnlisted.length > 0 ? (
+        // Open when one of them is mine (Mon équipe misses him); other teams' only matter for « Disponibles ».
+        <details className="mt-3" open={olderUnlisted.some(({ pick }) => pick.mine)}>
+          <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Choix hors liste plus anciens ({olderUnlisted.length})
+          </summary>
+          <ul className="mt-1 space-y-1.5">
+            {olderUnlisted.map(({ pick, index }) => (
+              <li key={`u-${index}`} className="flex items-center gap-2 text-sm">
+                <span className="w-12 shrink-0 text-xs tabular-nums text-slate-500">{pickLabel(index + 1)}</span>
+                <span className={`min-w-0 flex-1 truncate ${pick.mine ? "font-semibold text-cyan-200" : "text-slate-300"}`}>
+                  Joueur hors liste <span className="text-xs font-normal text-slate-500">({pick.mine ? "moi" : "autre"})</span>
+                </span>
+                <IdentifyButton label={pickLabel(index + 1)} onClick={() => onIdentify(index)} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       {picks.length > SHOWN ? (
         <p className="mt-2 text-xs text-slate-500">
           {picks.length - SHOWN} choix plus anciens : « Voir repêchés » dans le tableau pour les retirer.
         </p>
       ) : null}
     </section>
+  );
+}
+
+function IdentifyButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex min-h-10 shrink-0 items-center rounded-md px-2 text-[11px] font-semibold text-amber-200 ring-1 ring-inset ring-amber-300/40 hover:bg-amber-400/15 sm:min-h-8"
+      aria-label={`Identifier le joueur du ${label} (hors liste)`}
+      title="Nommer le joueur de ce choix (il garde son numéro et son équipe)"
+    >
+      Identifier
+    </button>
   );
 }

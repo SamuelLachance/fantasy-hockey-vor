@@ -11,6 +11,7 @@ import type { FantraxLeagueConfig, RosterLimits } from "@/lib/fantrax/config";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
 import type { DynastyMode } from "@/lib/fantrax/dynasty-mode";
 import type { LeagueSnapshotBundle } from "@/lib/fantrax/league-client";
+import type { LeaguePack } from "@/lib/fantrax/league-pack";
 import type { DraftFreshness, LiveOverlay } from "@/lib/fantrax/live";
 import type { StateSnapshot } from "@/lib/fantrax/snapshot-types";
 import type { PlayerLookup } from "./LeagueCard";
@@ -24,6 +25,8 @@ export interface FantraxLeagueValue {
    * features exist. Never assume the Captains one.
    */
   config: FantraxLeagueConfig;
+  /** What only this league needs (its planner rules and words, `league-pack.ts`); null for Captains. */
+  pack: LeaguePack | null;
   teams: Array<{ id: string; name: string }>;
   leagueName: string;
   /** Roster limits of the league (Actifs / Réserve / blessés / mineures). */

@@ -32,11 +32,8 @@ import {
   type PresetId,
 } from "@/lib/fantrax/table";
 import {
-  contractEndLabel,
   DYNASTY_LEGEND,
   fantraxTableNote,
-  salaryCell,
-  SLAPSHOT_LEGEND,
   iconTags,
   nhlDraftLabel,
   numCell,
@@ -136,13 +133,15 @@ const CELLS: Record<ColumnKey, (r: FantraxRow, ctx: FantraxCtx) => CellOut> = {
     };
   },
   fp: (r) => ({ node: numCell(r.fp, 0), className: MUTED }),
-  // Salary-cap league: this season's and next season's cap hit (projected ones in italics), contract end.
-  sal: (r) => salaryOut(r, 0),
-  sal2: (r) => salaryOut(r, 1),
+  // Salary-cap league: this season's and next season's cap hit (projected ones
+  // in italics), contract end. The cells come with its league pack (`ctx.parts`).
+  sal: (r, ctx) => salaryOut(r, 0, ctx),
+  sal2: (r, ctx) => salaryOut(r, 1, ctx),
   contrat: (r, ctx) => {
     const c = r.dynasty?.contract;
+    const End = ctx.parts?.ContractEndNode;
     return {
-      node: c ? contractEndLabel(c, ctx.capSeason) : "—",
+      node: c && End ? <End contract={c} firstSeason={ctx.capSeason} /> : "—",
       className: `whitespace-nowrap ${c && c.signed <= 1 ? "text-amber-200" : MUTED}`,
     };
   },
@@ -216,23 +215,11 @@ const CELLS: Record<ColumnKey, (r: FantraxRow, ctx: FantraxCtx) => CellOut> = {
 };
 
 /** A salary cell: signed seasons plain, a projected next contract in italics (its title says so). */
-function salaryOut(r: FantraxRow, t: number): CellOut {
+function salaryOut(r: FantraxRow, t: number, ctx: FantraxCtx): CellOut {
   const m = rowSalary(r, t);
-  const c = r.dynasty?.contract;
-  const projected = !!c && t >= c.signed;
+  const Salary = ctx.parts?.SalaryNode;
   return {
-    node:
-      m === null ? (
-        "—"
-      ) : projected && m === 0 ? (
-        <span title="Sans contrat LNH : aucun salaire avant son arrivée prévue dans la LNH">—</span>
-      ) : projected ? (
-        <span title={c!.signed === 0 ? "Sans contrat LNH : contrat d’entrée supposé" : "Contrat projeté (le sien se termine avant)"} className="italic">
-          {salaryCell(m)}
-        </span>
-      ) : (
-        salaryCell(m)
-      ),
+    node: m === null || !Salary ? "—" : <Salary m={m} contract={r.dynasty?.contract ?? null} t={t} />,
     className: `tabular-nums ${m !== null && m >= 8 ? "text-amber-100" : MUTED}`,
   };
 }
@@ -352,7 +339,7 @@ export function useFantraxTableData({
   autoLoad: boolean;
   fallback: "draft" | "team" | null;
 }): FantraxTableSource {
-  const { config, plan, bundle, state, teamId, teams, teamName, hasDynasty, mode, vor } = useFantraxLeague();
+  const { config, pack, plan, bundle, state, teamId, teams, teamName, hasDynasty, mode, vor } = useFantraxLeague();
   // Rosters at the sync the dynasty values saw (the snapshot, before the live read).
   const syncOwners = useMemo(() => syncOwnersOf(bundle?.state), [bundle]);
   const [wanted, setWanted] = useState(autoLoad);
@@ -489,9 +476,11 @@ export function useFantraxTableData({
       cutdown: config.features.keeperCutdown,
       ...(config.salaryCap ? { capSeason: config.salaryCap.firstSeason } : {}),
       ...(config.cadence.seasonShare !== undefined ? { seasonShare: config.cadence.seasonShare } : {}),
+      ...(pack ? { column: pack.copy.column } : {}),
+      ...(pack?.parts ? { parts: pack.parts } : {}),
       pickOf,
     }),
-    [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config, pickOf],
+    [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config, pack, pickOf],
   );
   const labels = useMemo(() => fantraxLabels(rows, dynasty, snake), [rows, dynasty, snake]);
 
@@ -556,7 +545,7 @@ export function FantraxPlayerTable({
   /** The « Valeur dynastie » mode switch above the filters (off where the tab shows its own). */
   modeSwitch?: boolean;
 }) {
-  const { hasDynasty, config } = useFantraxLeague();
+  const { hasDynasty, config, pack } = useFantraxLeague();
   const { data, pool, dynasty, snake } = useFantraxTableData({ autoLoad: true, fallback });
   // Only the views this league's data can apply: `availablePreset` drops the
   // dynasty ones for a league with no keeper model, and « Meilleure valeur
@@ -578,7 +567,7 @@ export function FantraxPlayerTable({
         dynasty: !!dynasty,
         mode: data.ctx.mode,
         snake: !!snake,
-        vor: data.caps.vor,
+        vorNote: data.caps.vor ? pack?.copy.vorTableNote : undefined,
         fxpa: data.caps.fxpa,
         brief: !!footer,
         cutdown: config.features.keeperCutdown,
@@ -601,7 +590,7 @@ export function FantraxPlayerTable({
           <>
             {modeSwitch ? <DynastyModeSwitch idPrefix={id} /> : null}
             <p className={`text-xs text-slate-400 ${modeSwitch ? "mt-2" : ""}`}>
-              {config.features.keeperCutdown ? DYNASTY_LEGEND : SLAPSHOT_LEGEND}
+              {!config.features.keeperCutdown && pack?.parts ? <pack.parts.Legend /> : DYNASTY_LEGEND}
             </p>
           </>
         ) : null

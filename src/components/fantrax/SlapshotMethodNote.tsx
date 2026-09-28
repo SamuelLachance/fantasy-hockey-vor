@@ -2,7 +2,24 @@
 
 import { ChevronRight } from "lucide-react";
 import { capGrowthText, fmtMoney } from "@/lib/fantrax/salary-copy";
+import { withBasePath } from "@/lib/site";
 import { useFantraxLeague } from "./fantrax-league-context";
+
+/** Under the Repêchage table: the stand-alone live draft page (public/slapshot-draft.html). */
+export function SlapshotLightPageLink() {
+  return (
+    <p className="text-xs text-slate-400">
+      Sur un téléphone lent ou pendant une longue séance :{" "}
+      <a
+        href={withBasePath("/slapshot-draft.html")}
+        className="text-cyan-300 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      >
+        la page légère du repêchage en direct
+      </a>{" "}
+      (mêmes valeurs, relue toutes les 20 secondes).
+    </p>
+  );
+}
 
 const NBSP = " ";
 const num = (x: number, d = 2) => x.toFixed(d).replace(".", ",");

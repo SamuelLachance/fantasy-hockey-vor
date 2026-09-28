@@ -4,9 +4,9 @@ import { BellRing, Coins, LayoutGrid, ListChecks, Users } from "lucide-react";
 import { useMemo } from "react";
 import { fmtTime, ordinal, pickLabel } from "@/lib/fantrax/league-copy";
 import { capSeasonLabel, fmtMoney } from "@/lib/fantrax/salary-copy";
-import type { SeatCount } from "@/lib/fantrax/seat-needs";
+import { wingSentence, type SeatCount } from "@/lib/fantrax/seat-needs";
 import { draftBoardView } from "@/lib/fantrax/slapshot-draft";
-import { contractEndLabel, salaryCell } from "@/lib/fantrax/table-copy";
+import { contractEndLabel, salaryCell } from "@/lib/fantrax/contract-copy";
 import { rowDynastyValue, rowSalary } from "@/lib/fantrax/table";
 import { DYNASTY_MODE_LABEL } from "@/lib/fantrax/dynasty-mode";
 import { fmtInt } from "@/lib/player-table/copy";
@@ -215,11 +215,7 @@ export function SlapshotDraftBoard() {
             {view.needs.slots.G ? <NeedTile label="G" c={view.needs.slots.G} /> : null}
           </ul>
           {w ? (
-            <p className="mt-2 text-xs text-slate-400">
-              {w.flex > 0
-                ? `Ailiers : ${w.flex} des vôtres jouent à gauche comme à droite, donc un LW ou un RW comble un poste (au plus ${w.lw} LW et ${w.rw} RW de plus).`
-                : "Ailiers : 4 LW et 4 RW; « LW ≤ n » = combien de LW de plus trouveraient un poste."}
-            </p>
+            <p className="mt-2 text-xs text-slate-400">{wingSentence(w)}</p>
           ) : null}
         </LeagueCard>
 

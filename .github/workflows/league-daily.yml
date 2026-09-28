@@ -100,6 +100,22 @@ jobs:
             echo "::warning::slapshot sync or check failed, using the committed snapshot"
           fi
 
+      # Who the NHL lists today (every club's roster and prospect list, then
+      # the public player search index for the rest of each organisation:
+      # 65 requests >= 1.2 s apart): the Light the Lamp list's players
+      # without a projection (call-ups, waiver-wire rookies) and current
+      # clubs, rebuilt into board.json / pool.json by build:pages. Non-fatal:
+      # the script never writes a partial file, and on any failure the
+      # committed snapshot is restored and used.
+      - name: Refresh NHL rosters (non-fatal)
+        run: |
+          if timeout 300 npm run nhl:rosters && npm run check:draft-board; then
+            echo "NHL rosters refreshed"
+          else
+            git checkout -- src/data/nhl-rosters.json || true
+            echo "::warning::NHL roster refresh failed, using committed snapshot"
+          fi
+
       - name: Build static site
         run: npm run build:pages
         env:

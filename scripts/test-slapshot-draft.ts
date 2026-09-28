@@ -14,7 +14,7 @@ import { SLAPSHOT } from "../src/lib/fantrax/config";
 import { parseDynasty } from "../src/lib/fantrax/dynasty-index";
 import type { ContractsFile } from "../src/lib/fantrax/salary-cap";
 import { slapshotContracts, type SlapshotSnapshotLike } from "../src/lib/dynasty/slapshot-client";
-import { seatNeeds, type SeatNeedsResult } from "../src/lib/fantrax/seat-needs";
+import { seatNeeds, wingSentence, type SeatNeedsResult, type WingNeed } from "../src/lib/fantrax/seat-needs";
 import { bestAvailable, draftBoardView, draftSeatNeeds, myDraftPlayers, stashCandidates, type MyDraftPlayer } from "../src/lib/fantrax/slapshot-draft";
 import type { FantraxRow } from "../src/lib/fantrax/table";
 import type { DynastyRecord } from "../src/lib/dynasty/types";
@@ -128,6 +128,47 @@ const p = (id: string, groups: string[], fp: number, status = "ACTIVE"): MyDraft
     else if (same === k) console.error(`first difference: ${JSON.stringify(players)}\n site ${a}\n page ${b}`);
   }
   assert(same === 400, `site and page seat fills agree on 400 random rosters (${same})`);
+
+  // The wings' sentence: the same function on both, and never « un LW ou un
+  // RW » once one side is full (four LW-only players on the left).
+  const ws = html.indexOf("  function wingSentence(w) {");
+  const we = html.indexOf("\n  }\n", ws);
+  assert(ws > 0 && we > ws, "the template carries function wingSentence");
+  const pageWing = new Function(`${html.slice(ws, we + 4)}; return wingSentence;`)() as (w: WingNeed) => string;
+  let sameWing = 0;
+  seed = 777;
+  for (let k = 0; k < 400; k++) {
+    const n = Math.floor(rnd() * 30);
+    const players = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, pos: SHAPES[Math.floor(rnd() * SHAPES.length)]! }));
+    const w = seatNeeds(players, slots).wing!;
+    if (wingSentence(w) === pageWing(w)) sameWing++;
+    const says = wingSentence(w);
+    if (w.lw === 0 || w.rw === 0) assert(!says.includes("un LW ou un RW"), `one side full, no « un LW ou un RW » (${JSON.stringify(w)}: ${says})`);
+    assert(!/\b0 (LW|RW|au plus)/.test(says), `no « 0 LW » (${JSON.stringify(w)}: ${says})`);
+  }
+  assert(sameWing === 400, `site and page wing sentences agree on 400 random rosters (${sameWing})`);
+  const lwFull = seatNeeds(
+    ["LW", "LW", "LW", "LW"].map((pos, i) => ({ id: `l${i}`, pos: [pos] })).concat([0, 1].map((i) => ({ id: `f${i}`, pos: ["LW", "RW"] }))),
+    slots,
+  ).wing!;
+  assert(
+    wingSentence(lwFull) === "Ailiers : plus de poste pour un LW seul; seul un RW (ou un LW/RW) comble encore un poste, 2 au plus.",
+    `four LW-only and two LW/RW: only a RW helps (${wingSentence(lwFull)})`,
+  );
+}
+
+// ---- the stand-alone page keeps « Afficher 300 de plus » / « Tout afficher »
+// (a829d03 added them to the published page by hand; the page is now
+// regenerated from the template, so the template must carry them)
+{
+  const tpl = readFileSync(join(process.cwd(), "scripts", "slapshot-draft", "template.html"), "utf8");
+  assert(tpl.includes('<div id="more"') && tpl.includes('data-more="all"') && tpl.includes("rows.length >= limit"), "template: the table grows past 300 rows on demand");
+  assert(!/rows\.length >= 300/.test(tpl), "template: no hard 300-row cap");
+  const page = join(process.cwd(), "public", "slapshot-draft.html");
+  if (existsSync(page)) {
+    const html = readFileSync(page, "utf8");
+    assert(html.includes('data-more="all"') && html.includes('<div id="more"'), "public/slapshot-draft.html keeps the show-more buttons (npm run slapshot:draft-page)");
+  }
 }
 
 // ---- a zero-value player's cap hit comes from the contracts file

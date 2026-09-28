@@ -25,18 +25,6 @@ export function fmtNum(x: number, digits = 2): string {
   return x < 0 && Number(s.replace(",", ".")) !== 0 ? `${MINUS}${s}` : s;
 }
 
-/**
- * `98,4 M$` (one decimal from 10 M$, two below). Built by hand like the
- * other numbers here: the page hydrates in whatever browser opens it.
- */
-export function fmtMoney(m: number): string {
-  const abs = Math.abs(m);
-  const d = abs >= 10 ? 1 : 2;
-  // Round half up first: 0.975.toFixed(2) is "0.97" in binary floating point.
-  const s = (Math.round(abs * 10 ** d) / 10 ** d).toFixed(d).replace(".", ",");
-  return `${m < 0 ? MINUS : ""}${s}${NBSP}M$`;
-}
-
 /** Always signed: `+2,42`, `−0,50`, `+0,00`. */
 export function fmtSigned(x: number, digits = 2): string {
   const s = fmtNum(x, digits);
@@ -287,14 +275,10 @@ export function alertText(a: PlanAlert, name: NameOf): string | null {
       return `Les mouvements suggérés portent Actifs + Réserve à ${n} (max. ${a.limit ?? "?"}) : envoyez un joueur aux mineures ou libérez-en un.`;
     case "fxpa-down":
       return "Données Fantrax partielles à la dernière synchronisation : plafonds de matchs, blessures et statut des mineures inconnus.";
-    case "fxpa-closed":
-      return "Cette ligue ne publie pas ses détails joueur : blessures, % de ligues Fantrax et priorité au ballottage ne sont pas lisibles sans être membre. L'alignement optimal ne sait donc pas qui est blessé — vérifiez dans Fantrax avant de le reproduire.";
     case "stale-data":
       return `Les données datent de ${n}${NBSP}h : la synchronisation automatique semble en retard.`;
-    case "salary-over": {
-      const top = (a.ids ?? []).map((id) => name(id)).join(", ");
-      return `Masse salariale dépassée : ${fmtMoney(n)} pour un plafond de ${fmtMoney(a.limit ?? 0)} (Actifs + Réserve). Envoyez un salarié aux mineures ou sur la liste des blessés (ils ne comptent pas)${top ? `; plus gros salaires : ${top}` : ""}.`;
-    }
+    // A salary-cap league's own alerts (salary-over, fxpa-closed) are worded
+    // by its league pack (cap-league-copy.ts): the caller asks it next.
     default:
       return null;
   }
@@ -361,14 +345,13 @@ export function draftBoardNote(
   following: number | null,
   poolShare: number,
   dynasty = false,
-  /** « Valeur » is points over replacement here, not raw season points. */
-  vor = false,
+  /**
+   * The value sentence of a league where « Valeur » is points over replacement
+   * (its league pack's `vorBoardNote`); the season-points one otherwise.
+   */
+  vorNote?: string,
 ): string {
-  const parts = [
-    vor
-      ? `Valeur (VOR) = points projetés au-dessus du remplacement à sa position${NBSP}: ses points de saison moins ceux du dernier partant de la ligue qui pourrait prendre son poste. C'est le seul chiffre qui compare un gardien à un centre; ajoutez la colonne «${NBSP}FP saison${NBSP}» (Colonnes → Projection) pour le total brut.`
-      : `Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`,
-  ];
+  const parts = [vorNote ?? `Valeur saison = points projetés sur la saison, jusqu'à +50${NBSP}% si vos postes D ou G sont vides.`];
   if (next !== null && following !== null) {
     parts.push(
       `VONA d'un joueur = sa valeur moins le meilleur attendu à sa position au ${pickLabel(following)} (négative si mieux devrait y rester).`,

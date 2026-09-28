@@ -107,3 +107,22 @@ export function seatNeeds(
   }
   return { slots: out, wing, seatOf: base.seatOf };
 }
+
+/**
+ * The wings' sentence under the need tiles (the board and the stand-alone
+ * page: the template carries the same function, compared by
+ * test-slapshot-draft.ts). « un LW ou un RW comble un poste » only while BOTH
+ * sides still seat a one-sided player: four LW-only players on the left make
+ * an LW pick a bench player however many LW/RW the roster has.
+ */
+export function wingSentence(w: WingNeed): string {
+  if (w.empty <= 0) return `Ailiers : les ${w.max} postes sont pris; un ailier de plus ne serait pas partant.`;
+  if (w.lw > 0 && w.rw > 0) {
+    return w.flex > 0
+      ? `Ailiers : ${w.flex} des vôtres jouent à gauche comme à droite, donc un LW ou un RW comble un poste (au plus ${w.lw} LW et ${w.rw} RW de plus).`
+      : "Ailiers : 4 LW et 4 RW; « LW ≤ n » = combien de LW de plus trouveraient un poste.";
+  }
+  const side = w.lw > 0 ? "LW" : "RW";
+  const full = side === "LW" ? "RW" : "LW";
+  return `Ailiers : plus de poste pour un ${full} seul; seul un ${side} (ou un LW/RW) comble encore un poste, ${side === "LW" ? w.lw : w.rw} au plus.`;
+}

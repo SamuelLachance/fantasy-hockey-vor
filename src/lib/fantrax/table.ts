@@ -36,6 +36,7 @@ import type { DynastyIndex } from "./dynasty-index";
 import { lookupExtra, VERDICT_POSITIVE, verdictRank, type SnakeIndex, type SnakeInfo } from "./extras";
 import { POOL_GROUPS, type PoolGroup, type PoolRosterStatus, type PoolSnapshot, type PoolSource } from "./pool";
 import { CAPTAINS_DYNASTY, eligibleGroups, parseGroups, type FantraxLeagueConfig } from "./config";
+import type { LeagueParts } from "./league-pack";
 import type { StateSnapshot, ValuesSnapshot } from "./snapshot-types";
 import { columnCopy, SORT_LABEL } from "./table-copy";
 
@@ -503,6 +504,8 @@ export interface FantraxCtx {
   capSeason?: number;
   /** Pick number of each player drafted in the league's current draft (live picks included). */
   pickOf?: ReadonlyMap<string, number>;
+  /** A salary-cap league's cells (its league pack: `cap-league-parts.tsx`). */
+  parts?: Pick<LeagueParts, "SalaryNode" | "ContractEndNode">;
 }
 
 /** Cap hit of season t (0 = this season) from his contract, M$; null without one. */

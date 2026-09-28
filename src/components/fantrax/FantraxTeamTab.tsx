@@ -21,9 +21,6 @@ const DynastyTeamCard = dynamic(() => import("./DynastyTeamCard").then((m) => m.
   ),
 });
 
-// A salary-cap league's cap card and method note: their own chunk.
-const SlapshotTeamCap = dynamic(() => import("./SlapshotTeamCap").then((m) => m.SlapshotTeamCap), { ssr: false });
-const SlapshotMethodNote = dynamic(() => import("./SlapshotMethodNote").then((m) => m.SlapshotMethodNote));
 
 /**
  * Mon équipe: roster counts against the league limits, then — only in a league
@@ -38,7 +35,8 @@ const SlapshotMethodNote = dynamic(() => import("./SlapshotMethodNote").then((m)
  * maximum nobody ever read.
  */
 export function FantraxTeamTab({ slug }: { slug: string }) {
-  const { config, limits, teamName, teamId, defaultTeamId, hasDynasty } = useFantraxLeague();
+  const { config, pack, limits, teamName, teamId, defaultTeamId, hasDynasty } = useFantraxLeague();
+  const parts = pack?.parts;
   // The tile counts the INJURED_RESERVE status that fxea's rosters carry, so
   // it is a known IR count even without fxpa; only the injury icons (who is
   // hurt but still Active) are unread there, which the lineup advice says.
@@ -106,7 +104,8 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
         }}
       </FantraxPlanGate>
       {hasDynasty && config.features.keeperCutdown ? <DynastyTeamCard /> : null}
-      {config.salaryCap ? <SlapshotTeamCap /> : null}
+      {/* A salary-cap league's cap card and method note come with its league pack. */}
+      {parts ? <parts.TeamCap /> : null}
       <FantraxPlayerTable
         id="effectif-joueurs"
         title={`Joueurs de ${teamName(teamId)}`}
@@ -126,7 +125,7 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
         modeSwitch={false}
         key={slug}
       />
-      {config.salaryCap ? <SlapshotMethodNote /> : null}
+      {parts ? <parts.MethodNote /> : null}
     </div>
   );
 }

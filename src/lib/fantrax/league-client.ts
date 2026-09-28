@@ -26,7 +26,7 @@ import {
   type FantraxLeagueConfig,
 } from "./config";
 import { carryLiveDraft, liveOverlay, type LiveOverlay } from "./live";
-import { isContractsFile, type ContractsFile } from "./salary-cap";
+import type { ContractsFile } from "./salary-cap";
 import { fetchSnapshotFile } from "./snapshot-fetch";
 import type {
   DynastySnapshot,
@@ -43,7 +43,8 @@ export interface LeagueSnapshotBundle {
   schedule: ScheduleSnapshot;
   /**
    * A salary-cap league's contracts (`<public>/contracts.json`, derived from
-   * its dynasty.json at build time), read apart (`loadContracts`: the plan
+   * its dynasty.json at build time), read apart by that league's shell
+   * (`loadContracts` in contracts-client.ts: the plan
    * and the live picks never wait for it); null until then, elsewhere, or
    * when unreadable (the plan then has no cap line rather than failing).
    */
@@ -92,31 +93,6 @@ export function loadLeagueSnapshot(cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY):
     throw err;
   });
   bundlePromises.set(cfg.slug, p);
-  return p;
-}
-
-const contractsPromises = new Map<string, Promise<ContractsFile | null>>();
-
-/**
- * A salary-cap league's contracts.json, once per page view (8 s timeout, one
- * retry); null for a league without a cap. Rejects when unreadable or
- * malformed, so the page can say that the salaries are unavailable instead
- * of loading forever; a later call retries.
- */
-export function loadContracts(cfg: FantraxLeagueConfig): Promise<ContractsFile | null> {
-  if (!cfg.salaryCap) return Promise.resolve(null);
-  const cached = contractsPromises.get(cfg.slug);
-  if (cached) return cached;
-  const p = fetchSnapshotFile<unknown>(fantraxPublicFile(cfg, "contracts.json"))
-    .then((c) => {
-      if (!isContractsFile(c)) throw new Error("contracts.json is malformed");
-      return c;
-    })
-    .catch((err: unknown) => {
-      if (contractsPromises.get(cfg.slug) === p) contractsPromises.delete(cfg.slug);
-      throw err;
-    });
-  contractsPromises.set(cfg.slug, p);
   return p;
 }
 

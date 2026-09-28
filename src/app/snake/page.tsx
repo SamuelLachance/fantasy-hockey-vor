@@ -6,7 +6,7 @@ import { SnakeDisclaimerShort } from "@/components/snake/SnakeDisclaimer";
 import { SnakeExplorer } from "@/components/snake/SnakeExplorer";
 import { SnakeMethodology } from "@/components/snake/SnakeMethodology";
 import type { BoardLeague } from "@/components/snake/SnakePlayerDetail";
-import { categorySnakeSeed } from "@/components/league-shell/category-board";
+import { categoryListedSnakeIds } from "@/components/league-shell/category-board";
 import leagueJson from "@/data/fantrax/league.json";
 import summaryJson from "@/data/snake-summary.json";
 import { FANTRAX_DEFAULT_TEAM_ID } from "@/lib/fantrax/config";
@@ -62,11 +62,11 @@ export default function SnakePage() {
   const roster = myRoster();
   // Only the ids Snake talked about travel to the browser.
   const myIds = roster.ids.filter((id) => summary.fx[id]);
-  // Categories leagues: the board players Snake discussed (their « Dans vos ligues » link).
+  // Categories leagues: every listed player Snake discussed, board and pool (their « Dans vos ligues » link).
   const boardLeagues: BoardLeague[] = LEAGUES.filter((l) => l.kind === "yahoo-categories").map((l) => ({
     slug: l.slug,
     name: l.shortName,
-    nhlIds: encodeIdSet(Object.keys(categorySnakeSeed(l))),
+    nhlIds: encodeIdSet(categoryListedSnakeIds(l)),
   }));
 
   return (
