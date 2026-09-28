@@ -87,7 +87,11 @@ export function explainFr(r: DynastyRecord, maxLen = 220): string {
   const clauses: string[] = [];
   // 1. who and phase
   if (r.phase === "prospect" && r.path !== "nhl") {
-    const draft = r.draft ? ` (${ordinal(r.draft.pick)} choix LNH ${r.draft.year})` : "";
+    const draft = r.draft
+      ? ` (${ordinal(r.draft.pick)} choix LNH ${r.draft.year})`
+      : r.seg === "prospect_undrafted"
+        ? " (non repêché)"
+        : "";
     const eta = r.eta != null ? `, arrivée ${seasonLabel(r.eta)}` : "";
     const who = r.g === "G" ? "Gardien espoir" : "Espoir";
     clauses.push(`${who} de ${age} ans${draft}${NBSP}: ${pct(r.pNhl)} de chances de s’établir dans la LNH${eta}`);

@@ -57,6 +57,38 @@ export function slotProspect(
   return { pMake, pi: slotPrime(p, g, draft.pick), eta: Math.max(season, draft.year + lag) };
 }
 
+/** Piecewise-linear lookup in [x, y] pairs sorted by x, flat past the ends. */
+export function interpPairs(pairs: ReadonlyArray<readonly [number, number]>, x: number): number {
+  if (!pairs.length) return 0;
+  if (x <= pairs[0]![0]) return pairs[0]![1];
+  for (let i = 1; i < pairs.length; i++) {
+    const [x1, y1] = pairs[i]!;
+    if (x <= x1) {
+      const [x0, y0] = pairs[i - 1]!;
+      return y0 + ((y1 - y0) * (x - x0)) / (x1 - x0);
+    }
+  }
+  return pairs[pairs.length - 1]![1];
+}
+
+/**
+ * Undrafted fallback (params.prospect.undrafted, fitted on the repo's
+ * history by scripts/fit-undrafted-prospects.ts): an undrafted player with
+ * no research record and no NHL role, in an NHL organisation. P(make it) by
+ * his age on Oct 1 (a 22-year-old signing is worth more than a 26-year-old
+ * one, as the no-arrival decay does for draft picks), the prime FP/G of the
+ * undrafted skaters who made it, and his first regular season after the
+ * median lag at his age. Null without the params block.
+ */
+export function undraftedProspect(p: DynastyParams, g: Group, age0: number, season = p.firstSeasonYear): ProspectModel | null {
+  const u = p.prospect.undrafted;
+  if (!u) return null;
+  const pMake = Math.max(0, Math.min(1, interpPairs(u.pMake[g], age0)));
+  const lag = Math.max(0, Math.round(interpPairs(u.etaLag, age0)));
+  const pi = g === "G" ? { ...p.prospect.slotPrime.G } : { ...u.prime[g] };
+  return { pMake, pi, eta: season + lag };
+}
+
 /** From a frozen research record. */
 export function recordProspect(r: ProspectRecord): ProspectModel {
   return { pMake: r.pMake, pi: { mu: r.fpgIfMake.mu, sd: r.fpgIfMake.sd }, eta: r.eta ?? 2028 };

@@ -1,5 +1,5 @@
 {
- "version": "dyn-v4-2026-09-25",
+ "version": "dyn-v5-2026-09-27",
  "season": "2026-27",
  "firstSeasonYear": 2026,
  "T": 12,
@@ -844,7 +844,94 @@
   "draftAgeRange": [
    17,
    21
-  ]
+  ],
+  "undrafted": {
+   "source": "scripts/fit-undrafted-prospects.ts (2026-09-28): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < 20 NHL GP) = M_a / U_a, M_a = undrafted players per birth cohort 1985-1996 who made it with < 20 NHL GP before their age-a season, on an NHL deal by then (a North American pro season that season or earlier, first NHL game at most 2 seasons later) (league-seasons.json: F 65, D 34, G 14 made it), U_a = today's undrafted organisation players of age a with < 20 NHL GP (nhl-rosters.json × 30.5/32 clubs); ages pooled in bands 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one non-increasing skater shape over them (weighted PAVA), each group's level its pooled ratio. Ages outside the table take its end values. eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n 21 mean 1.919 sd 0.392; D n 9 mean 2.045 sd 0.312), goalies the slot prior.",
+   "pMake": {
+    "F": [
+     [
+      21,
+      0.344
+     ],
+     [
+      23.5,
+      0.192
+     ],
+     [
+      25.5,
+      0.19
+     ],
+     [
+      28.5,
+      0.032
+     ]
+    ],
+    "D": [
+     [
+      21,
+      0.29
+     ],
+     [
+      23.5,
+      0.162
+     ],
+     [
+      25.5,
+      0.16
+     ],
+     [
+      28.5,
+      0.027
+     ]
+    ],
+    "G": [
+     [
+      21,
+      0.239
+     ],
+     [
+      23.5,
+      0.133
+     ],
+     [
+      25.5,
+      0.132
+     ],
+     [
+      28.5,
+      0.023
+     ]
+    ]
+   },
+   "etaLag": [
+    [
+     21,
+     3
+    ],
+    [
+     23.5,
+     1
+    ],
+    [
+     25.5,
+     1
+    ],
+    [
+     28.5,
+     0
+    ]
+   ],
+   "prime": {
+    "F": {
+     "mu": 1.919,
+     "sd": 0.392
+    },
+    "D": {
+     "mu": 2.045,
+     "sd": 0.312
+    }
+   }
+  }
  },
  "growth": {
   "source": "Conditional growth of young NHL skaters (Captains Dynasty scoring, NHL stats API 2008-09..2025-26, era-adjusted FP/G; rows from scratchpad/dynasty/youth/growth.cjs, fitted by scratchpad/dynasty/fix2/fit2.cjs). Base = a skater-season at 18-23 (Oct 1) with >= 30 GP (prorated); G_k = FP/G k seasons later / base FP/G among survivors (>= 20 GP), 2,653 base seasons. ln G_k = ln[c~(a+k)/c~(a)] (the lambda-scaled curve) x (1 + gamma h(pct)), h = max(0, (pct - 0.5)/0.5)^2 (above-median producers realize less of the curve growth) + A(pos, age band, k) pooled excess over the curve + B(pos, production band, k) regression to the mean (empirical-Bayes shrunk, n0 = sigma2/tau2 by method of moments; non-increasing in production by pool-adjacent-violators) + P(pos, ln pick, pct) pedigree x production surface (audit 2026-09-25: bilinear over 3 pedigree centres, top-10 / 11-32 / 33+ and undrafted at their mean ln pick, x 3 production centres, <p50 / p50-75 / p75+ at their mean pct, flat outside; least squares on the tent basis inside the joint fit, centred within each production centre, each cell shrunk by t2/(1+t2) with its cluster-robust SE; e.g. F p50-75: top-10 +0.083, 11-32 +0.033, late -0.084; D p50-75: top-10 +0.072, late -0.031; F p75+: 11-32 -0.058, late +0.025; the old single ln-pick slope, D -0.004, missed that pedigree matters at mid production and not among top producers) + v_k(pos, band)/2 (lognormal mean: the path shocks are mean-one; residual variance by production band). Joint alternating least squares, then A, B and gamma refitted with the shrunk surface. Age x production cells: method-of-moments variance ~0 -> not used. Linear over the age-band centres and production-band centres (flat outside). Production = percentile of the base FP/G among same-position, same-age backtest rows (pctKnots at pctQuantiles). Young shocks by production band: v_1 = sigma0^2 + season^2 and v_k - v_1 = (k-1) persistent^2 (floors 0.05); the band posterior sd widens sigma0. Checks (scripts/test-dynasty-growth.ts, fixtures scripts/fixtures/dynasty-growth-backtest.json): the mean G_k over 19 historical strata is within 2 SE of the survivors mean ratio in 92/94 stratum x season checks (all within 3 SE; a path 3% off everywhere fails); out of sample (fit on 2008-13 bases, test 2014-24) within 8.3% (F p75+ ~8% conservative at k4-5, pooled F and D within 4%). Target: survivors. End to end through this simulator the published eFP (zero-filled, retention included) matches history within ~10% for 18-20-year-olds and 21-23 top producers but runs high for 21-23-year-olds below the median (F 1.07 -> 1.54, D 1.16 -> 1.50 at k1..k5) and mildly for 21-23 p50-90 (1.05 -> 1.18): the growth path is the survivors growth applied to every path and the retention model keeps too many of them playing (F 22-23 below p50: survival 0.85 flat vs 0.86 -> 0.68). Their value is mostly near or below replacement, so DV moves little, but their eFP is overstated. Every young skater (base age = 2025-26 age < maxBaseAge) takes the same rule: base = the 2025-26 FP/G blended with the projection (w = GP / (GP + blendK), no games threshold; the projection reads as the 2025-26 level, as it does for young players with a base season: ln ratio +0.01, sd 0.10), year 0 = base x G_1; the year-0 sd blends the band sigma0 (weight w) with the projection error by career GP. minBaseGp only labels the base (season vs projection-led).",
@@ -1637,7 +1724,7 @@
   }
  },
  "output": {
-  "source": "Unrostered players below this long-term DV are left out of dynasty.json.",
+  "source": "Unrostered players below this DV in every horizon (win now, balanced, long term) are left out of dynasty.json (listed in zero: they read 0). The long-term value alone dropped veterans worth something to win now, who then had no record once rostered.",
   "minLongTerm": 0.5
  }
 }

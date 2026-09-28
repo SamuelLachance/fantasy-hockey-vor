@@ -6,7 +6,10 @@
  *  2. a record in the frozen prospect model       → prospect path (record)
  *  3. a real projection for a part-timer          → NHL path
  *  4. drafted at 17–21 and minors-eligible now    → prospect path (draft slot)
- *  5. otherwise                                   → fringe (market only, or 0)
+ *  5. minors-eligible now, no trusted draft       → prospect path (undrafted:
+ *     P(make it) by age, fitted on the undrafted players who made it; was
+ *     fringe, so every undrafted signing read 0)
+ *  6. otherwise                                   → fringe (market only, or 0)
  *
  * "Real" projection: an ML projection, or a contextual one with ≥ 20 NHL GP.
  * Contextual projections of 0–19 GP players are placeholders (Klepov's 62 GP)
@@ -49,13 +52,13 @@ import { ageShift, phaseByAge, trajectoryShift, type LevelFn, type Trajectory } 
 import { ageAt, birthMs, cutdownAge, isEligible, seasonAnchorMs } from "./eligibility";
 import { GROWTH_FALL, GROWTH_RISE, makeGrowth, youthBase, type GrowthModel, type GrowthPath } from "./growth";
 import type { DynastyParams } from "./params";
-import { recordProspect, slotProspect, type ProspectModel } from "./prospect";
+import { recordProspect, slotProspect, undraftedProspect, type ProspectModel } from "./prospect";
 import { clamp } from "./rng";
 import { groupOf, projectedX, realized, year0Cal } from "./scale";
 import type { SimPlayer } from "./simulate";
 import type { DynastyFlag, DynastyInput, Group, MarketSeg, PathKind, Phase } from "./types";
 
-export type Route = "nhl" | "prospect" | "nhl-part" | "slot" | "fringe";
+export type Route = "nhl" | "prospect" | "nhl-part" | "slot" | "undrafted" | "fringe";
 
 /** Projected games that make an NHL role (skaters / goalies). */
 export const SKATER_ROLE_GP = 40;
@@ -240,7 +243,9 @@ export function routePlayer(
         ? "nhl-part"
         : draftOk && eligNow
           ? "slot"
-          : "fringe";
+          : eligNow && p.prospect.undrafted
+            ? "undrafted"
+            : "fringe";
   const path: PathKind = route === "nhl" || route === "nhl-part" ? "nhl" : route === "fringe" ? "fringe" : "prospect";
 
   let sim: SimPlayer | null = null;
@@ -311,7 +316,7 @@ export function routePlayer(
       avail0,
     };
   } else if (path === "prospect") {
-    pm = route === "slot" ? slotProspect(p, g, draft!) : recordProspect(rec!);
+    pm = route === "slot" ? slotProspect(p, g, draft!) : route === "undrafted" ? undraftedProspect(p, g, age0)! : recordProspect(rec!);
     sim = {
       id: inp.id,
       g,
@@ -331,6 +336,7 @@ export function routePlayer(
 
   let seg: MarketSeg;
   if (path === "fringe") seg = "fringe";
+  else if (route === "undrafted") seg = "prospect_undrafted";
   else if (g === "G") seg = path === "prospect" ? "G_prospect" : gp0 >= p.eligibility.goalieGp ? "G_est" : "G_young";
   else if (route === "slot") seg = "prospect_slot";
   else if (path === "prospect") seg = gp0 > 0 ? "prospect_nhl" : "prospect";

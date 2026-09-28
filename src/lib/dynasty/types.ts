@@ -39,6 +39,8 @@ export type MarketSeg =
   | "prospect"
   | "prospect_nhl"
   | "prospect_slot"
+  /** Undrafted route (segment.ts): a flat prior by age, so the crowd prices him like a fringe player. */
+  | "prospect_undrafted"
   | "fringe";
 
 export type DynastyFlag =
@@ -335,8 +337,8 @@ export interface DynastySnapshot {
     keptPerCutdown?: number[];
   };
   /**
-   * values.json players that were modeled but left out to keep the file
-   * small: unrostered, long-term value below params.output.minLongTerm
+   * Players that were modeled but left out to keep the file small:
+   * unrostered, value below params.output.minLongTerm in every horizon
    * (read their value as 0 in every mode).
    */
   zero: string[];

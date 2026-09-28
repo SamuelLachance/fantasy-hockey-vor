@@ -9,7 +9,8 @@ import { join } from "path";
 import { ageShift, curveLevel, drift, makeLevel, makeRawLevel, phaseByAge, trajectoryShift } from "../src/lib/dynasty/aging";
 import { birthdayInWindow, cutdownAge, cutdownMs, isEligible } from "../src/lib/dynasty/eligibility";
 import { parseParams, type DynastyParams } from "../src/lib/dynasty/params";
-import { slotPMakeRaw, slotProspect } from "../src/lib/dynasty/prospect";
+import { interpPairs, slotPMakeRaw, slotProspect, undraftedProspect } from "../src/lib/dynasty/prospect";
+import { explainFr } from "../src/lib/dynasty/explain";
 import { makeRetention } from "../src/lib/dynasty/retention";
 import { hashStr, mulberry32 } from "../src/lib/dynasty/rng";
 import { groupOf, realized, replacement, year0Cal } from "../src/lib/dynasty/scale";
@@ -265,19 +266,19 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const slot = routePlayer(params, level, input({ id: "slot", draft: { year: 2026, pick: 10 } }));
   assert(slot.route === "slot" && slot.seg === "prospect_slot", `drafted, eligible, no record → draft-slot path (${slot.route})`);
   const wrongDraft = routePlayer(params, level, input({ id: "old", birthDate: "1995-01-01", draft: { year: 2026, pick: 10 } }));
-  assert(wrongDraft.route === "fringe", "draft year − birth year outside 17–21 → no slot model (namesake guard)");
+  assert(wrongDraft.route === "undrafted" && wrongDraft.draft === null, `draft year − birth year outside 17–21 → no slot model (namesake guard), the undrafted route (${wrongDraft.route})`);
   // no birth date: the Fantrax age stands in (±1); a registry match with no age at all is not trusted
   const noBirth = { birthDate: null, draftSource: "registry" as const };
   const miller = routePlayer(params, level, input({ id: "miller", ...noBirth, fantraxAge: 19, draft: { year: 1999, pick: 138 } }));
-  assert(miller.route === "fringe" && miller.draft === null, `a 19-year-old is not the 1999 #138 namesake (${miller.route})`);
+  assert(miller.route === "undrafted" && miller.draft === null, `a 19-year-old is not the 1999 #138 namesake (${miller.route})`);
   const fresh = routePlayer(params, level, input({ id: "fresh", ...noBirth, fantraxAge: 18, draft: { year: 2026, pick: 40 } }));
   assert(fresh.route === "slot", `an 18-year-old 2026 draftee keeps the slot model (${fresh.route})`);
   const ageless = routePlayer(params, level, input({ id: "ageless", ...noBirth, draft: { year: 2025, pick: 40 } }));
-  assert(ageless.route === "fringe", "no birth date and no age: a registry name match is not trusted");
+  assert(ageless.route === "undrafted" && ageless.draft === null, "no birth date and no age: a registry name match is not trusted");
   const agelessProfile = routePlayer(params, level, input({ id: "agelessP", birthDate: null, draftSource: "profile", draft: { year: 2025, pick: 40 } }));
   assert(agelessProfile.route === "slot", "an id-keyed profile draft is trusted without an age");
-  const fringe = routePlayer(params, level, input({ id: "fr" }));
-  assert(fringe.route === "fringe" && fringe.flags.has("noModel") && fringe.sim === null, "nothing to model → fringe");
+  const fringe = routePlayer(params, level, input({ id: "fr", eligNow: false }));
+  assert(fringe.route === "fringe" && fringe.flags.has("noModel") && fringe.sim === null, "nothing to model (not minors-eligible, no draft, no projection) → fringe");
   const vet = routePlayer(
     params,
     level,
@@ -440,6 +441,38 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(slotProspect(params, "G", { year: 2025, pick: 30 }).eta === 2030, "goalies + 5 years");
   assert(slotProspect(params, "F", { year: 2020, pick: 150 }).eta === 2026, "ETA never before 2026");
   assert(f10.pi.mu > slotProspect(params, "F", { year: 2026, pick: 60 }).pi.mu, "earlier picks have a higher prime");
+}
+
+// ---- 6b. Undrafted route (params.prospect.undrafted, scripts/fit-undrafted-prospects.ts)
+{
+  const u = params.prospect.undrafted!;
+  assert(!!u && /fit-undrafted-prospects/.test(u.source), "the undrafted block is fitted and sourced");
+  const tab: Array<[number, number]> = [
+    [22, 0.1],
+    [24, 0.05],
+  ];
+  assert(near(interpPairs(tab, 21), 0.1, 1e-12) && near(interpPairs(tab, 23), 0.075, 1e-12) && near(interpPairs(tab, 30), 0.05, 1e-12), "age table: flat past the ends, linear inside");
+  for (const g of ["F", "D", "G"] as const) {
+    const ps = u.pMake[g].map(([, p]) => p);
+    assert(ps.every((p, i) => p >= 0 && p <= 1 && (i === 0 || p <= ps[i - 1]! + 1e-12)), `${g}: P(make it) in [0, 1], never rising with age (${ps.join(", ")})`);
+  }
+  const young = undraftedProspect(params, "F", 22.3)!;
+  const old = undraftedProspect(params, "F", 26.5)!;
+  assert(young.pMake > old.pMake, `a 22-year-old signing has better odds than a 26-year-old (${young.pMake.toFixed(3)} vs ${old.pMake.toFixed(3)})`);
+  assert(young.eta >= 2026 && young.pi.mu === u.prime.F.mu, "eta from the lag table, prime from undrafted skaters who made it");
+  assert(undraftedProspect(params, "G", 23)!.pi.mu === params.prospect.slotPrime.G.mu, "goalies: the slot prior's prime");
+  const r = routePlayer(params, level, input({ id: "und", birthDate: "2004-05-01", careerGp: 0, eligNow: true }));
+  assert(r.route === "undrafted" && r.seg === "prospect_undrafted" && r.path === "prospect" && r.draft === null, `no draft, minors-eligible → undrafted route (${r.route})`);
+  const noElig = routePlayer(params, level, input({ id: "und2", birthDate: "1996-05-01", careerGp: 0, eligNow: false }));
+  assert(noElig.route === "fringe", "not minors-eligible: still fringe (Captains' rule)");
+  const drafted = routePlayer(params, level, input({ id: "dr", birthDate: "2004-05-01", draft: { year: 2022, pick: 200 }, draftSource: "profile" }));
+  assert(drafted.route === "slot", "a trusted draft keeps the slot model");
+  const one = (inp: DynastyInput) =>
+    buildDynasty({ players: [inp], meta: { valuesFetchedAt: "", stateFetchedAt: "", projectionsAt: "", prospectsBuiltAt: "" } }, params, { paths: 2000, K: 40, market: false }).all[inp.id]!;
+  const v22 = one(input({ id: "u22", birthDate: "2004-05-01", eligNow: true }));
+  const v26 = one(input({ id: "u26", birthDate: "2000-05-01", eligNow: true }));
+  assert(v22.dv.longTerm > 0 && v22.dv.longTerm > v26.dv.longTerm, `an undrafted 22-year-old is worth more than 0 and than a 26-year-old (${v22.dv.longTerm} vs ${v26.dv.longTerm})`);
+  assert(/non repêché/.test(explainFr(v22)), `the sentence says undrafted (${explainFr(v22)})`);
 }
 
 // ---- 7. Young-skater growth path in the simulator

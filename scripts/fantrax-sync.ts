@@ -763,14 +763,16 @@ async function main() {
   // Every player carries over and a salary cap binds, so the plan's cap line
   // reads the contracts the dynasty build derives. The build does not read
   // this league's values/state files (its universe is the shared projection
-  // set), only its own rosters and picks, written first from the payloads
-  // above. Non-fatal: without a fresh build the committed contracts stay.
+  // set plus every player of the pool built above), only its own rosters and
+  // picks, written first from the payloads above. Non-fatal: without a fresh
+  // build the committed contracts stay.
   let contracts: ContractsFile | null = null;
   if (CFG.dynastyProfile === "slapshot") {
     writeSlapshotPool(slapshotPoolFrom(info, rosters, draft, nowIso), slapshotPaths(ROOT).pool);
     if (DYNASTY) {
       try {
-        const b = runSlapshotBuild({ out: PATHS.dynasty });
+        // the explorer pool this run is about to write: its every player joins the build
+        const b = runSlapshotBuild({ out: PATHS.dynasty, explorerPool: pool });
         const errs = slapshotChecks(b);
         for (const e of errs) console.warn(`WARN: dynasty (slapshot): ${e}`);
         console.log(

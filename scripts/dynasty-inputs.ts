@@ -34,7 +34,11 @@ import {
   type ProspectsFile,
   type SeasonLine,
 } from "../src/lib/dynasty/index";
-import { CAPTAINS_DYNASTY, NHL_SEASON_ID, type FantraxLeagueConfig } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, NHL_SEASON_ID, parseGroups, type FantraxLeagueConfig } from "../src/lib/fantrax/config";
+import { orgBios, type NhlOrgBiosFile, type OrgBio } from "../src/lib/fantrax/org-players";
+import { ageOn, type PoolRecord, type PoolSnapshot } from "../src/lib/fantrax/pool";
+import type { LeagueSeasonsCache } from "../src/lib/league-seasons";
+import type { NhlRostersFile } from "../src/lib/nhl-rosters";
 import { fantraxPaths } from "./fantrax-paths";
 import type {
   ProspectPoolSnapshot,
@@ -64,6 +68,11 @@ export function dynastyPaths(root = process.cwd(), cfg: FantraxLeagueConfig = CA
     out: p.dynasty,
     nhlIds: p.nhlIds,
     pool: p.prospectPool,
+    /** The league's explorer pool (public/.../pool.json): its NHL-organisation players join the build. */
+    explorer: p.pool,
+    nhlRosters: p.nhlRosters,
+    nhlOrgBios: p.nhlOrgBios,
+    leagueSeasons: p.leagueSeasons,
     players: p.players,
     profiles: p.profiles,
     registry: p.draftRegistry,
@@ -84,8 +93,34 @@ export interface LoadedDynastyFiles {
   schedule: ScheduleSnapshot | null;
   nhlIds: Record<string, number>;
   pool: ProspectPoolSnapshot | null;
+  /** The league's explorer pool (its NHL-organisation players join the build). */
+  explorer: PoolSnapshot | null;
+  /** The NHL organisations' players and what the repo knows of them. */
+  org: OrgData;
   params: DynastyParams;
   prospects: ProspectsFile;
+}
+
+/** The NHL organisations' players (nhl-rosters.json) and their bios by NHL id. */
+export interface OrgData {
+  ids: Set<number>;
+  /** Birth date and draft (nhl-org-bios.json, league-seasons.json, the lists). */
+  bios: Map<number, OrgBio>;
+  /** NHL games before the current season (league-seasons.json), for players without a profile. */
+  careerGp: Map<number, number>;
+}
+
+export function loadOrgData(paths: { nhlRosters: string; nhlOrgBios: string; leagueSeasons: string }): OrgData {
+  const players = readOptional<NhlRostersFile>(paths.nhlRosters)?.players ?? [];
+  const seasons = readOptional<LeagueSeasonsCache>(paths.leagueSeasons)?.players ?? {};
+  const bios = orgBios(players, { bios: readOptional<NhlOrgBiosFile>(paths.nhlOrgBios)?.players, seasons });
+  const careerGp = new Map<number, number>();
+  for (const p of players) {
+    const ls = seasons[String(p.id)];
+    if (!ls) continue;
+    careerGp.set(p.id, ls.seasons.filter((l) => l[1] === "NHL" && l[0] < NHL_SEASON_ID).reduce((s, l) => s + l[2], 0));
+  }
+  return { ids: new Set(players.map((p) => p.id)), bios, careerGp };
 }
 
 export function loadDynastyFiles(paths = dynastyPaths()): LoadedDynastyFiles {
@@ -96,9 +131,79 @@ export function loadDynastyFiles(paths = dynastyPaths()): LoadedDynastyFiles {
     schedule: readOptional<ScheduleSnapshot>(paths.schedule),
     nhlIds: readJson<{ ids: Record<string, number> }>(paths.nhlIds).ids,
     pool: readOptional<ProspectPoolSnapshot>(paths.pool),
+    explorer: readOptional<PoolSnapshot>(paths.explorer),
+    org: loadOrgData(paths),
     params: parseParams(readJson<unknown>(paths.params)),
     prospects: readJson<ProspectsFile>(paths.prospects),
   };
+}
+
+/**
+ * Dynasty inputs of explorer-pool players nothing else covers (no values
+ * row, research record or prospect-pool row): Captains' NHL-organisation
+ * players, every other Slapshot pool player. Birth date and draft by NHL id
+ * (profile, then the organisation bios: an id-keyed draft), else the pool's
+ * (its draft a name match: trusted with an age only, segment.ts); a Fantrax
+ * age more than a year off the NHL birth date drops both (the id match is
+ * suspect). Position group from the pool's groups (C/W/LW/RW → F).
+ */
+export function poolExtraInputs(
+  records: readonly PoolRecord[],
+  ctx: {
+    cfg: FantraxLeagueConfig;
+    profiles: ReadonlyMap<number, PlayerProfile>;
+    org: OrgData;
+    eligNow: (r: PoolRecord) => boolean | null;
+    rostered: (id: string) => boolean;
+    leaguePick?: (id: string) => number | undefined;
+    seasonGp?: (id: string) => number;
+    /** Fantrax eligiblePos when known (else the pool's groups). */
+    eligiblePos?: (id: string) => string | undefined;
+    /** Birth date as of this instant for the age check. */
+    nowMs: number;
+  },
+): DynastyInput[] {
+  const out: DynastyInput[] = [];
+  for (const r of records) {
+    const prof = r.nhl != null ? ctx.profiles.get(r.nhl) : undefined;
+    const bio = r.nhl != null ? ctx.org.bios.get(r.nhl) : undefined;
+    let birthDate: string | null = prof?.bio?.birthDate ?? bio?.birthDate ?? r.bd ?? null;
+    let draft: { year: number; pick: number } | undefined;
+    let draftSource: "profile" | "registry" | undefined;
+    if (prof) {
+      if (prof.draft?.overallPick) [draft, draftSource] = [{ year: prof.draft.year, pick: prof.draft.overallPick }, "profile"];
+    } else if (bio?.draft !== undefined) {
+      if (bio.draft) [draft, draftSource] = [{ year: bio.draft.year, pick: bio.draft.overallPick }, "profile"];
+    } else if (r.dr) [draft, draftSource] = [{ year: r.dr[0], pick: r.dr[1] }, "registry"];
+    // a Fantrax age more than a year off the NHL birth date: the id match is suspect
+    const fromBirth = birthDate ? ageOn(birthDate, ctx.nowMs) : undefined;
+    if (r.age !== undefined && fromBirth !== undefined && Math.abs(r.age - fromBirth) > 1) {
+      birthDate = null;
+      if (draftSource === "profile") [draft, draftSource] = [undefined, undefined];
+    }
+    const e = ctx.eligiblePos?.(r.id) || parseGroups(r.pos, ctx.cfg).map((g) => (g === "LW" || g === "RW" ? "W" : g)).join(",");
+    const careerGp = prof ? careerGpBeforeSeason(prof) : r.nhl != null ? (ctx.org.careerGp.get(r.nhl) ?? null) : null;
+    const leaguePick = ctx.leaguePick?.(r.id);
+    out.push({
+      id: r.id,
+      n: r.n,
+      e,
+      team: r.t || null,
+      ...(r.nhl != null ? { nhlId: r.nhl } : {}),
+      birthDate,
+      ...(r.age !== undefined ? { fantraxAge: r.age } : {}),
+      careerGp,
+      seasonGp: ctx.seasonGp?.(r.id) ?? 0,
+      ...(draft ? { draft, draftSource } : {}),
+      eligNow: ctx.eligNow(r),
+      history: historyOf(prof),
+      ...(r.ros !== undefined ? { ros: r.ros } : {}),
+      ...(r.adp !== undefined ? { adp: r.adp } : {}),
+      ...(leaguePick !== undefined ? { leaguePick } : {}),
+      rostered: ctx.rostered(r.id),
+    });
+  }
+  return out;
 }
 
 function historyOf(p: PlayerProfile | undefined): SeasonLine[] | undefined {
@@ -254,6 +359,24 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       rostered: rostered.has(id),
     });
   }
+  // The league's NHL-organisation players nothing above covers (investigation
+  // 2026-09-27: 239 of the draftable universe never valued), under this
+  // league's own minors rule: Fantrax's minors-eligible flag, « not eligible »
+  // when fxpa listed him without it, else the rule by age and games.
+  const covered = new Set(players.map((x) => x.id));
+  const orgRows = (L.explorer?.players ?? []).filter((r) => r.nhl != null && L.org.ids.has(r.nhl) && !covered.has(r.id));
+  players.push(
+    ...poolExtraInputs(orgRows, {
+      cfg: CAPTAINS_DYNASTY,
+      profiles,
+      org: L.org,
+      eligNow: (r) => (r.me ? true : r.ros !== undefined ? false : null),
+      rostered: (id) => rostered.has(id),
+      leaguePick: (id) => leaguePick.get(id),
+      seasonGp: ytdGp,
+      nowMs: Date.parse(state.fetchedAt),
+    }),
+  );
   return {
     players,
     meta: {

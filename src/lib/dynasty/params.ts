@@ -95,6 +95,17 @@ export interface DynastyParams {
     primeFloor: Record<Group, number>;
     primeAge: number;
     draftAgeRange: [number, number];
+    /**
+     * Undrafted route (scripts/fit-undrafted-prospects.ts): P(make it) by age
+     * on Oct 1 of the first season ([age, p] pairs, interpolated, flat past
+     * the ends), years to the first regular season by age, and the prime
+     * FP/G of undrafted skaters who made it (goalies: slotPrime.G).
+     */
+    undrafted?: Sourced & {
+      pMake: Record<Group, Array<[number, number]>>;
+      etaLag: Array<[number, number]>;
+      prime: Record<"F" | "D", { mu: number; sd: number }>;
+    };
   };
   /**
    * Conditional growth of young skaters (base season at 18–23), fitted on the

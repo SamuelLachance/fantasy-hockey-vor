@@ -12,7 +12,10 @@
  * whole minors-eligible pool let NHL-path youngsters, whom Ros% favours for
  * being in the NHL already, take the top anchors and pushed every real
  * prospect down.) Fringe players (no model) are placed on the prospect
- * ladder of their kind (skater or goalie).
+ * ladder of their kind (skater or goalie), and so are undrafted prospects
+ * (segment.ts: a flat prior by age; weight 1 like fringe, so an undrafted
+ * signing the crowd rosters keeps the market's price, one it does not gets
+ * the prior instead of 0).
  *
  * Blend in u = ln(DV + 10): u_post = u_M + w·(u_K − u_M), the move capped at
  * ×/÷2.5 when w < 0.5. One posterior factor (the balanced one) scales every
@@ -98,7 +101,8 @@ function ladderOf(m: Pick<MarketMember, "pool" | "seg" | "g">): { segs: readonly
   if (m.pool === "S") return null;
   if (NHL_GOALIE.includes(m.seg)) return { segs: [m.seg], signal: "adp" };
   if (m.seg === "G_prospect" || PROSPECT_SKATER.includes(m.seg)) return { segs: [m.seg], signal: "ros" };
-  if (m.seg === "fringe") {
+  // an undrafted prospect's model is a flat prior by age: the crowd places him like a fringe player
+  if (m.seg === "fringe" || m.seg === "prospect_undrafted") {
     if (m.pool === "G") return { segs: NHL_GOALIE, signal: "adp" };
     return m.g === "G" ? { segs: ["G_prospect"], signal: "ros" } : { segs: PROSPECT_SKATER, signal: "ros" };
   }

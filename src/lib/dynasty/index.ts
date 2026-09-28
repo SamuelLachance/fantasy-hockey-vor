@@ -171,7 +171,7 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
       }
     }
   }
-  const routes = { nhl: 0, prospect: 0, "nhl-part": 0, slot: 0, fringe: 0 } as Record<Route, number>;
+  const routes = { nhl: 0, prospect: 0, "nhl-part": 0, slot: 0, undrafted: 0, fringe: 0 } as Record<Route, number>;
   for (const r of routed) routes[r.route]++;
 
   if (opts.league) {
@@ -392,10 +392,13 @@ export function buildDynasty(inputs: DynastyBuildInputs, p: DynastyParams, opts:
   const zero: string[] = [];
   const rostered = new Set(inputs.players.filter((x) => x.rostered).map((x) => x.id));
   // Every modeled player left out (values.json rows and prospects alike) is
-  // listed, so the tables read 0 for him instead of « not modeled ».
+  // listed, so the tables read 0 for him instead of « not modeled ». The cut
+  // reads the best horizon: on long term alone, veterans worth something to
+  // win now (Orlov, Teravainen, Hall, McCabe, Toews, Huberdeau, Howden) lost
+  // their record once a roster move after the snapshot made them rostered.
   for (const id of Object.keys(all).sort()) {
     const rec = all[id]!;
-    if (rostered.has(id) || rec.dv.longTerm >= p.output.minLongTerm) players[id] = rec;
+    if (rostered.has(id) || Math.max(rec.dv.winNow, rec.dv.balanced, rec.dv.longTerm) >= p.output.minLongTerm) players[id] = rec;
     else zero.push(id);
   }
 

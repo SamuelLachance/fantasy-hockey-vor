@@ -45,12 +45,17 @@ import {
   type SlapshotRecord,
 } from "../src/lib/dynasty/slapshot";
 import { CONTRACT_SEASONS } from "../src/lib/fantrax/salary-cap";
+import { fantraxLeague } from "../src/lib/fantrax/config";
+import type { PoolSnapshot } from "../src/lib/fantrax/pool";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import type { ProjectionsDataset } from "../src/lib/types";
-import { assembleDynastyInputs, loadDynastyFiles, type LoadedDynastyFiles } from "./dynasty-inputs";
+import { assembleDynastyInputs, loadDynastyFiles, poolExtraInputs, type LoadedDynastyFiles } from "./dynasty-inputs";
+import { fantraxPaths } from "./fantrax-paths";
 import type { ContractSeasonsFile } from "./fetch-contract-seasons";
 import { writeClientDynasty } from "./dynasty-client";
 import type { SlapshotPool } from "./slapshot-sync";
+
+const SLAPSHOT = fantraxLeague("slapshot");
 
 export function slapshotPaths(root = process.cwd()) {
   const dir = join(root, "src", "data", "dynasty", "slapshot");
@@ -58,6 +63,8 @@ export function slapshotPaths(root = process.cwd()) {
     league: join(dir, "league.json"),
     pool: join(dir, "pool.json"),
     contracts: join(dir, "contract-seasons.json"),
+    /** The league's explorer pool (league:sync): every player it lists joins the build. */
+    explorer: fantraxPaths(SLAPSHOT, root).pool,
     out: join(root, "public", "fantrax", "slapshot", "dynasty.json"),
   };
 }
@@ -242,6 +249,8 @@ export function runSlapshotBuild(
     onProgress?: (d: number, n: number) => void;
     /** Also build with λ = 0 (the report's contract-effect table). */
     compareNoCap?: boolean;
+    /** The league's explorer pool (the sync passes the one it is about to write); default: the committed file. */
+    explorerPool?: PoolSnapshot | null;
   } = {},
   L: LoadedDynastyFiles = loadDynastyFiles(),
 ): SlapshotBuild {
@@ -259,15 +268,43 @@ export function runSlapshotBuild(
   const base = assembleDynastyInputs(L);
   const rosteredIds = new Set(Object.values(pool.rosters).flat());
   const leaguePick = new Map(pool.picks.map(([pick, , id]) => [id, pick]));
-  const inputs = {
-    ...base,
-    players: base.players.map((x) => {
-      const { leaguePick: _lp, ...rest } = x;
-      void _lp;
-      return { ...rest, rostered: rosteredIds.has(x.id), ...(leaguePick.has(x.id) ? { leaguePick: leaguePick.get(x.id)! } : {}) };
-    }),
-    league: undefined,
-  };
+  // Slapshot's 17 minors spots take any player: whoever has no projection is
+  // minors-eligible here, whatever Captains' rule says (slot / undrafted route).
+  const universe = base.players.map((x) => {
+    const { leaguePick: _lp, ...rest } = x;
+    void _lp;
+    return {
+      ...rest,
+      ...(x.proj?.src === "proj" ? {} : { eligNow: true }),
+      rostered: rosteredIds.has(x.id),
+      ...(leaguePick.has(x.id) ? { leaguePick: leaguePick.get(x.id)! } : {}),
+    };
+  });
+  // Every Slapshot pool player the Captains-based universe lacks (investigation
+  // 2026-09-27: 240 of the draftable universe were never valued here).
+  const explorer =
+    opts.explorerPool !== undefined
+      ? opts.explorerPool
+      : existsSync(SP.explorer)
+        ? readJson<PoolSnapshot>(SP.explorer)
+        : null;
+  const known = new Set(universe.map((x) => x.id));
+  universe.push(
+    ...poolExtraInputs(
+      (explorer?.players ?? []).filter((r) => !known.has(r.id)),
+      {
+        cfg: SLAPSHOT,
+        profiles,
+        org: L.org,
+        eligNow: () => true,
+        rostered: (id) => rosteredIds.has(id),
+        leaguePick: (id) => leaguePick.get(id),
+        eligiblePos: (id) => pool.pos[id],
+        nowMs: Date.parse(pool.fetchedAt),
+      },
+    ),
+  );
+  const inputs = { ...base, players: universe, league: undefined };
 
   // per-player league data: scoring ratio, Slapshot positions, known contract
   const data = new Map<string, SlapPlayerData>();
@@ -360,7 +397,7 @@ export function runSlapshotBuild(
   const zeroContracts: Record<string, SlapZeroContract> = {};
   for (const id of Object.keys(records).sort()) {
     const r = records[id]!;
-    if (rosteredIds.has(id) || r.dv.longTerm >= p.output.minLongTerm || r.dv.balanced >= p.output.minLongTerm) players[id] = r;
+    if (rosteredIds.has(id) || Math.max(r.dv.winNow, r.dv.balanced, r.dv.longTerm) >= p.output.minLongTerm) players[id] = r;
     else {
       zero.push(id);
       const c = r.contract;
