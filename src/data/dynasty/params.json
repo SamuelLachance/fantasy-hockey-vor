@@ -846,20 +846,24 @@
    21
   ],
   "undrafted": {
-   "source": "scripts/fit-undrafted-prospects.ts (2026-09-28): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < 20 NHL GP) = M_a / U_a, M_a = undrafted players per birth cohort 1985-1996 who made it with < 20 NHL GP before their age-a season, on an NHL deal by then (a North American pro season that season or earlier, first NHL game at most 2 seasons later) (league-seasons.json: F 65, D 34, G 14 made it), U_a = today's undrafted organisation players of age a with < 20 NHL GP (nhl-rosters.json × 30.5/32 clubs); ages pooled in bands 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one non-increasing skater shape over them (weighted PAVA), each group's level its pooled ratio. Ages outside the table take its end values. eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n 21 mean 1.919 sd 0.392; D n 9 mean 2.045 sd 0.312), goalies the slot prior.",
+   "source": "scripts/fit-undrafted-prospects.ts (2026-09-28): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < 20 NHL GP) = M_a / U_a, M_a = undrafted players per birth cohort 1985-1996 who made it with < 20 NHL GP before their age-a season, on an NHL deal by then (a North American pro season that season or earlier, first NHL game at most 2 seasons later) (league-seasons.json: F 65, D 34, G 14 made it), U_a = today's undrafted organisation players of age a with < 20 NHL GP (nhl-rosters.json × 30.5/32 clubs); ages pooled in bands 18-19, 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one skater shape non-increasing from 20 on (weighted PAVA; 18-19, still draft-eligible, stand apart), each group's level its pooled ratio. Ages outside the table take its end values. eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n 21 mean 1.919 sd 0.392; D n 9 mean 2.045 sd 0.312), goalies the slot prior.",
    "pMake": {
     "F": [
      [
+      18.5,
+      0.006
+     ],
+     [
       21,
-      0.344
+      0.34
      ],
      [
       23.5,
-      0.192
+      0.19
      ],
      [
       25.5,
-      0.19
+      0.188
      ],
      [
       28.5,
@@ -868,42 +872,54 @@
     ],
     "D": [
      [
+      18.5,
+      0.005
+     ],
+     [
       21,
-      0.29
+      0.297
      ],
      [
       23.5,
-      0.162
+      0.166
      ],
      [
       25.5,
-      0.16
+      0.164
      ],
      [
       28.5,
-      0.027
+      0.028
      ]
     ],
     "G": [
      [
+      18.5,
+      0.004
+     ],
+     [
       21,
-      0.239
+      0.251
      ],
      [
       23.5,
-      0.133
+      0.14
      ],
      [
       25.5,
-      0.132
+      0.138
      ],
      [
       28.5,
-      0.023
+      0.024
      ]
     ]
    },
    "etaLag": [
+    [
+     18.5,
+     2
+    ],
     [
      21,
      3
@@ -1704,7 +1720,7 @@
   }
  },
  "market": {
-  "source": "Quantile anchoring for thin segments only: prospects by Fantrax Ros% (ADP tie-break), NHL-path goalies by ADP. NHL skaters never blended (redraft ADP biases against youth). Level-neutral (audit 2026-09-25): each segment is anchored on its own ladder (its members with a weight and a signal, ranked by the signal, mapped onto the same members' model values), so the layer reorders a segment without moving its level; fringe players (no model) are placed on the prospect ladder of their kind. Gap and market rank stay pool-wide (information). u = ln(DV + 10); |w (uK - uM)| <= ln 2.5 when w < 0.5. One posterior factor (balanced) scales eG, bands and every mode.",
+  "source": "Quantile anchoring for thin segments only: prospects by Fantrax Ros% (ADP tie-break), NHL-path goalies by ADP. NHL skaters never blended (redraft ADP biases against youth). Level-neutral (audit 2026-09-25): each segment is anchored on its own ladder (its members with a weight and a signal, ranked by the signal, mapped onto the same members' model values), so the layer reorders a segment without moving its level; fringe players (no model) are placed on the prospect ladder of their kind, and so are undrafted-route prospects (prospect_undrafted, weight 1 like fringe: their model is a flat prior by age, 2026-09-27). Gap and market rank stay pool-wide (information). u = ln(DV + 10); |w (uK - uM)| <= ln 2.5 when w < 0.5. One posterior factor (balanced) scales eG, bands and every mode.",
   "enabled": true,
   "adpMissing": 285,
   "offset": 10,
@@ -1719,6 +1735,7 @@
    "prospect": 0.35,
    "prospect_nhl": 0.25,
    "prospect_slot": 0.5,
+   "prospect_undrafted": 1,
    "G_prospect": 0.5,
    "fringe": 1
   }

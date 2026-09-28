@@ -6,9 +6,11 @@
  *  2. a record in the frozen prospect model       → prospect path (record)
  *  3. a real projection for a part-timer          → NHL path
  *  4. drafted at 17–21 and minors-eligible now    → prospect path (draft slot)
- *  5. minors-eligible now, no trusted draft       → prospect path (undrafted:
- *     P(make it) by age, fitted on the undrafted players who made it; was
- *     fringe, so every undrafted signing read 0)
+ *  5. minors-eligible now, no trusted draft, a    → prospect path (undrafted:
+ *     known age (birth date or Fantrax age)          P(make it) by age, fitted
+ *     on the undrafted players who made it; was fringe, so every undrafted
+ *     signing read 0; without an age the default 25.5 valued retired
+ *     veterans with no NHL id, Carey Price among them)
  *  6. otherwise                                   → fringe (market only, or 0)
  *
  * "Real" projection: an ML projection, or a contextual one with ≥ 20 NHL GP.
@@ -243,7 +245,7 @@ export function routePlayer(
         ? "nhl-part"
         : draftOk && eligNow
           ? "slot"
-          : eligNow && p.prospect.undrafted
+          : eligNow && p.prospect.undrafted && (b != null || inp.fantraxAge != null)
             ? "undrafted"
             : "fringe";
   const path: PathKind = route === "nhl" || route === "nhl-part" ? "nhl" : route === "fringe" ? "fringe" : "prospect";

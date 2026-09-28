@@ -268,13 +268,27 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
   const rostered = new Set(Object.values(state.rosters).flat().map((r) => r.id));
   const minorsEligible = new Set(state.minorsEligible);
   const leaguePick = new Map((state.draft?.picks ?? []).filter((p) => p.playerId).map((p) => [p.playerId!, p.pick]));
-  const draftOf = (prof: PlayerProfile | undefined, name: string) => {
+  const poolDraft = new Map((L.explorer?.players ?? []).flatMap((r) => (r.dr ? [[r.id, r.dr] as const] : [])));
+  /**
+   * Draft by trust: the profile, the organisation bio (the NHL landing, by
+   * NHL id: a player it says is undrafted takes no namesake's pick), the
+   * registry by name, then the explorer pool's pick (the club's recent picks
+   * matched by name and age). The last two are name matches, trusted with an
+   * age only (segment.ts).
+   */
+  const draftOf = (prof: PlayerProfile | undefined, name: string, id: string, nhlId: number | undefined) => {
     if (prof?.draft?.overallPick) {
       return { draft: { year: prof.draft.year, pick: prof.draft.overallPick }, source: "profile" as const };
     }
+    const bio = !prof && nhlId ? L.org.bios.get(nhlId) : undefined;
+    if (bio?.draft) return { draft: { year: bio.draft.year, pick: bio.draft.overallPick }, source: "profile" as const };
+    if (bio?.draft === null) return undefined;
     const r = registry[normalizeDraftName(name)];
-    return r ? { draft: { year: r.year, pick: r.overallPick }, source: "registry" as const } : undefined;
+    if (r) return { draft: { year: r.year, pick: r.overallPick }, source: "registry" as const };
+    const dr = poolDraft.get(id);
+    return dr ? { draft: { year: dr[0], pick: dr[1] }, source: "registry" as const } : undefined;
   };
+  const orgBirth = (nhlId: number | undefined) => (nhlId ? L.org.bios.get(nhlId)?.birthDate : undefined);
   // fxpa covered him (rostered, or in the available lists): the minors flag is known.
   const flagKnown = (id: string) => rostered.has(id) || id in state.ros || id in state.icons;
   const ytdGp = (id: string) => Math.max(0, state.ytd?.[id]?.[1] ?? 0);
@@ -293,7 +307,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
     const prof = nhlId ? profiles.get(nhlId) : undefined;
     const rec = prospects.players[id];
     const m = nhlId ? method.get(nhlId) : undefined;
-    const draft = draftOf(prof, v.n);
+    const draft = draftOf(prof, v.n, id, nhlId);
     const pS = v.gE !== undefined ? (depth.get(id) ?? v.pS) : undefined;
     players.push({
       id,
@@ -301,7 +315,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       e: v.e,
       team: v.t && !v.t.startsWith("(") ? v.t : null,
       ...(nhlId ? { nhlId } : {}),
-      birthDate: prof?.bio?.birthDate ?? rec?.birthDate ?? prospects.birthDates?.[id] ?? null,
+      birthDate: prof?.bio?.birthDate ?? rec?.birthDate ?? prospects.birthDates?.[id] ?? orgBirth(nhlId) ?? null,
       ...(v.age !== undefined ? { fantraxAge: v.age } : {}),
       careerGp: careerGpBeforeSeason(prof),
       seasonGp: ytdGp(id),
@@ -335,7 +349,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
     if (!name) continue;
     const nhlId = nhlIds[id] ?? rec?.nhlId;
     const prof = nhlId ? profiles.get(nhlId) : undefined;
-    const draft = draftOf(prof, name);
+    const draft = draftOf(prof, name, id, nhlId);
     const ros = pp?.ros ?? state.ros[id];
     const adp = state.adp[id] ?? pp?.adp;
     players.push({
@@ -344,7 +358,7 @@ export function assembleDynastyInputs(L: LoadedDynastyFiles): DynastyBuildInputs
       e: pp?.e ?? "",
       team: pp?.t && !pp.t.startsWith("(") ? pp.t : null,
       ...(nhlId ? { nhlId } : {}),
-      birthDate: prof?.bio?.birthDate ?? rec?.birthDate ?? prospects.birthDates?.[id] ?? null,
+      birthDate: prof?.bio?.birthDate ?? rec?.birthDate ?? prospects.birthDates?.[id] ?? orgBirth(nhlId) ?? null,
       ...(pp?.age !== undefined ? { fantraxAge: pp.age } : {}),
       careerGp: careerGpBeforeSeason(prof),
       seasonGp: Math.max(ytdGp(id), pp?.gp ?? 0),

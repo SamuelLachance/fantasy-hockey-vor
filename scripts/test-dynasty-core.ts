@@ -274,7 +274,7 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const fresh = routePlayer(params, level, input({ id: "fresh", ...noBirth, fantraxAge: 18, draft: { year: 2026, pick: 40 } }));
   assert(fresh.route === "slot", `an 18-year-old 2026 draftee keeps the slot model (${fresh.route})`);
   const ageless = routePlayer(params, level, input({ id: "ageless", ...noBirth, draft: { year: 2025, pick: 40 } }));
-  assert(ageless.route === "undrafted" && ageless.draft === null, "no birth date and no age: a registry name match is not trusted");
+  assert(ageless.route === "fringe" && ageless.draft === null, "no birth date and no age: a registry name match is not trusted (and no age for the undrafted prior)");
   const agelessProfile = routePlayer(params, level, input({ id: "agelessP", birthDate: null, draftSource: "profile", draft: { year: 2025, pick: 40 } }));
   assert(agelessProfile.route === "slot", "an id-keyed profile draft is trusted without an age");
   const fringe = routePlayer(params, level, input({ id: "fr", eligNow: false }));
@@ -453,8 +453,12 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   ];
   assert(near(interpPairs(tab, 21), 0.1, 1e-12) && near(interpPairs(tab, 23), 0.075, 1e-12) && near(interpPairs(tab, 30), 0.05, 1e-12), "age table: flat past the ends, linear inside");
   for (const g of ["F", "D", "G"] as const) {
-    const ps = u.pMake[g].map(([, p]) => p);
-    assert(ps.every((p, i) => p >= 0 && p <= 1 && (i === 0 || p <= ps[i - 1]! + 1e-12)), `${g}: P(make it) in [0, 1], never rising with age (${ps.join(", ")})`);
+    const ps = u.pMake[g].filter(([a]) => a >= 20).map(([, p]) => p);
+    assert(
+      u.pMake[g].every(([, p]) => p >= 0 && p <= 1) && ps.every((p, i) => i === 0 || p <= ps[i - 1]! + 1e-12),
+      `${g}: P(make it) in [0, 1], never rising with age from 20 (${ps.join(", ")})`,
+    );
+    assert(interpPairs(u.pMake[g], 18.5) < interpPairs(u.pMake[g], 21), `${g}: an undrafted 18-year-old (passed over at the draft) is behind a 21-year-old signing`);
   }
   const young = undraftedProspect(params, "F", 22.3)!;
   const old = undraftedProspect(params, "F", 26.5)!;
@@ -463,6 +467,8 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(undraftedProspect(params, "G", 23)!.pi.mu === params.prospect.slotPrime.G.mu, "goalies: the slot prior's prime");
   const r = routePlayer(params, level, input({ id: "und", birthDate: "2004-05-01", careerGp: 0, eligNow: true }));
   assert(r.route === "undrafted" && r.seg === "prospect_undrafted" && r.path === "prospect" && r.draft === null, `no draft, minors-eligible → undrafted route (${r.route})`);
+  const noAge = routePlayer(params, level, input({ id: "und3", birthDate: null, careerGp: null, eligNow: true }));
+  assert(noAge.route === "fringe", "no birth date and no Fantrax age: no undrafted prior (was the default 25.5)");
   const noElig = routePlayer(params, level, input({ id: "und2", birthDate: "1996-05-01", careerGp: 0, eligNow: false }));
   assert(noElig.route === "fringe", "not minors-eligible: still fringe (Captains' rule)");
   const drafted = routePlayer(params, level, input({ id: "dr", birthDate: "2004-05-01", draft: { year: 2022, pick: 200 }, draftSource: "profile" }));

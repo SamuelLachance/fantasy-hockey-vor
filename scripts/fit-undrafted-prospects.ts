@@ -48,8 +48,9 @@ const params = parseParams(rawParams);
 
 const COHORTS: [number, number] = [1985, 1996];
 const AGES = Array.from({ length: 13 }, (_, i) => 18 + i); // 18 … 30
-/** Age bands pooled for the fit (younger players on NHL deals are too few to read an age from). */
+/** Age bands pooled for the fit (the players on NHL deals are too few per age to read one). */
 const BANDS = [
+  [18, 19],
   [20, 21, 22],
   [23, 24],
   [25, 26],
@@ -179,7 +180,10 @@ const bandStats = BANDS.map((ages) => {
   const u = sum(ages, (r) => r.uF + r.uD);
   return { ages, at: ages.reduce((x, y) => x + y, 0) / ages.length, S: m / u, u };
 });
-const shape = pava(bandStats.map((b) => ({ v: b.S, w: b.u })));
+// 18-19 stand apart: undrafted then means passed over at the draft (a player
+// drafted a year later leaves the undrafted history), and the rate rises to
+// the 20-22 band; from 20 on it only falls with age.
+const shape = [bandStats[0]!.S, ...pava(bandStats.slice(1).map((b) => ({ v: b.S, w: b.u })))];
 const fitAgesAll = BANDS.flat();
 const pooled = (g: "F" | "D" | "G") =>
   sum(fitAgesAll, (r) => (g === "F" ? r.mF : g === "D" ? r.mD : r.mG)) / sum(fitAgesAll, (r) => (g === "F" ? r.uF : g === "D" ? r.uD : r.uG));
@@ -230,7 +234,7 @@ const pd = stats(prime.D);
 console.log(`prime FP/G (seasons at 24-27, 40+ GP, undrafted with 200+ GP in the current profiles): F ${JSON.stringify(pf)} D ${JSON.stringify(pd)}; params undraftedPrior F ${params.prospect.undraftedPrior.F} D ${params.prospect.undraftedPrior.D}`);
 
 const block = {
-  source: `scripts/fit-undrafted-prospects.ts (${new Date().toISOString().slice(0, 10)}): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < ${MAX_GP} NHL GP) = M_a / U_a, M_a = undrafted players per birth cohort ${COHORTS.join("-")} who made it with < ${MAX_GP} NHL GP before their age-a season, on an NHL deal by then (a North American pro season that season or earlier, first NHL game at most ${LEAD} seasons later) (league-seasons.json: F ${madeTotal.F}, D ${madeTotal.D}, G ${madeTotal.G} made it), U_a = today's undrafted organisation players of age a with < ${MAX_GP} NHL GP (nhl-rosters.json × ${CLUBS_THEN}/${CLUBS_NOW} clubs); ages pooled in bands 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one non-increasing skater shape over them (weighted PAVA), each group's level its pooled ratio. Ages outside the table take its end values. eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n ${pf.n} mean ${pf.mean} sd ${pf.sd}; D n ${pd.n} mean ${pd.mean} sd ${pd.sd}), goalies the slot prior.`,
+  source: `scripts/fit-undrafted-prospects.ts (${new Date().toISOString().slice(0, 10)}): P(make it = 200 NHL GP, a 40-game season for goalies | undrafted, age on Oct 1, < ${MAX_GP} NHL GP) = M_a / U_a, M_a = undrafted players per birth cohort ${COHORTS.join("-")} who made it with < ${MAX_GP} NHL GP before their age-a season, on an NHL deal by then (a North American pro season that season or earlier, first NHL game at most ${LEAD} seasons later) (league-seasons.json: F ${madeTotal.F}, D ${madeTotal.D}, G ${madeTotal.G} made it), U_a = today's undrafted organisation players of age a with < ${MAX_GP} NHL GP (nhl-rosters.json × ${CLUBS_THEN}/${CLUBS_NOW} clubs); ages pooled in bands 18-19, 20-22, 23-24, 25-26, 27-30 (a band's value at its mean age), one skater shape non-increasing from 20 on (weighted PAVA; 18-19, still draft-eligible, stand apart), each group's level its pooled ratio. Ages outside the table take its end values. eta = season + median years to the first 40-game NHL season (skaters). Prime if he makes it: undrafted 200+ GP skaters' FP/G at 24-27 in the current profiles (F n ${pf.n} mean ${pf.mean} sd ${pf.sd}; D n ${pd.n} mean ${pd.mean} sd ${pd.sd}), goalies the slot prior.`,
   pMake: { F: curve("F"), D: curve("D"), G: curve("G") },
   etaLag: lagCurve,
   prime: { F: { mu: pf.mean, sd: pf.sd }, D: { mu: pd.mean, sd: pd.sd } },

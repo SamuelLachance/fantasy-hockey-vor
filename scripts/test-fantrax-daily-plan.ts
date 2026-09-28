@@ -78,7 +78,12 @@ for (const team of league.teams) {
   const after = L.counts.counted + L.fixes.length + L.reserveFills.length - deadOut(p);
   assert(after + L.shortBy >= L.minTotal, `${tag}: following every move leaves ${after} counted (+${L.shortBy} short)`);
   if (deadOut(p) > 0) assert(after >= L.minTotal, `${tag}: dead players leave the count only when the roster stays legal`);
-  assert(L.counts.reserve + toReserve(p) <= limits.maxReserve, `${tag}: Reserve stays within ${limits.maxReserve}`);
+  // A live roster can already hold more (Southern Shore Breakers had 6 Reserve
+  // players on 2026-09-28, before the first lock): the advice never adds to it then.
+  assert(
+    toReserve(p) === 0 || L.counts.reserve + toReserve(p) <= limits.maxReserve,
+    `${tag}: the advice keeps Reserve within ${limits.maxReserve}`,
+  );
   if (L.shortBy > 0) {
     const bodies = (state.rosters[team.id] ?? []).filter((r) => r.status === "MINORS" || r.status === "INJURED_RESERVE").length;
     assert(
