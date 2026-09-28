@@ -23,6 +23,7 @@
     "vor:reapply": "tsx scripts/reapply-vor.ts",
     "draft:board": "tsx scripts/build-draft-board.ts",
     "draft:ranking": "tsx scripts/export-yahoo-ranking.ts",
+    "nhl:rosters": "tsx scripts/fetch-nhl-rosters.ts",
     "gp:recalibrate": "tsx scripts/recalibrate-gp.ts",
     "gp:split-fit": "tsx scripts/fit-split-season-gp.ts",
     "rates:recalibrate": "tsx scripts/recalibrate-rates.ts",

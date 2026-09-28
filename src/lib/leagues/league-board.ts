@@ -6,7 +6,12 @@ import {
   type BoardPosition,
   type DraftBoard,
   type DraftBoardPlayer,
+  type LeaguePool,
+  type UnprojectedPlayer,
 } from "../draft/board-types";
+import { nhlCodePosition, type NhlRostersFile } from "../nhl-rosters";
+import { snakeNhlSeed } from "../snake/league-seed";
+import type { SnakeSummaryFile } from "../snake/types";
 import type { PlayerProjection, Position } from "../types";
 import { matchAdp, type AdpMatchReport, type AdpRow } from "./adp-match";
 import {
@@ -32,6 +37,16 @@ export interface BoardInputs {
   adp: { source: string; fetchedAt: string; rows: AdpRow[] };
   /** Hand rank moves of this league (`rank-adjustments.json`), null when none. */
   rankAdjustments: RankAdjustmentsFile | null;
+  /**
+   * Who the NHL lists today (`src/data/nhl-rosters.json`): unprojected
+   * players join the pool, projected ones take their current club. Null or
+   * absent: neither.
+   */
+  nhlRosters?: NhlRostersFile | null;
+  /** NHL id → Yahoo eligibility (`yahoo-positions.json`), for unprojected players. */
+  yahooPositions?: ReadonlyMap<number, Position[]>;
+  /** Snake's summary, for the pool's verdicts (the pages' seed covers the board). */
+  snake?: Pick<SnakeSummaryFile, "rows" | "nhl"> | null;
 }
 
 export interface BuiltBoard {
@@ -45,13 +60,18 @@ export interface BuiltBoard {
   enginePlayers: DraftBoardPlayer[];
   /** Adjusted ids that are not on the board (skipped; check:draft-board warns on them). */
   adjustmentsMissing: number[];
+  /** Everyone else (`pool.json`): projected players past the board, then the unprojected. */
+  pool: LeaguePool;
+  /** Projected players whose club on an NHL roster today differs from players.json's (id → [old, new]). */
+  teamChanges: Map<number, [string, string]>;
 }
 
 /**
- * How deep the published board goes. 216 players are drafted; 400 by VOR
- * keeps every plausible pick plus a cushion for reaches, and the goalie floor
- * keeps streamer-grade goalies searchable (the 4-start minimum makes managers
- * reach for them late).
+ * How deep the published board (inlined in the pages) goes. 216 players are
+ * drafted; 400 by VOR keeps every plausible pick plus a cushion for reaches,
+ * and the goalie floor keeps streamer-grade goalies searchable (the
+ * 4-start minimum makes managers reach for them late). Everyone past it is
+ * in the league's `pool.json`, which the tables fetch (waivers all season).
  */
 export const BOARD_DEPTH = 400;
 export const BOARD_MIN_GOALIES = 50;
@@ -183,14 +203,14 @@ export function adjustBoardPlayers(
 
 export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
   const { profile } = inputs;
-  const pool = leaguePool(inputs.players);
-  const vor = applyCategoryVor(profile, pool, {
+  const enginePool = leaguePool(inputs.players);
+  const vor = applyCategoryVor(profile, enginePool, {
     r2: inputs.r2,
   });
   // Sensitivity of the goalie exchange rate (shown in the method note): the
   // same board with the softer, half-shrunk predictability ratio.
   const altWeight = vor.goalieWeight.leverageRatio * vor.goalieWeight.predictabilityRatioShrunk;
-  const alt = applyCategoryVor(profile, pool, { r2: inputs.r2, goalieWeight: altWeight });
+  const alt = applyCategoryVor(profile, enginePool, { r2: inputs.r2, goalieWeight: altWeight });
   const adp = matchAdp(
     vor.players.map((p) => ({
       id: p.id,
@@ -205,18 +225,27 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
   const skaterCats = profile.categories.skater;
   const goalieCats = profile.categories.goalie;
 
+  // The club each player is on today (roster lists only: a prospect list is
+  // an organisation, not a club), for display. Never used to drop anyone.
+  const currentTeam = new Map<number, string>();
+  for (const r of inputs.nhlRosters?.players ?? []) {
+    if (r.list === "roster") currentTeam.set(r.id, r.team);
+  }
+  const teamChanges = new Map<number, [string, string]>();
+
   let goalies = 0;
   const pickLimit = marketPickLimit(profile);
-  const kept = vor.players.filter((p) => {
-    if (p.isGoalie && goalies < BOARD_MIN_GOALIES) {
-      goalies++;
-      return true;
-    }
+  const keptIds = new Set<number>();
+  for (const p of vor.players) {
+    const keep =
+      (p.isGoalie && goalies < BOARD_MIN_GOALIES) ||
+      p.rank <= BOARD_DEPTH ||
+      isMarketPick(adp.matches.get(p.id)?.adp, pickLimit);
     if (p.isGoalie) goalies++;
-    return p.rank <= BOARD_DEPTH || isMarketPick(adp.matches.get(p.id)?.adp, pickLimit);
-  });
+    if (keep) keptIds.add(p.id);
+  }
 
-  const enginePlayers: DraftBoardPlayer[] = kept.map((p) => {
+  const toRow = (p: CategoryVorResult["players"][number]): DraftBoardPlayer => {
     const cats: LeagueCategory[] = p.isGoalie ? goalieCats : skaterCats;
     // The client derives F/D from eligibility (for the group-relative bars);
     // it must agree with the engine's primary-position grouping.
@@ -232,10 +261,12 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
         posRank[k as Position | "F"] = v;
       }
     }
+    const team = currentTeam.get(p.id) ?? p.team;
+    if (team !== p.team) teamChanges.set(p.id, [p.team, team]);
     return {
       id: p.id,
       name: p.name,
-      team: p.team,
+      team,
       pos: p.positions,
       age: age > 0 ? age : null,
       gp: Math.round(p.gamesPlayed),
@@ -251,7 +282,12 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
       posRank,
       adp: m && m.adp < ADP_CEILING ? round(m.adp, 1) : null,
     };
-  });
+  };
+  const enginePlayers: DraftBoardPlayer[] = vor.players.filter((p) => keptIds.has(p.id)).map(toRow);
+  // Past the board: engine ranks and position ranks as they are (hand moves
+  // only reorder the board's own rank slots, so board + pool stay 1..N).
+  const poolPlayers: DraftBoardPlayer[] = vor.players.filter((p) => !keptIds.has(p.id)).map(toRow);
+  const unprojected = unprojectedPlayers(inputs, new Set(vor.players.map((p) => p.id)), seasonStart);
   // Hand moves last: every reader of the board (tables, draft helper,
   // suggestions, the Yahoo export) follows the adjusted rank.
   const { players, missing: adjustmentsMissing } = adjustBoardPlayers(enginePlayers, inputs.rankAdjustments);
@@ -344,7 +380,51 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
     averageTeam: { slots },
     players,
   };
-  return { board, vor, adp, enginePlayers, adjustmentsMissing };
+  const pool: LeaguePool = {
+    schema: 1,
+    slug: profile.slug,
+    projectionsGeneratedAt: inputs.projectionsGeneratedAt,
+    rostersFetchedAt: inputs.nhlRosters?.fetchedAt ?? null,
+    players: poolPlayers,
+    unprojected,
+    snake: inputs.snake ? snakeNhlSeed([...poolPlayers, ...unprojected].map((p) => p.id), inputs.snake) : {},
+  };
+  return { board, vor, adp, enginePlayers, adjustmentsMissing, pool, teamChanges };
+}
+
+/**
+ * Players on an NHL roster or prospect list with no projection (not in
+ * `projected`): rostered players first, then prospects, each by name.
+ * Yahoo eligibility when Yahoo knows him (last season's file), else his NHL
+ * position.
+ */
+function unprojectedPlayers(inputs: BoardInputs, projected: ReadonlySet<number>, seasonStart: Date): UnprojectedPlayer[] {
+  const out: UnprojectedPlayer[] = [];
+  for (const r of inputs.nhlRosters?.players ?? []) {
+    if (projected.has(r.id)) continue;
+    const birth = r.birthDate ?? inputs.birthDates.get(r.id) ?? null;
+    const age = birth ? ageFromBirthDate(birth, seasonStart) : 0;
+    const yahoo = inputs.yahooPositions?.get(r.id);
+    out.push({
+      id: r.id,
+      name: r.name,
+      team: r.team,
+      pos: yahoo && yahoo.length > 0 ? [...yahoo] : [nhlCodePosition(r.code)],
+      age: age > 0 ? age : null,
+      noProj: r.list,
+    });
+  }
+  const order = { roster: 0, prospect: 1 } as const;
+  return out.sort((a, b) => order[a.noProj] - order[b.noProj] || a.name.localeCompare(b.name, "fr-CA") || a.id - b.id);
+}
+
+/** `pool.json`, one player per line like the board. */
+export function serializePool(pool: LeaguePool): string {
+  const { players, unprojected, snake, ...head } = pool;
+  const lines = (xs: readonly string[]) => (xs.length ? `\n${xs.join(",\n")}\n` : "");
+  const rows = (xs: readonly unknown[]) => lines(xs.map((x) => JSON.stringify(x)));
+  const verdicts = lines(Object.entries(snake).map(([id, e]) => `${JSON.stringify(id)}:${JSON.stringify(e)}`));
+  return `${JSON.stringify(head).slice(0, -1)},"snake":{${verdicts}},"players":[${rows(players)}],"unprojected":[${rows(unprojected)}]}\n`;
 }
 
 /**

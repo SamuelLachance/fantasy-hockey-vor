@@ -1,3 +1,4 @@
+import type { SnakeNhlFile } from "../snake/types";
 import type { Position, SkaterCategory } from "../types";
 import type {
   LeagueGoalieCategory,
@@ -44,6 +45,49 @@ export interface DraftBoardPlayer {
    * stay here.
    */
   adjusted?: BoardRankAdjustment;
+  /**
+   * Client-side rows only (never in board.json or pool.json's `players`): a
+   * player the NHL lists with no projection (`LeaguePool.unprojected`). His
+   * `proj` / `z` are empty, `value` / `vor` / `gp` are 0 and not to be
+   * shown, and `rank` only orders him after every projected player.
+   */
+  noProj?: NoProjectionKind;
+}
+
+/** Why a listed player has no projection row: on a club's roster, or only on its prospect list. */
+export type NoProjectionKind = "roster" | "prospect";
+
+/** A player the NHL lists today whom the projections never saw (`pool.json`). */
+export interface UnprojectedPlayer {
+  id: number;
+  name: string;
+  team: string;
+  /** Yahoo eligibility when Yahoo knows him, else his NHL position. */
+  pos: Position[];
+  age: number | null;
+  noProj: NoProjectionKind;
+}
+
+/**
+ * The rest of a categories league's player pool
+ * (`public/leagues/<slug>/pool.json`, written with board.json by
+ * `npm run draft:board`): fetched by the tables, never inlined in a page.
+ * `players` are the projected players past the board, in the same row shape
+ * at their own engine ranks (board and pool ranks together are 1..N with no
+ * gap), `unprojected` the players on an NHL roster or prospect list with no
+ * projection, and `snake` Snake's verdicts for the pool's players he
+ * discussed (the pages' seed covers the board).
+ */
+export interface LeaguePool {
+  schema: 1;
+  slug: string;
+  /** Same as the board's `source.projectionsGeneratedAt`. */
+  projectionsGeneratedAt: string;
+  /** The NHL lists snapshot (`src/data/nhl-rosters.json`); null without one. */
+  rostersFetchedAt: string | null;
+  players: DraftBoardPlayer[];
+  unprojected: UnprojectedPlayer[];
+  snake: SnakeNhlFile["rows"];
 }
 
 export interface BoardRankAdjustment {
