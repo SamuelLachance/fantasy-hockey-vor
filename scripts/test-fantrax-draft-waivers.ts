@@ -5,7 +5,7 @@
 import type { SlotId } from "../src/lib/fantrax/config";
 import { draftOutlook, draftValue, type DraftPickInfo, type DraftPoolPlayer } from "../src/lib/fantrax/draft";
 import { eligibleSlots, type LineupCandidate } from "../src/lib/fantrax/lineup";
-import { periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
+import { cappedTotal, periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
 import { capBenchPolicy, withCapBench } from "../src/lib/fantrax/daily-plan";
 
 let failed = 0;
@@ -193,6 +193,43 @@ assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(fu
   assert(near(loose[0]!.delta, 6), "a cap that is not reached changes nothing");
   const used = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 5, gsMax: null, gsUsed: 0 } });
   assert(near(used[0]!.delta, 3), "games already played count toward the cap: only day 1 is left (+3)");
+}
+
+// ---- the rest of season under each later period's caps (FX-2 / FX-3
+// regression): a full roster that reaches its 4-game cap on the first day of
+// every later period gains nothing from an add who only fills a seat on a
+// day already past the cap; cap-blind, he read as +3 a day.
+{
+  const slotCounts = { C: 0, W: 2, F: 0, D: 2, Skt: 0, G: 0 };
+  const g = (c: LineupCandidate, games = 1) => ({ ...c, games });
+  // Day 1 of each period: the four starters play (4 games = the cap). Day 2:
+  // only the two wingers play, one D seat is free for the pickup.
+  const day1 = [g(cand("f1", "W,F,Skt", 3)), g(cand("f2", "W,F,Skt", 2)), g(cand("d1", "D,Skt", 2)), g(cand("d2", "D,Skt", 2))];
+  const day2 = [g(cand("f1", "W,F,Skt", 3)), g(cand("f2", "W,F,Skt", 2)), g(cand("d1", "D,Skt", 0), 0), g(cand("d2", "D,Skt", 0), 0)];
+  // A Reserve player who never makes the lineup: his games must not count.
+  const reserve = { ...g(cand("r1", "W,F,Skt", 0.5)), status: "RESERVE" };
+  const fa = g(cand("fa", "D", 3, "FA"));
+  const later: WaiverDay[] = [9, 9, 10, 10].map((capPeriod, i) => ({
+    candidates: [...(i % 2 === 0 ? day1 : day2), reserve],
+    wwUsable: true,
+    capPeriod,
+    poolCandidate: (id) => (id === "fa" && i % 2 === 1 ? fa : null),
+  }));
+  const now: WaiverDay[] = [{ candidates: day2, wwUsable: true, poolCandidate: (id) => (id === "fa" ? fa : null) }];
+  const base = { slotCounts, needsDrop: false, drops: [], minDelta: 0, rosDays: later };
+  const blind = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], base);
+  assert(near(blind[0]!.ros, 6), `cap-blind: +3 on each later day 2 (${blind[0]?.ros})`);
+  const rosCaps = new Map([9, 10].map((n) => [n, { gpMax: 4, gsMax: null }] as const));
+  const capped = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps });
+  assert(capped.length === 1 && near(capped[0]!.ros, 0), `capped: day 2 of each period is past the 4-game cap, the add is worth nothing later (${capped[0]?.ros})`);
+  // The counter restarts with each period, and a cap not reached costs nothing.
+  const loose = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps: new Map([9, 10].map((n) => [n, { gpMax: 6, gsMax: null }] as const)) });
+  assert(near(loose[0]!.ros, 6), `a 6-game cap is not reached before day 2: +3 twice (${loose[0]?.ros})`);
+  // Only ACTIVE lineup games accrue: with the Reserve winger's games counted
+  // a 5-game cap would be reached on day 1; it is not.
+  const five = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps: new Map([9, 10].map((n) => [n, { gpMax: 5, gsMax: null }] as const)) });
+  assert(near(five[0]!.ros, 6), `Reserve players accrue no games toward the cap (${five[0]?.ros})`);
+  assert(cappedTotal([{ skaterPoints: 5, goaliePoints: 2, gp: 3, gs: 1 }, { skaterPoints: 5, goaliePoints: 2, gp: 3, gs: 1 }], [1, 1], () => ({ key: 1, cap: { gpMax: 3, gsMax: 1, gpUsed: 0, gsUsed: 0 } })) === 7, "cappedTotal: day 1 in full, nothing after either cap");
 }
 
 // ---- games-cap bench policy (FX-8): two weak wingers fill both W seats on

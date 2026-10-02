@@ -7,11 +7,13 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { CAPTAINS_DYNASTY, FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT, waiverMinDelta } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, eligibleSlots, FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT, waiverMinDelta } from "../src/lib/fantrax/config";
 import { buildDailyPlan, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
 import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
 import { rosterPeriodsIn, torontoDateOfIso } from "../src/lib/fantrax/dates";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
+import { skaterSlotValue } from "../src/lib/fantrax/scoring";
+import type { SlotId } from "../src/lib/fantrax/config";
 import type { RosterEntry } from "../src/lib/fantrax/roster-rules";
 import type {
   LeagueSnapshot,
@@ -293,7 +295,11 @@ assert(degraded.cap?.known === false, "cap usage unknown");
 // ---- a waiver target's rest of season is the plan replayed day by day (FX-2)
 // Late in the regular season so the replay is short: the plan's `ros` must be
 // what re-solving the whole plan each later lineup period, with and without
-// the swap, adds up to (the audit's ros-true replay).
+// the swap, adds up to under each later period's games caps (FX-3: the
+// lineup's ACTIVE games count, a period's points stop after the day its cap
+// is reached). The replayed lineups leave out the bench policy (the `ros`
+// fills every seat), so the plans run with the caps feature off and the
+// counter is kept here.
 {
   const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
   const regular = league.scoringPeriods.filter((p) => p.number < firstPlayoff);
@@ -301,6 +307,14 @@ assert(degraded.cap?.known === false, "cap usage unknown");
   const noCaps = { ...CAPTAINS_DYNASTY, features: { ...CAPTAINS_DYNASTY.features, gamesCaps: false } };
   const nowMs = Date.parse(sp.start) - 3_600_000;
   const lateState: StateSnapshot = { ...state, fetchedAt: new Date(nowMs).toISOString(), scoringPeriod: sp.number, caps: {}, draft: null };
+  const gamesOf = (slot: string, id: string, value: number) => {
+    const rec = values.players[id]!;
+    if (slot === "G") return value / (rec.gE || 1);
+    const perGame = skaterSlotValue(rec.off ?? 0, rec.dx ?? 0, slot as SlotId, league.sktMultiplier, {
+      isD: eligibleSlots(rec.e, CAPTAINS_DYNASTY).includes("D"),
+    });
+    return perGame > 0 ? value / perGame : 0;
+  };
   let checked = 0;
   for (const team of league.teams) {
     if (checked >= 2) break;
@@ -311,20 +325,52 @@ assert(degraded.cap?.known === false, "cap usage unknown");
     const dropped = roster0.find((r) => r.id === t.drop!.id)!;
     const swapped = [...roster0.filter((r) => r.id !== dropped.id), { ...dropped, id: t.id }];
     const after = Date.parse(sp.end);
-    const lineupSum = (roster: RosterEntry[]) =>
-      league.rosterPeriods
-        .filter((rp) => Date.parse(rp.start) > after && Date.parse(rp.start) <= Date.parse(regular[regular.length - 1]!.end))
-        .reduce((sum, rp) => {
-          const at = Date.parse(rp.start) - 60_000;
-          const st = { ...lateState, rosters: { ...state.rosters, [team.id]: roster }, fetchedAt: new Date(at).toISOString(), waivers: [] };
-          // `ros` is cap-blind: replay the lineups without the games-cap bench policy.
-          return sum + (buildDailyPlan({ ...input, state: st, teamId: team.id, nowMs: at, waiverRosSampleDays: 0, config: noCaps }).lineup?.total ?? 0);
-        }, 0);
-    const replay = lineupSum(swapped) - lineupSum(roster0);
-    assert(Math.abs(replay - t.ros) <= 0.15, `${team.name}: ros ${t.ros} = the day-by-day replay ${replay.toFixed(2)}`);
+    const lineupSum = (roster: RosterEntry[], capped: boolean) => {
+      let sum = 0;
+      let period = -1;
+      let gp = 0;
+      let gs = 0;
+      for (const rp of league.rosterPeriods.filter(
+        (x) => Date.parse(x.start) > after && Date.parse(x.start) <= Date.parse(regular[regular.length - 1]!.end),
+      )) {
+        const at = Date.parse(rp.start) - 60_000;
+        const scoring = league.scoringPeriods.find((x) => Date.parse(x.start) <= Date.parse(rp.start) && Date.parse(rp.start) <= Date.parse(x.end))!;
+        if (scoring.number !== period) {
+          period = scoring.number;
+          gp = 0;
+          gs = 0;
+        }
+        const st = { ...lateState, rosters: { ...state.rosters, [team.id]: roster }, fetchedAt: new Date(at).toISOString(), waivers: [] };
+        const lineup = buildDailyPlan({ ...input, state: st, teamId: team.id, nowMs: at, waiverRosSampleDays: 0, config: noCaps }).lineup;
+        let sk = 0;
+        let gl = 0;
+        let dgp = 0;
+        let dgs = 0;
+        for (const s of lineup?.slots ?? []) {
+          if (!s.id || !(s.value > 0)) continue;
+          if (s.slot === "G") {
+            gl += s.value;
+            dgs += gamesOf(s.slot, s.id, s.value);
+          } else {
+            sk += s.value;
+            dgp += gamesOf(s.slot, s.id, s.value);
+          }
+        }
+        if (!capped || scoring.gpMax == null || gp < scoring.gpMax) sum += sk;
+        if (!capped || scoring.gsMax == null || gs < scoring.gsMax) sum += gl;
+        gp += dgp;
+        gs += dgs;
+      }
+      return sum;
+    };
+    const replay = lineupSum(swapped, true) - lineupSum(roster0, true);
+    const blind = lineupSum(swapped, false) - lineupSum(roster0, false);
+    // Slot values are rounded to the centime in the plan: a few centimes over a month.
+    assert(Math.abs(replay - t.ros) <= 0.3, `${team.name}: ros ${t.ros} = the capped day-by-day replay ${replay.toFixed(2)} (cap-blind ${blind.toFixed(2)})`);
     checked++;
   }
   assert(checked > 0, "late-season plans offer a swap to replay");
+  // Quebec's swap, 2026-10-02 snapshot: ros 4.0 = capped replay 4.01, cap-blind 6.02.
 }
 
 // ---- the waiver bar is in each league's points and period length (FX-5)

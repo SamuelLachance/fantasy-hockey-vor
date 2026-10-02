@@ -120,6 +120,11 @@ export interface PlanInputs {
    * (`WAIVER_ROS_SAMPLE_DAYS`, every day, by default; 0 = none).
    */
   waiverRosSampleDays?: number;
+  /**
+   * The rest-of-season gain ignores the later periods' games caps (the
+   * behavior before 2026-10-02): the waiver replay's reference only.
+   */
+  waiverRosCapBlind?: boolean;
 }
 
 /** A league's own planner rules, kept out of this module (`plan-kit.ts`, `PLAN_KIT`). */
@@ -904,12 +909,24 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       candidates: rosterCandidates(ctx, roster, p.number),
       wwUsable: true,
       weight: rosStep,
+      capPeriod: scoringPeriodAt(league.scoringPeriods, Date.parse(p.start))?.number,
       poolCandidate: (id) => {
         const c = candidateFor(ctx, id, waiverSet.has(id) ? "WW" : "FA", undefined, p.number);
         return c && Object.values(c.values).some((v) => (v ?? 0) > 0) ? c : null;
       },
     });
   }
+  // Later periods' games caps (Captains: 52 GP / 8 GS a week), each counter
+  // at 0 when its period opens: the rest-of-season gain counts what the caps
+  // let count (only ACTIVE lineup games accrue).
+  const rosCaps =
+    config.features.gamesCaps && !input.waiverRosCapBlind
+      ? new Map(
+          league.scoringPeriods
+            .filter((p) => p.gpMax != null || p.gsMax != null)
+            .map((p) => [p.number, { gpMax: p.gpMax ?? null, gsMax: p.gsMax ?? null }] as const),
+        )
+      : null;
   // Games caps: the waiver days start at the target; what the lineup is
   // expected to play between the sync and the target is already used.
   const before = (byDay: number[]) =>
@@ -952,6 +969,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           minDelta,
           rosDays,
           cap: waiverCap,
+          rosCaps,
         },
       )
     : [];

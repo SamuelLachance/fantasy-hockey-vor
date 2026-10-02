@@ -67,7 +67,7 @@ export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
       )}
       <p className="mt-3 text-xs text-slate-400">
         {
-          `Gain = points ajoutés à votre alignement optimal, jour par jour, d’ici la fin de la période de pointage (${minDelta} pt${(w.minDelta ?? 3) >= 2 ? "s" : ""} ou plus; les 3 meilleurs par position). Reste de la saison = la même chose pour les jours suivants, jusqu’à la fin de la saison régulière de la ligue (sur un échantillon de journées); la liste est classée sur le total des deux, et un ajout qui fait perdre des points sur l’ensemble de la saison n’y figure pas. Un joueur au ballottage ne joue qu’à partir du lendemain.${w.capLimited ? " Votre limite de matchs de la période sera atteinte : les gains ne comptent que jusqu’à ce qu’elle le soit." : ""} Liste à jour à la dernière synchronisation.`
+          `Gain = points ajoutés à votre alignement optimal, jour par jour, d’ici la fin de la période de pointage (${minDelta} pt${(w.minDelta ?? 3) >= 2 ? "s" : ""} ou plus; les 3 meilleurs par position). Reste de la saison = la même chose pour les jours suivants, jusqu’à la fin de la saison régulière de la ligue${plan.cap ? ", chaque période ne comptant que jusqu’à sa limite de matchs (seuls les matchs joués dans l’alignement actif s’y comptent; réserve, blessés et mineures n’en accumulent pas)" : ""}; la liste est classée sur le total des deux, et un ajout qui fait perdre des points sur l’ensemble de la saison n’y figure pas. Un joueur au ballottage ne joue qu’à partir du lendemain.${w.capLimited ? " Votre limite de matchs de la période sera atteinte : les gains ne comptent que jusqu’à ce qu’elle le soit." : ""} Liste à jour à la dernière synchronisation.`
         }
       </p>
     </LeagueCard>

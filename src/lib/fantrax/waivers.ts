@@ -22,7 +22,14 @@
  * period total stops counting skater (goalie) points after the day the
  * expected games played (starts) reach the cap — that day counts in full, as
  * Fantrax scores it. Without that, an add on a team that will hit its cap
- * looks about 2.6 times as good as it is. `ros` stays cap-blind.
+ * looks about 2.6 times as good as it is. `ros` applies each later period's
+ * own caps the same way (`rosCaps`, the counter at 0 when the period opens):
+ * blind to them, an add whose games only push a full roster into its cap
+ * earlier read as a gain over the season.
+ *
+ * Only the games of players in ACTIVE lineup slots count toward a cap (the
+ * Fantrax rule): the lineup's assignments. A Reserve, IR or Minors player
+ * accrues nothing, whatever his team plays.
  */
 import { SLOT_ORDER, type SlotCounts, type SlotId } from "./config";
 import { optimizeLineup, type LineupCandidate } from "./lineup";
@@ -36,6 +43,8 @@ export interface WaiverDay {
   wwUsable: boolean;
   /** Lineup days this one stands for (a sampled later day); 1 by default. */
   weight?: number;
+  /** Scoring period of the day (later days: the key of `rosCaps`). */
+  capPeriod?: number;
 }
 
 export interface WaiverPoolPlayer {
@@ -63,7 +72,8 @@ export interface WaiverTarget {
   drop: DropOption | null;
   /**
    * Points added over the rest of the fantasy regular season AFTER this
-   * period, lineup-aware (0 without later days to sample).
+   * period, lineup-aware and under each later period's games caps when
+   * `rosCaps` is given (0 without later days to sample).
    */
   ros: number;
   /** ros < 0: worth it this period only, he costs points afterwards. */
@@ -93,6 +103,79 @@ export interface WaiverOptions {
   rosDays?: WaiverDay[];
   /** The period's games caps; null / absent = no cap. */
   cap?: WaiverCap | null;
+  /**
+   * Games caps of the later scoring periods, by `capPeriod` of the `rosDays`
+   * (nothing used when each opens); absent = the rest of season is cap-blind.
+   */
+  rosCaps?: ReadonlyMap<number, Pick<WaiverCap, "gpMax" | "gsMax">> | null;
+}
+
+/** One lineup day split for the games caps: points and games of the lineup (ACTIVE slots only). */
+export interface DayParts {
+  skaterPoints: number;
+  goaliePoints: number;
+  /** Expected games played by the skaters in the lineup. */
+  gp: number;
+  /** Expected starts of the goalies in the lineup. */
+  gs: number;
+}
+
+/** The optimal lineup of a day, split into capped parts. */
+export function dayParts(
+  cands: LineupCandidate[],
+  slots: SlotCounts,
+  slotOrder: readonly SlotId[] | undefined,
+): DayParts {
+  const res = optimizeLineup(cands, slots, slotOrder ?? SLOT_ORDER);
+  const byId = new Map(cands.map((c) => [c.id, c]));
+  const out: DayParts = { skaterPoints: 0, goaliePoints: 0, gp: 0, gs: 0 };
+  for (const a of res.assignments) {
+    if (!a.playerId || a.value <= 0) continue;
+    const games = byId.get(a.playerId)?.games ?? 1;
+    if (a.slot === "G") {
+      out.goaliePoints += a.value;
+      out.gs += games;
+    } else {
+      out.skaterPoints += a.value;
+      out.gp += games;
+    }
+  }
+  return out;
+}
+
+/**
+ * Counted points of consecutive days under games caps: a period's skater
+ * (goalie) points stop counting after the day its expected games (starts)
+ * reach the cap; that day counts in full. `capOf(i)` gives day i's cap and
+ * a key: the counters restart (from the cap's `gpUsed` / `gsUsed`) when the
+ * key changes. Days carry their weight.
+ */
+export function cappedTotal(
+  parts: readonly DayParts[],
+  weights: readonly number[],
+  capOf: (i: number) => { key: number; cap: WaiverCap | null },
+): number {
+  let total = 0;
+  let key: number | null = null;
+  let gp = 0;
+  let gs = 0;
+  for (let i = 0; i < parts.length; i++) {
+    const d = parts[i]!;
+    const w = weights[i] ?? 1;
+    const { key: k, cap } = capOf(i);
+    if (k !== key) {
+      key = k;
+      gp = cap?.gpUsed ?? 0;
+      gs = cap?.gsUsed ?? 0;
+    }
+    const gpMax = cap?.gpMax ?? null;
+    const gsMax = cap?.gsMax ?? null;
+    if (gpMax === null || gp < gpMax) total += w * d.skaterPoints;
+    if (gsMax === null || gs < gsMax) total += w * d.goaliePoints;
+    gp += w * d.gp;
+    gs += w * d.gs;
+  }
+  return total;
 }
 
 /**
@@ -108,41 +191,16 @@ export function periodTotal(
   slotOrder: readonly SlotId[] | undefined,
   cap?: WaiverCap | null,
 ): number {
-  let total = 0;
-  let gp = cap?.gpUsed ?? 0;
-  let gs = cap?.gsUsed ?? 0;
-  const gpMax = cap?.gpMax ?? null;
-  const gsMax = cap?.gsMax ?? null;
-  for (const d of days) {
-    const cands = transform(d);
-    const res = optimizeLineup(cands, slots, slotOrder ?? SLOT_ORDER);
-    const w = d.weight ?? 1;
-    if (!cap) {
-      total += w * res.total;
-      continue;
-    }
-    const byId = new Map(cands.map((c) => [c.id, c]));
-    let sk = 0;
-    let gl = 0;
-    let dgp = 0;
-    let dgs = 0;
-    for (const a of res.assignments) {
-      if (!a.playerId || a.value <= 0) continue;
-      const games = byId.get(a.playerId)?.games ?? 1;
-      if (a.slot === "G") {
-        gl += a.value;
-        dgs += games;
-      } else {
-        sk += a.value;
-        dgp += games;
-      }
-    }
-    if (gpMax === null || gp < gpMax) total += w * sk;
-    if (gsMax === null || gs < gsMax) total += w * gl;
-    gp += w * dgp;
-    gs += w * dgs;
+  if (!cap) {
+    let total = 0;
+    for (const d of days) total += (d.weight ?? 1) * optimizeLineup(transform(d), slots, slotOrder ?? SLOT_ORDER).total;
+    return total;
   }
-  return total;
+  return cappedTotal(
+    days.map((d) => dayParts(transform(d), slots, slotOrder)),
+    days.map((d) => d.weight ?? 1),
+    () => ({ key: 0, cap }),
+  );
 }
 
 export function waiverTargets(
@@ -157,12 +215,21 @@ export function waiverTargets(
   const base = total(days, (d) => d.candidates, opts.cap);
   const without = (d: WaiverDay, id: string) => d.candidates.filter((c) => c.id !== id);
   // Later days, solved once per day for the roster and for each drop: a
-  // pickup only changes the days he plays, so only those are re-solved.
-  const solveDay = (cands: LineupCandidate[]) => optimizeLineup(cands, slots, opts.slotOrder ?? SLOT_ORDER).total;
+  // pickup only changes the days he plays, so only those are re-solved. Each
+  // later period's games caps then apply to the day-by-day parts.
+  const rosCaps = opts.rosCaps ?? null;
+  const rosWeights = rosDays.map((d) => d.weight ?? 1);
+  const rosCapOf = (i: number) => {
+    const key = rosDays[i]!.capPeriod ?? -1;
+    const c = rosCaps?.get(key);
+    return { key, cap: c ? { gpMax: c.gpMax, gsMax: c.gsMax, gpUsed: 0, gsUsed: 0 } : null };
+  };
+  const rosTotal = (parts: DayParts[]) => cappedTotal(parts, rosWeights, rosCapOf);
+  const solveDay = (cands: LineupCandidate[]) => dayParts(cands, slots, opts.slotOrder);
   const rosBaseByDay = rosDays.map((d) => solveDay(d.candidates));
-  const baseRos = rosDays.reduce((s, d, i) => s + (d.weight ?? 1) * rosBaseByDay[i]!, 0);
-  const rosWithoutCache = new Map<string, number[]>();
-  const rosWithout = (dropId: string | undefined): number[] => {
+  const baseRos = rosTotal(rosBaseByDay);
+  const rosWithoutCache = new Map<string, DayParts[]>();
+  const rosWithout = (dropId: string | undefined): DayParts[] => {
     if (!dropId) return rosBaseByDay;
     let byDay = rosWithoutCache.get(dropId);
     if (!byDay) {
@@ -173,13 +240,11 @@ export function waiverTargets(
   };
   const rosFor = (id: string, dropId: string | undefined): number => {
     const kept = rosWithout(dropId);
-    let sum = 0;
-    rosDays.forEach((d, i) => {
+    const parts = rosDays.map((d, i) => {
       const pc = d.poolCandidate(id);
-      const day = pc ? solveDay([...(dropId ? without(d, dropId) : d.candidates), pc]) : kept[i]!;
-      sum += (d.weight ?? 1) * day;
+      return pc ? solveDay([...(dropId ? without(d, dropId) : d.candidates), pc]) : kept[i]!;
     });
-    return sum - baseRos;
+    return rosTotal(parts) - baseRos;
   };
 
   // Cheapest drops first: what the lineup loses without each player, this
@@ -191,7 +256,7 @@ export function waiverTargets(
           loss:
             base -
             total(days, (day) => without(day, d.id), opts.cap) +
-            rosDays.reduce((s, day, i) => s + (day.weight ?? 1) * (rosBaseByDay[i]! - rosWithout(d.id)[i]!), 0),
+            (baseRos - rosTotal(rosWithout(d.id))),
         }))
         .sort((a, b) => a.loss - b.loss)
         .slice(0, 3)
