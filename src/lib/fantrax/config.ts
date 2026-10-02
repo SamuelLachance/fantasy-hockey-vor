@@ -782,10 +782,32 @@ export const PRIOR_GOALIE_E = 3.65;
 /** Unprojected skaters rarely hold a nightly spot; discount their P(play). */
 export const PRIOR_P_PLAY = 0.6;
 
-/** Waiver targets below this gain over the rest of the scoring period are hidden. */
+/**
+ * Waiver targets below this gain over the rest of the scoring period are
+ * hidden — in Captains' points, over a period of a week or more.
+ */
 export const WAIVER_MIN_DELTA = 3;
+
+/**
+ * The same threshold in a league's own points and period length: scaled by
+ * its forward prior (its points scale; Captains' p25 FP/G 2.52) and by the
+ * scoring period's days over a week, at least 3 days and at most a week.
+ * Captains: 3. Slapshot (1-4 day periods, p25 1.66): 0.85 to 1.13 — a flat 3
+ * left its panel empty in 4 plans out of 5.
+ */
+export function waiverMinDelta(cfg: { priors: { fpg: { F: number } } }, periodDays: number): number {
+  const scale = cfg.priors.fpg.F / PRIOR_FPG.F;
+  const days = Math.min(7, Math.max(3, periodDays));
+  return Math.round(WAIVER_MIN_DELTA * scale * (days / 7) * 100) / 100;
+}
 /** Players this young with this Ros% are dynasty assets, never suggested as drops. */
 export const DROP_PROTECT_MAX_AGE = 24;
 export const DROP_PROTECT_MIN_ROS = 30;
+/**
+ * Players rostered in at least this share of Fantrax leagues are never
+ * suggested as drops, whatever their age (a 79 %-rostered starting goalie
+ * was offered as a drop for a fringe backup).
+ */
+export const DROP_PROTECT_ANY_AGE_MIN_ROS = 60;
 /** The top-N players by season value are the keeper core: never dropped. */
 export const DROP_PROTECT_TOP_N = 10;

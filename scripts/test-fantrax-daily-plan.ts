@@ -7,10 +7,10 @@
  */
 import { readFileSync } from "fs";
 import { join } from "path";
-import { FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT, waiverMinDelta } from "../src/lib/fantrax/config";
 import { buildDailyPlan, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
 import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
-import { torontoDateOfIso } from "../src/lib/fantrax/dates";
+import { rosterPeriodsIn, torontoDateOfIso } from "../src/lib/fantrax/dates";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
 import type { RosterEntry } from "../src/lib/fantrax/roster-rules";
 import type {
@@ -28,6 +28,7 @@ function assert(cond: boolean, msg: string) {
   }
 }
 const near = (a: number, b: number, tol = 1e-6) => Math.abs(a - b) <= tol;
+const eq3 = (a: number, b: number, msg: string) => assert(near(a, b, 1e-9), `${msg} (${a} vs ${b})`);
 const load = <T>(...parts: string[]) => JSON.parse(readFileSync(join(process.cwd(), ...parts), "utf8")) as T;
 
 const state = load<StateSnapshot>("public", "fantrax", "state.json");
@@ -53,7 +54,16 @@ for (const l of [plan.baseLineup, ...(plan.lineup ? [plan.lineup] : [])]) {
   assert(l.slots.every((s) => Number.isFinite(s.value) && s.value >= 0), "finite non-negative slot values");
 }
 assert(plan.legality.fixes.every((id) => plan.legality.movableFromMinors.includes(id) || plan.legality.healthyOnIr.includes(id)), "fixes come from Minors / IR");
+assert(plan.waivers.minDelta === 3, `Captains keeps its 3-point bar (${plan.waivers.minDelta})`);
 assert(plan.waivers.targets.every((t) => t.delta >= 3), "waiver targets clear the 3 FP bar");
+// Ranked on the season (this period + the rest), never a net loss, and a
+// target that costs points after the period says so.
+assert(plan.waivers.targets.every((t) => t.delta + t.ros >= -0.05), "no target loses points over the season");
+assert(plan.waivers.targets.every((t) => (t.rental === true) === t.ros < 0), "rental <=> negative rest of season");
+assert(
+  plan.waivers.targets.every((t, i, a) => i === 0 || a[i - 1]!.delta + a[i - 1]!.ros >= t.delta + t.ros - 0.11),
+  "targets ranked by period + rest-of-season gain",
+);
 assert(plan.goalies.every((g) => g.pStart >= 0 && g.pStart <= 1), "P(start) in [0, 1]");
 for (const id of [...plan.legality.fixes, ...plan.legality.reserveFills, ...plan.waivers.targets.map((t) => t.id)]) {
   assert(!!plan.players[id], `referenced player ${id} carried in players`);
@@ -278,6 +288,65 @@ assert(degraded.cap?.known === false, "cap usage unknown");
   // Once the night's last game has locked, the plan moves to the next day
   const late = buildDailyPlan({ ...sInput, nowMs: lastLock + 1_000 });
   assert(late.target?.rosterPeriod === 2, `after the last lock → period 2 (${late.target?.rosterPeriod})`);
+}
+
+// ---- a waiver target's rest of season is the plan replayed day by day (FX-2)
+// Late in the regular season so the replay is short: the plan's `ros` must be
+// what re-solving the whole plan each later lineup period, with and without
+// the swap, adds up to (the audit's ros-true replay).
+{
+  const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
+  const regular = league.scoringPeriods.filter((p) => p.number < firstPlayoff);
+  const sp = regular[regular.length - 2]!;
+  const nowMs = Date.parse(sp.start) - 3_600_000;
+  const lateState: StateSnapshot = { ...state, fetchedAt: new Date(nowMs).toISOString(), scoringPeriod: sp.number, caps: {}, draft: null };
+  let checked = 0;
+  for (const team of league.teams) {
+    if (checked >= 2) break;
+    const p = buildDailyPlan({ ...input, state: lateState, teamId: team.id, nowMs });
+    const t = p.waivers.targets.find((x) => x.drop);
+    if (!t) continue;
+    const roster0 = state.rosters[team.id] ?? [];
+    const dropped = roster0.find((r) => r.id === t.drop!.id)!;
+    const swapped = [...roster0.filter((r) => r.id !== dropped.id), { ...dropped, id: t.id }];
+    const after = Date.parse(sp.end);
+    const lineupSum = (roster: RosterEntry[]) =>
+      league.rosterPeriods
+        .filter((rp) => Date.parse(rp.start) > after && Date.parse(rp.start) <= Date.parse(regular[regular.length - 1]!.end))
+        .reduce((sum, rp) => {
+          const at = Date.parse(rp.start) - 60_000;
+          const st = { ...lateState, rosters: { ...state.rosters, [team.id]: roster }, fetchedAt: new Date(at).toISOString(), waivers: [] };
+          return sum + (buildDailyPlan({ ...input, state: st, teamId: team.id, nowMs: at, waiverRosSampleDays: 0 }).lineup?.total ?? 0);
+        }, 0);
+    const replay = lineupSum(swapped) - lineupSum(roster0);
+    assert(Math.abs(replay - t.ros) <= 0.15, `${team.name}: ros ${t.ros} = the day-by-day replay ${replay.toFixed(2)}`);
+    checked++;
+  }
+  assert(checked > 0, "late-season plans offer a swap to replay");
+}
+
+// ---- the waiver bar is in each league's points and period length (FX-5)
+{
+  eq3(waiverMinDelta(CAPTAINS_DYNASTY, 7), 3, "Captains: 3 points a week");
+  eq3(waiverMinDelta(CAPTAINS_DYNASTY, 13), 3, "Captains: a long period keeps the bar");
+  const slapBar = waiverMinDelta(SLAPSHOT, 2);
+  assert(slapBar > 0.5 && slapBar < 1.3, `Slapshot: about 1 point (${slapBar})`);
+  const sState = load<StateSnapshot>("public", "fantrax", "slapshot", "state.json");
+  const sValues = load<ValuesSnapshot>("public", "fantrax", "slapshot", "values.json");
+  const sLeague = load<LeagueSnapshot>("src", "data", "fantrax", "slapshot", "league.json");
+  const sSchedule = load<ScheduleSnapshot>("public", "fantrax", "slapshot", `schedule-${NHL_SEASON_ID}.json`);
+  let withTargets = 0;
+  const periods = sLeague.scoringPeriods.slice(2, 6);
+  for (const sp of periods) {
+    const at = Date.parse(sp.start) - 3_600_000;
+    for (const team of sLeague.teams.slice(0, 8)) {
+      const p = buildDailyPlan({ league: sLeague, state: { ...sState, fetchedAt: new Date(at).toISOString(), draft: null }, values: sValues, schedule: sSchedule, teamId: team.id, nowMs: at, config: SLAPSHOT, kit: PLAN_KIT });
+      assert(near(p.waivers.minDelta, waiverMinDelta(SLAPSHOT, rosterPeriodsIn(sLeague.rosterPeriods, sp).length)), "Slapshot plan uses its own bar");
+      if (p.waivers.targets.length) withTargets++;
+    }
+  }
+  const share = withTargets / (periods.length * 8);
+  assert(share >= 0.6, `Slapshot's waiver panel is not empty by construction (${(share * 100).toFixed(0)} % of plans with a target)`);
 }
 
 if (failed) process.exit(1);

@@ -9,9 +9,11 @@ interface WaiverTargetsProps {
   player: PlayerLookup;
 }
 
-/** Free agents / waiver players ranked by points added over the rest of the period. */
+/** Free agents / waiver players ranked by points added over the rest of the season. */
 export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
   const w = plan.waivers;
+  // An older baked plan has no league threshold: Captains' 3 points.
+  const minDelta = fmtNum(w.minDelta ?? 3, w.minDelta !== undefined && w.minDelta < 3 ? 1 : 0);
   return (
     <LeagueCard
       id="ballottage"
@@ -22,7 +24,7 @@ export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
     >
       {w.targets.length === 0 ? (
         <p className="text-sm text-slate-400">
-          {"Aucun ajout ne rapporte 3 pts ou plus d'ici la fin de la période."}
+          {`Aucun ajout ne rapporte ${minDelta} pt${(w.minDelta ?? 3) >= 2 ? "s" : ""} ou plus d’ici la fin de la période sans en coûter sur le reste de la saison.`}
         </p>
       ) : (
         <ul className="grid gap-3 md:grid-cols-2">
@@ -45,6 +47,14 @@ export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
                 <span className="tabular-nums text-slate-400">({fmtNum(t.fpg)} pts/match)</span>
               </p>
               <p className="text-xs text-slate-400">
+                {t.rental ? (
+                  <Tag tone="amber">Location courte</Tag>
+                ) : null}{" "}
+                Reste de la saison après la période{" "}:{" "}
+                <span className={`tabular-nums ${t.ros < 0 ? "text-amber-300" : "text-slate-300"}`}>{fmtSigned(t.ros, 1)} pts</span>
+                {t.rental ? " : il vous en coûte après cette période." : null}
+              </p>
+              <p className="text-xs text-slate-400">
                 {t.drop
                   ? t.drop.action === "minors"
                     ? `Envoyer ${player(t.drop.id)?.n ?? "un joueur"} aux mineures pour faire de la place.`
@@ -57,7 +67,7 @@ export function WaiverTargets({ plan, player }: WaiverTargetsProps) {
       )}
       <p className="mt-3 text-xs text-slate-400">
         {
-          "Gain = points ajoutés à votre alignement optimal, jour par jour, d'ici la fin de la période de pointage (3 pts ou plus; les 3 meilleurs par position). Un joueur au ballottage ne joue qu'à partir du lendemain. Liste à jour à la dernière synchronisation."
+          `Gain = points ajoutés à votre alignement optimal, jour par jour, d’ici la fin de la période de pointage (${minDelta} pt${(w.minDelta ?? 3) >= 2 ? "s" : ""} ou plus; les 3 meilleurs par position). Reste de la saison = la même chose pour les jours suivants, jusqu’à la fin de la saison régulière de la ligue (sur un échantillon de journées); la liste est classée sur le total des deux, et un ajout qui fait perdre des points sur l’ensemble de la saison n’y figure pas. Un joueur au ballottage ne joue qu’à partir du lendemain.${w.capLimited ? " Votre limite de matchs de la période sera atteinte : les gains ne comptent que jusqu’à ce qu’elle le soit." : ""} Liste à jour à la dernière synchronisation.`
         }
       </p>
     </LeagueCard>
