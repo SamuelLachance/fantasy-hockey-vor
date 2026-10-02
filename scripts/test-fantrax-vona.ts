@@ -9,7 +9,10 @@ import { join } from "path";
 import { CAPTAINS_DYNASTY, FANTRAX_DEFAULT_TEAM_ID } from "../src/lib/fantrax/config";
 import { buildDailyPlan, PLAN_ODDS_EPS, planOdds, seasonFp, type DailyPlan } from "../src/lib/fantrax/daily-plan";
 import {
-  availability,
+  ADP_LOG_SIGMA,
+  ADP_RANK_OFFSET,
+  ADP_SATURATED,
+  availability as shippedAvailability,
   binomialPmf,
   DEFAULT_RANKED_POOL,
   draftOutlook,
@@ -23,6 +26,8 @@ import {
   type DraftPoolPlayer,
 } from "../src/lib/fantrax/draft";
 import { fmtOdds } from "../src/lib/fantrax/league-copy";
+import { CAPTAINS_DYNASTY as CAPTAINS_CFG, SLAPSHOT } from "../src/lib/fantrax/config";
+import { replayDraft, replayInput } from "./draft-calibration";
 import type {
   LeagueSnapshot,
   ScheduleSnapshot,
@@ -38,6 +43,13 @@ function assert(cond: boolean, msg: string) {
   }
 }
 const near = (a: number, b: number, tol = 1e-6) => Math.abs(a - b) <= tol;
+
+// The mechanics below (monotonicity, cut-offs, a steep synthetic board) are
+// checked under the narrow first-guess noise, where they bite hardest; the
+// shipped, fitted noise is checked against the two real drafts at the end.
+const NARROW = { sigma: 0.35, offset: 5 } as const;
+const availability = (rank: number | null, m: number, s: number, ranked?: number) =>
+  shippedAvailability(rank, m, s, ranked, NARROW);
 
 // ---- building blocks
 assert(near(normalCdf(0), 0.5, 1e-7), "Φ(0) = 0.5");
@@ -87,7 +99,7 @@ for (const s of [0.3, 0.5, 1]) {
 }
 {
   // Cut-offs: exactly n expected gone after n pool picks; everyone once n reaches the pool.
-  const small = rankPool([1, 2, 3, 3, 9]);
+  const small = rankPool([1, 2, 3, 3, 9], NARROW);
   const cut = goneCutoffs(small, 7);
   assert(cut.length === 8 && cut[0] === Number.NEGATIVE_INFINITY, "u_0 = −∞");
   for (let n = 1; n < 5; n++) {
@@ -198,7 +210,7 @@ function checkSteep(o: DraftOutlook, label: string) {
   const vonas = new Set(o.board.map((b) => b.vona!.toFixed(3)));
   assert(vonas.size > 5, `${label}: per-player VONA differs player to player`);
 }
-const out = draftOutlook(picks, "me", pool, {}, { poolShare: 0.6, boardSize: 30 });
+const out = draftOutlook(picks, "me", pool, {}, { poolShare: 0.6, boardSize: 30, adp: NARROW });
 const r = (id: string) => out.board.find((b) => b.id === id)!;
 assert(out.picksBefore === 0 && out.picksBeforeFollowing === 11, "on the clock at #6, 11 picks to #18");
 checkSteep(out, "on the clock");
@@ -211,7 +223,7 @@ assert(out.vona.C.laterId === "cStar" && out.vona.C.laterP < 0.6, "the star may 
     "me",
     pool,
     {},
-    { poolShare: 0.6, boardSize: 30 },
+    { poolShare: 0.6, boardSize: 30, adp: NARROW },
   );
   assert(later.picksBefore === 11 && later.picksBeforeFollowing === 17, "11 picks to #18, 17 to #25");
   checkSteep(later, "mid-round");
@@ -306,6 +318,40 @@ assert(out.vona.C.laterId === "cStar" && out.vona.C.laterP < 0.6, "the star may 
   const simOut = draftOutlook(sim, "t5", all, { D: 0.5 }, { poolShare: 0.5 });
   assert(simOut.next?.pick === 20 && simOut.following?.pick === 34, "simulated: my picks #20 and #34");
   nonDegenerate(simOut, "snapshot pool, simulated mid-draft");
+}
+
+// ---- the shipped noise, replayed on the two real drafts (FX-4)
+// After a team's pick, the board's P(still there at my next pick) for every
+// pool player in the first 120 by ADP, against what the draft then did
+// (`scripts/draft-calibration.ts`; every 3rd Captains / 20th Slapshot pick to
+// stay fast). The first guess (τ 0.35, c 5, every ADP ranked) said 0-10 %
+// for players who were still there 62-65 % of the time.
+{
+  assert(ADP_LOG_SIGMA === 0.6 && ADP_RANK_OFFSET === 15 && ADP_SATURATED === 290, "fitted constants");
+  const firstGuess = { sigma: 0.35, offset: 5, saturated: Number.POSITIVE_INFINITY };
+  for (const [cfg, step, maxBrier] of [[CAPTAINS_CFG, 3, 0.066], [SLAPSHOT, 20, 0.09]] as const) {
+    const input = replayInput(cfg);
+    if (!input) continue;
+    const shipped = replayDraft(input, undefined, step);
+    const old = replayDraft(input, firstGuess, step);
+    assert(shipped.n > 500, `${cfg.slug}: replay sample ${shipped.n}`);
+    assert(shipped.brier <= maxBrier, `${cfg.slug}: Brier ${shipped.brier.toFixed(4)} <= ${maxBrier}`);
+    assert(shipped.brier < 0.8 * old.brier, `${cfg.slug}: Brier ${shipped.brier.toFixed(4)} vs ${old.brier.toFixed(4)} for the first guess`);
+    assert(shipped.logLoss < 0.6 * old.logLoss, `${cfg.slug}: log loss ${shipped.logLoss.toFixed(3)} vs ${old.logLoss.toFixed(3)}`);
+    assert(shipped.lowBin.n === 0 || shipped.lowBin.observed < 0.25, `${cfg.slug}: "under 10 %" means it (${shipped.lowBin.observed.toFixed(2)} still there)`);
+  }
+  // Saturated ADPs are one tie, not an order.
+  const sat: DraftPoolPlayer[] = [
+    { id: "a", groups: ["C"], seasonFp: 10, adp: 291.2 },
+    { id: "b", groups: ["C"], seasonFp: 10, adp: 293.6 },
+    { id: "c", groups: ["C"], seasonFp: 10, adp: Number.POSITIVE_INFINITY },
+    { id: "r", groups: ["C"], seasonFp: 10, adp: 150 },
+  ];
+  const satPicks: DraftPickInfo[] = [1, 2, 3].map((n) => ({ pick: n, round: 1, teamId: n === 3 ? "me" : `t${n}` }));
+  const satOut = draftOutlook(satPicks, "me", sat, {}, { poolShare: 1, boardSize: 10 });
+  const av = (id: string) => satOut.board.find((b) => b.id === id)!.available;
+  assert(near(av("a"), av("b"), 1e-12) && near(av("a"), av("c"), 1e-12), "ADP 291 / 294 / none: the same odds");
+  assert(av("r") < av("a"), "a real ADP rank goes first");
 }
 
 if (failed) {
