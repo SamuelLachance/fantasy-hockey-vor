@@ -367,8 +367,9 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
         const ageT = pl.age0 + t + j - 1;
         if (thetaGate !== null && g !== "G" && ageT >= G.retireIfOutAge) {
           const gs = g as "F" | "D";
-          const pR = ret.pRegularNext(gs, ageT, ret.levelPct(gs, thPrev), Math.max(Kp.shareFloor, share));
-          surv *= 1 - (1 - pR) * ret.pAbsentIfNotRegular(gs, ageT);
+          const sh = Math.max(Kp.shareFloor, share);
+          const pR = ret.pRegularNext(gs, ageT, ret.levelPct(gs, thPrev), sh);
+          surv *= 1 - (1 - pR) * ret.pAbsentIfNotRegular(gs, ageT, sh);
         } else if (thetaGate !== null && g === "G" && ageT >= gg.retireIfOutAge) {
           const ws = Math.min(1, share);
           surv *= ret.goalieRoleNext(ageT, ws, (thPrev - gg.svLeague - gg.svWorkload * ws) / gg.svFpPerPt).pP;
@@ -521,13 +522,27 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
             }
           } else {
             const gs = g as "F" | "D";
-            const pct = ret.levelPct(gs, lastFpg ?? theta);
-            const pR = ret.pRegularNext(gs, age - 1, pct, share);
-            if (rng.u() < pR) share = Math.min(1, (G.regular[0] + G.regular[1] * Math.sqrt(rng.u())) * durPow[t]!);
-            else if (rng.u() < ret.pAbsentIfNotRegular(gs, age - 1)) {
-              share = 0;
-              if (age - 1 >= G.retireIfOutAge) retired = true;
-            } else share = G.partial[0] + G.partial[1] * rng.u();
+            // after a season out of the NHL, the observed odds of coming back
+            // (audit 2026-10-02: the logistics brought 73 % of 23-29-year-olds back, 16.5 % observed)
+            const az = share === 0 ? ret.afterZero(age - 1) : null;
+            const regular = () => Math.min(1, (G.regular[0] + G.regular[1] * Math.sqrt(rng.u())) * durPow[t]!);
+            if (az) {
+              const u = rng.u();
+              if (u < az.pRegular) share = regular();
+              else if (u < az.pAny) share = G.partial[0] + G.partial[1] * rng.u();
+              else {
+                share = 0;
+                if (age - 1 >= G.retireIfOutAge) retired = true;
+              }
+            } else {
+              const pct = ret.levelPct(gs, lastFpg ?? theta);
+              const pR = ret.pRegularNext(gs, age - 1, pct, share);
+              if (rng.u() < pR) share = regular();
+              else if (rng.u() < ret.pAbsentIfNotRegular(gs, age - 1, share)) {
+                share = 0;
+                if (age - 1 >= G.retireIfOutAge) retired = true;
+              } else share = G.partial[0] + G.partial[1] * rng.u();
+            }
           }
         }
         thetaT = theta;

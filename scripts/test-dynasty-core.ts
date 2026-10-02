@@ -690,6 +690,40 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   assert(mean(on.fp[3]!) > mean(off.fp[3]!), "a growth path above the curve raises season 3");
 }
 
+// ---- 8. Role transitions refit on history (audit 2026-10-02: ROLE-ABSENT, GOALIE-PERSIST)
+{
+  const odds = (x: number) => x / (1 - x);
+  // a part-timer who is not a regular next season leaves the NHL far more often than his age alone says
+  const base25 = ret.pAbsentIfNotRegular("F", 25);
+  assert(near(odds(ret.pAbsentIfNotRegular("F", 25, 0.1)) / odds(base25), 3.29, 0.01), "share < 0.25 at 23-29: absence odds × 3.29");
+  assert(near(odds(ret.pAbsentIfNotRegular("F", 25, 0.35)) / odds(base25), 1.61, 0.01), "share 0.25-0.5 at 23-29: × 1.61");
+  assert(near(ret.pAbsentIfNotRegular("F", 25, 0.8), base25, 1e-12), "a regular's share at 23-29: the age table");
+  assert(ret.pAbsentIfNotRegular("F", 21, 0.1) > ret.pAbsentIfNotRegular("F", 21), "under 23 too");
+  // observed: P(absent | not regular), share < 0.25, 23-29 0.552 (the age table read 0.277)
+  assert(ret.pAbsentIfNotRegular("F", 26, 0.1) > 0.45, `share < 0.25 at 26: ${ret.pAbsentIfNotRegular("F", 26, 0.1).toFixed(3)}`);
+  const z25 = ret.afterZero(25)!;
+  const z21 = ret.afterZero(21)!;
+  assert(near(z25.pRegular, 0.033, 1e-9) && near(z25.pAny, 0.165, 1e-9), "after a season out at 23-29: 3.3 % regular, 16.5 % any game");
+  assert(near(z21.pRegular, 0.171, 1e-9) && near(z21.pAny, 0.502, 1e-9), "under 23: 17.1 % / 50.2 %");
+  // end to end: a 25-year-old out of the NHL in season 1 is back in season 2 on ~16.5 % of the paths (the logistics: ~73 %)
+  const fringe: SimPlayer = { id: "fringe-out", g: "F", age0: 25, birthDate: null, gp0: 150, eligNow: false, path: "nhl", theta0: 1.6, share0: 0.25, sigma0: 0.1, elite: false };
+  const r = simulatePlayer(fringe, ctx({ N: 6000, recordGames: true, keepGate: false, K: 0 }));
+  let out1 = 0;
+  let back2 = 0;
+  for (let n = 0; n < r.N; n++) {
+    if (r.gamesPath![1]![n]! > 0) continue;
+    out1++;
+    if (r.gamesPath![2]![n]! > 0) back2++;
+  }
+  assert(out1 > 500 && near(back2 / out1, 0.165, 0.04), `after a season out at 26: back ${(back2 / out1).toFixed(3)} (observed 0.165; ${out1} paths out)`);
+  // goalies: after a season with no start, the observed odds of any start (0.29 under 27, the logistic alone 0.81)
+  const gNone = ret.goalieRoleNext(25, 0, 0);
+  assert(gNone.pP < 0.4 && gNone.pT < 0.1 && gNone.pS <= gNone.pT && gNone.pT <= gNone.pP, `goalie 25 after no start: present ${gNone.pP.toFixed(3)}, ≥ tandem ${gNone.pT.toFixed(3)}`);
+  const gLow = ret.goalieRoleNext(25, 0.05, 0);
+  assert(gLow.pP > 0.7, `a goalie with a few starts keeps the logistics (present ${gLow.pP.toFixed(3)})`);
+  assert(ret.goalieRoleNext(33, 0, 0).pP > gNone.pP, "32+: the logistics (the simulator retires an absent goalie anyway)");
+}
+
 if (failed > 0) {
   console.error(`test-dynasty-core: ${failed} failure(s)`);
   process.exit(1);

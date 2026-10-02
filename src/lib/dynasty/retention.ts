@@ -18,8 +18,25 @@ export interface Retention {
    * P(present) (each ≥ the previous), on the raw games-started share.
    */
   goalieRoleNext(age: number, gsShare: number, svRelPts: number): { pS: number; pT: number; pP: number };
-  pAbsentIfNotRegular(g: "F" | "D", age: number): number;
+  /**
+   * P(no NHL game next | not a regular next) by age; with this season's
+   * games share, the share × age odds multiplier (params games.roleAbsent:
+   * a part-timer is out of the league far more often than his age alone says).
+   */
+  pAbsentIfNotRegular(g: "F" | "D", age: number, share?: number): number;
+  /**
+   * After a season with no NHL game: P(regular next) and P(any game next),
+   * observed by age (null without the table: the logistics then apply).
+   */
+  afterZero(age: number): { pRegular: number; pAny: number } | null;
 }
+
+/** Index of the band `x` falls in: below cuts[0] → 0, …, at or above the last cut → cuts.length. */
+const bandOf = (cuts: readonly number[], x: number) => {
+  let i = 0;
+  while (i < cuts.length && x >= cuts[i]!) i++;
+  return i;
+};
 
 export function makeRetention(p: DynastyParams): Retention {
   const absent: Record<"F" | "D", Map<number, number>> = { F: new Map(), D: new Map() };
@@ -65,6 +82,8 @@ export function makeRetention(p: DynastyParams): Retention {
     age <= 25 ? (26 - age) / 3 : 0,
   ];
   const lin = (b: readonly number[], x: readonly number[]) => x.reduce((z, xi, i) => z + xi * b[i]!, 0);
+  const ra = p.games.roleAbsent ?? null;
+  const low = p.games.goalie.lowShare ?? null;
   return {
     levelPct,
     pRegularNext(g, age, lp, gpShare) {
@@ -87,15 +106,37 @@ export function makeRetention(p: DynastyParams): Retention {
       return sigmoid(lin(betaS, goalieX(age, gsShare, svRelPts)));
     },
     goalieRoleNext(age, gsShare, svRelPts) {
+      // after (almost) no starts the observed role odds (the logistics, fitted on
+      // every share, keep 76-81 % of these goalies present against 16-51 % observed)
       const x = goalieX(age, gsShare, svRelPts);
-      const pS = sigmoid(lin(betaS, x));
-      const pT = Math.max(pS, sigmoid(lin(betaT, x)));
-      const pP = Math.max(pT, sigmoid(lin(betaP, x)));
+      // after (almost) no starts, the observed odds multipliers (the logistics, fitted on
+      // every share, kept 75-81 % of these goalies present against 16-51 % observed)
+      const cell = low && gsShare < low.maxShare && age < low.maxAge ? (gsShare > 0 ? low.low : low.none) : null;
+      const m = cell?.[age < low!.ageCut ? 0 : 1] ?? null;
+      const at = (b: readonly number[], k: number) => {
+        const z = lin(b, x);
+        const mk = m ? (m[k] ?? 1) : 1;
+        return mk === 1 ? sigmoid(z) : mk > 0 ? sigmoid(z + Math.log(mk)) : 0;
+      };
+      const pS = at(betaS, 0);
+      const pT = Math.max(pS, at(betaT, 1));
+      const pP = Math.max(pT, at(betaP, 2));
       return { pS, pT, pP };
     },
-    pAbsentIfNotRegular(g, age) {
+    pAbsentIfNotRegular(g, age, share) {
       const a = clamp(Math.round(age), 19, 40);
-      return absent[g].get(a) ?? 0.3;
+      const base = absent[g].get(a) ?? 0.3;
+      if (!ra || share == null || !(base > 0 && base < 1)) return base;
+      const m = ra.oddsMult[bandOf(ra.shareCuts, share)]?.[bandOf(ra.ageCuts, age)] ?? 1;
+      const o = (base / (1 - base)) * m;
+      return o / (1 + o);
+    },
+    afterZero(age) {
+      if (!ra) return null;
+      const i = bandOf(ra.afterZero.ageCuts, age);
+      const pRegular = ra.afterZero.pRegular[i];
+      const pAny = ra.afterZero.pAny[i];
+      return pRegular == null || pAny == null ? null : { pRegular, pAny: Math.max(pRegular, pAny) };
     },
   };
 }

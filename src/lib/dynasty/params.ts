@@ -54,6 +54,20 @@ export interface DynastyParams {
     partial: [number, number];
     absentYear0: number;
     retireIfOutAge: number;
+    /**
+     * P(absent | not a regular next) by this season's share and age: odds
+     * multipliers on the age-only availability table (rows: shares below
+     * shareCuts[0], below shareCuts[1], above; columns: ages below each of
+     * ageCuts, then above), and after a season with 0 games the observed
+     * P(regular) / P(any game) next, by age band (below ageCuts, then above).
+     * Absent = the age-only table.
+     */
+    roleAbsent?: Sourced & {
+      shareCuts: number[];
+      ageCuts: number[];
+      oddsMult: number[][];
+      afterZero: { ageCuts: number[]; pRegular: number[]; pAny: number[] };
+    };
     /** Games in an NHL regular season from 2026-27 (84). */
     seasonGames: number;
     /** Season length the projections' games are a share of (82). */
@@ -75,6 +89,13 @@ export interface DynastyParams {
       svWorkload: number;
       svFpPerPt: number;
       maxShare: number;
+      /**
+       * Role next season after (almost) no starts: odds multipliers on the
+       * [starter, at least tandem, present] logistics by age band (below
+       * ageCut, then up to maxAge), for a season with none (`none`) or under
+       * maxShare (`low`). Absent = the logistics alone.
+       */
+      lowShare?: Sourced & { maxShare: number; maxAge: number; ageCut: number; none: number[][]; low?: number[][] };
     };
     prospectFirstSeason: { pRegular: number; fringeMax: number };
   };
