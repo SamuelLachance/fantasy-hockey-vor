@@ -3,18 +3,26 @@
  * each player's season projection becomes what he has done so far plus the
  * rest of his season, from
  *
- * - his pre-season projection (src/data/players-preseason.json, frozen the
- *   first time this runs): per-game rates and expected share of his team's
+ * - his pre-season projection (src/data/players-preseason.json, written by
+ *   `npm run generate`): per-game rates and expected share of his team's
  *   games;
  * - this season's NHL stats to date (api.nhle.com stats REST, public):
  *   each per-game rate is updated by shrinkage — (prior × K + actual) /
  *   (K + games played), K per stat (how many games before a stat speaks for
- *   itself) — so a hot or cold week moves it a little, a season a lot;
+ *   itself) — so a hot or cold week moves it a little, a season a lot; his
+ *   share of his team's games is updated the same way (src/lib/in-season.ts
+ *   holds every constant and how it was chosen);
  * - the remaining schedule (public/fantrax/schedule-20262027.json): his
- *   team's games left;
+ *   team's games beyond those it has played according to the same stats
+ *   REST, so a game under way, or not in the stats yet, still counts as left;
  * - current injuries and their estimated return dates (ESPN's public injury
  *   report): the games his team plays before his return are taken out of
- *   his remaining games; a status without a date gets a typical absence.
+ *   his remaining games; a status without a date gets a typical absence
+ *   that grows with what the absence has already lasted. A hurt goalie's
+ *   starts go to his healthy teammates, the n° 2 first;
+ * - a player with NHL games this season but no pre-season projection (a
+ *   call-up, a rookie the pre-season pool missed) gets a first-season prior
+ *   instead of being left out.
  *
  * Writes src/data/players.json (same shape; `gamesPlayed` and `projection`
  * are the full-season totals, actual + rest of season; `inSeason` holds the
@@ -23,6 +31,21 @@
  */
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
+import {
+  defaultGamesOut,
+  GOALIE_K,
+  GOALIE_SHARE_K,
+  NEWCOMER_GOALIE,
+  NEWCOMER_PER82,
+  NEWCOMER_RATE_K,
+  NEWCOMER_SHARE_K,
+  NEWCOMER_SHARE_PRIOR,
+  redistributeGoalieStarts,
+  shrinkRate,
+  SKATER_RATE_K,
+  SKATER_SHARE_K,
+  updatedGameShare,
+} from "../src/lib/in-season";
 
 const UA = "fantasy-hockey-vor (personal read-only helper; github.com/SamuelLachance/fantasy-hockey-vor)";
 const SEASON_ID = "20262027";
@@ -30,29 +53,10 @@ const root = process.cwd();
 const PLAYERS = join(root, "src", "data", "players.json");
 const BASELINE = join(root, "src", "data", "players-preseason.json");
 const SCHEDULE = join(root, "public", "fantrax", "schedule-20262027.json");
+/** Pre-season games are on an 82-game basis: gamesPlayed / 82 is a share of the team's games. */
 const SEASON_GAMES = 82;
-
-/** Games before a stat's season rate weighs as much as the pre-season one. */
-// Close to the games it takes each per-game rate to stabilise in the NHL
-// (shots, hits and blocks are skills that show early; goals ride on
-// shooting luck and need well over a season).
-const K: Record<string, number> = {
-  goals: 120,
-  assists: 100,
-  powerplayPoints: 120,
-  shots: 40,
-  hits: 40,
-  blocks: 50,
-  penaltyMinutes: 80,
-  faceoffWins: 30,
-};
-/** Goalies: games for wins / shutouts, shots against for the save percentage. */
-const K_GOALIE_GAMES = 30;
-const K_GOALIE_SHOTS = 1500;
-/** Most of his team's remaining games a goalie can start when a teammate is hurt. */
-const GOALIE_MAX_SHARE = 0.8;
-/** Typical absence (team games) when the report gives no return date. */
-const DEFAULT_OUT: Record<string, number> = { "Day-To-Day": 1, Out: 6, "Injured Reserve": 12, Suspension: 3 };
+/** Newcomers whose debut date is looked up (one public game-log request each). */
+const MAX_NEWCOMER_LOOKUPS = 40;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function getJson<T>(url: string): Promise<T> {
@@ -69,6 +73,7 @@ const fold = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z]/g, "");
 const r1 = (x: number) => Math.round(x * 10) / 10;
+const POSITION: Record<string, string> = { C: "C", L: "LW", R: "RW", D: "D", G: "G" };
 
 interface Player {
   id: number;
@@ -88,6 +93,17 @@ interface InSeason {
   teamLeft: number;
   rosGames: number;
   injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null; since: string | null } | null;
+  /** No pre-season projection: first-season prior (call-up, rookie). */
+  newcomer?: true;
+}
+interface Live {
+  gp: number;
+  team: string;
+  /** Played for one club only (his GP counts that club's games). */
+  oneTeam: boolean;
+  name: string;
+  position: string;
+  stats: Record<string, number>;
 }
 
 async function main() {
@@ -110,15 +126,18 @@ async function main() {
   const goalies = (await getJson<{ data: Row[] }>(`https://api.nhle.com/stats/rest/en/goalie/summary?${q}`)).data;
   const rt = new Map(realtime.map((r) => [Number(r.playerId), r]));
   const fo = new Map(faceoffs.map((r) => [Number(r.playerId), r]));
-  const sk = new Map<number, { gp: number; team: string; stats: Record<string, number> }>();
+  const sk = new Map<number, Live>();
   for (const r of summary) {
     const id = Number(r.playerId);
     const x = rt.get(id);
     const f = fo.get(id);
-    const teams = String(r.teamAbbrevs ?? "").split(",");
+    const teams = String(r.teamAbbrevs ?? "").split(",").map((t) => t.trim()).filter(Boolean);
     sk.set(id, {
       gp: Number(r.gamesPlayed) || 0,
-      team: teams[teams.length - 1]!.trim(),
+      team: teams[teams.length - 1] ?? "",
+      oneTeam: teams.length === 1,
+      name: String(r.skaterFullName ?? ""),
+      position: POSITION[String(r.positionCode ?? "C")] ?? "C",
       stats: {
         goals: Number(r.goals) || 0,
         assists: Number(r.assists) || 0,
@@ -131,12 +150,15 @@ async function main() {
       },
     });
   }
-  const gk = new Map<number, { gp: number; team: string; stats: Record<string, number> }>();
+  const gk = new Map<number, Live>();
   for (const r of goalies) {
-    const teams = String(r.teamAbbrevs ?? "").split(",");
+    const teams = String(r.teamAbbrevs ?? "").split(",").map((t) => t.trim()).filter(Boolean);
     gk.set(Number(r.playerId), {
       gp: Number(r.gamesPlayed) || 0,
-      team: teams[teams.length - 1]!.trim(),
+      team: teams[teams.length - 1] ?? "",
+      oneTeam: teams.length === 1,
+      name: String(r.goalieFullName ?? ""),
+      position: "G",
       stats: {
         wins: Number(r.wins) || 0,
         shutouts: Number(r.shutouts) || 0,
@@ -146,18 +168,37 @@ async function main() {
     });
   }
 
-  // ---- the schedule: games each team has left, and their dates
+  // ---- the schedule, and the games each team has played per the same REST
+  // stats (the most games any one-club player of the team has): a game
+  // started, or over but not in the stats yet, is still left, so nobody
+  // loses it until the stats count it.
   const games = (JSON.parse(readFileSync(SCHEDULE, "utf8")) as { games: Array<[string, string, string]> }).games;
-  const upcoming = new Map<string, number[]>();
+  const teamSchedule = new Map<string, number[]>();
   for (const [iso, a, b] of games) {
     const t = Date.parse(iso);
-    if (!(t > nowMs)) continue;
+    if (!Number.isFinite(t)) continue;
     for (const team of [a, b]) {
-      if (!upcoming.has(team)) upcoming.set(team, []);
-      upcoming.get(team)!.push(t);
+      if (!teamSchedule.has(team)) teamSchedule.set(team, []);
+      teamSchedule.get(team)!.push(t);
     }
   }
-  for (const list of upcoming.values()) list.sort((x, y) => x - y);
+  for (const list of teamSchedule.values()) list.sort((x, y) => x - y);
+  const teamPlayed = new Map<string, number>();
+  for (const live of [...sk.values(), ...gk.values()]) {
+    if (!live.oneTeam || !live.team) continue;
+    teamPlayed.set(live.team, Math.max(teamPlayed.get(live.team) ?? 0, live.gp));
+  }
+  const played = (team: string) => {
+    const dates = teamSchedule.get(team) ?? [];
+    // Never more than the games already started.
+    const started = dates.filter((t) => t <= nowMs).length;
+    return Math.min(started, teamPlayed.get(team) ?? 0);
+  };
+  /** Dates of the team's games still to play. */
+  const upcomingOf = (team: string) => (teamSchedule.get(team) ?? []).slice(played(team));
+  /** Team games played since a date (inclusive), among those counted played. */
+  const playedSince = (team: string, sinceMs: number) =>
+    (teamSchedule.get(team) ?? []).slice(0, played(team)).filter((t) => t >= sinceMs).length;
 
   // ---- injuries (ESPN public report), matched by name (+ team)
   type Inj = { status: string; returnDate: string | null; note: string | null; team: string; since: string | null };
@@ -185,79 +226,141 @@ async function main() {
   } catch (err) {
     console.warn(`WARN: injury report unavailable (${(err as Error).message}); no injury adjustment today`);
   }
-  const injuryOf = (p: Player, team: string): Inj | null => {
-    const list = injByName.get(fold(p.name));
+  const injuryOf = (name: string, team: string): Inj | null => {
+    const list = injByName.get(fold(name));
     if (!list?.length) return null;
     return list.find((i) => i.team === team) ?? (list.length === 1 ? list[0]! : null);
   };
 
-  // ---- pass 1: each player's remaining games (an injury takes out the
-  // games his team plays before his return)
+  // ---- newcomers: NHL games this season, no pre-season projection
+  const baseIds = new Set(base.players.map((p) => p.id));
+  const newcomerIds = [...sk.keys(), ...gk.keys()].filter((id) => !baseIds.has(id) && ((sk.get(id) ?? gk.get(id))!.gp > 0));
+  const debutOf = new Map<number, number>();
+  for (const id of newcomerIds.slice(0, MAX_NEWCOMER_LOOKUPS)) {
+    try {
+      const log = await getJson<{ gameLog?: Array<{ gameDate: string }> }>(
+        `https://api-web.nhle.com/v1/player/${id}/game-log/${SEASON_ID}/2`,
+      );
+      const first = (log.gameLog ?? []).map((g) => Date.parse(`${g.gameDate}T00:00:00Z`)).filter(Number.isFinite).sort((a, b) => a - b)[0];
+      if (first != null) debutOf.set(id, first);
+    } catch {
+      /* debut unknown: his team's games so far are used */
+    }
+  }
+  const newcomers: Player[] = newcomerIds.map((id) => {
+    const live = (sk.get(id) ?? gk.get(id))!;
+    const isGoalie = gk.has(id) && !sk.has(id);
+    const projection: Record<string, number> = {};
+    let gamesPlayed: number;
+    if (isGoalie) {
+      gamesPlayed = NEWCOMER_GOALIE.share * SEASON_GAMES;
+      projection.wins = NEWCOMER_GOALIE.wins * gamesPlayed;
+      projection.shutouts = NEWCOMER_GOALIE.shutouts * gamesPlayed;
+      projection.saves = NEWCOMER_GOALIE.shotsAgainstPerGame * NEWCOMER_GOALIE.savePct * gamesPlayed;
+      projection.savePct = NEWCOMER_GOALIE.savePct;
+    } else {
+      gamesPlayed = NEWCOMER_SHARE_PRIOR * SEASON_GAMES;
+      const per82 = NEWCOMER_PER82[live.position === "D" ? "D" : "F"];
+      for (const [stat, v] of Object.entries(per82)) projection[stat] = (v * gamesPlayed) / SEASON_GAMES;
+    }
+    return {
+      id,
+      name: live.name,
+      team: live.team,
+      position: live.position,
+      positions: [live.position],
+      primaryPosition: live.position,
+      isGoalie,
+      gamesPlayed,
+      projection,
+      projectionMethod: "contextual",
+      confidence: 0.4,
+      newcomer: true,
+    };
+  });
+  const players = [...base.players, ...newcomers];
+
+  // ---- pass 1: each player's remaining games. His share of his team's
+  // games is the pre-season one updated by the games he has played; an
+  // injury takes out the games his team plays before his return (the games
+  // of the current absence are left out of the share update: the injury
+  // already accounts for them).
   let updated = 0;
   let injured = 0;
-  const plan = new Map<number, { team: string; left: number; inj: Inj | null; gamesOut: number; ros: number }>();
-  for (const b of base.players) {
+  const plan = new Map<number, { team: string; left: number; inj: Inj | null; gamesOut: number; share: number; ros: number }>();
+  for (const b of players) {
     const live = b.isGoalie ? gk.get(b.id) : sk.get(b.id);
     const team = live?.team || currentById.get(b.id)?.team || b.team;
-    const left = upcoming.get(team)?.length ?? 0;
-    const share = Math.max(0, Math.min(1, b.gamesPlayed / SEASON_GAMES));
-    const inj = injuryOf(b, team);
+    const upcoming = upcomingOf(team);
+    const left = upcoming.length;
+    const inj = injuryOf(b.name, team);
+    const sinceMs = inj?.since ? Date.parse(`${inj.since}T00:00:00Z`) : NaN;
+    const missedSoFar = inj && Number.isFinite(sinceMs) ? playedSince(team, sinceMs) : null;
     let gamesOut = 0;
     if (inj) {
       const ret = inj.returnDate ? Date.parse(`${inj.returnDate}T12:00:00Z`) : NaN;
       gamesOut = Number.isFinite(ret)
-        ? (upcoming.get(team) ?? []).filter((t) => t < ret).length
-        : Math.min(left, DEFAULT_OUT[inj.status] ?? 3);
+        ? upcoming.filter((t) => t < ret).length
+        : Math.min(left, defaultGamesOut(inj.status, missedSoFar));
       injured++;
     }
-    plan.set(b.id, { team, left, inj, gamesOut, ros: Math.max(0, left - gamesOut) * share });
+    const gp = live?.gp ?? 0;
+    const isNew = b.newcomer === true;
+    const teamGames = isNew
+      ? (() => {
+          const debut = debutOf.get(b.id);
+          return debut != null ? Math.max(gp, playedSince(team, debut)) : Math.max(gp, played(team));
+        })()
+      : Math.max(gp, played(team) - (gamesOut > 0 ? (missedSoFar ?? 0) : 0));
+    const share = isNew
+      ? b.isGoalie
+        ? updatedGameShare(NEWCOMER_GOALIE.share, gp, teamGames, NEWCOMER_SHARE_K)
+        : updatedGameShare(NEWCOMER_SHARE_PRIOR, gp, teamGames, NEWCOMER_SHARE_K)
+      : updatedGameShare(b.gamesPlayed / SEASON_GAMES, gp, teamGames, b.isGoalie ? GOALIE_SHARE_K : SKATER_SHARE_K);
+    plan.set(b.id, { team, left, inj, gamesOut, share, ros: Math.max(0, left - gamesOut) * share });
   }
-  // A team still dresses a goalie every game: the starts an injured goalie
-  // misses go to his healthy teammates (each up to GOALIE_MAX_SHARE of the
-  // games left).
+  // A team still dresses a goalie every game: the starts a hurt goalie
+  // misses go to his healthy teammates, the n° 2 first (a day-to-day
+  // listing that costs no game is healthy).
   const goaliesByTeam = new Map<string, Player[]>();
-  for (const b of base.players) {
+  for (const b of players) {
     if (!b.isGoalie) continue;
     const t = plan.get(b.id)!.team;
     if (!goaliesByTeam.has(t)) goaliesByTeam.set(t, []);
     goaliesByTeam.get(t)!.push(b);
   }
   for (const [team, list] of goaliesByTeam) {
-    const left = upcoming.get(team)?.length ?? 0;
-    if (!left) continue;
-    const missing = list.reduce((s, g) => s + Math.min(plan.get(g.id)!.gamesOut, left) * Math.min(1, g.gamesPlayed / SEASON_GAMES), 0);
-    const healthy = list.filter((g) => !plan.get(g.id)!.inj);
-    const room = healthy.reduce((s, g) => s + Math.max(0, GOALIE_MAX_SHARE * left - plan.get(g.id)!.ros), 0);
-    if (!(missing > 0) || !(room > 0)) continue;
-    const k = Math.min(1, missing / room);
-    for (const g of healthy) {
-      const p = plan.get(g.id)!;
-      p.ros += k * Math.max(0, GOALIE_MAX_SHARE * left - p.ros);
-    }
+    const left = upcomingOf(team).length;
+    const extra = redistributeGoalieStarts(
+      list.map((g) => ({ id: g.id, share: plan.get(g.id)!.share, gamesOut: plan.get(g.id)!.gamesOut })),
+      left,
+    );
+    for (const [id, n] of extra) plan.get(id)!.ros += n;
   }
 
   // ---- pass 2: to date + rest of season
-  const out: Player[] = base.players.map((b) => {
+  const out: Player[] = players.map((b) => {
     const live = b.isGoalie ? gk.get(b.id) : sk.get(b.id);
     const { team, left, inj, gamesOut, ros: rosGames } = plan.get(b.id)!;
     const gp = live?.gp ?? 0;
+    const isNew = b.newcomer === true;
     const proj: Record<string, number> = { ...b.projection };
     const gp0 = Math.max(1, b.gamesPlayed);
     if (!b.isGoalie) {
-      for (const [stat, k] of Object.entries(K)) {
+      for (const [stat, k] of Object.entries(SKATER_RATE_K)) {
         const prior = (b.projection[stat] ?? 0) / gp0;
         const actual = live?.stats[stat] ?? 0;
-        const rate = (prior * k + actual) / (k + gp);
+        const rate = shrinkRate(prior, isNew ? NEWCOMER_RATE_K : k, actual, gp);
         proj[stat] = r1(actual + rate * rosGames);
       }
     } else {
       const s = live?.stats ?? { wins: 0, shutouts: 0, saves: 0, shotsAgainst: 0 };
       const sv0 = b.projection.savePct ?? 0.9;
       const sa0 = sv0 < 1 ? (b.projection.saves ?? 0) / sv0 / gp0 : 0;
-      const sv = (sv0 * K_GOALIE_SHOTS + s.saves) / (K_GOALIE_SHOTS + s.shotsAgainst);
-      const saPerGame = (sa0 * K_GOALIE_GAMES + s.shotsAgainst) / (K_GOALIE_GAMES + gp);
-      const wPerGame = (((b.projection.wins ?? 0) / gp0) * K_GOALIE_GAMES + s.wins) / (K_GOALIE_GAMES + gp);
-      const soPerGame = (((b.projection.shutouts ?? 0) / gp0) * K_GOALIE_GAMES + s.shutouts) / (K_GOALIE_GAMES + gp);
+      const sv = shrinkRate(sv0, GOALIE_K.savePctShots, s.saves, s.shotsAgainst);
+      const saPerGame = shrinkRate(sa0, GOALIE_K.shotsAgainstPerGame, s.shotsAgainst, gp);
+      const wPerGame = shrinkRate((b.projection.wins ?? 0) / gp0, GOALIE_K.wins, s.wins, gp);
+      const soPerGame = shrinkRate((b.projection.shutouts ?? 0) / gp0, GOALIE_K.shutouts, s.shutouts, gp);
       proj.wins = r1(s.wins + wPerGame * rosGames);
       proj.shutouts = r1(s.shutouts + soPerGame * rosGames);
       proj.saves = Math.round(s.saves + sv * saPerGame * rosGames);
@@ -265,9 +368,10 @@ async function main() {
     }
     if (live) updated++;
     const totalGp = Math.round(gp + rosGames);
-    const prev = currentById.get(b.id);
+    const prev = isNew ? undefined : currentById.get(b.id);
+    const { newcomer: _n, ...rest } = b;
     return {
-      ...(prev ?? b),
+      ...(prev ?? rest),
       team,
       gamesPlayed: totalGp,
       projection: proj,
@@ -278,6 +382,7 @@ async function main() {
         teamLeft: left,
         rosGames: r1(rosGames),
         injury: inj ? { status: inj.status, returnDate: inj.returnDate, gamesOut, note: inj.note, since: inj.since } : null,
+        ...(isNew ? { newcomer: true as const } : {}),
       },
     };
   });
@@ -285,7 +390,7 @@ async function main() {
   const file = { ...current, players: out, inSeasonAt: now.toISOString() };
   writeFileSync(PLAYERS, `${JSON.stringify(file)}\n`);
   console.log(
-    `OK: in-season projections for ${out.length} players (${updated} with ${SEASON_ID} stats, ${injured} injured, ${games.length} scheduled games, ${upcoming.size} teams) → src/data/players.json`,
+    `OK: in-season projections for ${out.length} players (${updated} with ${SEASON_ID} stats, ${newcomers.length} newcomers${newcomers.length ? `: ${newcomers.slice(0, 8).map((p) => p.name).join(", ")}${newcomers.length > 8 ? "…" : ""}` : ""}, ${injured} injured, ${games.length} scheduled games, ${teamSchedule.size} teams) → src/data/players.json`,
   );
 }
 
