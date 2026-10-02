@@ -8,7 +8,12 @@ import {
   top3GoalieGpSum,
   topGoalieGpTooLow,
 } from "../src/lib/goalie-tandem-guards";
-import { GOALIE_GP_CEILING, GOALIE_TEAM_GAMES, renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
+import {
+  GOALIE_GP_CEILING,
+  GOALIE_LOW_EVIDENCE_WEIGHT,
+  GOALIE_TEAM_GAMES,
+  renormalizeGoalieGamesByTeam,
+} from "../src/lib/ml/goalie-v2";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -73,6 +78,33 @@ const uta = renormalizeGoalieGamesByTeam([
   { team: "UTA", gamesPlayed: 8, isGoalie: true },
 ]);
 assert(uta[0]!.gamesPlayed > 49 && uta[0]!.gamesPlayed <= GOALIE_GP_CEILING, `starter of an empty crease gains (got ${uta[0]!.gamesPlayed})`);
+// Regression (2026-10-02 board): a third goalie with little recent NHL
+// evidence (Matt Murray, 31 model games after 7 NHL games in two seasons)
+// weighs GOALIE_LOW_EVIDENCE_WEIGHT, not his model games.
+const seaRoster = [
+  { team: "SEA", gamesPlayed: 45, isGoalie: true, recentNhlGames: 104 },
+  { team: "SEA", gamesPlayed: 34, isGoalie: true, recentNhlGames: 58 },
+  { team: "SEA", gamesPlayed: 31, isGoalie: true, recentNhlGames: 7 },
+  { team: "SEA", gamesPlayed: 8, isGoalie: true, recentNhlGames: 1 },
+];
+const sea = renormalizeGoalieGamesByTeam(seaRoster);
+const seaUncapped = renormalizeGoalieGamesByTeam(seaRoster.map(({ recentNhlGames: _r, ...p }) => (void _r, p)));
+assert(sea[0]!.gamesPlayed >= 44 && sea[0]!.gamesPlayed > seaUncapped[0]!.gamesPlayed, `starter not crowded out by a low-evidence third (got ${sea[0]!.gamesPlayed}, ${seaUncapped[0]!.gamesPlayed} uncapped)`);
+assert(sea[2]!.gamesPlayed <= GOALIE_LOW_EVIDENCE_WEIGHT && sea[1]!.gamesPlayed > 25, `low-evidence third at most his weight, backup the rest (got ${sea[1]!.gamesPlayed} / ${sea[2]!.gamesPlayed})`);
+// A low-evidence starter (the most model games) keeps his model games as his weight.
+const fresh = renormalizeGoalieGamesByTeam([
+  { team: "X", gamesPlayed: 40, isGoalie: true, recentNhlGames: 0 },
+  { team: "X", gamesPlayed: 30, isGoalie: true, recentNhlGames: 60 },
+]);
+assert(fresh[0]!.gamesPlayed >= 40, `low-evidence starter keeps his model games (got ${fresh[0]!.gamesPlayed})`);
+// An evidenced third outranks a low-evidence one with more model games.
+const ana = renormalizeGoalieGamesByTeam([
+  { team: "ANA", gamesPlayed: 47, isGoalie: true, recentNhlGames: 110 },
+  { team: "ANA", gamesPlayed: 31, isGoalie: true, recentNhlGames: 1 },
+  { team: "ANA", gamesPlayed: 24, isGoalie: true, recentNhlGames: 33 },
+  { team: "ANA", gamesPlayed: 21, isGoalie: true, recentNhlGames: 48 },
+]);
+assert(ana[0]!.gamesPlayed >= 45 && ana[1]!.gamesPlayed === 4 && ana[3]!.gamesPlayed > 4, `Dostal / Brossoit / Mrazek (got ${ana.map((p) => p.gamesPlayed).join(" ")})`);
 // Monotone: a crowded crease never lifts the starter, an emptier one never cuts him.
 for (const other of [10, 20, 30, 40, 50, 60]) {
   const a = renormalizeGoalieGamesByTeam([

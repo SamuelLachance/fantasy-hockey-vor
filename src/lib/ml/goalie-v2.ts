@@ -1901,22 +1901,63 @@ export const GOALIE_TANDEM_SIZE = 3;
  * renormalizeGoalieGamesByTeam), chosen out of sample by
  * scripts/backtest-goalie-gp.ts (src/data/ml/goalie-gp-backtest.json):
  * walk-forward 2015-16 .. 2025-26, the 1,085 goalies who played, MAE of
- * their games on an 82-game basis 9.72 at 0.35-0.4 (9.71 at 0.45, 9.74 at
- * 0.5), 10.07 at 0 (starter untouched) and 10.24 at 1 (pro rata); with one
- * more org-depth goalie on each club 10.18 (flat 0.35-0.5). Picked season
- * by season on the seasons before, α is 0.4-0.5 every year.
+ * their games on an 82-game basis (with the low-evidence weight) 9.26 at
+ * 0.4-0.45 (9.28 at 0.35, 9.31 at 0.5), 9.63 at 0 (starter untouched) and
+ * 9.79 at 1 (pro rata); with one more org-depth goalie on each club 9.55
+ * (9.53 at 0.45), with the live board's low-evidence org goalies 9.55.
+ * Picked season by season on the seasons before, α is 0.4-0.6 (mostly
+ * 0.4-0.45).
  */
 export const GOALIE_STARTER_BUDGET_ELASTICITY = 0.4;
 
 /**
+ * NHL games over the last two seasons under which a goalie has « little
+ * recent NHL evidence » (a prospect at the contextual prior, a veteran back
+ * from injury, the AHL or Europe): his model games are not a workload the
+ * club has shown it gives him.
+ */
+export const GOALIE_LOW_EVIDENCE_GP = 10;
+/**
+ * Weight such a goalie carries in his club's budget (the games the starter's
+ * elasticity and the backup split see), chosen out of sample by
+ * scripts/backtest-goalie-gp.ts with three club rosters (as played, with
+ * one org-depth goalie, with the live board's low-evidence org goalies);
+ * see src/data/ml/goalie-gp-backtest.json (lowEvidenceSweep). MAE all /
+ * starters / established at 8: 9.26 / 9.71 / 8.17 as played, 9.55 / 9.89 /
+ * 8.34 on both other rosters, against 9.72 / 9.90 / 8.22, 10.18 / 10.35 /
+ * 8.81 and 10.24 / 10.62 / 8.81 uncapped. 4-6 do a little better on all
+ * goalies with org depth (9.45-9.51) and worse on established starters
+ * (8.25-8.42); 15 (the backtest's prospect prior) gives 9.54 / 10.01 / 9.78.
+ * 8 is also the board's games for a goalie without an NHL season.
+ */
+export const GOALIE_LOW_EVIDENCE_WEIGHT = 8;
+
+/** NHL games a goalie played in the given seasons (his profile's club history). */
+export function recentNhlGoalieGames(
+  history: readonly { isGoalie: boolean; seasonId: number; gamesPlayed: number }[] | undefined,
+  seasonIds: readonly number[],
+): number {
+  if (!history) return 0;
+  return history
+    .filter((h) => h.isGoalie && seasonIds.includes(h.seasonId))
+    .reduce((s, h) => s + (h.gamesPlayed > 0 ? h.gamesPlayed : 0), 0);
+}
+
+/**
  * Post-hoc team GP allocation of finished projections (generate, gp:recalibrate
- * and the goalie GP backtest). Per club, the three goalies with the most
- * model games share GOALIE_TEAM_GAMES:
- *  - the starter (most model games) keeps his model games times
- *    (budget / Σ top-3 model games)^α, α = GOALIE_STARTER_BUDGET_ELASTICITY,
+ * and the goalie GP backtest). Per club:
+ *  - the starter is the goalie with the most model games;
+ *  - his two partners are the next goalies by budget weight: model games,
+ *    capped at GOALIE_LOW_EVIDENCE_WEIGHT for a goalie with fewer than
+ *    GOALIE_LOW_EVIDENCE_GP NHL games over the last two seasons
+ *    (`recentNhlGames`; absent = no cap). A third goalie with no recent NHL
+ *    games but an inflated model (a 31-game veteran back from two seasons in
+ *    the minors, a 22-game contextual prospect) no longer crowds the crease;
+ *  - the three share GOALIE_TEAM_GAMES: the starter keeps his model games
+ *    times (budget / Σ weights)^α, α = GOALIE_STARTER_BUDGET_ELASTICITY,
  *    capped at GOALIE_GP_CEILING: a crowded crease costs him part of the
  *    excess, not all of it, and an empty one gives him part of the slack;
- *  - the other two share what is left in proportion to their model games
+ *  - the other two share what is left in proportion to their weights
  *    (at least 4, at most the starter's);
  *  - org depth beyond the three stays on the board at 4 games (streamers).
  *
@@ -1924,16 +1965,18 @@ export const GOALIE_STARTER_BUDGET_ELASTICITY = 0.4;
  * untouched and otherwise scaled the top three pro rata to 80 games: a
  * starter next to a former starter (Hellebuyck 55 model games with Skinner
  * 41 and a 15-game prospect: 37 published) lost the whole excess, i.e. a
- * third of his season, while a starter just past the 1.35 line lost nothing
- * (walk-forward MAE 10.10 against 9.72 now; starters 10.10 / 9.90,
- * backups 12.29 / 11.31, starters of two 50-game seasons 8.78 / 8.22).
+ * third of his season, while a starter just past the 1.35 line lost nothing.
+ * The low-evidence weight came next (2026-10-02 board: Daccord 45 model
+ * games cut to 40 by Matt Murray's 31 after 7 NHL games in two seasons,
+ * Dostal 47 to 43 by Brossoit's 31 after one).
  */
 export function renormalizeGoalieGamesByTeam<
-  T extends { team: string; gamesPlayed: number; isGoalie: boolean },
+  T extends { team: string; gamesPlayed: number; isGoalie: boolean; recentNhlGames?: number | null },
 >(
   players: T[],
   teamBudget = GOALIE_TEAM_GAMES,
   alpha = GOALIE_STARTER_BUDGET_ELASTICITY,
+  lowEvidenceWeight = GOALIE_LOW_EVIDENCE_WEIGHT,
 ): T[] {
   const groups = new Map<string, number[]>();
   for (let i = 0; i < players.length; i++) {
@@ -1945,26 +1988,35 @@ export function renormalizeGoalieGamesByTeam<
     groups.set(team, list);
   }
   const out = players.map((p) => ({ ...p }));
+  const model = (i: number) => Math.max(0, out[i]!.gamesPlayed);
+  const weight = (i: number) => {
+    const recent = out[i]!.recentNhlGames;
+    return recent != null && recent < GOALIE_LOW_EVIDENCE_GP ? Math.min(model(i), lowEvidenceWeight) : model(i);
+  };
   for (const idxs of groups.values()) {
     if (idxs.length < 2) continue;
-    const ordered = [...idxs].sort((a, b) => out[b]!.gamesPlayed - out[a]!.gamesPlayed);
-    const active = ordered.slice(0, GOALIE_TANDEM_SIZE);
-    const depth = ordered.slice(GOALIE_TANDEM_SIZE);
-    const sum = active.reduce((s, i) => s + Math.max(0, out[i]!.gamesPlayed), 0);
+    const byModel = [...idxs].sort((a, b) => model(b) - model(a));
+    const starterIdx = byModel[0]!;
+    const others = byModel.slice(1).sort((a, b) => weight(b) - weight(a) || model(b) - model(a));
+    const rest = others.slice(0, GOALIE_TANDEM_SIZE - 1);
+    const depth = others.slice(GOALIE_TANDEM_SIZE - 1);
+    const restWeight = rest.reduce((s, i) => s + weight(i), 0);
+    const sum = model(starterIdx) + restWeight;
     if (!(sum > 0)) continue;
-    const starter = out[active[0]!]!;
+    const starter = out[starterIdx]!;
     const starterGp = Math.max(
       4,
-      Math.min(GOALIE_GP_CEILING, Math.round(starter.gamesPlayed * Math.pow(teamBudget / sum, alpha))),
+      Math.min(GOALIE_GP_CEILING, Math.round(model(starterIdx) * Math.pow(teamBudget / sum, alpha))),
     );
-    const rest = active.slice(1);
-    const restModeled = rest.reduce((s, i) => s + Math.max(0, out[i]!.gamesPlayed), 0);
     const remaining = Math.max(0, teamBudget - starterGp);
+    const restGp = rest.map((i) => {
+      const share = restWeight > 0 ? weight(i) / restWeight : 1 / rest.length;
+      return Math.max(4, Math.min(starterGp, Math.round(remaining * share)));
+    });
     starter.gamesPlayed = starterGp;
-    for (const i of rest) {
-      const share = restModeled > 0 ? Math.max(0, out[i]!.gamesPlayed) / restModeled : 1 / rest.length;
-      out[i]!.gamesPlayed = Math.max(4, Math.min(starterGp, Math.round(remaining * share)));
-    }
+    rest.forEach((i, k) => {
+      out[i]!.gamesPlayed = restGp[k]!;
+    });
     // Org depth stays on the board as streamers, not budget participants.
     for (const i of depth) out[i]!.gamesPlayed = 4;
   }

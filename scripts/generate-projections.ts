@@ -436,10 +436,21 @@ async function main() {
   }
 
   // Team tandem: a club's goalies share its 82 games (the starter keeps
-  // most of his model games, src/lib/ml/goalie-v2.ts).
-  const { renormalizeGoalieGamesByTeam } = await import("../src/lib/ml/goalie-v2");
+  // most of his model games, src/lib/ml/goalie-v2.ts); a goalie with little
+  // recent NHL evidence weighs little in the budget.
+  const { recentNhlGoalieGames, renormalizeGoalieGamesByTeam } = await import("../src/lib/ml/goalie-v2");
   const prevGp = new Map(activeBeforeTandem.map((p) => [p.id, p.gamesPlayed]));
-  const tandemAdjusted = renormalizeGoalieGamesByTeam(activeBeforeTandem).map((p) => {
+  const recentGoalieGp = new Map(
+    activeBeforeTandem
+      .filter((p) => p.isGoalie)
+      .map((p) => [p.id, recentNhlGoalieGames(profileById.get(p.id)?.teamHistory, lastTwo)]),
+  );
+  const tandemAdjusted = renormalizeGoalieGamesByTeam(
+    activeBeforeTandem.map((p): typeof p & { recentNhlGames?: number } =>
+      p.isGoalie ? { ...p, recentNhlGames: recentGoalieGp.get(p.id) ?? 0 } : p,
+    ),
+  ).map(({ recentNhlGames: _recent, ...p }) => {
+    void _recent;
     if (!p.isGoalie) return p;
     const gp = p.gamesPlayed;
     const prev = prevGp.get(p.id) ?? gp;

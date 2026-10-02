@@ -9,12 +9,13 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { attachDraftEdge } from "../src/lib/draft-edge";
-import { renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
+import { recentNhlGoalieGames, renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
 import {
   decideSkaterGp,
   gpCurveFor,
   loadGpCalibration,
   modelGp,
+  priorSeasonIdsFor,
   projectionSeasonIdOf,
   splitSeasonRuleFromFiles,
 } from "../src/lib/gp-calibration";
@@ -81,9 +82,18 @@ const curveOf = (p: (typeof data.players)[number]) =>
     : [];
 
 // Goalies: the team allocation of generate, from the model's games.
+const lastTwo = priorSeasonIdsFor(season);
 const goalieGp = new Map(
   renormalizeGoalieGamesByTeam(
-    data.players.filter((p) => p.isGoalie).map((p) => ({ id: p.id, team: p.team, isGoalie: true, gamesPlayed: modelGp(p) })),
+    data.players
+      .filter((p) => p.isGoalie)
+      .map((p) => ({
+        id: p.id,
+        team: p.team,
+        isGoalie: true,
+        gamesPlayed: modelGp(p),
+        recentNhlGames: recentNhlGoalieGames(profilesById.get(p.id)?.teamHistory, lastTwo),
+      })),
   ).map((p) => [p.id, p.gamesPlayed]),
 );
 

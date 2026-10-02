@@ -20,20 +20,32 @@
  *   seasons) who leads his club's crease lands within 38-65 games, the group
  *   averages 47-60 (walk-forward: such goalies play 50.0 on average), and
  *   the team allocation keeps at least 80 % of his model games (the old
- *   pro-rata rule published Hellebuyck at 37 of his 55).
+ *   pro-rata rule published Hellebuyck at 37 of his 55) and never puts him
+ *   under 45 games unless his model does (Dostal 47 → 43 beside Brossoit's
+ *   31 after one NHL game in two seasons). A goalie with little recent NHL
+ *   evidence who is not his club's starter weighs at most the low-evidence
+ *   weight: he is never allocated more games than that would give him.
  * - Goalie GP backtest (src/data/ml/goalie-gp-backtest.json, npm run
  *   gp:goalie-backtest): run on today's dataset with today's allocation
  *   constants; the published allocation is at least as accurate as the
  *   rule it replaced, the previous engine, the model alone and the
- *   baselines (all goalies, starters, backups, established starters, both
- *   club rosters), and its MAE does not regress.
+ *   baselines and the same allocation without the low-evidence weight (all
+ *   goalies, starters, backups, established starters; the three club
+ *   rosters: as played, with org depth, with the live board's low-evidence
+ *   org goalies), and its MAE does not regress.
  * Run: npx tsx scripts/check-preseason.ts
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { CALIBRATED_GP_CEILING } from "../src/lib/gp-calibration";
 import { GOALIE_SAVE_PCT_SKILL_SD, GOALIE_SHRINK_MIN_GP } from "../src/lib/leagues/goalie-shrink";
-import { GOALIE_STARTER_BUDGET_ELASTICITY, GOALIE_TEAM_GAMES } from "../src/lib/ml/goalie-v2";
+import {
+  GOALIE_LOW_EVIDENCE_GP,
+  GOALIE_LOW_EVIDENCE_WEIGHT,
+  GOALIE_STARTER_BUDGET_ELASTICITY,
+  GOALIE_TEAM_GAMES,
+  recentNhlGoalieGames,
+} from "../src/lib/ml/goalie-v2";
 import { NHL_TEAMS } from "../src/lib/nhl-api";
 import type { NhlRostersFile } from "../src/lib/nhl-rosters";
 import { ROOKIE_OFF_ROSTER_MAX_GP, SKATER_GAMES_PER_TEAM, staleReason } from "../src/lib/projection-pool";
@@ -172,8 +184,23 @@ if (existsSync(rostersPath)) {
     if (cut.length > 0) {
       errors.push(`team allocation cut established starter(s) below 80 % of their model games: ${cut.map((p) => `${p.name} ${p.gamesPlayed}/${p.modelGamesPlayed}`).join(", ")}`);
     }
+    const under45 = established.filter((p) => p.gamesPlayed < Math.min(45, p.modelGamesPlayed ?? p.gamesPlayed));
+    if (under45.length > 0) {
+      errors.push(`team allocation put established starter(s) under 45 games against a 45+ model: ${under45.map((p) => `${p.name} ${p.gamesPlayed}/${p.modelGamesPlayed}`).join(", ")}`);
+    }
   } else {
     errors.push(`only ${established.length} established starters on the board (expected ≥ 8)`);
+  }
+  // Low-evidence goalies behind the starter take at most their capped share
+  // of what the starter leaves: (82 - starter) × weight / (weight + 4).
+  const recent = (id: number) => recentNhlGoalieGames(profiles.get(id)?.teamHistory, [20252026, 20242025]);
+  const crowd = goalies.filter((p) => {
+    if (p.gamesPlayed === lead.get(p.team) || recent(p.id) >= GOALIE_LOW_EVIDENCE_GP) return false;
+    const cap = Math.round(((GOALIE_TEAM_GAMES - lead.get(p.team)!) * GOALIE_LOW_EVIDENCE_WEIGHT) / (GOALIE_LOW_EVIDENCE_WEIGHT + 4));
+    return p.gamesPlayed > Math.max(4, cap);
+  });
+  if (crowd.length > 0) {
+    errors.push(`low-evidence goalie(s) (< ${GOALIE_LOW_EVIDENCE_GP} NHL GP in two seasons) above the low-evidence weight: ${crowd.map((p) => `${p.name} ${p.gamesPlayed}`).join(", ")}`);
   }
 }
 
@@ -184,14 +211,27 @@ if (existsSync(rostersPath)) {
   type Scenario = { methods: Record<string, Record<string, Cell>> };
   if (!existsSync(path)) errors.push("src/data/ml/goalie-gp-backtest.json missing (npm run gp:goalie-backtest)");
   else {
-    const bt = read<{ datasetSha1: string; alpha: number; teamGames: number; played: Scenario; depth: Scenario }>("src", "data", "ml", "goalie-gp-backtest.json");
+    const bt = read<{
+      datasetSha1: string;
+      alpha: number;
+      teamGames: number;
+      lowEvidenceGp?: number;
+      lowEvidenceWeight?: number;
+      played: Scenario;
+      depth: Scenario;
+      live: Scenario;
+    }>("src", "data", "ml", "goalie-gp-backtest.json");
     if (bundleSha1 && bt.datasetSha1 !== bundleSha1) errors.push(`goalie GP backtest ran on dataset ${bt.datasetSha1.slice(0, 12)}, bundle trained on ${bundleSha1.slice(0, 12)} (npm run gp:goalie-backtest)`);
     if (bt.alpha !== GOALIE_STARTER_BUDGET_ELASTICITY || bt.teamGames !== GOALIE_TEAM_GAMES) {
       errors.push(`goalie GP backtest ran with α ${bt.alpha} / ${bt.teamGames} games, code has ${GOALIE_STARTER_BUDGET_ELASTICITY} / ${GOALIE_TEAM_GAMES} (npm run gp:goalie-backtest)`);
     }
-    // MAE ceilings of the 2026-10-02 run (9.72 / 10.18) plus a little room.
-    const ceiling: Record<string, number> = { played: 9.85, depth: 10.3 };
-    for (const scen of ["played", "depth"] as const) {
+    if (bt.lowEvidenceGp !== GOALIE_LOW_EVIDENCE_GP || bt.lowEvidenceWeight !== GOALIE_LOW_EVIDENCE_WEIGHT) {
+      errors.push(`goalie GP backtest ran with low-evidence ${bt.lowEvidenceGp} GP / weight ${bt.lowEvidenceWeight}, code has ${GOALIE_LOW_EVIDENCE_GP} / ${GOALIE_LOW_EVIDENCE_WEIGHT} (npm run gp:goalie-backtest)`);
+    }
+    // MAE ceilings of the 2026-10-02 run with the low-evidence weight
+    // (9.26 / 9.55 / 9.55; 9.72 / 10.18 / 10.24 without it) plus a little room.
+    const ceiling: Record<string, number> = { played: 9.4, depth: 9.7, live: 9.7 };
+    for (const scen of ["played", "depth", "live"] as const) {
       const m = bt[scen]?.methods;
       const pub = m?.published;
       if (!pub) {

@@ -15,7 +15,10 @@
  *  - new: no eligible season (the board's prospect prior, 15 games);
  *  - established: 50+ GP in each of the two seasons before T (subset).
  *
- * Methods: `published` (renormalizeGoalieGamesByTeam, today's rule);
+ * Methods: `published` (renormalizeGoalieGamesByTeam, today's rule:
+ * goalies with fewer than 10 NHL games over the two seasons before T weigh
+ * at most GOALIE_LOW_EVIDENCE_WEIGHT in the budget); `noEvidenceCap` (the
+ * same without that cap, the rule published until the 2026-10-02 fix);
  * `legacyRenorm` (the rule it replaced: clear starter 1.35 × his backup
  * kept, else the top three pro rata to 80); `previousEngine` (the
  * 2026-09-27 board: legacyRenorm, then gp:recalibrate's history share —
@@ -23,12 +26,17 @@
  * (the stacked GP alone); baselines `lag1` (last eligible season, gp82),
  * `ewma3` (0.5 / 0.3 / 0.2) and `fixedRole` (58 / 24 / 15).
  *
- * Two club rosters: `played` (the goalies who played for the club in T)
- * and `depth` (the same plus one org-depth goalie at the 15-game prospect
+ * Three club rosters: `played` (the goalies who played for the club in T),
+ * `depth` (the same plus one org-depth goalie at the 15-game prospect
  * prior, unscored: the board lists the org depth too, and a roster known
- * only in hindsight flatters the allocations that split the budget).
+ * only in hindsight flatters the allocations that split the budget) and
+ * `live` (the same plus, unscored, the low-evidence org goalies of a live
+ * club at their model games on today's board, club i taking those of live
+ * club i mod 32: Matt Murray's 31, Brossoit's 31, the 22-game contextual
+ * prospects; the live crease is more crowded than the one played).
  * The starter's budget elasticity α is swept, and chosen walk-forward
- * (α minimizing the MAE of the seasons before T, scored on T).
+ * (α minimizing the MAE of the seasons before T, scored on T); the
+ * low-evidence weight is swept on each roster (lowEvidenceSweep).
  * Goalies who did not play in T (retired, abroad, out all season) are not
  * scored: the board drops the first two, the third is rare.
  *
@@ -38,7 +46,8 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
-import { calibratedGoalieGp } from "../src/lib/gp-calibration";
+import { calibratedGoalieGp, priorSeasonIdsFor } from "../src/lib/gp-calibration";
+import { DEFAULT_LEAGUE } from "../src/lib/league";
 import { datasetManifestOf } from "../src/lib/ml/dataset-manifest";
 import { gp82 } from "../src/lib/ml/dataset-view";
 import { attachDurability } from "../src/lib/ml/gamelog-durability";
@@ -51,10 +60,13 @@ import {
   computeGoalieSignals,
   fitGoalieMetas,
   goalieEligible,
+  GOALIE_LOW_EVIDENCE_GP,
+  GOALIE_LOW_EVIDENCE_WEIGHT,
   GOALIE_STARTER_BUDGET_ELASTICITY,
   GOALIE_TEAM_GAMES,
   inferGoalieForPlayer,
   isStarterGoalie,
+  recentNhlGoalieGames,
   renormalizeGoalieGamesByTeam,
   trainGoalieBoundary,
   type GoalieExample,
@@ -66,11 +78,14 @@ import { loadMoneyPuckRegistrySync } from "../src/lib/moneypuck-goalies";
 import { normalizeTeamAbbrev } from "../src/lib/team-abbreviations";
 
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
+const BOARD_PATH = join(process.cwd(), "src", "data", "players-preseason.json");
+const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
 const GOALIE_GP_BACKTEST_PATH = join(process.cwd(), "src", "data", "ml", "goalie-gp-backtest.json");
 const POOL_FROM = 20112012;
 const EVAL_FROM = 20152016;
 const PROSPECT_PRIOR_GP = 15;
 const ALPHAS = [0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.75, 1];
+const LOW_EVIDENCE_WEIGHTS = [4, 6, 8, 10, 12, 15, 20, Infinity];
 
 type Role = "starter" | "backup" | "new";
 interface Rec {
@@ -119,11 +134,22 @@ function legacyRenormalize(players: Rec[], teamBudget = 80): Map<number, number>
   return out;
 }
 
-function published(club: Rec[], alpha = GOALIE_STARTER_BUDGET_ELASTICITY): Map<number, number> {
+function published(
+  club: Rec[],
+  alpha = GOALIE_STARTER_BUDGET_ELASTICITY,
+  lowEvidenceWeight = GOALIE_LOW_EVIDENCE_WEIGHT,
+): Map<number, number> {
   const res = renormalizeGoalieGamesByTeam(
-    club.map((p) => ({ id: p.id, team: p.team, isGoalie: true, gamesPlayed: Math.round(p.m) })),
+    club.map((p) => ({
+      id: p.id,
+      team: p.team,
+      isGoalie: true,
+      gamesPlayed: Math.round(p.m),
+      recentNhlGames: p.gpPrev1 + p.gpPrev2,
+    })),
     GOALIE_TEAM_GAMES,
     alpha,
+    lowEvidenceWeight,
   );
   return new Map(res.map((p) => [p.id, p.gamesPlayed]));
 }
@@ -154,6 +180,7 @@ function previousEngine(club: Rec[]): Map<number, number> {
 
 const METHODS: Record<string, (club: Rec[]) => Map<number, number>> = {
   published: (c) => published(c),
+  noEvidenceCap: (c) => published(c, GOALIE_STARTER_BUDGET_ELASTICITY, Infinity),
   legacyRenorm: legacyRenormalize,
   previousEngine,
   model: (c) => new Map(c.map((p) => [p.id, Math.max(4, Math.min(72, p.m))])),
@@ -289,7 +316,25 @@ function main() {
     console.log(`${T}: ${idx.length} training examples${T >= EVAL_FROM ? `, ${recs.filter((r) => r.T === T).length} goalies scored` : ""}`);
   }
 
-  const clubsOf = (withDepth: boolean): Rec[][] => {
+  // Live board: each club's org goalies with little recent NHL evidence, at
+  // their model games (the allocation's input), for the `live` roster.
+  const board = JSON.parse(readFileSync(BOARD_PATH, "utf8")) as {
+    players: { id: number; team: string; isGoalie: boolean; gamesPlayed: number; modelGamesPlayed?: number }[];
+  };
+  const profilesFile = JSON.parse(readFileSync(PROFILES_PATH, "utf8")) as { profiles: PlayerProfile[] };
+  const profiles = new Map(profilesFile.profiles.map((p) => [p.id, p]));
+  const lastTwo = priorSeasonIdsFor(DEFAULT_LEAGUE.season);
+  const liveClubs = new Map<string, number[]>();
+  for (const p of board.players) {
+    if (!p.isGoalie) continue;
+    if (recentNhlGoalieGames(profiles.get(p.id)?.teamHistory, lastTwo) >= GOALIE_LOW_EVIDENCE_GP) continue;
+    const l = liveClubs.get(p.team) ?? [];
+    l.push(Math.round(p.modelGamesPlayed ?? p.gamesPlayed));
+    liveClubs.set(p.team, l);
+  }
+  const liveExtras = [...liveClubs.keys()].sort().map((k) => liveClubs.get(k)!);
+
+  const clubsOf = (roster: "played" | "depth" | "live"): Rec[][] => {
     const m = new Map<string, Rec[]>();
     for (const r of recs) {
       const k = `${r.team}:${r.T}`;
@@ -297,18 +342,29 @@ function main() {
       l.push(r);
       m.set(k, l);
     }
-    const clubs = [...m.values()];
-    if (withDepth) {
-      let n = 0;
-      for (const c of clubs) {
-        const base = c[0]!;
-        c.push({ ...base, id: -1 - n++, name: "org depth", role: "new", established: false, m: PROSPECT_PRIOR_GP, y: 0, synthetic: true });
-      }
-    }
+    const clubs = [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0)).map((e) => e[1]);
+    let n = 0;
+    const synth = (base: Rec, m: number): Rec => ({
+      ...base,
+      id: -1 - n++,
+      name: "org depth",
+      role: "new",
+      established: false,
+      m,
+      gpPrev1: 0,
+      gpPrev2: 0,
+      y: 0,
+      synthetic: true,
+    });
+    clubs.forEach((c, i) => {
+      const base = c[0]!;
+      if (roster === "depth") c.push(synth(base, PROSPECT_PRIOR_GP));
+      if (roster === "live" && liveExtras.length > 0) for (const m of liveExtras[i % liveExtras.length]!) c.push(synth(base, m));
+    });
     return clubs;
   };
 
-  const scenarios = { played: clubsOf(false), depth: clubsOf(true) };
+  const scenarios = { played: clubsOf("played"), depth: clubsOf("depth"), live: clubsOf("live") };
   const evalSeasons = [...new Set(recs.map((r) => r.T))].sort();
   const result: Record<string, unknown> = {};
   for (const [scen, clubs] of Object.entries(scenarios)) {
@@ -346,7 +402,18 @@ function main() {
       picks.push([T, best]);
       for (const r of recs) if (r.T === T) wfPred.set(`${r.id}:${r.T}`, byAlpha.get(best)!.get(`${r.id}:${r.T}`)!);
     }
-    result[scen] = { methods, established, alphaSweep: sweep, walkForwardAlpha: { picks, scores: score(recs.filter((r) => r.T > evalSeasons[0]!), wfPred) } };
+    const lowEvidenceSweep: Record<string, { all: number; starter: number; backup: number; established: number }> = {};
+    for (const w of LOW_EVIDENCE_WEIGHTS) {
+      const c = score(recs, predictAll(clubs, (club) => published(club, GOALIE_STARTER_BUDGET_ELASTICITY, w)));
+      lowEvidenceSweep[String(w)] = { all: c.all!.mae, starter: c.starter!.mae, backup: c.backup!.mae, established: c.established!.mae };
+    }
+    result[scen] = {
+      methods,
+      established,
+      alphaSweep: sweep,
+      lowEvidenceSweep,
+      walkForwardAlpha: { picks, scores: score(recs.filter((r) => r.T > evalSeasons[0]!), wfPred) },
+    };
   }
 
   const out = {
@@ -357,6 +424,9 @@ function main() {
     goalies: recs.length,
     teamGames: GOALIE_TEAM_GAMES,
     alpha: GOALIE_STARTER_BUDGET_ELASTICITY,
+    lowEvidenceGp: GOALIE_LOW_EVIDENCE_GP,
+    lowEvidenceWeight: GOALIE_LOW_EVIDENCE_WEIGHT,
+    liveExtras: liveExtras.flat().length,
     source:
       "scripts/backtest-goalie-gp.ts: walk-forward (base models and GP metas trained on the seasons before T, production inference), every goalie who played in T, scored on his games of T on an 82-game basis; roles from the history before T",
     ...result,
@@ -368,6 +438,7 @@ function main() {
       methods: Record<string, Record<string, Cell>>;
       established: Record<string, { meanPred: number; meanActual: number; under45: number }>;
       alphaSweep: Record<string, number>;
+      lowEvidenceSweep: Record<string, { all: number; starter: number; backup: number; established: number }>;
       walkForwardAlpha: { picks: [number, number][]; scores: Record<string, Cell> };
     };
     console.log(`\n== clubs: ${scen} (MAE / bias, games on an 82-game basis)`);
@@ -381,6 +452,11 @@ function main() {
         }).join("")}   ${e.meanPred} / ${e.meanActual}, ${e.under45}`,
       );
     }
+    console.log(
+      `low-evidence weight sweep (MAE all / starter / backup / established): ${Object.entries(s.lowEvidenceSweep)
+        .map(([w, c]) => `${w}: ${c.all.toFixed(2)} / ${c.starter.toFixed(2)} / ${c.backup.toFixed(2)} / ${c.established.toFixed(2)}`)
+        .join(", ")}`,
+    );
     console.log(`α sweep (MAE all): ${Object.entries(s.alphaSweep).map(([a, m]) => `${a}: ${m.toFixed(2)}`).join(", ")}`);
     console.log(
       `α walk-forward: ${s.walkForwardAlpha.picks.map(([t, a]) => `${String(t).slice(4)} ${a}`).join(", ")}; MAE ${s.walkForwardAlpha.scores.all!.mae.toFixed(2)} (seasons after the first)`,
