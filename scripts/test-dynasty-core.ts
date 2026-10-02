@@ -523,7 +523,18 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const f10 = slotProspect(params, "F", { year: 2026, pick: 10 });
   assert(near(f10.pMake, 0.8, 0.02), `pMake F pick 10, fresh ≈ 0.80 (${f10.pMake.toFixed(3)})`);
   const f10old = slotProspect(params, "F", { year: 2023, pick: 10 });
-  assert(f10old.pMake < f10.pMake * 0.5, "no-arrival decay lowers the odds");
+  assert(f10old.pMake < f10.pMake, "no-arrival decay lowers the odds");
+  // Audit 2026-10-02 (PROSPECT-DECAY): the odds multiplier per completed
+  // post-draft season without an NHL game, fitted on the 2008-2017 classes
+  // (P(200 GP) observed 0.244 one season out, 0.132 three out; the old
+  // table [1, 0.65, 0.35, 0.14, 0.08, 0.05] read 0.181 and 0.036).
+  const fitted = [1, 1, 0.89, 0.63, 0.36, 0.19, 0.09];
+  const dec = params.prospect.decay;
+  assert(dec.length === fitted.length && dec.every((x, k) => near(x, fitted[k]!, 0.05)), `decay is the fitted table (${dec.join(", ")})`);
+  assert(dec.every((x, k) => k === 0 || x <= dec[k - 1]!), "decay never rises with the seasons out");
+  const f10one = slotProspect(params, "F", { year: 2025, pick: 10 });
+  assert(near(f10one.pMake, f10.pMake, 1e-9), "one season out with no NHL game: the fresh odds (fitted multiplier 1.03)");
+  assert(near(f10old.pMake / (1 - f10old.pMake), (0.63 * f10.pMake) / (1 - f10.pMake), 0.05 * f10.pMake), "three seasons out: odds × 0.63");
   const d6 = slotProspect(params, "D", { year: 2026, pick: 6 });
   assert(near(d6.pMake, 0.84, 0.02), `pMake D pick 6 ≈ 0.84 (${d6.pMake.toFixed(3)})`);
   assert(slotPMakeRaw(params, "G", 20) === 0.44 && slotPMakeRaw(params, "G", 200) === 0.05, "goalie buckets");

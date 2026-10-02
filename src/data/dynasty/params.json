@@ -784,12 +784,14 @@
   },
   "decay": [
    1,
-   0.65,
-   0.35,
-   0.14,
-   0.08,
-   0.05
+   1,
+   0.89,
+   0.63,
+   0.36,
+   0.19,
+   0.09
   ],
+  "decaySource": "Refit 2026-10-02 (audit PROSPECT-DECAY): draftees of the 2008-2017 classes with 0 NHL games in their k completed post-draft seasons, outcome 200+ career NHL GP (NHL stats via the audit's history cache), odds multiplier on slotPMake fitted by bisection to the observed rate per k: k = 0 1.07 (n.s., kept 1), 1 1.03 (kept 1), 2 0.89, 3 0.63, 4 0.36, 5 0.19, 6 0.09 (observed P(200 GP) 0.274 / 0.244 / 0.195 / 0.132 / 0.072 / 0.037 / 0.018; the old table [1, 0.65, 0.35, 0.14, 0.08, 0.05], never fitted, gave 0.181 at k = 1 and 0.036 at k = 3). Walk-forward backtest (scripts/backtest-dynasty.ts, no K): slot-route calibration 0.41 -> 0.57 (2015) and 0.64 -> 0.93 (2021), prospect ranking unchanged. Caveat: fitted on every draftee; the slot route only takes players missing from prospects.json.",
   "etaLag": [
    [
     3,
