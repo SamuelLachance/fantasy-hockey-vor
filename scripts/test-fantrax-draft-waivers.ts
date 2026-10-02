@@ -33,7 +33,11 @@ const pool: DraftPoolPlayer[] = [
   { id: "w2", groups: ["W"], seasonFp: 290, adp: 70 },
   { id: "c1", groups: ["C"], seasonFp: 280, adp: 80 },
 ];
-const o = draftOutlook(picks, "me", pool, {});
+// A steep synthetic board: checked under the narrow first-guess ADP noise,
+// where the mechanics bite hardest (the fitted noise is replayed on the real
+// drafts in test-fantrax-vona).
+const NARROW = { sigma: 0.35, offset: 5 } as const;
+const o = draftOutlook(picks, "me", pool, {}, { adp: NARROW });
 assert(o.state === "running" && o.made === 2, "2 of 10 made");
 assert(o.current?.pick === 3 && o.next?.pick === 4 && o.following?.pick === 8, "current #3, mine #4 then #8");
 assert(o.picksBefore === 1 && o.picksBeforeFollowing === 4, "one pick before mine, four before the next one");
@@ -67,13 +71,15 @@ const onClock = draftOutlook(
   picks.map((p) => (p.pick === 3 ? { ...p, playerId: "c1" } : p)),
   "me",
   pool,
+  {},
+  { adp: NARROW },
 );
 assert(onClock.picksBefore === 0 && onClock.next?.pick === 4, "on the clock → 0 picks before");
 assert(onClock.board.every((b) => b.available === 1), "on the clock → everyone is still there");
 assert(near(onClock.vona.W.now, 300) && onClock.vona.W.bestId === "w1" && onClock.vona.W.bestP === 1, "on the clock → best now is the best left");
 // When two picks in three go to prospects outside the pool, fewer pool
 // players are expected gone: w1 likely survives to #4 and G is less urgent.
-const third = draftOutlook(picks, "me", pool, {}, { poolShare: 1 / 3 });
+const third = draftOutlook(picks, "me", pool, {}, { poolShare: 1 / 3, adp: NARROW });
 assert(third.vona.W.bestId === "w1" && !row(third, "w1").likelyGone, "w1 likely survives to #4");
 assert(row(third, "w1").available > row(o, "w1").available, "fewer pool picks → better odds");
 assert(third.vona.G.vona! > 0 && third.vona.G.vona! < o.vona.G.vona!, "G less urgent with fewer pool picks");
