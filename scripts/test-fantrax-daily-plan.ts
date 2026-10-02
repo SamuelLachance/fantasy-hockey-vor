@@ -298,6 +298,7 @@ assert(degraded.cap?.known === false, "cap usage unknown");
   const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
   const regular = league.scoringPeriods.filter((p) => p.number < firstPlayoff);
   const sp = regular[regular.length - 2]!;
+  const noCaps = { ...CAPTAINS_DYNASTY, features: { ...CAPTAINS_DYNASTY.features, gamesCaps: false } };
   const nowMs = Date.parse(sp.start) - 3_600_000;
   const lateState: StateSnapshot = { ...state, fetchedAt: new Date(nowMs).toISOString(), scoringPeriod: sp.number, caps: {}, draft: null };
   let checked = 0;
@@ -316,7 +317,8 @@ assert(degraded.cap?.known === false, "cap usage unknown");
         .reduce((sum, rp) => {
           const at = Date.parse(rp.start) - 60_000;
           const st = { ...lateState, rosters: { ...state.rosters, [team.id]: roster }, fetchedAt: new Date(at).toISOString(), waivers: [] };
-          return sum + (buildDailyPlan({ ...input, state: st, teamId: team.id, nowMs: at, waiverRosSampleDays: 0 }).lineup?.total ?? 0);
+          // `ros` is cap-blind: replay the lineups without the games-cap bench policy.
+          return sum + (buildDailyPlan({ ...input, state: st, teamId: team.id, nowMs: at, waiverRosSampleDays: 0, config: noCaps }).lineup?.total ?? 0);
         }, 0);
     const replay = lineupSum(swapped) - lineupSum(roster0);
     assert(Math.abs(replay - t.ros) <= 0.15, `${team.name}: ros ${t.ros} = the day-by-day replay ${replay.toFixed(2)}`);

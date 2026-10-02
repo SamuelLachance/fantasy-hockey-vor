@@ -6,6 +6,7 @@ import type { SlotId } from "../src/lib/fantrax/config";
 import { draftOutlook, draftValue, type DraftPickInfo, type DraftPoolPlayer } from "../src/lib/fantrax/draft";
 import { eligibleSlots, type LineupCandidate } from "../src/lib/fantrax/lineup";
 import { periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
+import { capBenchPolicy, withCapBench } from "../src/lib/fantrax/daily-plan";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -192,6 +193,24 @@ assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(fu
   assert(near(loose[0]!.delta, 6), "a cap that is not reached changes nothing");
   const used = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 5, gsMax: null, gsUsed: 0 } });
   assert(near(used[0]!.delta, 3), "games already played count toward the cap: only day 1 is left (+3)");
+}
+
+// ---- games-cap bench policy (FX-8): two weak wingers fill both W seats on
+// day 1 and reach the 2-game cap, so the star who only plays day 2 counts
+// nothing. Benching anyone under 1 point a game saves the games for him.
+{
+  const slotCounts = { C: 0, W: 2, F: 0, D: 0, Skt: 0, G: 0 };
+  const w = (id: string, v: number, games: number) => ({ ...cand(id, "W", v), games });
+  const day1 = [w("w1", 1, 1), w("w2", 1, 1), w("s", 0, 0)];
+  const day2 = [w("w1", 1, 1), w("w2", 1, 1), w("s", 4, 1)];
+  const capT = { gpMax: 2, gpUsed: 0, gsMax: null, gsUsed: 0 };
+  const policy = capBenchPolicy([day1, day2], slotCounts, ["W"], capT, { gp: true, gs: false });
+  assert(policy !== null && policy.skater! > 1 && policy.skater! < 4 && policy.goalie === null, `bench the 1-point wingers (${JSON.stringify(policy)})`);
+  assert(near(policy!.gain, 2), `gain 4 - 2 (${policy?.gain})`);
+  assert(withCapBench(day2, policy!).filter((c) => Object.keys(c.values).length > 0).map((c) => c.id).join() === "s", "only the star stays in the lineup");
+  assert(capBenchPolicy([day1, day2], slotCounts, ["W"], { ...capT, gpMax: 4 }, { gp: true, gs: false }) === null, "no policy when the cap does not bite");
+  const locked = { ...w("w1", 1, 1), locked: true };
+  assert(withCapBench([locked], { skater: 2, goalie: null })[0] === locked, "a locked player is never benched");
 }
 
 if (failed) process.exit(1);
