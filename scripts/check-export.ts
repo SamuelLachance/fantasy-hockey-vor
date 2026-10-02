@@ -390,6 +390,9 @@ const BUDGETS: Budget[] = [
   // pieces, the contracts read). Its HTML is smaller: 20 lineup slots but a
   // 1-to-2-day matchup panel instead of a 7-to-14-day one.
   { label: "Slapshot · Aujourd’hui", match: isTab("slapshot", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
+  // Plafond (league contracts) and Actifs (asset scores): their own chunks, data fetched on demand (cap-plan.json, dynasty-table.json, fxea getDraftPicks).
+  { label: "Slapshot · Plafond / Actifs", match: isTab("slapshot", ["plafond", "actifs"]), js: 45, htmlRaw: 100, htmlGz: 20 },
+  { label: "Captains · Actifs", match: isTab("captains-dynasty", ["actifs"]), js: 45, htmlRaw: 100, htmlGz: 20 },
   {
     label: "Slapshot · autres onglets",
     match: isTab("slapshot", ["repechage", "joueurs", "mon-equipe"]),

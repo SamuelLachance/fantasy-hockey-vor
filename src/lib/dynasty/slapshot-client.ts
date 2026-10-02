@@ -165,3 +165,93 @@ export function slapshotContracts(full: SlapshotSnapshotLike, firstSeason: numbe
     players,
   };
 }
+
+// ---------------------------------------------------------------- cap plan
+
+/** File name of the « Plafond » tab's data, next to dynasty.json (not committed). */
+export const CAP_PLAN_FILE = "cap-plan.json";
+
+/** One player's league-contract inputs: enough for the browser to re-plan any length. */
+export interface CapPlanRow {
+  /** Name, positions, age, phase and dynasty value per horizon (the tab needs nothing else). */
+  nm: string;
+  pos: string[];
+  age: number;
+  ph: string;
+  dv: { W: number; B: number; L: number };
+  /** Season index of the first league contract. */
+  s: number;
+  /** Real NHL cap hit per season (the bases), M$. */
+  n: number[];
+  /** Expected value per season before the cap, league points above replacement. */
+  v: number[];
+  /** Planned first-contract length, extension, bases. */
+  y: number;
+  e: number;
+  b: number;
+  eb: number | null;
+  /** The first contract is confirmed. */
+  f?: 1;
+}
+
+export interface CapPlanFile {
+  builtAt: string;
+  firstSeason: number;
+  cap: number;
+  floor: number;
+  /** Cap shadow price and league minimum per season. */
+  lambda: number[];
+  min: number[];
+  rules: { mult: number[]; maxYears: number; extensions: number; delta: number };
+  /** Discount per season of each dynasty horizon (winNow, balanced, longTerm). */
+  deltas: { W: number; B: number; L: number };
+  players: Record<string, CapPlanRow>;
+}
+
+/** The league-contract plans of every valued player (null: the profile has no league contracts). */
+export function slapshotCapPlan(
+  full: SlapshotSnapshotLike & {
+    params: { contracts?: CapPlanFile["rules"]; cap: { floor?: number }; modes?: Record<string, { delta: number }> };
+  }, firstSeason: number): CapPlanFile | null {
+  const rules = full.params.contracts;
+  if (!rules) return null;
+  const players: Record<string, CapPlanRow> = {};
+  for (const id of Object.keys(full.players).sort()) {
+    const c = full.players[id]!.contract;
+    const L = c.league;
+    if (!L || !c.nhl) continue;
+    // nobody would roster him: not worth the bytes
+    if (Math.max(full.players[id]!.dv.balanced, full.players[id]!.dv.longTerm) < 1) continue;
+    const r = full.players[id]!;
+    players[id] = {
+      nm: r.n,
+      pos: r.pos,
+      age: r1(r.age),
+      ph: r.phase,
+      dv: { W: r1(r.dv.winNow), B: r1(r.dv.balanced), L: r1(r.dv.longTerm) },
+      s: L.start,
+      n: c.nhl.map(r2),
+      v: L.value.map(r1),
+      y: L.years,
+      e: L.ext,
+      b: L.base,
+      eb: L.extBase,
+      ...(L.fixed ? { f: 1 as const } : {}),
+    };
+  }
+  return {
+    builtAt: full.builtAt,
+    firstSeason,
+    cap: full.params.cap.league[0]!,
+    floor: full.params.cap.floor ?? 0,
+    lambda: full.params.lambda,
+    min: full.params.cap.min,
+    rules,
+    deltas: {
+      W: full.params.modes?.winNow?.delta ?? 0.35,
+      B: full.params.modes?.balanced?.delta ?? rules.delta,
+      L: full.params.modes?.longTerm?.delta ?? 0.95,
+    },
+    players,
+  };
+}

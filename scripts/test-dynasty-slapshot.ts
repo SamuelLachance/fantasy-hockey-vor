@@ -16,9 +16,11 @@ import { makeRetention } from "../src/lib/dynasty/retention";
 import { mean } from "../src/lib/dynasty/rng";
 import { replacement } from "../src/lib/dynasty/scale";
 import { simulatePlayer, type SimContext, type SimLeague, type SimPlayer } from "../src/lib/dynasty/simulate";
+import { contractSalaries, planContract, seasonGain } from "../src/lib/dynasty/league-contracts";
 import {
   capLambda,
   capSeries,
+  contractRules,
   contractPath,
   explainSlapshotFr,
   fitSalaryModel,
@@ -72,12 +74,40 @@ const T = params.T;
   assert(near(g, (3 * 30 + 0.25 * 1500 - ga + 5 * 3) / 55 + 3 * 0.0185, 1e-9), `goalie FP/G ${g} derives GA from saves and sv%`);
 }
 
+// ---------------------------------------------------------------- league contracts (SFHL §2.4)
+{
+  const R = contractRules(prof)!;
+  assert(!!R && R.maxYears === 7 && R.extensions === 1, "league contracts: 1-7 seasons, one extension");
+  // raises relative to the base, not compounded (owner 2026-10-02): Marner 5 years at 12
+  const m = contractSalaries(12, 5, R);
+  assert(JSON.stringify(m) === JSON.stringify([12, 13.2, 13.2, 13.8, 13.8]), `Marner 5 years: ${m}`);
+  assert(JSON.stringify(contractSalaries(1, 7, R)) === JSON.stringify([1, 1.1, 1.1, 1.15, 1.15, 1.15, 1.2]), "7-year raises on the base");
+  const flat = (x: number) => new Array<number>(12).fill(x);
+  // a cheap young player with steady value: the longest first contract
+  const young = planContract({ start: 0, nhl: [1, ...new Array<number>(11).fill(9)], value: flat(60), lambda: flat(1.4), min: flat(0.85), delta: 0.75 }, R);
+  assert(young.years === 7 && young.salary[0] === 1 && young.salary[6] === 1.2, `entry-level base locked 7 years (got ${young.years})`);
+  // the extension restarts from the NHL cap hit of its first season, then he is a free agent
+  assert(young.ext > 0 && young.extBase === 9 && young.end === young.years + young.ext, "one extension at the then NHL cap hit");
+  const noExt = planContract({ start: 0, nhl: flat(5), value: flat(40), lambda: flat(1.4), min: flat(0.85), delta: 0.75, extended: true }, R);
+  assert(noExt.ext === 0 && noExt.salary[noExt.end] === 0, "after control: 0 salary (gone as a free agent)");
+  // a confirmed contract keeps its length
+  const fixed = planContract({ start: 0, nhl: flat(12), value: flat(100), lambda: flat(1.4), min: flat(0.85), delta: 0.75, fixed: { years: 5, base: 12 } }, R);
+  assert(fixed.years === 5 && fixed.fixed && fixed.salary[4] === 13.8, "confirmed 5-year contract kept");
+  // a season where he costs more than he brings is stashed in the minors (0, never negative)
+  assert(seasonGain(5, 20, 1.4, 0.85) === 0 && seasonGain(50, 10, 1, 1) === 41, "season gain = max(0, value - charge)");
+  // a prospect without an NHL contract starts his league contract at arrival
+  const pros = planContract({ start: 3, nhl: [0, 0, 0, 0.975, 0.975, 0.975, 5, 5, 5, 5, 5, 5], value: [0, 0, 0, 30, 35, 40, 45, 45, 45, 45, 45, 45], lambda: flat(1.4), min: flat(0.85), delta: 0.75 }, R);
+  assert(pros.start === 3 && pros.salary[2] === 0 && pros.salary[3] === 0.98, `prospect contract from his arrival (${pros.salary.slice(0, 5)})`);
+}
+
 // ---------------------------------------------------------------- cap series
 {
   const cs = capSeries(prof, Y0, T);
   assert(cs.league[0] === 105, `league cap 2026-27 = 105 (got ${cs.league[0]})`);
-  assert(near(cs.league[1]!, (105 * 113.5) / 104, 1e-3), `2027-28 follows the NHL 113.5 (got ${cs.league[1]})`);
-  assert(near(cs.league[2]! / cs.league[1]!, 1 + prof.cap.growthAfter, 1e-4), "then grows by growthAfter");
+  // commissioner rule 2026-10-02: 105 M$ and a 70 M$ floor, fixed every season
+  assert(prof.cap.leagueFixed === true && cs.league.every((c) => c === 105), `league cap fixed at 105 (got ${cs.league.slice(0, 3)})`);
+  assert(prof.cap.floor === 70, "league floor 70 M$");
+  assert(near(cs.nhl[1]!, 113.5, 1e-3) && near(cs.nhl[2]! / cs.nhl[1]!, 1 + prof.cap.growthAfter, 1e-4), "the NHL trajectory still sets the bases");
   assert(cs.min[0] === prof.cap.minSalary && cs.min[3]! > cs.min[0]!, "league minimum grows with the cap");
   assert(near(nhlCapOf(prof, 2029), 113.5 * (1 + prof.cap.growthAfter) ** 2, 1e-9), "NHL cap extrapolated after 2027-28");
   // the training contracts' own first-season caps (2023-24 83.5, 2024-25 88.0), never the earliest listed one

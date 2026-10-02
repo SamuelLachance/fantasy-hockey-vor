@@ -19,12 +19,12 @@ const slapshot = fantraxLeague("slapshot");
 export const LEAGUE_KINDS = ["fantrax-points", "yahoo-categories"] as const;
 export type LeagueKind = (typeof LEAGUE_KINDS)[number];
 
-export const LEAGUE_TABS = ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe", "duel"] as const;
+export const LEAGUE_TABS = ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe", "plafond", "actifs", "duel"] as const;
 export type LeagueTab = (typeof LEAGUE_TABS)[number];
 
 /** Tabs a kind of league can have (a league lists a subset, in its own order). */
 export const KIND_TABS: Record<LeagueKind, readonly LeagueTab[]> = {
-  "fantrax-points": ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe"],
+  "fantrax-points": ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe", "plafond", "actifs"],
   "yahoo-categories": ["repechage", "joueurs", "mon-equipe", "duel"],
 };
 
@@ -53,6 +53,16 @@ export const TAB_META: Record<LeagueTab, { label: string; heading: string; descr
     label: "Mon équipe",
     heading: "Mon équipe",
     description: "Votre effectif, ses valeurs et ses forces.",
+  },
+  plafond: {
+    label: "Plafond",
+    heading: "Plafond et contrats",
+    description: "Masse salariale par saison et durée de contrat à offrir à chaque joueur.",
+  },
+  actifs: {
+    label: "Actifs",
+    heading: "Actifs des équipes",
+    description: "Le score de chaque actif de chaque équipe et que faire de chacun.",
   },
   duel: {
     label: "Duel de la semaine",
@@ -104,7 +114,7 @@ export const LEAGUES: readonly LeagueEntry[] = [
     season: "2026-27",
     teams: captains.teams,
     myTeamId: captains.defaultTeamId,
-    tabs: ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe"],
+    tabs: ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe", "actifs"],
     defaultTab: "aujourdhui",
     legacyPaths: [{ path: "/league", tab: "aujourdhui" }],
     // leagueId confirmed by src/data/fantrax/league.json.
@@ -129,9 +139,9 @@ export const LEAGUES: readonly LeagueEntry[] = [
     // this league, and a two-day scoring period makes the « gain over the
     // rest of the period » threshold the waiver helper ranks by meaningless.
     // Free agents are on « Joueurs » (the « Autonomes à ajouter » view).
-    tabs: ["repechage", "joueurs", "aujourdhui", "mon-equipe"],
-    // The draft is live (2026-09-27, 38 rounds); the season opens Sep 29.
-    defaultTab: "repechage",
+    tabs: ["aujourdhui", "mon-equipe", "plafond", "actifs", "joueurs", "repechage"],
+    // The startup draft is over (2026-10); the season is under way.
+    defaultTab: "aujourdhui",
     legacyPaths: [],
     // leagueId confirmed by src/data/fantrax/slapshot/league.json.
     externalUrl: `https://www.fantrax.com/fantasy/league/${slapshot.leagueId}/home`,

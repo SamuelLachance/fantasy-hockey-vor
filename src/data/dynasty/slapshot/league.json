@@ -1,6 +1,6 @@
 {
- "version": "slap-v2-2026-09-27",
- "source": "Slapshot Fantasy League (Fantrax glxjunc7mtxdqi8x): rules summary pasted by the user and the public fxea getLeagueInfo (2026-09-27); owner answers: every player carries over (no cutdown), any player may sit in the minors, salary cap 105 M$ in 2026-27 on the 20 active + 3 reserve (minors and IR free), real NHL cap hits, growth unknown -> NHL trajectory.",
+ "version": "slap-v3-2026-10-02",
+ "source": "Slapshot Fantasy League (Fantrax glxjunc7mtxdqi8x): rules summary pasted by the user and the public fxea getLeagueInfo (2026-09-27); owner answers: every player carries over (no cutdown), any player may sit in the minors, salary cap 105 M$ in 2026-27 on the 20 active + 3 reserve (minors and IR free), real NHL cap hits, growth unknown -> NHL trajectory. Rulebook (SFHL, pasted 2026-10-02) and owner answers: league contracts 1-7 seasons on the real NHL cap hit of the signing season, raises relative to that base, one extension, then UFA whatever the age (no RFA); cap 105 M$ and floor 70 M$ fixed.",
  "league": {
   "id": "glxjunc7mtxdqi8x",
   "name": "Slapshot Fantasy League",
@@ -50,7 +50,7 @@
   "fantasyShare": 0.746
  },
  "cap": {
-  "source": "League cap 105 M$ in 2026-27 (commissioner rule). Growth unknown (owner): the NHL trajectory scaled to the league base, league_t = 105 x NHL_t / NHL_2026. NHL upper limit: 2023-24 83.5, 2024-25 88.0, 2025-26 95.5 (the training contracts' share of the cap of their first season), 2026-27 104.0, 2027-28 113.5 (announced, NHL/NHLPA MOU 2025); after 2027-28 +5 %/season (assumption: the long-run HRR growth the escrow-free era would allow; the announced steps average +9 %). NHL minimum salary 2026-27: 0.85 M$ (the 5th percentile and the common floor of the 957 2026-27 cap hits in the capwages seasons; a few older two-way deals sit at 0.80-0.81), grown with the cap. A prospect without a contract signs an entry-level deal at 0.975 M$ (2024+ ELC maximum) for 3 seasons from his expected arrival.",
+  "source": "League cap 105 M$ and floor 70 M$, fixed every season until the commissioner says otherwise (rulebook §2.3, owner 2026-10-02); counted over the 23 active + reserve players. The NHL trajectory below only sets the real NHL cap hits (the bases of league contracts) and the league minimum salary: NHL upper limit 2023-24 83.5, 2024-25 88.0, 2025-26 95.5, 2026-27 104.0, 2027-28 113.5 (announced), then +5 %/season (assumption). NHL minimum salary 2026-27 0.85 M$, grown with the NHL cap. A prospect without an NHL contract signs an entry-level deal at 0.975 M$ for 3 seasons from his expected arrival.",
   "base": 105,
   "nhl": {
    "2023": 83.5,
@@ -62,7 +62,9 @@
   "growthAfter": 0.05,
   "minSalary": 0.85,
   "elcCapHit": 0.975,
-  "elcYears": 3
+  "elcYears": 3,
+  "leagueFixed": true,
+  "floor": 70
  },
  "lambda": {
   "source": "Cap shadow price (league points per M$ above the league minimum). snake (default) = the λ = 0 points-optimal counting players (640 starters by an optimal seat fill + the next 96 as reserves) dealt to the 32 teams in snake order by expected points (12 draft orders: the plain one and 11 with a 15 % log-normal jitter); each team over the cap swaps starters for the best free agents at the fewest points lost per M$ saved until it fits; λ_team = the last swap's rate (0 under the cap); λ = the mean over teams and orders (a generic team before trades). aggregate = the league-wide Lagrangian (0 when the points-optimal set fits under 32 x cap, i.e. trades could move every surplus). Solved on each season's own pool (expected points and cap hits from the calibration pass) for the first solvedSeasons seasons (2026-27 with the real contracts, 2027-28 with the 9 % cap jump against mostly signed contracts); later seasons hold the last solved value per share of the cap (λ_t = λ_last C_last / C_t): their pools lack future draft classes and rest on projected contracts (the 2028-29 solve is reported as a diagnostic).",
@@ -78,16 +80,45 @@
  "contracts": {
   "source": "Projected contracts after the signed seasons: AAV = expected share of that season's NHL cap (fitSalaryModel: Poisson pseudo-maximum likelihood, log link, on the non-ELC contracts whose first season is 2023-24 .. 2027-28 from the capwages seasons, each as a share of its own first season's cap, against today's level, role, age at signing and RFA status, with hinges in the level so the top of the market is paid convexly; exp(x b) is the conditional mean, calibrated in the top level decile), term by age at signing; UFA from 27. Ceiling: 17 % of the cap (the largest current deals: Celebrini 18.8 / 113.5 = 16.6 %, Carlsson 18 / 104 = 17.3 %, Kaprizov 17 / 104 = 16.3 %), 12 % when signing at 30+ (largest 2019-2026 deals signed at 30-45: 8.6-12.3 % of that season's cap). A prospect without a contract has no cap hit before his expected arrival, then cap.elcCapHit for cap.elcYears. Seasons come from capwages only (player-profiles.json `contract` lists extensions as the current cap hit).",
   "termByAge": [
-   [25, 5],
-   [29, 4],
-   [32, 3],
-   [34, 2],
-   [99, 1]
+   [
+    25,
+    5
+   ],
+   [
+    29,
+    4
+   ],
+   [
+    32,
+    3
+   ],
+   [
+    34,
+    2
+   ],
+   [
+    99,
+    1
+   ]
   ],
   "ufaAge": 27,
   "minPct": 0.0075,
   "maxPct": 0.17,
   "oldAge": 30,
   "oldMaxPct": 0.12
+ },
+ "leagueContracts": {
+  "source": "SFHL rulebook §2.4 (pasted 2026-10-02) and owner answers: each player signs a league contract of 1 to 7 seasons; year 1 = his real NHL cap hit of the signing season; years 2-3 = base +10 %, years 4-6 = base +15 %, year 7 = base +20 % (each relative to the base, not compounded); ONE extension of any length under the same rules (base = his real NHL cap hit when it starts: assumption, « exactly like the NHL »); when control ends he is an unrestricted free agent whatever his age (no RFA). A prospect without an NHL contract starts his league contract when he signs his NHL one (assumption: he sits in the minors, cap-free, before). Lengths are planned by discounted surplus at the balanced δ (src/lib/dynasty/league-contracts.ts); confirmed contracts come from src/data/fantrax/slapshot/league-contracts.json.",
+  "mult": [
+   1,
+   1.1,
+   1.1,
+   1.15,
+   1.15,
+   1.15,
+   1.2
+  ],
+  "maxYears": 7,
+  "extensions": 1
  }
 }

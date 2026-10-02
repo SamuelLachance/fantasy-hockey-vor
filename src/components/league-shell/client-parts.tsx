@@ -28,6 +28,8 @@ export const FantraxWaiversPart = dynamic(() =>
   import("@/components/fantrax/FantraxWaiversTab").then((m) => m.FantraxWaiversTab),
 );
 export const FantraxTeamPart = dynamic(() => import("@/components/fantrax/FantraxTeamTab").then((m) => m.FantraxTeamTab));
+export const FantraxCapPart = dynamic(() => import("@/components/fantrax/SlapshotCapTab").then((m) => m.SlapshotCapTab));
+export const FantraxAssetsPart = dynamic(() => import("@/components/fantrax/AssetsTab").then((m) => m.AssetsTab));
 
 // ---- yahoo-categories
 export const CategoryDraftPart = dynamic(() => import("@/components/draft/CategoryDraftTab").then((m) => m.CategoryDraftTab));

@@ -33,5 +33,6 @@ export function capGrowthText(f: Pick<ContractsFile, "cap" | "firstSeason" | "gr
   const last = Math.max(...f.announced);
   const pct = (x: number) => `${String(Math.round(x * 1000) / 10).replace(".", ",")} %`;
   const seasons = f.cap.slice(0, 4).map((c, t) => `${capSeasonLabel(f.firstSeason + t)} ${fmtMoney(c)}`).join(", ");
+  if (f.cap.every((c) => c === f.cap[0])) return `Plafond de la ligue : ${fmtMoney(f.cap[0]!)} chaque saison (fixe, règle du commissaire), plancher de 70 M$.`;
   return `Plafond de la ligue : ${seasons}… Il suit le plafond de la LNH (annoncé jusqu’en ${capSeasonLabel(last)}), puis +${pct(f.growthAfter)} par saison (hypothèse, à confirmer par le commissaire).`;
 }

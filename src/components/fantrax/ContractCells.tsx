@@ -13,10 +13,10 @@ type Contract = NonNullable<DynastyRecord["contract"]>;
 /** A salary cell: signed seasons plain, a projected next contract in italics (its title says so). */
 export function SalaryNode({ m, contract, t }: { m: number; contract: Contract | null; t: number }) {
   const projected = !!contract && t >= contract.signed;
-  if (projected && m === 0) return <span title="Sans contrat LNH : aucun salaire avant son arrivée prévue dans la LNH">—</span>;
+  if (projected && m === 0) return <span title="Pas de contrat de ligue cette saison : avant son arrivée dans la LNH, ou agent libre après la fin de son contrôle">—</span>;
   if (projected) {
     return (
-      <span title={contract.signed === 0 ? "Sans contrat LNH : contrat d’entrée supposé" : "Contrat projeté (le sien se termine avant)"} className="italic">
+      <span title={contract.signed === 0 ? "Contrat de ligue conseillé (durée pas encore confirmée; voir l’onglet Plafond)" : "Prolongation conseillée après son contrat confirmé"} className="italic">
         {salaryCell(m)}
       </span>
     );

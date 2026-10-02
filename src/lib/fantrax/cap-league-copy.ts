@@ -62,13 +62,13 @@ function column(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy | null {
       const y = (ctx.capSeason ?? 2026) + (col === "sal2" ? 1 : 0);
       return {
         label: `Salaire ${shortSeason(y)}`,
-        title: `Salaire ${shortSeason(y)} (moyenne annuelle de son contrat LNH réel pour cette saison, M$)${NBSP}: ce qui compte au plafond de la ligue s’il est parmi les 23 Actifs + Réserve (mineures et blessés ne comptent pas). Après la fin de son contrat, son prochain contrat projeté (en italique)${NBSP}; un espoir sans contrat LNH ne compte rien avant son arrivée prévue, puis un contrat d’entrée supposé`,
+        title: `Salaire de ligue ${shortSeason(y)} (M$)${NBSP}: son contrat de ligue, dont la base est son salaire LNH de la saison de signature, puis +10 à +20 %${NBSP}; en italique, la durée conseillée (pas encore confirmée). Ce qui compte au plafond s’il est parmi les 23 Actifs + Réserve (mineures et blessés ne comptent pas)${NBSP}; un espoir sans contrat LNH ne compte rien avant son arrivée`,
       };
     }
     case "contrat":
       return {
         label: "Fin de contrat",
-        title: "Dernière saison de son contrat LNH signé, et son statut à l’échéance (JAS : joueur autonome sans compensation, JAC : avec compensation)",
+        title: "Dernière saison de son contrat de ligue (confirmé, ou conseillé); il peut être prolongé une seule fois, puis il devient joueur autonome (JAS), peu importe son âge",
       };
     default:
       return null;

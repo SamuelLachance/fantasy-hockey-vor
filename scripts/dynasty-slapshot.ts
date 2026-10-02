@@ -64,6 +64,8 @@ export function slapshotPaths(root = process.cwd()) {
     league: join(dir, "league.json"),
     pool: join(dir, "pool.json"),
     contracts: join(dir, "contract-seasons.json"),
+    /** Confirmed league contracts (the user's team). */
+    leagueContracts: join(root, "src", "data", "fantrax", "slapshot", "league-contracts.json"),
     /** The league's explorer pool (league:sync): every player it lists joins the build. */
     explorer: fantraxPaths(SLAPSHOT, root).pool,
     out: join(root, "public", "fantrax", "slapshot", "dynasty.json"),
@@ -110,7 +112,12 @@ export interface SlapshotSnapshot {
       /** Entry-level deal assumed for a prospect without an NHL contract (M$, seasons). */
       elcCapHit: number;
       elcYears: number;
+      /** League cap fixed at its base every season; league floor (M$). */
+      leagueFixed?: boolean;
+      floor?: number;
     };
+    /** League contracts (src/lib/dynasty/league-contracts.ts): raises on the base by contract year, max length, extensions, the planner's δ. */
+    contracts?: { mult: number[]; maxYears: number; extensions: number; delta: number };
     /** Cap shadow price per season (league points per M$ above the minimum). */
     lambda: number[];
     /** Per solved season (2026-27 …): both estimators and the snake allocation's team caps. */
@@ -274,6 +281,9 @@ export function runSlapshotBuild(
   const profile = parseSlapshotProfile(readJson(SP.league));
   const pool = readJson<SlapshotPool>(SP.pool);
   const cw = existsSync(SP.contracts) ? readJson<ContractSeasonsFile>(SP.contracts) : null;
+  const confirmed = existsSync(SP.leagueContracts)
+    ? readJson<{ contracts: Record<string, { years: number; base?: number; startYear?: number; extended?: boolean }> }>(SP.leagueContracts).contracts
+    : {};
   const p = L.params;
   const y0 = p.firstSeasonYear;
   const dataset = readJson<ProjectionsDataset>(L.paths.players);
@@ -351,7 +361,13 @@ export function runSlapshotBuild(
       .map((s) => s.trim())
       .filter((s): s is SlapPos => s === "C" || s === "LW" || s === "RW" || s === "D" || s === "G");
     const known = knownContract(inp.nhlId ? cw?.players[inp.nhlId] : undefined, y0);
-    data.set(inp.id, { k, pos, known });
+    const lc = confirmed[inp.id];
+    data.set(inp.id, {
+      k,
+      pos,
+      known,
+      ...(lc ? { league: { years: lc.years, ...(lc.base != null ? { base: lc.base } : {}), ...(lc.extended ? { extended: true } : {}) } } : {}),
+    });
   }
 
   const level = makeLevel(p);
@@ -462,7 +478,19 @@ export function runSlapshotBuild(
           .sort((a, b) => a - b),
         elcCapHit: profile.cap.elcCapHit,
         elcYears: profile.cap.elcYears,
+        ...(profile.cap.leagueFixed ? { leagueFixed: true } : {}),
+        ...(profile.cap.floor != null ? { floor: profile.cap.floor } : {}),
       },
+      ...(profile.leagueContracts
+        ? {
+            contracts: {
+              mult: profile.leagueContracts.mult,
+              maxYears: profile.leagueContracts.maxYears,
+              extensions: profile.leagueContracts.extensions,
+              delta: p.modes.balanced.delta,
+            },
+          }
+        : {}),
       lambda: pr.lambda.map(r3),
       lambdaDiag: {
         method: profile.lambda.method,

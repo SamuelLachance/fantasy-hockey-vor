@@ -30,6 +30,8 @@ import {
   FantraxPlayersPart,
   FantraxShellPart,
   FantraxTeamPart,
+  FantraxCapPart,
+  FantraxAssetsPart,
   FantraxTodayPart,
   FantraxWaiversPart,
 } from "./client-parts";
@@ -100,6 +102,10 @@ function FantraxTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
       return <FantraxWaiversPart />;
     case "mon-equipe":
       return <FantraxTeamPart slug={entry.slug} />;
+    case "plafond":
+      return <FantraxCapPart />;
+    case "actifs":
+      return <FantraxAssetsPart />;
     default:
       return null;
   }

@@ -14,11 +14,16 @@ const NBSP = " ";
  * The legend of a salary-cap dynasty league (Slapshot): no cutdown, no
  * « Conseil », but the cap charge inside the value and the salary columns.
  */
-export const SLAPSHOT_LEGEND = `Valeur dyn.${NBSP}: points au-dessus du remplacement sur 12 saisons, nets du coût de son salaire sous le plafond, pas des points de la saison (ne pas additionner). Salaire${NBSP}: moyenne annuelle de son contrat LNH réel (en italique, un contrat projeté). Fourchette${NBSP}: 8 chances sur 10 que la valeur finisse entre ces bornes. Chances LNH${NBSP}: devenir un régulier.`;
+export const SLAPSHOT_LEGEND = `Valeur dyn.${NBSP}: points au-dessus du remplacement sur 12 saisons, nets du coût de son salaire sous le plafond, pas des points de la saison (ne pas additionner). Salaire${NBSP}: son contrat de ligue (base = son salaire LNH de la saison de signature, puis +10 à +20 %); en italique, la durée conseillée, pas encore confirmée. Fourchette${NBSP}: 8 chances sur 10 que la valeur finisse entre ces bornes. Chances LNH${NBSP}: devenir un régulier.`;
 
 /** « 2031-32 · JAS » (the contract column), « sans contrat » for a player with no signed season. */
 export function contractEndLabel(c: { signed: number; expiry: number | null; status: "UFA" | "RFA" | null; elc: boolean }, firstSeason = 2026): string {
-  if (c.signed === 0) return "sans contrat";
+  if (c.signed === 0) {
+    // a league contract not confirmed yet: the end of the recommended one
+    if (c.expiry == null) return "sans contrat";
+    const end = c.expiry - 1;
+    return `${end}-${String((end + 1) % 100).padStart(2, "0")} (conseil)`;
+  }
   const last = firstSeason + c.signed - 1;
   const season = `${last}-${String((last + 1) % 100).padStart(2, "0")}`;
   const st = c.status === "RFA" ? "JAC" : c.status === "UFA" ? "JAS" : null;

@@ -20,6 +20,7 @@ import { fillSlots, type SlotSpec } from "../leagues/slot-fill";
 import type { Position } from "../types";
 import type { LevelFn } from "./aging";
 import type { DynastyParams } from "./params";
+import { planContract, type ContractPlan, type LeagueContractRules, SLAPSHOT_CONTRACT_RULES } from "./league-contracts";
 import { rngFor } from "./rng";
 import type { Routed } from "./segment";
 import type { SimLeague } from "./simulate";
@@ -59,8 +60,13 @@ export interface SlapshotProfile {
     /** Entry-level cap hit assumed for a prospect without a contract, M$. */
     elcCapHit: number;
     elcYears: number;
-    /** Cap hits at or below this (M$) count as the minimum (two-way / ELC floor). */
+    /** The league cap stays at `base` every season (commissioner rule 2026-10-02); otherwise it follows the NHL trajectory. */
+    leagueFixed?: boolean;
+    /** League salary floor, M$ (fixed). */
+    floor?: number;
   };
+  /** League contracts (SFHL §2.4): 1-7 seasons on the NHL cap hit of the signing season, raises on that base, one extension, then UFA. */
+  leagueContracts?: Sourced & { mult: number[]; maxYears: number; extensions: number };
   lambda: Sourced & {
     /** "snake": mean per-team shadow price after a snake allocation (no trades); "aggregate": league-wide Lagrangian; "fixed". */
     method: "snake" | "aggregate" | "fixed";
@@ -143,7 +149,7 @@ export function capSeries(prof: SlapshotProfile, y0: number, T: number): CapSeri
   const r = (x: number) => Math.round(x * 1000) / 1000;
   return {
     nhl: nhl.map(r),
-    league: nhl.map((x) => r((prof.cap.base * x) / nhl[0]!)),
+    league: nhl.map((x) => (prof.cap.leagueFixed ? prof.cap.base : r((prof.cap.base * x) / nhl[0]!))),
     min: nhl.map((x) => r((prof.cap.minSalary * x) / nhl[0]!)),
   };
 }
@@ -372,6 +378,10 @@ export interface ContractPath {
   nextAav: number | null;
   elc: boolean;
   source: KnownContract["source"];
+  /** League contracts: his real NHL cap hits per season (the bases); `cap` is then the league salary. */
+  nhl?: number[];
+  /** League contracts: the planned (or confirmed) contract and extension. */
+  plan?: ContractPlan;
 }
 
 /**
@@ -709,6 +719,8 @@ export interface SlapPlayerData {
   k: number | null;
   pos: SlapPos[];
   known: KnownContract;
+  /** A confirmed league contract (src/data/fantrax/slapshot/league-contracts.json). */
+  league?: { years: number; base?: number; extended?: boolean } | null;
 }
 
 export interface SlapPrepared {
@@ -724,7 +736,26 @@ export interface SlapPrepared {
   /** Expected 2026-27 season points (league scoring) of NHL-path players. */
   seasonFp0: Map<string, number>;
   regularGames: number;
+  /** League contracts: expected value per season before the cap (league points above replacement). */
+  value: Map<string, number[]>;
+  rules: LeagueContractRules | null;
 }
+
+/** The league-contract rules of a profile (null: salaries follow the NHL contracts). */
+export function contractRules(prof: SlapshotProfile): LeagueContractRules | null {
+  const lc = prof.leagueContracts;
+  if (!lc) return null;
+  return {
+    mult: lc.mult,
+    maxYears: lc.maxYears,
+    extensions: lc.extensions,
+    cap: prof.cap.base,
+    floor: prof.cap.floor ?? SLAPSHOT_CONTRACT_RULES.floor,
+  };
+}
+
+/** A season charge that no value can beat: the player has left (a free agent after his league contract). */
+export const LOST_CHARGE = 1e6;
 
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -845,20 +876,70 @@ export function prepareSlapshot(
   const lam0 =
     prof.lambda.method === "fixed" ? prof.lambda.fixed : prof.lambda.method === "aggregate" ? lambdaDiag.aggregate : lambdaDiag.snake.mean;
   const lambda = opts.lambda ? [...opts.lambda] : lambdaPath(lam0, cs);
+  // League contracts: the salary is the league contract's (planned on the
+  // expected value per season, or confirmed), and the player is lost when it
+  // and its one extension end.
+  const rules = contractRules(prof);
+  const value = new Map<string, number[]>();
+  if (rules) {
+    const delta = p.modes.balanced.delta;
+    for (const r of routed) {
+      const id = r.input.id;
+      const nhlPath = contracts.get(id)!;
+      const th = theta.get(id)!;
+      const k = kEff.get(id)!;
+      const rr = playerReplacement(repl, r.g, pos.get(id)!);
+      const pMake = r.sim?.path === "prospect" ? (r.sim.pm?.pMake ?? 0) : 1;
+      const share0 = r.sim?.path === "nhl" ? (r.sim.share0 ?? 0) : p.games.regShareMean;
+      const v = th.map((x, t) => {
+        if (!(x > 0)) return 0;
+        if (r.g === "G") return pMake * (k * x * share0 * SG - repl.G);
+        const games = (t === 0 ? share0 : p.games.regShareMean) * SG;
+        return pMake * (k * x - rr) * games;
+      });
+      value.set(id, v);
+      const start = Math.max(0, nhlPath.cap.findIndex((x) => x > 0));
+      const fixed = data.get(id)?.league ?? null;
+      const plan = planContract(
+        {
+          start: nhlPath.cap.some((x) => x > 0) ? start : T,
+          nhl: nhlPath.cap,
+          value: v,
+          lambda,
+          min: cs.min,
+          delta,
+          fixed: fixed ? { years: fixed.years, ...(fixed.base != null ? { base: fixed.base } : {}) } : null,
+          extended: !!fixed?.extended,
+        },
+        rules,
+      );
+      contracts.set(id, {
+        ...nhlPath,
+        nhl: nhlPath.cap,
+        cap: plan.salary,
+        known: fixed ? Math.min(T, plan.start + plan.years) : 0,
+        expiry: plan.start < T ? y0 + plan.start + plan.years : null,
+        status: "UFA",
+        nextAav: plan.extBase,
+        plan,
+      });
+    }
+  }
   for (const r of routed) {
     if (!r.sim) continue;
     const id = r.input.id;
     const c = contracts.get(id)!;
+    const lost = c.plan ? c.plan.end : Infinity;
     const lg: SimLeague = {
       k: kEff.get(id)!,
       r: playerReplacement(repl, r.g, pos.get(id)!),
       rG: repl.G,
-      capCost: c.cap.map((x, t) => lambda[t]! * Math.max(0, x - cs.min[t]!)),
+      capCost: c.cap.map((x, t) => (t >= lost ? LOST_CHARGE : lambda[t]! * Math.max(0, x - cs.min[t]!))),
       ...(opts.rosterGate ? { noEligibility: true } : {}),
     };
     r.sim.lg = lg;
   }
-  return { capSeries: cs, lambda, lambdaDiag, repl, kDefault, contracts, kEff, pos, seasonFp0, regularGames };
+  return { capSeries: cs, lambda, lambdaDiag, repl, kDefault, contracts, kEff, pos, seasonFp0, regularGames, value, rules };
 }
 
 function fallbackPos(e: string): SlapPos[] {
@@ -889,6 +970,29 @@ export interface SlapContractOut {
   /** Cap charge per season, league points (λ_t × (cap_t − min_t)). */
   capFP: number[];
   source: KnownContract["source"];
+  /** League contracts: his real NHL cap hit per season (the base of a contract signed that season), M$. */
+  nhl?: number[];
+  /** League contracts: the planned (or confirmed) league contract. */
+  league?: SlapLeagueContractOut;
+}
+
+/** A player's league contract plan (src/lib/dynasty/league-contracts.ts), as published. */
+export interface SlapLeagueContractOut {
+  /** Season index of the first contract (0 = 2026-27). */
+  start: number;
+  years: number;
+  base: number;
+  /** Planned extension length (0 = let him walk) and its base. */
+  ext: number;
+  extBase: number | null;
+  /** First season index he is a free agent. */
+  end: number;
+  /** The first contract is confirmed (league-contracts.json). */
+  fixed: boolean;
+  /** Discounted surplus (balanced δ) of each first-contract length 1..7 with its best extension, league points. */
+  options: number[];
+  /** Expected value per season before the cap, league points above replacement. */
+  value: number[];
 }
 
 export interface SlapshotRecord
@@ -948,6 +1052,22 @@ export function slapshotRecord(rec: DynastyRecord, prep: SlapPrepared, id: strin
       capShare: Math.round((c.cap[0]! / cs.league[0]!) * 1000) / 1000,
       capFP: c.cap.map((x, t) => r1(prep.lambda[t]! * Math.max(0, x - cs.min[t]!))),
       source: c.source,
+      ...(c.nhl ? { nhl: c.nhl.map(r2) } : {}),
+      ...(c.plan
+        ? {
+            league: {
+              start: c.plan.start,
+              years: c.plan.years,
+              base: c.plan.base,
+              ext: c.plan.ext,
+              extBase: c.plan.extBase,
+              end: c.plan.end,
+              fixed: c.plan.fixed,
+              options: c.plan.options.map((o) => o.total),
+              value: (prep.value.get(id) ?? []).map(r1),
+            },
+          }
+        : {}),
     },
     market: rec.market,
     ...(rec.flags ? { flags: rec.flags } : {}),
@@ -988,7 +1108,13 @@ export function explainSlapshotFr(r: SlapshotRecord, y0 = 2026, maxLen = 240): s
     clauses.push(`${POS_FR[r.g]}${noAge ? " d’âge inconnu" : `${ofAge} ${PHASE_CLAUSE[r.phase]}`}${t}`);
   }
   const c = r.contract;
-  if (c.signed > 0) {
+  const lc = c.league;
+  if (lc && lc.start < (c.cap.length || 12)) {
+    const from = lc.start > 0 ? ` dès ${seasonLabel(y0 + lc.start)}` : "";
+    const head = lc.fixed ? `contrat de ligue ${lc.years}${NBSP}an${lc.years > 1 ? "s" : ""}` : `contrat conseillé${NBSP}: ${lc.years}${NBSP}an${lc.years > 1 ? "s" : ""}`;
+    const ext = lc.ext > 0 && lc.extBase != null ? `, prolongation ${lc.ext}${NBSP}an${lc.ext > 1 ? "s" : ""} à ~${money(lc.extBase)}` : ", puis agent libre";
+    clauses.push(`${head} à ${money(lc.base)}${from}${ext}`);
+  } else if (c.signed > 0) {
     const until = seasonLabel(y0 + c.signed - 1);
     const kind = c.elc ? "contrat d’entrée" : "contrat";
     // French status: JAS (joueur autonome sans compensation) / JAC (avec compensation).

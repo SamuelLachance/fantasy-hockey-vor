@@ -62,7 +62,7 @@ export function SlapshotMethodNote({ id = "methode" }: { id?: string }) {
         </li>
         <li>
           <strong className="text-slate-100">Salaire</strong>
-          {`${NBSP}: la moyenne annuelle réelle de son contrat LNH pour la saison (source${NBSP}: capwages); après l’échéance, son prochain contrat est projeté (la moyenne des contrats signés depuis 2023 par des joueurs de même niveau, âge et statut JAS ou JAC, vedettes comprises) et affiché en italique; un espoir sans contrat LNH ne compte rien avant son arrivée prévue. Salaire minimum de la ligue${NBSP}: ${c ? fmtMoney(c.min[0]!) : `0,85${NBSP}M$`}, qui croît avec le plafond.`}
+          {`${NBSP}: son contrat de ligue de 1 à 7 ans. Base (an 1)${NBSP}: son salaire LNH réel de la saison de signature (source${NBSP}: capwages; un salaire LNH futur non signé est projeté d’après les contrats récents de joueurs semblables); ans 2-3 +10${NBSP}%, ans 4-6 +15${NBSP}%, an 7 +20${NBSP}% (par rapport à la base); une seule prolongation, aux mêmes règles, puis joueur autonome. Tant qu’un contrat n’est pas confirmé, le modèle utilise la durée conseillée (onglet Plafond), affichée en italique. Un espoir sans contrat LNH ne compte rien avant son arrivée prévue.`}
         </li>
         <li>
           <strong className="text-slate-100">Espoirs sans contrat LNH</strong>
@@ -71,7 +71,7 @@ export function SlapshotMethodNote({ id = "methode" }: { id?: string }) {
         <li>
           <strong className="text-slate-100">Prix du plafond (λ)</strong>
           {c
-            ? `${NBSP}: ${num(c.lambda[0]!)} point par M$ au-dessus du minimum en ${cap.firstSeason}-${String((cap.firstSeason + 1) % 100).padStart(2, "0")}, ${num(c.lambda[1] ?? 0)} ensuite (moins contraignant à mesure que le plafond monte et que les contrats projetés remplacent les vrais). Estimé en simulant le repêchage des ${config.teams} équipes : les points qu’une équipe au-dessus du plafond perd par M$ économisé en remplaçant des partants.`
+            ? `${NBSP}: ${num(c.lambda[0]!)} point par M$ au-dessus du minimum en ${cap.firstSeason}-${String((cap.firstSeason + 1) % 100).padStart(2, "0")}, ${num(c.lambda[1] ?? 0)} ensuite (le plafond reste fixe pendant que les salaires de ligue montent avec les années de contrat). Estimé en simulant le repêchage des ${config.teams} équipes : les points qu’une équipe au-dessus du plafond perd par M$ économisé en remplaçant des partants.`
             : `${NBSP}: les points qu’une équipe au-dessus du plafond perd par M$ économisé.`}
         </li>
         {c?.rosterSpot ? (
