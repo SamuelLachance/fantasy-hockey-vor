@@ -1,5 +1,5 @@
 /**
- * Unit checks for post-hoc GP calibration (isotonic skater curve + goalie
+ * Unit checks for post-hoc GP calibration (out-of-sample skater curves + goalie
  * tandem split). Run: npx tsx scripts/test-gp-calibration.ts
  */
 import {
@@ -7,7 +7,12 @@ import {
   calibratedGoalieGp,
   calibratedSkaterGp,
   fitIsotonic,
-  fitSkaterGpCurve,
+  fitGroupCurves,
+  GP_GROUPS,
+  gpCurveFor,
+  gpGroupOfPlayer,
+  loadGpCalibration,
+  type GpOosPair,
   goalieStarterShare,
   modelGp,
   predictIsotonic,
@@ -75,46 +80,69 @@ function profileWith(
   } as unknown as PlayerProfile;
 }
 
-// --- skater curve fit end-to-end: bias corrected upward ---
-const skaters = Array.from({ length: 40 }, (_, i) => ({
-  id: i + 1,
-  team: "T",
-  isGoalie: false,
-  gamesPlayed: 55 + (i % 10), // proj 55..64
-}));
-const profiles = new Map<number, PlayerProfile>(
-  skaters.map((p) => [
-    p.id,
-    profileWith(p.id, [
-      { seasonId: 20252026, gamesPlayed: Math.min(82, p.gamesPlayed + 14) },
-      { seasonId: 20242025, gamesPlayed: Math.min(82, p.gamesPlayed + 12) },
-    ]),
-  ]),
-);
-const { curve, pairCount } = fitSkaterGpCurve(skaters, profiles, "2026-27");
-assert(pairCount === 80, `two pairs per skater (got ${pairCount})`);
-const calibrated = calibratedSkaterGp(skaters[0], profiles.get(1), curve);
-assert(
-  calibrated > skaters[0].gamesPlayed + 8,
-  `under-projection corrected upward (55 -> ${calibrated})`,
-);
+// --- out-of-sample group curves ---
+{
+  const pairs: GpOosPair[] = [];
+  for (let x = 20; x <= 80; x++) {
+    // young: next season ~ x − 8 (0 included); vets ~ x
+    pairs.push({ group: "youngF", x, y: Math.max(0, x - 8) });
+    pairs.push({ group: "vetF", x, y: x });
+  }
+  const { curves, pairCount } = fitGroupCurves(pairs);
+  assert(pairCount.youngF === 61 && pairCount.vetF === 61 && pairCount.vetD === 0, "pairs counted per group");
+  assert(Math.abs(predictIsotonic(curves.youngF, 60) - 52) < 1e-9, "young curve maps 60 → 52");
+  assert(Math.abs(predictIsotonic(curves.vetF, 60) - 60) < 1e-9, "vet curve maps 60 → 60");
+  assert(curves.vetD.length === 0, "no pairs, no curve (model GP kept)");
+  const young = { id: 1, team: "T", isGoalie: false, gamesPlayed: 60 };
+  const withHistory = profileWith(1, [{ seasonId: 20252026, gamesPlayed: 30 }]);
+  assert(
+    calibratedSkaterGp(young, withHistory, gpCurveFor({ curves }, { modelSegment: "young", position: "LW" })) === 52,
+    "a young forward gets the young-forward curve",
+  );
+  assert(gpGroupOfPlayer({ modelSegment: "vet", primaryPosition: "D", position: "LW" }) === "vetD", "build position decides D");
+  // no NHL history → untouched
+  assert(calibratedSkaterGp({ id: 9, team: "T", isGoalie: false, gamesPlayed: 58 }, undefined, curves.youngF) === 58, "no-history player keeps model GP");
+  // idempotence: modelGamesPlayed anchors recalibration
+  const once = calibratedSkaterGp(young, withHistory, curves.youngF);
+  const again = calibratedSkaterGp({ ...young, gamesPlayed: once, modelGamesPlayed: 60 }, withHistory, curves.youngF);
+  assert(once === again, `recalibration is idempotent (${once} vs ${again})`);
+  assert(modelGp({ id: 1, team: "T", isGoalie: false, gamesPlayed: 70, modelGamesPlayed: 60 }) === 60, "modelGp prefers anchor");
+}
 
-// no NHL history → untouched
-const rookie = { id: 999, team: "T", isGoalie: false, gamesPlayed: 58 };
-assert(
-  calibratedSkaterGp(rookie, undefined, curve) === 58,
-  "no-history player keeps model GP",
-);
-
-// idempotence: modelGamesPlayed anchors recalibration
-const once = calibratedSkaterGp(skaters[0], profiles.get(1), curve);
-const again = calibratedSkaterGp(
-  { ...skaters[0], gamesPlayed: once, modelGamesPlayed: skaters[0].gamesPlayed },
-  profiles.get(1),
-  curve,
-);
-assert(once === again, `recalibration is idempotent (${once} vs ${again})`);
-assert(modelGp({ id: 1, team: "T", isGoalie: false, gamesPlayed: 70, modelGamesPlayed: 60 }) === 60, "modelGp prefers anchor");
+// --- the committed calibration (src/data/ml/gp-calibration.json) ---
+// Fitted on next-season games out of sample (0 included for players still
+// around), not on the board's own past: its walk-forward backtest must stay
+// unbiased overall, per model-GP bin and for young players and defensemen.
+{
+  const cal = loadGpCalibration();
+  assert(cal !== null, "src/data/ml/gp-calibration.json present (version 2)");
+  if (cal) {
+    for (const g of GP_GROUPS) {
+      assert(cal.pairCount[g] >= 300, `${g}: ${cal.pairCount[g]} out-of-sample pairs (≥ 300)`);
+      const c = cal.curves[g];
+      assert(c.length >= 5, `${g}: curve has blocks`);
+      for (let i = 1; i < c.length; i++) assert(c[i]!.y >= c[i - 1]!.y - 1e-9, `${g}: curve monotone`);
+    }
+    // An iron man (model ~75) stays an iron man; a 45-GP model is not 62.
+    assert(predictIsotonic(cal.curves.vetF, 75) >= 70, `vetF 75 → ${predictIsotonic(cal.curves.vetF, 75).toFixed(1)} (≥ 70)`);
+    assert(predictIsotonic(cal.curves.vetF, 45) < 45, `vetF 45 → ${predictIsotonic(cal.curves.vetF, 45).toFixed(1)} (< 45: zeros included)`);
+    type Score = { bias: number; r2: number };
+    const bt = cal.backtest as {
+      all: Record<string, Score>;
+      young: Record<string, Score>;
+      defense: Record<string, Score>;
+      biasByModelGp: Record<string, Record<string, number>>;
+    };
+    assert(Math.abs(bt.all.calibrated.bias) <= 1, `walk-forward bias ${bt.all.calibrated.bias} (|·| ≤ 1)`);
+    assert(Math.abs(bt.young.calibrated.bias) <= 2, `young bias ${bt.young.calibrated.bias} (|·| ≤ 2)`);
+    assert(Math.abs(bt.defense.calibrated.bias) <= 2, `defense bias ${bt.defense.calibrated.bias} (|·| ≤ 2)`);
+    assert(bt.all.calibrated.r2 >= bt.all.model.r2, `R² ${bt.all.calibrated.r2} ≥ raw model ${bt.all.model.r2}`);
+    assert(bt.all.calibrated.r2 >= 0.31, `R² ${bt.all.calibrated.r2} ≥ 0.31`);
+    for (const [bin, b] of Object.entries(bt.biasByModelGp)) {
+      assert(Math.abs(b.calibrated) <= 2, `bias in model-GP bin ${bin}: ${b.calibrated} (|·| ≤ 2)`);
+    }
+  }
+}
 
 // --- goalie split ---
 assert(Math.abs(goalieStarterShare(45) - 0.55) < 1e-9, "45-start starter share floor");

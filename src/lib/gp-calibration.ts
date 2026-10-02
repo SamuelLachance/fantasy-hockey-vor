@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "fs";
+import { join } from "path";
 import { loadLeagueSeasonsSync, MIN_SEASON_COVERAGE, seasonCoverage } from "./league-seasons";
 import { durabilityKey, loadDurabilityRegistrySync } from "./ml/gamelog-durability";
 import { loadMoneyPuckSkaterRegistrySync, skaterSeasonKey } from "./moneypuck-skaters";
@@ -19,37 +21,97 @@ import { SKATER_CATEGORIES } from "./types";
 import { normalizeTeamAbbrev } from "./team-abbreviations";
 
 /**
- * Post-hoc games-played calibration.
+ * Post-hoc games-played calibration of the v2 skaters.
  *
- * The GP model heads regress hard toward the population mean: on the committed
- * 2026-27 board the top-150 skaters project 60.9 GP on average while the same
- * players realized 73.7 GP in 2025-26 and 73.5 in 2024-25, and no player at
- * all projects above 69. Rather than retraining (the ML dataset is gitignored
- * and heavy to rebuild), we correct the bias where it is measurable: an
- * isotonic regression (PAVA) maps projected GP onto the realized GP of the
- * same players in the two prior seasons. Monotone by construction, so the
- * model's durability ordering is preserved — only the level is fixed.
+ * The v2 GP model is trained on target seasons of 10+ games only: it
+ * predicts the games of a player who plays, not the expectation a fantasy
+ * board needs (≈15 % of the skaters with 10+ games one season play fewer
+ * than 10 the next, and the model gave them ~45). The calibration maps the
+ * model's GP onto what the NEXT season gave, out of sample: walk-forward
+ * pairs (model GP at season T, trained on seasons < T → actual GP at T on
+ * an 82-game basis, 0 for a player who did not play but was still around:
+ * an NHL game later, or still on a club's list), 2018-19 → 2025-26, one
+ * isotonic curve (PAVA, monotone: the model's order is kept) per meta
+ * segment young / veteran × F / D. Players who retired or left the NHL are
+ * left out: they are not on a board (src/data/inactive-player-ids.json and
+ * the stale-player rule of generate).
+ * Fitted by `npm run gp:fit` (scripts/fit-gp-calibration.ts) into
+ * src/data/ml/gp-calibration.json, with its walk-forward backtest.
+ *
+ * History: the previous curve was fitted at generate time on the board's
+ * own players, model GP → their realized GP of the two PRIOR seasons with
+ * the zeros left out, i.e. on the wrong target (survivors' past), and on the
+ * 2026-07-30 board whose model GP came from a dataset that no longer
+ * matched the bundle (mean 50.6, max 69, against 56.8 / 82 with the
+ * matching file): the « regression toward the mean » it corrected was that
+ * drift (src/lib/ml/dataset-manifest.ts now refuses such a dataset).
  *
  * Counting stats are scaled with GP so per-game rates are untouched.
  */
 
 /** Season-total ceiling for a calibrated expectation (E[GP] of an ironman). */
 export const CALIBRATED_GP_CEILING = 80;
-const FULL_SEASON = 82;
-
-/** Weight of the most recent prior season vs the one before in the fit. */
-const RECENT_SEASON_WEIGHT = 0.65;
 
 export interface IsotonicPoint {
   x: number;
   y: number;
 }
 
+/** Meta segment of a v2 skater: young (≤ 2 eligible NHL seasons) or veteran × F / D. */
+export type GpGroup = "youngF" | "youngD" | "vetF" | "vetD";
+export const GP_GROUPS: readonly GpGroup[] = ["youngF", "youngD", "vetF", "vetD"];
+
+/** src/data/ml/gp-calibration.json */
+export interface GpOosCalibration {
+  version: 2;
+  fittedAt: string;
+  /** trainedAt of the bundle whose walk-forward produced the pairs (same code and dataset). */
+  bundleTrainedAt: string | null;
+  /** Dataset sha1 the walk-forward ran on. */
+  datasetSha1: string | null;
+  source: string;
+  curves: Record<GpGroup, IsotonicPoint[]>;
+  pairCount: Record<GpGroup, number>;
+  /** Walk-forward backtest (fit on seasons < T, scored on T). */
+  backtest?: Record<string, unknown>;
+}
+
 export interface GpCalibrationMeta {
-  version: 1;
+  version: 2;
   appliedAt: string;
-  skaterCurve: IsotonicPoint[];
-  pairCount: number;
+  fittedAt: string;
+  source: string;
+  skaterCurves: Record<GpGroup, IsotonicPoint[]>;
+  pairCount: Record<GpGroup, number>;
+}
+
+export const GP_CALIBRATION_PATH = join(process.cwd(), "src", "data", "ml", "gp-calibration.json");
+
+export function loadGpCalibration(path = GP_CALIBRATION_PATH): GpOosCalibration | null {
+  if (!existsSync(path)) return null;
+  const cal = JSON.parse(readFileSync(path, "utf8")) as GpOosCalibration;
+  return cal.version === 2 ? cal : null;
+}
+
+export function gpGroupOf(young: boolean, isDefense: boolean): GpGroup {
+  return `${young ? "young" : "vet"}${isDefense ? "D" : "F"}` as GpGroup;
+}
+
+/** Group of a board skater: its v2 segment and its build position. */
+export function gpGroupOfPlayer(p: {
+  modelSegment?: "young" | "vet";
+  primaryPosition?: string;
+  position?: string;
+}): GpGroup {
+  return gpGroupOf(p.modelSegment === "young", (p.primaryPosition ?? p.position) === "D");
+}
+
+/** The calibration curve of a board skater (empty: model GP kept). */
+export function gpCurveFor(
+  cal: Pick<GpOosCalibration, "curves"> | null,
+  p: { modelSegment?: "young" | "vet"; primaryPosition?: string; position?: string },
+): IsotonicPoint[] {
+  return cal?.curves[gpGroupOfPlayer(p)] ?? [];
 }
 
 interface WeightedPair {
@@ -154,37 +216,36 @@ export function modelGp(player: CalibratablePlayer): number {
   return player.modelGamesPlayed ?? player.gamesPlayed;
 }
 
-/**
- * Fit the skater calibration curve on (projected GP → realized prior-season
- * GP) pairs across every skater with NHL history on the board.
- */
-export function fitSkaterGpCurve(
-  players: CalibratablePlayer[],
-  profilesById: Map<number, PlayerProfile>,
-  season: string,
-): { curve: IsotonicPoint[]; pairCount: number } {
-  const [recentId, olderId] = priorSeasonIdsFor(season);
-  const pairs: WeightedPair[] = [];
-  for (const p of players) {
-    if (p.isGoalie) continue;
-    const profile = profilesById.get(p.id);
-    const recent = realizedGp(profile, recentId, false);
-    const older = realizedGp(profile, olderId, false);
-    const x = modelGp(p);
-    if (recent > 0) {
-      pairs.push({ x, y: Math.min(FULL_SEASON, recent), w: RECENT_SEASON_WEIGHT });
-    }
-    if (older > 0) {
-      pairs.push({ x, y: Math.min(FULL_SEASON, older), w: 1 - RECENT_SEASON_WEIGHT });
-    }
-  }
-  return { curve: fitIsotonic(pairs), pairCount: pairs.length };
+/** One out-of-sample pair: model GP at season T → actual GP (82-game basis, 0 included). */
+export interface GpOosPair {
+  group: GpGroup;
+  x: number;
+  y: number;
 }
 
 /**
- * Calibrated GP for one skater. Players with no NHL skater history keep the
- * model GP: the curve is fit on players with history, and the rookie path
- * (contextual dossiers) was never shown to carry the same bias.
+ * One isotonic curve per group, model GP (rounded, as published) → mean
+ * actual GP of the next season.
+ */
+export function fitGroupCurves(pairs: GpOosPair[]): {
+  curves: Record<GpGroup, IsotonicPoint[]>;
+  pairCount: Record<GpGroup, number>;
+} {
+  const curves = {} as Record<GpGroup, IsotonicPoint[]>;
+  const pairCount = {} as Record<GpGroup, number>;
+  for (const g of GP_GROUPS) {
+    const sub = pairs.filter((p) => p.group === g);
+    curves[g] = fitIsotonic(sub.map((p) => ({ x: Math.round(p.x), y: Math.min(82, Math.max(0, p.y)), w: 1 })));
+    pairCount[g] = sub.length;
+  }
+  return { curves, pairCount };
+}
+
+/**
+ * Calibrated GP for one skater, `curve` being his group's (gpCurveFor).
+ * Players with no NHL skater history keep the model GP: the curves are fit
+ * on v2 skaters; the contextual path has its own prior
+ * (src/lib/projection-gp.ts contextualSkaterGp).
  */
 export function calibratedSkaterGp(
   player: CalibratablePlayer,

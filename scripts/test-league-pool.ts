@@ -213,8 +213,8 @@ const byName = (name: string) => everyone.find((p) => p.name === name);
   assert(firstNoProj === board.players.length + pool.players.length, "every projected player before the unprojected");
   assert(everyone.slice(0, firstNoProj).every((p, i) => p.rank === i + 1), "projected ranks 1..N");
   eq(everyone.slice(0, board.players.length).length, board.players.length, "board rows kept");
-  const marner = byName("Mitch Marner");
-  assert(!!marner?.adjusted && marner.rank < marner.adjusted.fromRank, "hand moves survive the merge");
+  const landeskog = byName("Gabriel Landeskog");
+  assert(!!landeskog?.adjusted && landeskog.rank > landeskog.adjusted.fromRank, "hand moves survive the merge");
 
   // The players the league was missing (brief, 2026-09-27).
   for (const name of ["Max Domi", "Brett Howden", "Mavrik Bourque", "Oliver Kapanen", "Sean Couturier", "Taylor Hall", "Mikael Backlund"]) {
@@ -225,8 +225,13 @@ const byName = (name: string) => everyone.find((p) => p.name === name);
   for (const name of ["Carter Bear", "Trey Augustine", "Tij Iginla", "Caleb Desnoyers", "Ben Danford", "Cole Eiserman", "Kashawn Aitcheson"]) {
     assert(!!byName(name), `${name} is listed`);
   }
+  // Every NHL roster player is projected since 2026-10 (npm run
+  // collect:missing, check:preseason): Belzile, unprojected in September,
+  // is listed with his projection; the unprojected are prospects and the
+  // rest of the organisations.
   const belzile = byName("Alex Belzile");
-  assert(belzile?.noProj === "roster" && belzile.team === "MTL", "Alex Belzile: on the MTL roster, no projection");
+  assert(!!belzile && !belzile.noProj && belzile.team === "MTL", "Alex Belzile: on the MTL roster, projected");
+  assert(!everyone.some((p) => p.noProj === "roster"), "no roster player without a projection");
 
   // Page + pool from two builds: a player on both is listed once (the board's row).
   const dup: LeaguePool = { ...pool, players: [{ ...board.players[0]!, rank: 99_999 }, ...pool.players] };
@@ -300,7 +305,9 @@ const rows: CategoryRow[] = buildCategoryRows(board, { state: state0, currentPic
   eq(f({ proj: "avec" }).length, rows.length - pool.unprojected.length, "projection: with");
   assert(f({ vor: { min: null, max: 0 } }).every((r) => !r.noProj), "a VOR range leaves the unprojected out");
   assert(f({ q: "domi" }).some((r) => r.name === "Max Domi"), "search finds a pool player");
-  assert(f({ q: "belzile" }).some((r) => r.name === "Alex Belzile"), "search finds an unprojected player");
+  assert(f({ q: "belzile" }).some((r) => r.name === "Alex Belzile"), "search finds a call-up");
+  const unprojected = everyone.find((p) => p.noProj)!;
+  assert(f({ q: unprojected.name }).some((r) => r.id === unprojected.id), "search finds an unprojected player");
   assert(f({ pos: "G" }).length > board.players.filter((p) => p.pos.includes("G")).length, "goalies past the board listed");
 
   // URL: projection=sans|avec round-trips; junk falls back to the base.
@@ -317,7 +324,7 @@ const rows: CategoryRow[] = buildCategoryRows(board, { state: state0, currentPic
 {
   const domi = byName("Max Domi")!;
   const kapanen = byName("Oliver Kapanen")!;
-  const rookie = everyone.find((p) => p.noProj === "roster")!;
+  const rookie = everyone.find((p) => p.noProj)!;
   let s: DraftState = setDraftSlot(EMPTY_DRAFT_STATE, 1, board.league.teams);
   s = markPick(s, board.players[0]!.id, true);
   s = markPick(s, UNLISTED_PLAYER_ID, false);

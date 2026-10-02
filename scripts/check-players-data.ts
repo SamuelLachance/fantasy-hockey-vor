@@ -369,7 +369,15 @@ if (mlSkaters > 100 && mlWithUnc < mlSkaters * 0.4) {
         string,
         Partial<PlayerDetailRecord>
       >;
-      const hydrated = players
+      // In season, players.json is actual + rest of season: a defenseman's
+      // two goalless games move his segment against a pre-season market. The
+      // generation drift this guards against lives in the pre-season board.
+      const preseasonPath = join(process.cwd(), "src", "data", "players-preseason.json");
+      const levelSource =
+        (data as { inSeasonAt?: string }).inSeasonAt && existsSync(preseasonPath)
+          ? (JSON.parse(readFileSync(preseasonPath, "utf8")) as ProjectionsDataset).players
+          : players;
+      const hydrated = levelSource
         .filter((p) => !p.isGoalie && p.projectionMethod === "ml")
         .map((p) => {
           const d = details[String(p.id)];

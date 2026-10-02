@@ -1,6 +1,6 @@
 {
   "collectedAt": "2026-07-30T23:54:15.333Z",
-  "count": 1349,
+  "count": 1388,
   "profiles": [
     {
       "id": 8478421,
@@ -5453,6 +5453,71 @@
       },
       "contextNarrative": "Adam Henrique (C, EDM). Age 36, 72\" / 195lb, shoots L. Drafted 2008 round 3 (#82 overall) by NJD. Team history: ANA → EDM (recent change affects linemates/usage). Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: moderate — Missed ~17 games last season. Contract: $3.00M cap hit, 0 years remaining (UFA). Last season (2025-26): 65 GP, key stats {\"goals\":3,\"assists\":12,\"points\":15,\"shots\":91}",
       "collectedAt": "2026-07-30T23:52:58.081Z"
+    },
+    {
+      "id": 8484790,
+      "name": "Adam Jiricek",
+      "team": "STL",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 20,
+        "ageAtSeasonStart": 20,
+        "birthDate": "2006-06-28",
+        "birthCity": "Klatovy",
+        "birthCountry": "CZE",
+        "heightInches": 75,
+        "weightPounds": 185,
+        "shootsCatches": "R",
+        "sweaterNumber": 36
+      },
+      "draft": {
+        "year": 2024,
+        "round": 1,
+        "pickInRound": 16,
+        "overallPick": 16,
+        "team": "STL"
+      },
+      "teamContext": {
+        "teamAbbrev": "STL",
+        "leagueRank": 23,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Adam Jiricek (D, STL). Age 20, 75\" / 185lb, shoots R. Drafted 2024 round 1 (#16 overall) by STL. Team STL ranks #23 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:03.970Z"
     },
     {
       "id": 8483609,
@@ -12506,6 +12571,174 @@
       "collectedAt": "2026-07-30T23:53:15.133Z"
     },
     {
+      "id": 8475968,
+      "name": "Alex Belzile",
+      "team": "MTL",
+      "position": "RW",
+      "positions": [
+        "RW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 35,
+        "ageAtSeasonStart": 35,
+        "birthDate": "1991-08-31",
+        "birthCity": "St-Eloi",
+        "birthCountry": "CAN",
+        "heightInches": 72,
+        "weightPounds": 198,
+        "shootsCatches": "R",
+        "sweaterNumber": 60
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "MTL",
+        "leagueRank": 11,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 9,
+        "avgToi": "11:38",
+        "faceoffWinningPctg": 0.4672,
+        "gameWinningGoals": 0,
+        "gamesPlayed": 44,
+        "goals": 6,
+        "otGoals": 0,
+        "pim": 17,
+        "plusMinus": -1,
+        "points": 15,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0.10710000000000001,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 56
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2023-04-01",
+          "gameId": 2022021207,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "CAR",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 16,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "MTL",
+          "toi": "14:59"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-30",
+          "gameId": 2022021190,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "FLA",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 17,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "MTL",
+          "toi": "13:04"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-28",
+          "gameId": 2022021177,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "PHI",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 15,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "MTL",
+          "toi": "12:21"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-27",
+          "gameId": 2022021171,
+          "gameTypeId": 2,
+          "goals": 1,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "BUF",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 14,
+          "shorthandedGoals": 0,
+          "shots": 3,
+          "teamAbbrev": "MTL",
+          "toi": "10:40"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-25",
+          "gameId": 2022021158,
+          "gameTypeId": 2,
+          "goals": 1,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "CBJ",
+          "pim": 0,
+          "plusMinus": 1,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 17,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "MTL",
+          "toi": "14:13"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Alex Belzile (RW, MTL). Age 35, 72\" / 198lb, shoots R. Undrafted or draft data unavailable. Team MTL ranks #11 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:35.452Z"
+    },
+    {
       "id": 8483731,
       "name": "Alex Bump",
       "team": "PHI",
@@ -13226,6 +13459,126 @@
       },
       "contextNarrative": "Alex DeBrincat (RW, DET). Age 28, 68\" / 180lb, shoots R. Drafted 2016 round 2 (#39 overall) by CHI. Team DET ranks #16 (56.1% pts), 2.94 GF/G. Durability: healthy — Consistent availability. Contract: $7.88M cap hit, 1 year remaining (UFA). Last season (2025-26): 82 GP, key stats {\"goals\":41,\"assists\":44,\"points\":85,\"shots\":287}",
       "collectedAt": "2026-07-30T23:52:14.587Z"
+    },
+    {
+      "id": 8480029,
+      "name": "Alex Formenton",
+      "team": "EDM",
+      "position": "LW",
+      "positions": [
+        "LW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 27,
+        "ageAtSeasonStart": 27,
+        "birthDate": "1999-09-13",
+        "birthCity": "Barrie",
+        "birthCountry": "CAN",
+        "heightInches": 75,
+        "weightPounds": 193,
+        "shootsCatches": "L",
+        "sweaterNumber": 26
+      },
+      "draft": {
+        "year": 2017,
+        "round": 2,
+        "pickInRound": 16,
+        "overallPick": 47,
+        "team": "OTT"
+      },
+      "teamContext": {
+        "teamAbbrev": "EDM",
+        "leagueRank": 1,
+        "pointsPct": 0.75,
+        "goalsForPerGame": 7,
+        "goalsAgainstPerGame": 6.5,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 14,
+        "l10GoalsAgainst": 13,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 17,
+        "avgToi": "14:26",
+        "faceoffWinningPctg": 0.35710000000000003,
+        "gameWinningGoals": 1,
+        "gamesPlayed": 111,
+        "goals": 23,
+        "otGoals": 0,
+        "pim": 71,
+        "plusMinus": -6,
+        "points": 40,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0.11109999999999999,
+        "shorthandedGoals": 6,
+        "shorthandedPoints": 7,
+        "shots": 207
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-10-01",
+          "gameId": 2026020015,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "VAN",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 27,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "EDM",
+          "toi": "16:15"
+        },
+        {
+          "assists": 1,
+          "gameDate": "2026-09-29",
+          "gameId": 2026020004,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "VAN",
+          "pim": 0,
+          "plusMinus": 3,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 22,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "EDM",
+          "toi": "15:09"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Alex Formenton (LW, EDM). Age 27, 75\" / 193lb, shoots L. Drafted 2017 round 2 (#47 overall) by OTT. Team EDM ranks #1 (75.0% pts), 7.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:36.278Z"
     },
     {
       "id": 8471274,
@@ -23971,6 +24324,106 @@
       "collectedAt": "2026-07-30T23:53:20.462Z"
     },
     {
+      "id": 8483695,
+      "name": "Amadeus Lombardi",
+      "team": "NJD",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 23,
+        "ageAtSeasonStart": 23,
+        "birthDate": "2003-06-05",
+        "birthCity": "Newmarket",
+        "birthCountry": "CAN",
+        "heightInches": 71,
+        "weightPounds": 180,
+        "shootsCatches": "L",
+        "sweaterNumber": 93
+      },
+      "draft": {
+        "year": 2022,
+        "round": 4,
+        "pickInRound": 16,
+        "overallPick": 113,
+        "team": "DET"
+      },
+      "teamContext": {
+        "teamAbbrev": "NJD",
+        "leagueRank": 13,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "8:03",
+        "gameWinningGoals": 0,
+        "gamesPlayed": 1,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": 0,
+        "points": 0,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 0
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-10-01",
+          "gameId": 2026020009,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "PHI",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 11,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "NJD",
+          "toi": "8:03"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Amadeus Lombardi (C, NJD). Age 23, 71\" / 180lb, shoots L. Drafted 2022 round 4 (#113 overall) by DET. Team NJD ranks #13 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:54.121Z"
+    },
+    {
       "id": 8475314,
       "name": "Anders Lee",
       "team": "UTA",
@@ -32962,6 +33415,71 @@
       "collectedAt": "2026-07-30T23:54:05.992Z"
     },
     {
+      "id": 8483679,
+      "name": "Anton Johansson",
+      "team": "DET",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 22,
+        "ageAtSeasonStart": 22,
+        "birthDate": "2004-06-10",
+        "birthCity": "Stockholm",
+        "birthCountry": "SWE",
+        "heightInches": 76,
+        "weightPounds": 203,
+        "shootsCatches": "R",
+        "sweaterNumber": 42
+      },
+      "draft": {
+        "year": 2022,
+        "round": 4,
+        "pickInRound": 8,
+        "overallPick": 105,
+        "team": "DET"
+      },
+      "teamContext": {
+        "teamAbbrev": "DET",
+        "leagueRank": 21,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Anton Johansson (D, DET). Age 22, 76\" / 203lb, shoots R. Drafted 2022 round 4 (#105 overall) by DET. Team DET ranks #21 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:52.992Z"
+    },
+    {
       "id": 8482113,
       "name": "Anton Lundell",
       "team": "FLA",
@@ -33631,6 +34149,72 @@
       "advancedSeasonLatest": {},
       "contextNarrative": "Antti Raanta (G, CAR). Age 37, 72\" / 195lb, shoots L. Undrafted or draft data unavailable. Team CAR ranks #2 (68.9% pts), 3.61 GF/G. Durability: moderate — Limited NHL starts last season (split season: 24 NHL GP + 8 AHL GP (games in another league, not absences)); platoon risk. Contract: $1.50M cap hit, term unknown (UFA). Awards: William M. Jennings Trophy. Last season (2023-24): 24 GP, key stats {\"wins\":12,\"savePct\":0.87221}",
       "collectedAt": "2026-07-30T23:53:37.731Z"
+    },
+    {
+      "id": 8481587,
+      "name": "Antti Tuomisto",
+      "team": "VGK",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 25,
+        "ageAtSeasonStart": 25,
+        "birthDate": "2001-01-20",
+        "birthCity": "Pori",
+        "birthCountry": "FIN",
+        "heightInches": 77,
+        "weightPounds": 216,
+        "shootsCatches": "R",
+        "sweaterNumber": 6
+      },
+      "draft": {
+        "year": 2019,
+        "round": 2,
+        "pickInRound": 4,
+        "overallPick": 35,
+        "team": "DET"
+      },
+      "teamContext": {
+        "teamAbbrev": "VGK",
+        "leagueRank": 8,
+        "pointsPct": 1,
+        "goalsForPerGame": 5,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 3,
+        "l10Wins": 1,
+        "l10GoalsFor": 5,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Antti Tuomisto (D, VGK). Age 25, 77\" / 216lb, shoots R. Drafted 2019 round 2 (#35 overall) by DET. Team VGK ranks #8 (100.0% pts), 5.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:40.779Z"
     },
     {
       "id": 8471685,
@@ -44216,6 +44800,72 @@
       },
       "contextNarrative": "Ben Meyers (C, SEA). Age 27, 71\" / 194lb, shoots L. Undrafted or draft data unavailable. Team history: COL → SEA (recent change affects linemates/usage). Team SEA ranks #27 (48.2% pts), 2.76 GF/G. Durability: healthy — Split season: 52 NHL GP + 11 AHL GP (games in another league, not absences). Contract: $1.00M cap hit, 2 years remaining (UFA). Last season (2025-26): 52 GP, key stats {\"goals\":7,\"assists\":8,\"points\":15,\"shots\":61}",
       "collectedAt": "2026-07-30T23:52:21.340Z"
+    },
+    {
+      "id": 8485587,
+      "name": "Benjamin Rautiainen",
+      "team": "TBL",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 21,
+        "ageAtSeasonStart": 21,
+        "birthDate": "2005-06-12",
+        "birthCity": "Tampere",
+        "birthCountry": "FIN",
+        "heightInches": 72,
+        "weightPounds": 187,
+        "shootsCatches": "L",
+        "sweaterNumber": 41
+      },
+      "draft": {
+        "year": 2025,
+        "round": 4,
+        "pickInRound": 12,
+        "overallPick": 108,
+        "team": "TBL"
+      },
+      "teamContext": {
+        "teamAbbrev": "TBL",
+        "leagueRank": 30,
+        "pointsPct": 0,
+        "goalsForPerGame": 1,
+        "goalsAgainstPerGame": 5,
+        "goalDifferential": -4,
+        "l10Wins": 0,
+        "l10GoalsFor": 1,
+        "l10GoalsAgainst": 5,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Benjamin Rautiainen (C, TBL). Age 21, 72\" / 187lb, shoots L. Drafted 2025 round 4 (#108 overall) by TBL. Team TBL ranks #30 (0.0% pts), 1.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:09.701Z"
     },
     {
       "id": 8484800,
@@ -81625,6 +82275,72 @@
       "collectedAt": "2026-07-30T23:52:53.348Z"
     },
     {
+      "id": 8484231,
+      "name": "Charlie Stramel",
+      "team": "MIN",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 21,
+        "ageAtSeasonStart": 21,
+        "birthDate": "2004-10-15",
+        "birthCity": "St. Paul",
+        "birthCountry": "USA",
+        "heightInches": 75,
+        "weightPounds": 212,
+        "shootsCatches": "R",
+        "sweaterNumber": null
+      },
+      "draft": {
+        "year": 2023,
+        "round": 1,
+        "pickInRound": 21,
+        "overallPick": 21,
+        "team": "MIN"
+      },
+      "teamContext": {
+        "teamAbbrev": "MIN",
+        "leagueRank": 10,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 1,
+        "goalDifferential": 2,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 1,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Charlie Stramel (C, MIN). Age 21, 75\" / 212lb, shoots R. Drafted 2023 round 1 (#21 overall) by MIN. Team MIN ranks #10 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:01.918Z"
+    },
+    {
       "id": 8482507,
       "name": "Chase Bradley",
       "team": "NSH",
@@ -103973,6 +104689,66 @@
       "collectedAt": "2026-07-30T23:53:41.429Z"
     },
     {
+      "id": 8485484,
+      "name": "Damien Carfagna",
+      "team": "EDM",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 23,
+        "ageAtSeasonStart": 23,
+        "birthDate": "2002-12-12",
+        "birthCity": "Wood-Ridge",
+        "birthCountry": "USA",
+        "heightInches": 71,
+        "weightPounds": 190,
+        "shootsCatches": "L",
+        "sweaterNumber": 73
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "EDM",
+        "leagueRank": 1,
+        "pointsPct": 0.75,
+        "goalsForPerGame": 7,
+        "goalsAgainstPerGame": 6.5,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 14,
+        "l10GoalsAgainst": 13,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Damien Carfagna (D, EDM). Age 23, 71\" / 190lb, shoots L. Undrafted or draft data unavailable. Team EDM ranks #1 (75.0% pts), 7.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:08.617Z"
+    },
+    {
       "id": 8476923,
       "name": "Damon Severson",
       "team": "CBJ",
@@ -119854,6 +120630,71 @@
       },
       "contextNarrative": "Dmitry Orlov (D, SJS). Age 35, 71\" / 215lb, shoots L. Drafted 2009 round 2 (#55 overall) by WSH. Team history: CAR → SJS (recent change affects linemates/usage). Team SJS ranks #24 (52.4% pts), 3.06 GF/G. Durability: healthy — Consistent availability. Contract: $6.50M cap hit, 1 year remaining (UFA). Awards: Stanley Cup. Last season (2025-26): 82 GP, key stats {\"goals\":3,\"assists\":34,\"points\":37,\"shots\":91}",
       "collectedAt": "2026-07-30T23:53:01.459Z"
+    },
+    {
+      "id": 8483711,
+      "name": "Domenic DiVincentiis",
+      "team": "WPG",
+      "position": "G",
+      "positions": [
+        "G"
+      ],
+      "isGoalie": true,
+      "isActive": true,
+      "bio": {
+        "age": 22,
+        "ageAtSeasonStart": 22,
+        "birthDate": "2004-03-04",
+        "birthCity": "Toronto",
+        "birthCountry": "CAN",
+        "heightInches": 74,
+        "weightPounds": 191,
+        "shootsCatches": "L",
+        "sweaterNumber": 50
+      },
+      "draft": {
+        "year": 2022,
+        "round": 7,
+        "pickInRound": 14,
+        "overallPick": 207,
+        "team": "WPG"
+      },
+      "teamContext": {
+        "teamAbbrev": "WPG",
+        "leagueRank": 25,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "moderate",
+        "note": "Limited starts last season; platoon or injury risk"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Domenic DiVincentiis (G, WPG). Age 22, 74\" / 191lb, shoots L. Drafted 2022 round 7 (#207 overall) by WPG. Team WPG ranks #25 (NaN% pts), 2.80 GF/G. Durability: moderate — Limited starts last season; platoon or injury risk. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:55.256Z"
     },
     {
       "id": 8481562,
@@ -141400,6 +142241,72 @@
       "collectedAt": "2026-07-30T23:52:55.858Z"
     },
     {
+      "id": 8482890,
+      "name": "Ethan Samson",
+      "team": "MTL",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 23,
+        "ageAtSeasonStart": 23,
+        "birthDate": "2003-08-23",
+        "birthCity": "Delta",
+        "birthCountry": "CAN",
+        "heightInches": 73,
+        "weightPounds": 180,
+        "shootsCatches": "R",
+        "sweaterNumber": 74
+      },
+      "draft": {
+        "year": 2021,
+        "round": 6,
+        "pickInRound": 14,
+        "overallPick": 174,
+        "team": "PHI"
+      },
+      "teamContext": {
+        "teamAbbrev": "MTL",
+        "leagueRank": 11,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Ethan Samson (D, MTL). Age 23, 73\" / 180lb, shoots R. Drafted 2021 round 6 (#174 overall) by PHI. Team MTL ranks #11 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:49.734Z"
+    },
+    {
       "id": 8483573,
       "name": "Ethen Frank",
       "team": "WSH",
@@ -153256,6 +154163,125 @@
       "collectedAt": "2026-07-30T23:53:20.861Z"
     },
     {
+      "id": 8486067,
+      "name": "Gavin McKenna",
+      "team": "TOR",
+      "position": "LW",
+      "positions": [
+        "LW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 18,
+        "ageAtSeasonStart": 18,
+        "birthDate": "2007-12-20",
+        "birthCity": "Whitehorse",
+        "birthCountry": "CAN",
+        "heightInches": 71,
+        "weightPounds": 164,
+        "shootsCatches": "L",
+        "sweaterNumber": 92
+      },
+      "draft": {
+        "year": 2026,
+        "round": 1,
+        "pickInRound": 1,
+        "overallPick": 1,
+        "team": "TOR"
+      },
+      "teamContext": {
+        "teamAbbrev": "TOR",
+        "leagueRank": 15,
+        "pointsPct": 0.5,
+        "goalsForPerGame": 2,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 0,
+        "l10Wins": 1,
+        "l10GoalsFor": 4,
+        "l10GoalsAgainst": 4,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "15:26",
+        "gameWinningGoals": 0,
+        "gamesPlayed": 2,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": -2,
+        "points": 0,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 2
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-09-30",
+          "gameId": 2026020008,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "NYI",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 16,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "TOR",
+          "toi": "15:32"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2026-09-29",
+          "gameId": 2026020002,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "MTL",
+          "pim": 0,
+          "plusMinus": -2,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "TOR",
+          "toi": "15:19"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Gavin McKenna (LW, TOR). Age 18, 71\" / 164lb, shoots L. Drafted 2026 round 1 (#1 overall) by TOR. Team TOR ranks #15 (50.0% pts), 2.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:13.030Z"
+    },
+    {
       "id": 8483567,
       "name": "Georgii Merkulov",
       "team": "COL",
@@ -161818,6 +162844,174 @@
       "collectedAt": "2026-07-30T23:54:03.710Z"
     },
     {
+      "id": 8484125,
+      "name": "Hunter McKown",
+      "team": "MTL",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2002-08-18",
+        "birthCity": "San Jose",
+        "birthCountry": "USA",
+        "heightInches": 73,
+        "weightPounds": 192,
+        "shootsCatches": "R",
+        "sweaterNumber": 41
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "MTL",
+        "leagueRank": 11,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 2,
+        "avgToi": "12:14",
+        "faceoffWinningPctg": 0.5517,
+        "gameWinningGoals": 0,
+        "gamesPlayed": 12,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 8,
+        "plusMinus": -4,
+        "points": 2,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 13
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2023-04-14",
+          "gameId": 2022020547,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "BUF",
+          "pim": 2,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "CBJ",
+          "toi": "17:24"
+        },
+        {
+          "assists": 1,
+          "gameDate": "2023-04-13",
+          "gameId": 2022021303,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "PIT",
+          "pim": 0,
+          "plusMinus": 1,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 21,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "CBJ",
+          "toi": "17:20"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-11",
+          "gameId": 2022021287,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "PHI",
+          "pim": 0,
+          "plusMinus": 1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 15,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "CBJ",
+          "toi": "11:44"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-08",
+          "gameId": 2022021263,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "NYR",
+          "pim": 2,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 17,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "CBJ",
+          "toi": "12:25"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-06",
+          "gameId": 2022021243,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "NJD",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 19,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "CBJ",
+          "toi": "11:44"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Hunter McKown (C, MTL). Age 24, 73\" / 192lb, shoots R. Undrafted or draft data unavailable. Team MTL ranks #11 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:57.563Z"
+    },
+    {
       "id": 8482411,
       "name": "Hunter Shepard",
       "team": "OTT",
@@ -170085,6 +171279,107 @@
       "collectedAt": "2026-07-30T23:53:11.530Z"
     },
     {
+      "id": 8486103,
+      "name": "Ivar Stenberg",
+      "team": "SJS",
+      "position": "LW",
+      "positions": [
+        "LW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 19,
+        "ageAtSeasonStart": 19,
+        "birthDate": "2007-09-30",
+        "birthCity": "Gothenburg",
+        "birthCountry": "SWE",
+        "heightInches": 71,
+        "weightPounds": 185,
+        "shootsCatches": "L",
+        "sweaterNumber": 41
+      },
+      "draft": {
+        "year": 2026,
+        "round": 1,
+        "pickInRound": 2,
+        "overallPick": 2,
+        "team": "SJS"
+      },
+      "teamContext": {
+        "teamAbbrev": "SJS",
+        "leagueRank": 12,
+        "pointsPct": 1,
+        "goalsForPerGame": 4,
+        "goalsAgainstPerGame": 3,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 4,
+        "l10GoalsAgainst": 3,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "13:35",
+        "faceoffWinningPctg": 1,
+        "gameWinningGoals": 0,
+        "gamesPlayed": 1,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": 0,
+        "points": 0,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 0
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-10-01",
+          "gameId": 2026020016,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "FLA",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 16,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "SJS",
+          "toi": "13:35"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Ivar Stenberg (LW, SJS). Age 19, 71\" / 185lb, shoots L. Drafted 2026 round 1 (#2 overall) by SJS. Team SJS ranks #12 (100.0% pts), 4.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:14.139Z"
+    },
+    {
       "id": 8482655,
       "name": "J.J. Moser",
       "team": "TBL",
@@ -175506,6 +176801,179 @@
       },
       "contextNarrative": "Jack Quinn (RW, BUF). Age 24, 73\" / 185lb, shoots R. Drafted 2020 round 1 (#8 overall) by BUF. Team BUF ranks #4 (66.5% pts), 3.51 GF/G. Durability: moderate — Missed ~0 games last season. Contract: $3.38M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 82 GP, key stats {\"goals\":20,\"assists\":31,\"points\":51,\"shots\":191}",
       "collectedAt": "2026-07-30T23:53:21.108Z"
+    },
+    {
+      "id": 8480056,
+      "name": "Jack Rathbone",
+      "team": "BUF",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 27,
+        "ageAtSeasonStart": 27,
+        "birthDate": "1999-05-20",
+        "birthCity": "Boston",
+        "birthCountry": "USA",
+        "heightInches": 71,
+        "weightPounds": 192,
+        "shootsCatches": "L",
+        "sweaterNumber": 3
+      },
+      "draft": {
+        "year": 2017,
+        "round": 4,
+        "pickInRound": 2,
+        "overallPick": 95,
+        "team": "VAN"
+      },
+      "teamContext": {
+        "teamAbbrev": "BUF",
+        "leagueRank": 28,
+        "pointsPct": 0,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 6,
+        "goalDifferential": -3,
+        "l10Wins": 0,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 6,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 3,
+        "avgToi": "14:28",
+        "gameWinningGoals": 0,
+        "gamesPlayed": 28,
+        "goals": 2,
+        "otGoals": 0,
+        "pim": 4,
+        "plusMinus": -5,
+        "points": 5,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 1,
+        "shootingPctg": 0.0512,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 39
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2023-04-04",
+          "gameId": 2022021238,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "SEA",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 22,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "VAN",
+          "toi": "15:27"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-02",
+          "gameId": 2022021225,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "LAK",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 21,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "VAN",
+          "toi": "15:35"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-31",
+          "gameId": 2022021202,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "CGY",
+          "pim": 0,
+          "plusMinus": 2,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "VAN",
+          "toi": "9:41"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-26",
+          "gameId": 2022021168,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "CHI",
+          "pim": 2,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "VAN",
+          "toi": "14:06"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-25",
+          "gameId": 2022021161,
+          "gameTypeId": 2,
+          "goals": 1,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "DAL",
+          "pim": 0,
+          "plusMinus": 1,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 14,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "VAN",
+          "toi": "9:14"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Jack Rathbone (D, BUF). Age 27, 71\" / 192lb, shoots L. Drafted 2017 round 4 (#95 overall) by VAN. Team BUF ranks #28 (0.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:38.475Z"
     },
     {
       "id": 8478458,
@@ -186741,6 +188209,72 @@
       },
       "contextNarrative": "Jake Neighbours (LW, STL). Age 24, 72\" / 201lb, shoots L. Drafted 2020 round 1 (#26 overall) by STL. Team STL ranks #22 (52.4% pts), 2.82 GF/G. Durability: moderate — Missed ~13 games last season. Contract: $3.75M cap hit, 1 year remaining (RFA (Arb)). Last season (2025-26): 69 GP, key stats {\"goals\":15,\"assists\":21,\"points\":36,\"shots\":86}",
       "collectedAt": "2026-07-30T23:52:54.964Z"
+    },
+    {
+      "id": 8485383,
+      "name": "Jake O'Brien",
+      "team": "SEA",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 19,
+        "ageAtSeasonStart": 19,
+        "birthDate": "2007-06-16",
+        "birthCity": "Toronto",
+        "birthCountry": "CAN",
+        "heightInches": 74,
+        "weightPounds": 174,
+        "shootsCatches": "R",
+        "sweaterNumber": 44
+      },
+      "draft": {
+        "year": 2025,
+        "round": 1,
+        "pickInRound": 8,
+        "overallPick": 8,
+        "team": "SEA"
+      },
+      "teamContext": {
+        "teamAbbrev": "SEA",
+        "leagueRank": 5,
+        "pointsPct": 1,
+        "goalsForPerGame": 6,
+        "goalsAgainstPerGame": 1,
+        "goalDifferential": 5,
+        "l10Wins": 1,
+        "l10GoalsFor": 6,
+        "l10GoalsAgainst": 1,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Jake O'Brien (C, SEA). Age 19, 74\" / 174lb, shoots R. Drafted 2025 round 1 (#8 overall) by SEA. Team SEA ranks #5 (100.0% pts), 6.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:07.375Z"
     },
     {
       "id": 8479979,
@@ -199116,6 +200650,65 @@
       },
       "contextNarrative": "Jason Zucker (LW, BUF). Age 34, 71\" / 198lb, shoots L. Drafted 2010 round 2 (#59 overall) by MIN. Team history: ARI → BUF (recent change affects linemates/usage). Team BUF ranks #4 (66.5% pts), 3.51 GF/G. Durability: injury_prone — Missed ~20 games last season; durability concern. Contract: $4.75M cap hit, 1 year remaining (UFA). Awards: King Clancy Memorial Trophy. Last season (2025-26): 62 GP, key stats {\"goals\":24,\"assists\":21,\"points\":45,\"shots\":128}",
       "collectedAt": "2026-07-30T23:52:26.799Z"
+    },
+    {
+      "id": 8485691,
+      "name": "Jaxon Fuder",
+      "team": "DAL",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 20,
+        "ageAtSeasonStart": 20,
+        "birthDate": "2006-04-02",
+        "birthCity": "Grande Prarie",
+        "birthCountry": "CAN",
+        "heightInches": 72,
+        "weightPounds": 175,
+        "shootsCatches": "L",
+        "sweaterNumber": 48
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "DAL",
+        "leagueRank": 20,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Jaxon Fuder (C, DAL). Age 20, 72\" / 175lb, shoots L. Undrafted or draft data unavailable. Team DAL ranks #20 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:10.875Z"
     },
     {
       "id": 8483530,
@@ -221924,6 +223517,72 @@
       "collectedAt": "2026-07-30T23:54:00.637Z"
     },
     {
+      "id": 8484154,
+      "name": "Jonathan Castagna",
+      "team": "CGY",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 21,
+        "ageAtSeasonStart": 21,
+        "birthDate": "2005-04-20",
+        "birthCity": "Toronto",
+        "birthCountry": "CAN",
+        "heightInches": 73,
+        "weightPounds": 183,
+        "shootsCatches": "L",
+        "sweaterNumber": 38
+      },
+      "draft": {
+        "year": 2023,
+        "round": 3,
+        "pickInRound": 6,
+        "overallPick": 70,
+        "team": "ARI"
+      },
+      "teamContext": {
+        "teamAbbrev": "CGY",
+        "leagueRank": 31,
+        "pointsPct": 0,
+        "goalsForPerGame": 1,
+        "goalsAgainstPerGame": 6,
+        "goalDifferential": -5,
+        "l10Wins": 0,
+        "l10GoalsFor": 1,
+        "l10GoalsAgainst": 6,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Jonathan Castagna (C, CGY). Age 21, 73\" / 183lb, shoots L. Drafted 2023 round 3 (#70 overall) by ARI. Team CGY ranks #31 (0.0% pts), 1.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:59.535Z"
+    },
+    {
       "id": 8477494,
       "name": "Jonathan Drouin",
       "team": "NYI",
@@ -242839,6 +244498,66 @@
       "collectedAt": "2026-07-30T23:53:23.915Z"
     },
     {
+      "id": 8483878,
+      "name": "Kai Schwindt",
+      "team": "FLA",
+      "position": "LW",
+      "positions": [
+        "LW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 22,
+        "ageAtSeasonStart": 22,
+        "birthDate": "2003-12-07",
+        "birthCity": "Kitchener",
+        "birthCountry": "CAN",
+        "heightInches": 78,
+        "weightPounds": 197,
+        "shootsCatches": "L",
+        "sweaterNumber": 97
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "FLA",
+        "leagueRank": 2,
+        "pointsPct": 0.75,
+        "goalsForPerGame": 2,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 0,
+        "l10Wins": 1,
+        "l10GoalsFor": 4,
+        "l10GoalsAgainst": 4,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Kai Schwindt (LW, FLA). Age 22, 78\" / 197lb, shoots L. Undrafted or draft data unavailable. Team FLA ranks #2 (75.0% pts), 2.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:56.399Z"
+    },
+    {
       "id": 8485251,
       "name": "Kai Uchacz",
       "team": "VGK",
@@ -255543,6 +257262,66 @@
       },
       "contextNarrative": "Kyle Connor (LW, WPG). Age 29, 73\" / 183lb, shoots L. Drafted 2015 round 1 (#17 overall) by WPG. Team WPG ranks #26 (50.0% pts), 2.82 GF/G. Durability: healthy — Consistent availability. Contract: $12.00M cap hit, 8 years remaining (UFA). Awards: Lady Byng Memorial Trophy. Last season (2025-26): 82 GP, key stats {\"goals\":39,\"assists\":53,\"points\":92,\"shots\":274}",
       "collectedAt": "2026-07-30T23:53:18.524Z"
+    },
+    {
+      "id": 8480356,
+      "name": "Kyle Keyser",
+      "team": "SJS",
+      "position": "G",
+      "positions": [
+        "G"
+      ],
+      "isGoalie": true,
+      "isActive": true,
+      "bio": {
+        "age": 27,
+        "ageAtSeasonStart": 27,
+        "birthDate": "1999-03-08",
+        "birthCity": "Coral Springs",
+        "birthCountry": "USA",
+        "heightInches": 74,
+        "weightPounds": 186,
+        "shootsCatches": "L",
+        "sweaterNumber": 36
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "SJS",
+        "leagueRank": 12,
+        "pointsPct": 1,
+        "goalsForPerGame": 4,
+        "goalsAgainstPerGame": 3,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 4,
+        "l10GoalsAgainst": 3,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "moderate",
+        "note": "Limited starts last season; platoon or injury risk"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Kyle Keyser (G, SJS). Age 27, 74\" / 186lb, shoots L. Undrafted or draft data unavailable. Team SJS ranks #12 (100.0% pts), 4.00 GF/G. Durability: moderate — Limited starts last season; platoon or injury risk. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:39.582Z"
     },
     {
       "id": 8481237,
@@ -271866,6 +273645,65 @@
       },
       "contextNarrative": "Luke Hughes (D, NJD). Age 22, 74\" / 198lb, shoots L. Drafted 2021 round 1 (#4 overall) by NJD. Team NJD ranks #21 (53.0% pts), 2.80 GF/G. Durability: moderate — Missed ~14 games last season. Contract: $9.00M cap hit, 6 years remaining (UFA). Last season (2025-26): 68 GP, key stats {\"goals\":6,\"assists\":29,\"points\":35,\"shots\":150}",
       "collectedAt": "2026-07-30T23:52:37.389Z"
+    },
+    {
+      "id": 8484822,
+      "name": "Luke Krys",
+      "team": "DAL",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 26,
+        "ageAtSeasonStart": 26,
+        "birthDate": "2000-09-27",
+        "birthCity": "Ridgefield",
+        "birthCountry": "USA",
+        "heightInches": 73,
+        "weightPounds": 188,
+        "shootsCatches": "R",
+        "sweaterNumber": 36
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "DAL",
+        "leagueRank": 20,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Luke Krys (D, DAL). Age 26, 73\" / 188lb, shoots R. Undrafted or draft data unavailable. Team DAL ranks #20 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:05.327Z"
     },
     {
       "id": 8479316,
@@ -301141,6 +302979,72 @@
       "collectedAt": "2026-07-30T23:53:08.685Z"
     },
     {
+      "id": 8483666,
+      "name": "Mattias Havelid",
+      "team": "SJS",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 22,
+        "ageAtSeasonStart": 22,
+        "birthDate": "2004-01-01",
+        "birthCity": "Taby",
+        "birthCountry": "SWE",
+        "heightInches": 71,
+        "weightPounds": 170,
+        "shootsCatches": "R",
+        "sweaterNumber": 22
+      },
+      "draft": {
+        "year": 2022,
+        "round": 2,
+        "pickInRound": 13,
+        "overallPick": 45,
+        "team": "SJS"
+      },
+      "teamContext": {
+        "teamAbbrev": "SJS",
+        "leagueRank": 12,
+        "pointsPct": 1,
+        "goalsForPerGame": 4,
+        "goalsAgainstPerGame": 3,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 4,
+        "l10GoalsAgainst": 3,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Mattias Havelid (D, SJS). Age 22, 71\" / 170lb, shoots R. Drafted 2022 round 2 (#45 overall) by SJS. Team SJS ranks #12 (100.0% pts), 4.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:51.988Z"
+    },
+    {
       "id": 8477406,
       "name": "Mattias Janmark",
       "team": "EDM",
@@ -328064,6 +329968,126 @@
       },
       "contextNarrative": "Nicholas Robertson (LW, PIT). Age 24, 69\" / 180lb, shoots L. Drafted 2019 round 2 (#53 overall) by TOR. Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: healthy — Consistent availability. Contract: $3.25M cap hit, 0 years remaining (RFA (Arb)). Last season (2025-26): 78 GP, key stats {\"goals\":16,\"assists\":16,\"points\":32,\"shots\":127}",
       "collectedAt": "2026-07-30T23:53:13.084Z"
+    },
+    {
+      "id": 8481720,
+      "name": "Nick Abruzzese",
+      "team": "TBL",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 27,
+        "ageAtSeasonStart": 27,
+        "birthDate": "1999-06-04",
+        "birthCity": "Slate Hill",
+        "birthCountry": "USA",
+        "heightInches": 70,
+        "weightPounds": 177,
+        "shootsCatches": "L",
+        "sweaterNumber": 80
+      },
+      "draft": {
+        "year": 2019,
+        "round": 4,
+        "pickInRound": 31,
+        "overallPick": 124,
+        "team": "TOR"
+      },
+      "teamContext": {
+        "teamAbbrev": "TBL",
+        "leagueRank": 30,
+        "pointsPct": 0,
+        "goalsForPerGame": 1,
+        "goalsAgainstPerGame": 5,
+        "goalDifferential": -4,
+        "l10Wins": 0,
+        "l10GoalsFor": 1,
+        "l10GoalsAgainst": 5,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 2,
+        "avgToi": "9:59",
+        "faceoffWinningPctg": 0.2857,
+        "gameWinningGoals": 1,
+        "gamesPlayed": 11,
+        "goals": 1,
+        "otGoals": 0,
+        "pim": 2,
+        "plusMinus": 0,
+        "points": 3,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 1,
+        "shootingPctg": 0.1,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 10
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 1,
+          "gameDate": "2023-04-04",
+          "gameId": 2022021230,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "CBJ",
+          "pim": 0,
+          "plusMinus": 1,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 14,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "TOR",
+          "toi": "8:51"
+        },
+        {
+          "assists": 1,
+          "gameDate": "2023-04-02",
+          "gameId": 2022021222,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "DET",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 16,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "TOR",
+          "toi": "9:06"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Nick Abruzzese (C, TBL). Age 27, 70\" / 177lb, shoots L. Drafted 2019 round 4 (#124 overall) by TOR. Team TBL ranks #30 (0.0% pts), 1.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:41.986Z"
     },
     {
       "id": 8475760,
@@ -355751,6 +357775,120 @@
       "collectedAt": "2026-07-30T23:53:42.413Z"
     },
     {
+      "id": 8486161,
+      "name": "Owen Michaels",
+      "team": "EDM",
+      "position": "RW",
+      "positions": [
+        "RW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2002-05-01",
+        "birthCity": "Detroit",
+        "birthCountry": "USA",
+        "heightInches": 73,
+        "weightPounds": 184,
+        "shootsCatches": "R",
+        "sweaterNumber": 43
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "EDM",
+        "leagueRank": 1,
+        "pointsPct": 0.75,
+        "goalsForPerGame": 7,
+        "goalsAgainstPerGame": 6.5,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 14,
+        "l10GoalsAgainst": 13,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "10:53",
+        "faceoffWinningPctg": 0.5,
+        "gameWinningGoals": 0,
+        "gamesPlayed": 2,
+        "goals": 1,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": -1,
+        "points": 1,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 1,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 1
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-10-01",
+          "gameId": 2026020015,
+          "gameTypeId": 2,
+          "goals": 1,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "VAN",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 26,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "EDM",
+          "toi": "13:23"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2026-09-29",
+          "gameId": 2026020004,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "VAN",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 16,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "EDM",
+          "toi": "8:22"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Owen Michaels (RW, EDM). Age 24, 73\" / 184lb, shoots R. Undrafted or draft data unavailable. Team EDM ranks #1 (75.0% pts), 7.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:15.246Z"
+    },
+    {
       "id": 8483503,
       "name": "Owen Pickering",
       "team": "PIT",
@@ -370217,6 +372355,72 @@
       "collectedAt": "2026-07-30T23:53:31.790Z"
     },
     {
+      "id": 8484200,
+      "name": "Quentin Musty",
+      "team": "SJS",
+      "position": "LW",
+      "positions": [
+        "LW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 21,
+        "ageAtSeasonStart": 21,
+        "birthDate": "2005-07-06",
+        "birthCity": "Hamburg",
+        "birthCountry": "USA",
+        "heightInches": 74,
+        "weightPounds": 205,
+        "shootsCatches": "L",
+        "sweaterNumber": 13
+      },
+      "draft": {
+        "year": 2023,
+        "round": 1,
+        "pickInRound": 26,
+        "overallPick": 26,
+        "team": "SJS"
+      },
+      "teamContext": {
+        "teamAbbrev": "SJS",
+        "leagueRank": 12,
+        "pointsPct": 1,
+        "goalsForPerGame": 4,
+        "goalsAgainstPerGame": 3,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 4,
+        "l10GoalsAgainst": 3,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Quentin Musty (LW, SJS). Age 21, 74\" / 205lb, shoots L. Drafted 2023 round 1 (#26 overall) by SJS. Team SJS ranks #12 (100.0% pts), 4.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:00.836Z"
+    },
+    {
       "id": 8480800,
       "name": "Quinn Hughes",
       "team": "MIN",
@@ -376755,6 +378959,107 @@
       "collectedAt": "2026-07-30T23:53:11.032Z"
     },
     {
+      "id": 8480054,
+      "name": "Reilly Walsh",
+      "team": "MTL",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 27,
+        "ageAtSeasonStart": 27,
+        "birthDate": "1999-04-21",
+        "birthCity": "Framingham",
+        "birthCountry": "USA",
+        "heightInches": 71,
+        "weightPounds": 192,
+        "shootsCatches": "R",
+        "sweaterNumber": 44
+      },
+      "draft": {
+        "year": 2017,
+        "round": 3,
+        "pickInRound": 19,
+        "overallPick": 81,
+        "team": "NJD"
+      },
+      "teamContext": {
+        "teamAbbrev": "MTL",
+        "leagueRank": 11,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 1,
+        "avgToi": "14:23",
+        "gameWinningGoals": 0,
+        "gamesPlayed": 1,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": 0,
+        "points": 1,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 2
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 1,
+          "gameDate": "2022-04-26",
+          "gameId": 2021021274,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "OTT",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 20,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "NJD",
+          "toi": "14:23"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Reilly Walsh (D, MTL). Age 27, 71\" / 192lb, shoots R. Drafted 2017 round 3 (#81 overall) by NJD. Team MTL ranks #11 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:37.375Z"
+    },
+    {
       "id": 8479514,
       "name": "Rem Pitlick",
       "team": "CHI",
@@ -377045,6 +379350,72 @@
       },
       "contextNarrative": "Rem Pitlick (C, CHI). Age 29, 71\" / 186lb, shoots L. Drafted 2016 round 3 (#76 overall) by NSH. Team CHI ranks #31 (43.9% pts), 2.60 GF/G. Durability: healthy — Split season: 9 NHL GP + 59 AHL GP (games in another league, not absences). Contract: $1.10M cap hit, term unknown (UFA). Last season (2023-24): 9 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":13}",
       "collectedAt": "2026-07-30T23:53:08.085Z"
+    },
+    {
+      "id": 8482465,
+      "name": "Rémi Poirier",
+      "team": "NJD",
+      "position": "G",
+      "positions": [
+        "G"
+      ],
+      "isGoalie": true,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2001-10-06",
+        "birthCity": "Farnham",
+        "birthCountry": "CAN",
+        "heightInches": 75,
+        "weightPounds": 211,
+        "shootsCatches": "L",
+        "sweaterNumber": 1
+      },
+      "draft": {
+        "year": 2020,
+        "round": 6,
+        "pickInRound": 30,
+        "overallPick": 185,
+        "team": "DAL"
+      },
+      "teamContext": {
+        "teamAbbrev": "NJD",
+        "leagueRank": 13,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "moderate",
+        "note": "Limited starts last season; platoon or injury risk"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Rémi Poirier (G, NJD). Age 24, 75\" / 211lb, shoots L. Drafted 2020 round 6 (#185 overall) by DAL. Team NJD ranks #13 (100.0% pts), 3.00 GF/G. Durability: moderate — Limited starts last season; platoon or injury risk. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:46.250Z"
     },
     {
       "id": 8479587,
@@ -382173,6 +384544,126 @@
       },
       "contextNarrative": "Roman Josi (D, NSH). Age 36, 73\" / 201lb, shoots L. Drafted 2008 round 2 (#38 overall) by NSH. Team NSH ranks #23 (52.4% pts), 3.01 GF/G. Durability: moderate — Missed ~14 games last season. Contract: $9.06M cap hit, 2 years remaining (UFA). Awards: James Norris Memorial Trophy. Last season (2025-26): 68 GP, key stats {\"goals\":13,\"assists\":42,\"points\":55,\"shots\":181}",
       "collectedAt": "2026-07-30T23:53:09.035Z"
+    },
+    {
+      "id": 8484390,
+      "name": "Roman Kantserov",
+      "team": "CHI",
+      "position": "RW",
+      "positions": [
+        "RW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 22,
+        "ageAtSeasonStart": 22,
+        "birthDate": "2004-09-20",
+        "birthCity": "Magnitogorsk",
+        "birthCountry": "RUS",
+        "heightInches": 69,
+        "weightPounds": 176,
+        "shootsCatches": "L",
+        "sweaterNumber": 80
+      },
+      "draft": {
+        "year": 2023,
+        "round": 2,
+        "pickInRound": 12,
+        "overallPick": 44,
+        "team": "CHI"
+      },
+      "teamContext": {
+        "teamAbbrev": "CHI",
+        "leagueRank": 32,
+        "pointsPct": 0,
+        "goalsForPerGame": 1,
+        "goalsAgainstPerGame": 5.5,
+        "goalDifferential": -9,
+        "l10Wins": 0,
+        "l10GoalsFor": 2,
+        "l10GoalsAgainst": 11,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "16:52",
+        "faceoffWinningPctg": 0.375,
+        "gameWinningGoals": 0,
+        "gamesPlayed": 2,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": -3,
+        "points": 0,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 1
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-10-01",
+          "gameId": 2026020013,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "UTA",
+          "pim": 0,
+          "plusMinus": -2,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 21,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "CHI",
+          "toi": "16:36"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2026-09-29",
+          "gameId": 2026020005,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "VGK",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 19,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "CHI",
+          "toi": "17:07"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Roman Kantserov (RW, CHI). Age 22, 69\" / 176lb, shoots L. Drafted 2023 round 2 (#44 overall) by CHI. Team CHI ranks #32 (0.0% pts), 1.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:03.182Z"
     },
     {
       "id": 8482187,
@@ -403525,6 +406016,72 @@
       "collectedAt": "2026-07-30T23:53:06.749Z"
     },
     {
+      "id": 8482682,
+      "name": "Sasha Pastujov",
+      "team": "MTL",
+      "position": "RW",
+      "positions": [
+        "RW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 23,
+        "ageAtSeasonStart": 23,
+        "birthDate": "2003-07-15",
+        "birthCity": "Bradenton",
+        "birthCountry": "USA",
+        "heightInches": 72,
+        "weightPounds": 186,
+        "shootsCatches": "L",
+        "sweaterNumber": 40
+      },
+      "draft": {
+        "year": 2021,
+        "round": 3,
+        "pickInRound": 2,
+        "overallPick": 66,
+        "team": "ANA"
+      },
+      "teamContext": {
+        "teamAbbrev": "MTL",
+        "leagueRank": 11,
+        "pointsPct": 1,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 2,
+        "goalDifferential": 1,
+        "l10Wins": 1,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 2,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Sasha Pastujov (RW, MTL). Age 23, 72\" / 186lb, shoots L. Drafted 2021 round 3 (#66 overall) by ANA. Team MTL ranks #11 (100.0% pts), 3.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:47.381Z"
+    },
+    {
       "id": 8476872,
       "name": "Scott Laughton",
       "team": "LAK",
@@ -406983,6 +409540,178 @@
       },
       "contextNarrative": "Sean Durzi (D, NYR). Age 27, 73\" / 196lb, shoots R. Drafted 2018 round 2 (#52 overall) by TOR. Team history: ARI → UTA (recent change affects linemates/usage). Team UTA ranks #15 (56.1% pts), 3.27 GF/G. Durability: injury_prone — Missed ~22 games last season; durability concern. Contract: $6.00M cap hit, 2 years remaining (UFA). Last season (2025-26): 60 GP, key stats {\"goals\":5,\"assists\":22,\"points\":27,\"shots\":84}",
       "collectedAt": "2026-07-30T23:52:11.360Z"
+    },
+    {
+      "id": 8482081,
+      "name": "Sean Farrell",
+      "team": "ANA",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2001-11-02",
+        "birthCity": "Milford",
+        "birthCountry": "USA",
+        "heightInches": 69,
+        "weightPounds": 183,
+        "shootsCatches": "L",
+        "sweaterNumber": 59
+      },
+      "draft": {
+        "year": 2020,
+        "round": 4,
+        "pickInRound": 31,
+        "overallPick": 124,
+        "team": "MTL"
+      },
+      "teamContext": {
+        "teamAbbrev": "ANA",
+        "leagueRank": 19,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "13:52",
+        "gameWinningGoals": 0,
+        "gamesPlayed": 6,
+        "goals": 1,
+        "otGoals": 0,
+        "pim": 0,
+        "plusMinus": -2,
+        "points": 1,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0.125,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 8
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2023-04-13",
+          "gameId": 2022021298,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "BOS",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 14,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "MTL",
+          "toi": "11:55"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-12",
+          "gameId": 2022021295,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "R",
+          "opponentAbbrev": "NYI",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 3,
+          "teamAbbrev": "MTL",
+          "toi": "13:42"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-04",
+          "gameId": 2022021231,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "DET",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 0,
+          "teamAbbrev": "MTL",
+          "toi": "15:34"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-04-01",
+          "gameId": 2022021207,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "CAR",
+          "pim": 0,
+          "plusMinus": -1,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 17,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "MTL",
+          "toi": "14:15"
+        },
+        {
+          "assists": 0,
+          "gameDate": "2023-03-30",
+          "gameId": 2022021190,
+          "gameTypeId": 2,
+          "goals": 1,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "FLA",
+          "pim": 0,
+          "plusMinus": 0,
+          "points": 1,
+          "powerPlayGoals": 0,
+          "shifts": 18,
+          "shorthandedGoals": 0,
+          "shots": 1,
+          "teamAbbrev": "MTL",
+          "toi": "14:45"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Sean Farrell (C, ANA). Age 24, 69\" / 183lb, shoots L. Drafted 2020 round 4 (#124 overall) by MTL. Team ANA ranks #19 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:42.963Z"
     },
     {
       "id": 8476374,
@@ -419786,6 +422515,71 @@
       "collectedAt": "2026-07-30T23:53:15.693Z"
     },
     {
+      "id": 8484859,
+      "name": "Stian Solberg",
+      "team": "ANA",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 20,
+        "ageAtSeasonStart": 20,
+        "birthDate": "2005-12-29",
+        "birthCity": "Oslo",
+        "birthCountry": "NOR",
+        "heightInches": 74,
+        "weightPounds": 204,
+        "shootsCatches": "L",
+        "sweaterNumber": 50
+      },
+      "draft": {
+        "year": 2024,
+        "round": 1,
+        "pickInRound": 23,
+        "overallPick": 23,
+        "team": "ANA"
+      },
+      "teamContext": {
+        "teamAbbrev": "ANA",
+        "leagueRank": 19,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Stian Solberg (D, ANA). Age 20, 74\" / 204lb, shoots L. Drafted 2024 round 1 (#23 overall) by ANA. Team ANA ranks #19 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:06.290Z"
+    },
+    {
       "id": 8479973,
       "name": "Stuart Skinner",
       "team": "WPG",
@@ -420001,6 +422795,102 @@
       "advancedSeasonLatest": {},
       "contextNarrative": "Stuart Skinner (G, WPG). Age 27, 76\" / 215lb, shoots L. Drafted 2017 round 3 (#78 overall) by EDM. Team EDM ranks #14 (56.7% pts), 3.44 GF/G. Durability: injury_prone — Missed ~32 games last season; durability concern. Contract: $3.75M cap hit, 2 years remaining (UFA). Last season (2025-26): 50 GP, key stats {\"wins\":23,\"savePct\":0.88792}",
       "collectedAt": "2026-07-30T23:53:33.349Z"
+    },
+    {
+      "id": 8486171,
+      "name": "T.J. Hughes",
+      "team": "COL",
+      "position": "RW",
+      "positions": [
+        "RW"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2001-11-09",
+        "birthCity": "Hamilton",
+        "birthCountry": "CAN",
+        "heightInches": 72,
+        "weightPounds": 185,
+        "shootsCatches": "L",
+        "sweaterNumber": 13
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "COL",
+        "leagueRank": 6,
+        "pointsPct": 1,
+        "goalsForPerGame": 8,
+        "goalsAgainstPerGame": 4,
+        "goalDifferential": 4,
+        "l10Wins": 1,
+        "l10GoalsFor": 8,
+        "l10GoalsAgainst": 4,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {
+        "assists": 0,
+        "avgToi": "13:35",
+        "faceoffWinningPctg": 0.6,
+        "gameWinningGoals": 0,
+        "gamesPlayed": 1,
+        "goals": 0,
+        "otGoals": 0,
+        "pim": 2,
+        "plusMinus": -3,
+        "points": 0,
+        "powerPlayGoals": 0,
+        "powerPlayPoints": 0,
+        "shootingPctg": 0,
+        "shorthandedGoals": 0,
+        "shorthandedPoints": 0,
+        "shots": 2
+      },
+      "awards": [],
+      "last5Games": [
+        {
+          "assists": 0,
+          "gameDate": "2026-09-30",
+          "gameId": 2026020007,
+          "gameTypeId": 2,
+          "goals": 0,
+          "homeRoadFlag": "H",
+          "opponentAbbrev": "LAK",
+          "pim": 2,
+          "plusMinus": -3,
+          "points": 0,
+          "powerPlayGoals": 0,
+          "shifts": 15,
+          "shorthandedGoals": 0,
+          "shots": 2,
+          "teamAbbrev": "COL",
+          "toi": "13:35"
+        }
+      ],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "T.J. Hughes (RW, COL). Age 24, 72\" / 185lb, shoots L. Undrafted or draft data unavailable. Team COL ranks #6 (100.0% pts), 8.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:16.340Z"
     },
     {
       "id": 8471698,
@@ -431643,6 +434533,72 @@
       "collectedAt": "2026-07-30T23:53:09.789Z"
     },
     {
+      "id": 8483475,
+      "name": "Topias Leinonen",
+      "team": "BUF",
+      "position": "G",
+      "positions": [
+        "G"
+      ],
+      "isGoalie": true,
+      "isActive": true,
+      "bio": {
+        "age": 22,
+        "ageAtSeasonStart": 22,
+        "birthDate": "2004-01-25",
+        "birthCity": "Jyvaskyla",
+        "birthCountry": "FIN",
+        "heightInches": 78,
+        "weightPounds": 234,
+        "shootsCatches": "L",
+        "sweaterNumber": 50
+      },
+      "draft": {
+        "year": 2022,
+        "round": 2,
+        "pickInRound": 9,
+        "overallPick": 41,
+        "team": "BUF"
+      },
+      "teamContext": {
+        "teamAbbrev": "BUF",
+        "leagueRank": 28,
+        "pointsPct": 0,
+        "goalsForPerGame": 3,
+        "goalsAgainstPerGame": 6,
+        "goalDifferential": -3,
+        "l10Wins": 0,
+        "l10GoalsFor": 3,
+        "l10GoalsAgainst": 6,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "moderate",
+        "note": "Limited starts last season; platoon or injury risk"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Topias Leinonen (G, BUF). Age 22, 78\" / 234lb, shoots L. Drafted 2022 round 2 (#41 overall) by BUF. Team BUF ranks #28 (0.0% pts), 3.00 GF/G. Durability: moderate — Limited starts last season; platoon or injury risk. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:50.877Z"
+    },
+    {
       "id": 8482873,
       "name": "Topias Vilen",
       "team": "NJD",
@@ -437257,6 +440213,71 @@
       },
       "contextNarrative": "Trey Fix-Wolansky (RW, VAN). Age 27, 66\" / 193lb, shoots R. Drafted 2018 round 7 (#204 overall) by CBJ. Team CBJ ranks #17 (56.1% pts), 3.09 GF/G. Durability: healthy — Split season: 11 NHL GP + 58 AHL GP (games in another league, not absences). Contract: $0.90M cap hit, 1 year remaining (UFA). Last season (2023-24): 11 GP, key stats {\"goals\":2,\"assists\":1,\"points\":3,\"shots\":17}",
       "collectedAt": "2026-07-30T23:52:42.595Z"
+    },
+    {
+      "id": 8484146,
+      "name": "Tristan Bertucci",
+      "team": "DAL",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 21,
+        "ageAtSeasonStart": 21,
+        "birthDate": "2005-07-12",
+        "birthCity": "Woodbridge",
+        "birthCountry": "CAN",
+        "heightInches": 74,
+        "weightPounds": 191,
+        "shootsCatches": "L",
+        "sweaterNumber": 42
+      },
+      "draft": {
+        "year": 2023,
+        "round": 2,
+        "pickInRound": 29,
+        "overallPick": 61,
+        "team": "DAL"
+      },
+      "teamContext": {
+        "teamAbbrev": "DAL",
+        "leagueRank": 20,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Tristan Bertucci (D, DAL). Age 21, 74\" / 191lb, shoots L. Drafted 2023 round 2 (#61 overall) by DAL. Team DAL ranks #20 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:58.622Z"
     },
     {
       "id": 8482698,
@@ -445739,6 +448760,71 @@
       "collectedAt": "2026-07-30T23:53:10.415Z"
     },
     {
+      "id": 8482459,
+      "name": "Tyrel Bauer",
+      "team": "WPG",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2002-03-23",
+        "birthCity": "Calgary",
+        "birthCountry": "CAN",
+        "heightInches": 75,
+        "weightPounds": 207,
+        "shootsCatches": "R",
+        "sweaterNumber": 77
+      },
+      "draft": {
+        "year": 2020,
+        "round": 6,
+        "pickInRound": 9,
+        "overallPick": 164,
+        "team": "WPG"
+      },
+      "teamContext": {
+        "teamAbbrev": "WPG",
+        "leagueRank": 25,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Tyrel Bauer (D, WPG). Age 24, 75\" / 207lb, shoots R. Drafted 2020 round 6 (#164 overall) by WPG. Team WPG ranks #25 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:45.072Z"
+    },
+    {
       "id": 8475197,
       "name": "Tyson Barrie",
       "team": "CGY",
@@ -452708,6 +455794,71 @@
       "collectedAt": "2026-07-30T23:53:07.187Z"
     },
     {
+      "id": 8486025,
+      "name": "Viggo Björck",
+      "team": "WPG",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 18,
+        "ageAtSeasonStart": 18,
+        "birthDate": "2008-03-12",
+        "birthCity": "Stockholm",
+        "birthCountry": "SWE",
+        "heightInches": 69,
+        "weightPounds": 177,
+        "shootsCatches": "R",
+        "sweaterNumber": 61
+      },
+      "draft": {
+        "year": 2026,
+        "round": 1,
+        "pickInRound": 8,
+        "overallPick": 8,
+        "team": "WPG"
+      },
+      "teamContext": {
+        "teamAbbrev": "WPG",
+        "leagueRank": 25,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Viggo Björck (C, WPG). Age 18, 69\" / 177lb, shoots R. Drafted 2026 round 1 (#8 overall) by WPG. Team WPG ranks #25 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:11.869Z"
+    },
+    {
       "id": 8486166,
       "name": "Viking Gustafsson Nyberg",
       "team": "MIN",
@@ -456958,6 +460109,66 @@
       },
       "contextNarrative": "Vinnie Hinostroza (C, COL). Age 32, 70\" / 183lb, shoots R. Drafted 2012 round 6 (#169 overall) by CHI. Team history: PIT → NSH → MIN (recent change affects linemates/usage). Team MIN ranks #7 (63.4% pts), 3.32 GF/G. Durability: moderate — Missed ~17 games last season. Contract: $0.88M cap hit, 2 years remaining (UFA). Last season (2025-26): 65 GP, key stats {\"goals\":6,\"assists\":12,\"points\":18,\"shots\":65}",
       "collectedAt": "2026-07-30T23:52:16.212Z"
+    },
+    {
+      "id": 8486189,
+      "name": "Vitali Pinchuk",
+      "team": "NSH",
+      "position": "C",
+      "positions": [
+        "C"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2002-01-11",
+        "birthCity": "Zhlobin",
+        "birthCountry": "BLR",
+        "heightInches": 75,
+        "weightPounds": 203,
+        "shootsCatches": "L",
+        "sweaterNumber": 51
+      },
+      "draft": null,
+      "teamContext": {
+        "teamAbbrev": "NSH",
+        "leagueRank": 27,
+        "pointsPct": 0,
+        "goalsForPerGame": 1,
+        "goalsAgainstPerGame": 3,
+        "goalDifferential": -2,
+        "l10Wins": 0,
+        "l10GoalsFor": 1,
+        "l10GoalsAgainst": 3,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "Vitali Pinchuk (C, NSH). Age 24, 75\" / 203lb, shoots L. Undrafted or draft data unavailable. Team NSH ranks #27 (0.0% pts), 1.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:24:17.590Z"
     },
     {
       "id": 8477970,
@@ -464040,6 +467251,72 @@
       "collectedAt": "2026-07-30T23:54:00.359Z"
     },
     {
+      "id": 8482806,
+      "name": "William Trudeau",
+      "team": "NSH",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 23,
+        "ageAtSeasonStart": 23,
+        "birthDate": "2002-10-11",
+        "birthCity": "Varennes",
+        "birthCountry": "CAN",
+        "heightInches": 71,
+        "weightPounds": 200,
+        "shootsCatches": "L",
+        "sweaterNumber": 85
+      },
+      "draft": {
+        "year": 2021,
+        "round": 4,
+        "pickInRound": 17,
+        "overallPick": 113,
+        "team": "MTL"
+      },
+      "teamContext": {
+        "teamAbbrev": "NSH",
+        "leagueRank": 27,
+        "pointsPct": 0,
+        "goalsForPerGame": 1,
+        "goalsAgainstPerGame": 3,
+        "goalDifferential": -2,
+        "l10Wins": 0,
+        "l10GoalsFor": 1,
+        "l10GoalsAgainst": 3,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "William Trudeau (D, NSH). Age 23, 71\" / 200lb, shoots L. Drafted 2021 round 4 (#113 overall) by MTL. Team NSH ranks #27 (0.0% pts), 1.00 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:48.482Z"
+    },
+    {
       "id": 8482174,
       "name": "William Villeneuve",
       "team": "TOR",
@@ -464293,6 +467570,71 @@
       },
       "contextNarrative": "William Villeneuve (D, TOR). Age 24, 74\" / 183lb, shoots R. Drafted 2020 round 4 (#122 overall) by TOR. Team TOR ranks #28 (47.6% pts), 3.09 GF/G. Durability: healthy — Split season: 3 NHL GP + 61 AHL GP (games in another league, not absences). Contract: $0.88M cap hit, 2 years remaining (RFA (Arb)). Last season (2025-26): 3 GP, key stats {\"goals\":0,\"assists\":0,\"points\":0,\"shots\":2}",
       "collectedAt": "2026-07-30T23:54:04.815Z"
+    },
+    {
+      "id": 8482171,
+      "name": "William Wallinder",
+      "team": "DET",
+      "position": "D",
+      "positions": [
+        "D"
+      ],
+      "isGoalie": false,
+      "isActive": true,
+      "bio": {
+        "age": 24,
+        "ageAtSeasonStart": 24,
+        "birthDate": "2002-07-28",
+        "birthCity": "Solleftea",
+        "birthCountry": "SWE",
+        "heightInches": 77,
+        "weightPounds": 210,
+        "shootsCatches": "L",
+        "sweaterNumber": 54
+      },
+      "draft": {
+        "year": 2020,
+        "round": 2,
+        "pickInRound": 1,
+        "overallPick": 32,
+        "team": "DET"
+      },
+      "teamContext": {
+        "teamAbbrev": "DET",
+        "leagueRank": 21,
+        "goalsForPerGame": 2.8,
+        "goalsAgainstPerGame": 2.8,
+        "goalDifferential": 0,
+        "l10Wins": 0,
+        "l10GoalsFor": 0,
+        "l10GoalsAgainst": 0,
+        "playoffClinch": false
+      },
+      "teamHistory": [],
+      "otherLeagues": [],
+      "injury": {
+        "gamesPlayedLastSeason": 0,
+        "gamesMissedLastSeason": 82,
+        "avgGamesPlayedLast3": 0,
+        "durabilityScore": 0,
+        "trend": "injury_prone",
+        "note": "Missed ~82 games last season; durability concern"
+      },
+      "contract": {
+        "capHitUsd": null,
+        "aavUsd": null,
+        "yearsRemaining": null,
+        "expiryStatus": null,
+        "contractType": null,
+        "source": "unavailable",
+        "summary": "Contract data unavailable"
+      },
+      "careerTotals": {},
+      "awards": [],
+      "last5Games": [],
+      "advancedSeasonLatest": {},
+      "contextNarrative": "William Wallinder (D, DET). Age 24, 77\" / 210lb, shoots L. Drafted 2020 round 2 (#32 overall) by DET. Team DET ranks #21 (NaN% pts), 2.80 GF/G. Durability: injury_prone — Missed ~82 games last season; durability concern. Contract: Contract data unavailable",
+      "collectedAt": "2026-10-02T20:23:43.956Z"
     },
     {
       "id": 8484380,
@@ -475225,5 +478567,50 @@
       "contextNarrative": "Zemgus Girgensons (C, TBL). Age 32, 75\" / 197lb, shoots L. Drafted 2012 round 1 (#14 overall) by BUF. Team history: BUF → TBL (recent change affects linemates/usage). Team TBL ranks #5 (64.6% pts), 3.54 GF/G. Durability: healthy — Consistent availability. Contract: $0.88M cap hit, 1 year remaining (UFA). Last season (2025-26): 74 GP, key stats {\"goals\":9,\"assists\":11,\"points\":20,\"shots\":89}",
       "collectedAt": "2026-07-30T23:52:15.700Z"
     }
-  ]
+  ],
+  "toppedUp": {
+    "at": "2026-10-02T20:24:17.590Z",
+    "rostersFetchedAt": "2026-09-28T01:14:30.919Z",
+    "ids": [
+      8475968,
+      8480029,
+      8480054,
+      8480056,
+      8480356,
+      8481587,
+      8481720,
+      8482081,
+      8482171,
+      8482459,
+      8482465,
+      8482682,
+      8482806,
+      8482890,
+      8483475,
+      8483666,
+      8483679,
+      8483695,
+      8483711,
+      8483878,
+      8484125,
+      8484146,
+      8484154,
+      8484200,
+      8484231,
+      8484390,
+      8484790,
+      8484822,
+      8484859,
+      8485383,
+      8485484,
+      8485587,
+      8485691,
+      8486025,
+      8486067,
+      8486103,
+      8486161,
+      8486171,
+      8486189
+    ]
+  }
 }

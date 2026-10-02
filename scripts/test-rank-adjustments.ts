@@ -168,9 +168,14 @@ const rows = (n: number) => Array.from({ length: n }, (_, i) => ({ id: i + 1 }))
 //    at his published VOR.
 {
   const board = JSON.parse(readFileSync(leagueBoardPath("light-the-lamp"), "utf8")) as DraftBoard;
-  // The SV% shrink the method note explains is published with the board.
+  // The SV% shrink the method note explains is published with the board
+  // (factor 1 when the projections already sit within the skill ceiling:
+  // they shrink save% out of sample since 2026-10, src/lib/ml/goalie-v2.ts).
   const sv = board.goalieSavePctShrink;
-  assert.ok(sv.factor > 1 && sv.spread > sv.skillSd && sv.mean > 0.89 && sv.mean < 0.92, "SV% shrink published");
+  assert.ok(
+    sv.factor >= 1 && (sv.factor > 1 ? sv.spread > sv.skillSd : sv.spread <= sv.skillSd) && sv.mean > 0.89 && sv.mean < 0.92,
+    "SV% shrink published",
+  );
   const byVor = [...board.players].sort((a, b) => b.vor - a.vor || a.rank - b.rank);
   assert.deepEqual(ids(byVor), ids(board.players), "VOR sort = rank order");
   for (const p of board.players.filter((x) => x.adjusted)) {

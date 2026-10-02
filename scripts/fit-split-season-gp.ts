@@ -21,8 +21,8 @@
  *  - "pipeline": the current pipeline, emulated: its v2 model GP is a ridge on
  *    the GP signals the v2 heads see (market GP, lag-1, EWMA, game-log
  *    availability, age, draft, TOI, career) fitted on the committed board's
- *    modelGamesPlayed, then the committed isotonic curve (players.json
- *    gpCalibration); skaters without a 10-game season take the contextual
+ *    modelGamesPlayed, then the committed out-of-sample GP curve of his group
+ *    (src/data/ml/gp-calibration.json); skaters without a 10-game season take the contextual
  *    path's 10 → curve;
  *  - "lag1": his NHL games of the season (the injury reading).
  *
@@ -32,7 +32,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { SPLIT_SEASON_MIN_OTHER_GAMES } from "../src/lib/split-season";
-import { predictIsotonic, type IsotonicPoint } from "../src/lib/gp-calibration";
+import { gpGroupOf, loadGpCalibration, predictIsotonic, type IsotonicPoint } from "../src/lib/gp-calibration";
 import { loadLeagueSeasonsSync } from "../src/lib/league-seasons";
 import {
   durabilityKey,
@@ -227,7 +227,10 @@ function fitModel(kind: SplitKind, rows: Sample[], anchor: number): LinearGpMode
 const players = JSON.parse(
   readFileSync(join(process.cwd(), "src", "data", "players.json"), "utf8"),
 ) as ProjectionsDataset;
-const curve: IsotonicPoint[] = (players.gpCalibration?.skaterCurve ?? []) as IsotonicPoint[];
+// The committed out-of-sample GP calibration, per young / veteran × F / D.
+const gpCal = loadGpCalibration();
+const curveFor = (young: boolean, isD: boolean): IsotonicPoint[] =>
+  gpCal?.curves[gpGroupOf(young, isD)] ?? [];
 
 interface GpSignals {
   eligible: number;
@@ -351,13 +354,14 @@ for (const p of players.players) {
 }
 const emuCoef = fitRidge(emuX, emuY, emuY.map(() => 1));
 const emuPredict = (row: number[]) => emuCoef[0]! + row.reduce((s, v, j) => s + v * emuCoef[j + 1]!, 0);
-const published = (model: number) =>
+const published = (model: number, curve: IsotonicPoint[]) =>
   Math.max(1, Math.min(80, Math.round(curve.length ? predictIsotonic(curve, model) : model)));
 
 function pipelineGp(id: number, x: SplitSeasonInput): number {
   const sig = gpSignals(id, lastNhlOf(x));
-  if (sig.eligible === 0) return published(10);
-  return published(Math.max(10, Math.min(82, emuPredict(emulatorRow(sig, x)))));
+  const curve = curveFor(sig.eligible <= 2, x.isDefense);
+  if (sig.eligible === 0) return published(10, curve);
+  return published(Math.max(10, Math.min(82, emuPredict(emulatorRow(sig, x)))), curve);
 }
 
 // ---------------------------------------------------------------------------

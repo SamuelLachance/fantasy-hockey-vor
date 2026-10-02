@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { PROJECTION_SEASON_ID } from "../src/lib/nhl-api";
+import { NO_AFFINE_CALIBRATION } from "../src/lib/ml/stack";
 
 const PATH = join(process.cwd(), "src", "data", "ml", "v2-bundle.json");
 
@@ -16,6 +17,7 @@ if (!existsSync(PATH)) {
 const bundle = JSON.parse(readFileSync(PATH, "utf8")) as {
   trainedAt?: string;
   datasetBuiltAt?: string;
+  datasetSha1?: string;
   projectionSeasonId?: number;
   marketTraining?: unknown;
   skater?: {
@@ -23,6 +25,7 @@ const bundle = JSON.parse(readFileSync(PATH, "utf8")) as {
     ridge?: unknown;
     gpMeta?: unknown;
     rateMetas?: unknown;
+    rateCalibrators?: Record<string, unknown>;
     gbdtGp?: unknown;
     ridgeGp?: unknown;
   };
@@ -76,6 +79,13 @@ if (!bundle.skater?.gbdtGp || !bundle.skater?.ridgeGp) {
 }
 if (!bundle.skater?.gpMeta) errors.push("skater gpMeta missing");
 if (!bundle.skater?.rateMetas) errors.push("skater rateMetas missing");
+const affine = Object.keys(bundle.skater?.rateCalibrators ?? {}).filter((t) => NO_AFFINE_CALIBRATION.includes(t));
+if (affine.length > 0) {
+  errors.push(`affine rate calibrator shipped on ${affine.join(", ")} (it doubles the stars' under-projection)`);
+}
+if (!bundle.datasetSha1) {
+  errors.push("datasetSha1 missing (retrain with npm run ml:train-v2: generate needs the training dataset's identity)");
+}
 
 if (!bundle.goalie) errors.push("goalie section missing");
 else {

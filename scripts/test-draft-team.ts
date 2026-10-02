@@ -85,8 +85,20 @@ assert.equal(startingSeatCount(board), 14);
 {
   const util = board.replacement.Util!;
   const fourD = board.players.filter((p) => p.pos.includes("D")).slice(0, 4);
-  const weakD = board.players.find((p) => p.pos.includes("D") && p.vor > 0 && effectiveValue(p) < util)!;
-  assert.ok(weakD, "a positive-VOR D below the Util replacement exists");
+  // Positive-VOR D below the Util level: from the board when it has two,
+  // otherwise two rows built inside that band from a real D (the band is
+  // narrow when the D and Util replacements are close).
+  const dRepl = board.replacement.D!;
+  assert.ok(dRepl < util, "the D replacement sits below the Util one");
+  const boardWeak = board.players.filter((p) => p.pos.includes("D") && p.vor > 0 && effectiveValue(p) < util);
+  const template = board.players.find((p) => p.pos.includes("D") && !p.adjusted)!;
+  const inBand = (k: number) => {
+    const value = Math.round((util - ((util - dRepl) * (k + 1)) / 3) * 100) / 100;
+    return { ...template, id: -(k + 1), name: `D test ${k + 1}`, value, vor: Math.round((value - dRepl) * 100) / 100 };
+  };
+  const weakDs = boardWeak.length >= 2 ? boardWeak : [inBand(0), inBand(1)];
+  const weakD = weakDs[0]!;
+  assert.ok(weakD.vor > 0 && effectiveValue(weakD) < util, "a positive-VOR D below the Util replacement exists");
   const roster = [...fourD, ...board.players.filter((p) => p.pos.includes("C")).slice(0, 2)];
   const before = lineupScore(board, buildLineup(board, roster));
   const lineup = buildLineup(board, [...roster, weakD]);
@@ -98,7 +110,6 @@ assert.equal(startingSeatCount(board), 14);
   // seat, the other is benched (Util stays with waivers).
   // (Two D whose published values differ: board values are rounded to 0.01,
   // and a tie is broken by id, not by the unrounded VOR.)
-  const weakDs = board.players.filter((p) => p.pos.includes("D") && p.vor > 0 && effectiveValue(p) < util);
   const hi = weakDs[0];
   const lo = weakDs.find((p) => effectiveValue(p) < effectiveValue(hi!));
   const strongD = board.players.filter((p) => p.pos.includes("D")).slice(0, 3);

@@ -738,12 +738,29 @@ export function projectGoalieSavePctDistinct(
     if (gp > 0) saPg = shots / gp;
   }
   const skillTilt = Math.max(-0.015, Math.min(0.015, gsax60 / Math.max(saPg, 1)));
-  // Expand career residual so table gaps are obvious (.920 vs .892).
+  // Career residual expanded so the goalies rank apart (.920 vs .892)…
   const delta = career - prior;
   const teamDelta = 0.25 * (teamXsv - prior);
-  const blended = prior + 1.55 * delta + teamDelta + 0.55 * skillTilt;
-  return Math.round(Math.max(0.875, Math.min(0.935, blended)) * 10000) / 10000;
+  const blended = Math.max(0.875, Math.min(0.935, prior + 1.55 * delta + teamDelta + 0.55 * skillTilt));
+  // …then shrunk toward the league's expected level: as published (spread
+  // 1) its out-of-sample R² was −0.62 (2021-26, goalies with 20+ games,
+  // shot-weighted), worse than the league level alone (0.09).
+  const league0 = trendLevel(league.svPct, seasonId, prior);
+  return Math.round((league0 + SAVE_PCT_SPREAD * (blended - league0)) * 10000) / 10000;
 }
+
+/**
+ * Share of a goalie's distinct save% gap to the league kept in the
+ * projection, chosen out of sample: shot-weighted R² on 2021-26 (goalies
+ * with 20+ games) −0.62 at 1, 0.12 at 0.3, 0.136 at 0.2, 0.137 at 0.15,
+ * 0.133 at 0.1, 0.09 for the league level alone (2018-21 prefers 0.1);
+ * ranking goalies within a season (what a fantasy value uses), the best
+ * spread is 0.185 (R² 0.056 against 0.054 at 0.15 and −1.03 at 1).
+ * The save% repeats so little from a season to the next that most of a
+ * goalie's past gap is noise; the spread (SD ≈ 0.004) now sits under the
+ * skill ceiling of src/lib/leagues/goalie-shrink.ts (0.0051).
+ */
+export const SAVE_PCT_SPREAD = 0.2;
 
 /** EB-shrunk GSAx/60 (decay 0.8, prior 2000 minutes at 0). */
 function shrunkGsax60(

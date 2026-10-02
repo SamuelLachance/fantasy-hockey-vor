@@ -12,7 +12,8 @@ import { attachDraftEdge } from "../src/lib/draft-edge";
 import {
   calibratedGoalieGp,
   decideSkaterGp,
-  fitSkaterGpCurve,
+  gpCurveFor,
+  loadGpCalibration,
   modelGp,
   projectionSeasonIdOf,
   splitSeasonRuleFromFiles,
@@ -68,8 +69,16 @@ const league = {
 };
 const season = league.season;
 
-const { curve, pairCount } = fitSkaterGpCurve(data.players, profilesById, season);
-console.log(`Skater isotonic curve: ${curve.length} blocks from ${pairCount} pairs`);
+const gpCal = loadGpCalibration();
+if (!gpCal) throw new Error("src/data/ml/gp-calibration.json missing (npm run gp:fit)");
+console.log(`Skater GP calibration: ${gpCal.source}`);
+const curveOf = (p: (typeof data.players)[number]) =>
+  p.projectionMethod === "ml"
+    ? gpCurveFor(gpCal, {
+        modelSegment: p.modelSegment ?? details[String(p.id)]?.modelSegment,
+        primaryPosition: p.primaryPosition ?? profilesById.get(p.id)?.position ?? p.position,
+      })
+    : [];
 
 const goalieGp = calibratedGoalieGp(data.players, profilesById, season);
 
@@ -92,7 +101,7 @@ const calibrated = data.players.map((p) => {
     p.primaryPosition ?? profilesById.get(p.id)?.position ?? p.position;
   const decision = p.isGoalie
     ? null
-    : decideSkaterGp(p, profilesById.get(p.id), curve, splitRule);
+    : decideSkaterGp(p, profilesById.get(p.id), curveOf(p), splitRule);
   const newGp = decision ? decision.gamesPlayed : (goalieGp.get(p.id) ?? p.gamesPlayed);
   // A previous run's rule marker is recomputed, never carried over.
   const { availability: _previous, ...rest } = p;
@@ -239,13 +248,12 @@ const out: ProjectionsDataset = {
   league,
   generatedAt: new Date().toISOString(),
   gpCalibration: {
-    version: 1,
+    version: 2,
     appliedAt: new Date().toISOString(),
-    skaterCurve: curve.map((c) => ({
-      x: Math.round(c.x * 100) / 100,
-      y: Math.round(c.y * 100) / 100,
-    })),
-    pairCount,
+    fittedAt: gpCal.fittedAt,
+    source: gpCal.source,
+    skaterCurves: gpCal.curves,
+    pairCount: gpCal.pairCount,
   },
   ...(rates
     ? {
