@@ -1,5 +1,5 @@
 {
- "version": "slap-v4-2026-10-02",
+ "version": "slap-v5-2026-10-02",
  "source": "Slapshot Fantasy League (Fantrax glxjunc7mtxdqi8x): rules summary pasted by the user and the public fxea getLeagueInfo (2026-09-27); owner answers: every player carries over (no cutdown), any player may sit in the minors, salary cap 105 M$ in 2026-27 on the 20 active + 3 reserve (minors and IR free), real NHL cap hits, growth unknown -> NHL trajectory. Rulebook (SFHL, pasted 2026-10-02) and owner answers: league contracts 1-7 seasons on the real NHL cap hit of the signing season, raises relative to that base, one extension, then UFA whatever the age (no RFA); cap 105 M$ and floor 70 M$ fixed.",
  "league": {
   "id": "glxjunc7mtxdqi8x",
@@ -8,15 +8,15 @@
   "userTeam": "lz1ka65mmuh16mtf"
  },
  "scoring": {
-  "source": "getLeagueInfo scoringSystem: skaters G 3.5, A 2.5, PPP 0.5, SHG 1, SOG 0.25; Hit (Default 0.15) and SB (Default 0.3) carry a 0 override on every roster slot (C, LW, RW, D, G) and flex positions score by slot, so both score 0. Goalies W 3, SV 0.25, GA -1, SHO 5, A 3. players.json has no SHG and no goalie GA: GA = saves (1 - sv%) / sv%; SHG = goals x the career share of short-handed goals in player-profiles.json (F 1,881 / 66,393 = 0.0283, D 239 / 11,659 = 0.0205); goalie assists 424 / 22,959 GP = 0.0185 per game.",
+  "source": "getLeagueInfo scoringSystem: skaters G 3.5, A 2.5, PPP 0.5, SHG 1, SOG 0.25; Hit 0.15 and SB 0.3 in every slot: the complete scoringCategories view publishes a 0 override on each roster slot, but Fantrax does not apply it (scoring period 1 team totals, 28 teams: median gap 0.00 paying Hit / SB everywhere vs +6.90 with the zeros; Seattle 39.20 and Utah 18.40 to the centime). Goalies W 3, SV 0.25, GA -1, SHO 5, A 3. players.json has no SHG and no goalie GA: GA = saves (1 - sv%) / sv%; SHG = goals x the career share of short-handed goals in player-profiles.json (F 1,881 / 66,393 = 0.0283, D 239 / 11,659 = 0.0205); goalie assists 424 / 22,959 GP = 0.0185 per game.",
   "skater": {
    "G": 3.5,
    "A": 2.5,
    "PPP": 0.5,
    "SHG": 1,
    "SOG": 0.25,
-   "Hit": 0,
-   "SB": 0
+   "Hit": 0.15,
+   "SB": 0.3
   },
   "goalie": {
    "W": 3,

@@ -11,14 +11,15 @@
  * among the still-available pool players is r gets an "effective rank" ρ
  * with log-normal noise:
  *
- *   ln(ρ + c) = ln(r + c) + τ·Z,   Z ~ Normal(0, 1),  τ = 0.35,  c = 5
+ *   ln(ρ + c) = ln(r + c) + τ·Z,   Z ~ Normal(0, 1),  τ = 0.6,  c = 15
  *
- * so drafts stray from ADP by about 35% of the rank (the ADP is Fantrax-wide
- * and mostly redraft; this is a dynasty draft), never much less than two
- * spots at the top (c), and ρ can never go below 0: a player 300 deep has
- * no real chance of going in the next few picks. (Additive noise ε with
- * σ = 0.35·r gave every deep player the same ~0.2% floor, P(ε < −r), which
- * added up to about one phantom player gone per pick window.)
+ * so drafts stray from ADP by a lot (the ADP is Fantrax-wide and mostly
+ * redraft; these are dynasty drafts): τ and c are fitted on the two real
+ * drafts (see `ADP_LOG_SIGMA`). ρ can never go below 0: a player 300 deep
+ * has little chance of going in the next few picks. (Additive noise ε with
+ * σ proportional to r gave every deep player the same floor, P(ε < −r),
+ * which added up to phantom players gone in every pick window.) ADPs of
+ * `ADP_SATURATED` and up are Fantrax's ceiling, not an order: unranked.
  *
  * The N pool players taken are the N smallest effective ranks. Rather than
  * the exact order statistics, each player is gone when ln(ρ + c) falls
@@ -191,10 +192,35 @@ export function draftValue(p: DraftPoolPlayer, need: NeedWeights): number {
 
 // ------------------------------------------------------------ availability
 
-/** ADP noise τ: standard deviation of ln(effective rank + c). */
-export const ADP_LOG_SIGMA = 0.35;
-/** Rank offset c: keeps the noise near two spots at the top of the board. */
-export const ADP_RANK_OFFSET = 5;
+/**
+ * ADP noise τ: standard deviation of ln(effective rank + c). Fitted with c
+ * and `ADP_SATURATED` by replaying `draftOutlook` after every pick of the two
+ * real drafts (Captains 224 picks, Slapshot 1,216: scripts/test-fantrax-vona.ts
+ * keeps the replay; `npx tsx scripts/draft-calibration.ts` re-runs the grid).
+ * The first guess, τ 0.35 / c 5 with every ADP ranked, called players gone
+ * who stayed: predicted 0-10 % still there, 65 % (Slapshot) and 62 %
+ * (Captains) actually were. Brier / log loss, Captains then Slapshot:
+ *   τ 0.35, c 5, all ranked:    0.0810 / 0.405   0.1815 / 1.004
+ *   τ 1.0,  c 25, all ranked:   0.0593 / 0.211   0.0934 / 0.328
+ *   τ 0.6,  c 15, ADP < 290:    0.0600 / 0.225   0.0737 / 0.288  (shipped)
+ */
+export const ADP_LOG_SIGMA = 0.6;
+/** Rank offset c: the noise is wide in absolute picks even at the top of the board. */
+export const ADP_RANK_OFFSET = 15;
+/**
+ * Fantrax ADPs from here up are saturated: 617 of 969 sit at 290-294 (players
+ * almost never drafted in Fantrax leagues get about the same number), so their
+ * order is noise. They are treated as unranked (tied just past the deepest
+ * ranked player), like a player without ADP.
+ */
+export const ADP_SATURATED = 290;
+
+/** The availability model's noise (see the header); the fitted constants by default. */
+export interface AdpNoise {
+  sigma: number;
+  offset: number;
+}
+export const ADP_NOISE: AdpNoise = { sigma: ADP_LOG_SIGMA, offset: ADP_RANK_OFFSET };
 /** Ranked pool size `availability` assumes when none is given. */
 export const DEFAULT_RANKED_POOL = 400;
 
@@ -240,7 +266,7 @@ export function binomialPmf(m: number, s: number): number[] {
   return out;
 }
 
-const logRank = (rank: number) => Math.log(rank + ADP_RANK_OFFSET);
+const logRank = (rank: number, noise: AdpNoise = ADP_NOISE) => Math.log(rank + noise.offset);
 
 /**
  * The available pool as ADP ranks (unranked players already at R + 1), with
@@ -251,15 +277,17 @@ export interface RankPool {
   levels: ReadonlyArray<readonly [number, number]>;
   size: number;
   cut: number[];
+  noise: AdpNoise;
 }
 
-export function rankPool(ranks: readonly number[]): RankPool {
+export function rankPool(ranks: readonly number[], noise: AdpNoise = ADP_NOISE): RankPool {
   const counts = new Map<number, number>();
   for (const r of ranks) counts.set(r, (counts.get(r) ?? 0) + 1);
   return {
-    levels: [...counts].map(([r, k]) => [logRank(r), k] as const),
+    levels: [...counts].map(([r, k]) => [logRank(r, noise), k] as const),
     size: ranks.length,
     cut: [Number.NEGATIVE_INFINITY],
+    noise,
   };
 }
 
@@ -271,15 +299,16 @@ export function rankPool(ranks: readonly number[]): RankPool {
  */
 export function goneCutoffs(pool: RankPool, maxN: number): readonly number[] {
   const { levels, size, cut } = pool;
+  const sigma = pool.noise.sigma;
   if (cut.length > maxN) return cut;
   const expectedGone = (u: number) => {
     let e = 0;
-    for (const [l, k] of levels) e += k * normalCdf((u - l) / ADP_LOG_SIGMA);
+    for (const [l, k] of levels) e += k * normalCdf((u - l) / sigma);
     return e;
   };
   const ls = levels.map(([l]) => l);
-  const bottom = Math.min(...ls) - 12 * ADP_LOG_SIGMA;
-  const top = Math.max(...ls) + 12 * ADP_LOG_SIGMA;
+  const bottom = Math.min(...ls) - 12 * sigma;
+  const top = Math.max(...ls) + 12 * sigma;
   for (let n = cut.length; n <= maxN; n++) {
     if (n >= size) {
       cut.push(Number.POSITIVE_INFINITY);
@@ -300,20 +329,20 @@ export function goneCutoffs(pool: RankPool, maxN: number): readonly number[] {
 }
 
 /** Availability of a player at ADP rank `rank` (see the header). */
-function availabilityFrom(rank: number, pmf: readonly number[], cut: readonly number[]): number {
+function availabilityFrom(rank: number, pmf: readonly number[], cut: readonly number[], noise: AdpNoise = ADP_NOISE): number {
   const m = pmf.length - 1;
   if (m <= 0 || pmf[0] === 1) return 1;
-  const l = logRank(rank);
+  const l = logRank(rank, noise);
   let gone = 0;
   for (let n = 1; n <= m; n++) {
     const w = pmf[n]!;
     if (w < 1e-15) continue;
-    gone += w * normalCdf((cut[n]! - l) / ADP_LOG_SIGMA);
+    gone += w * normalCdf((cut[n]! - l) / noise.sigma);
   }
   return Math.min(1, Math.max(0, 1 - gone));
 }
 
-const defaultPools = new Map<number, RankPool>();
+const defaultPools = new Map<string, RankPool>();
 
 /**
  * Probability a pool player is still available after `m` picks by other
@@ -321,15 +350,22 @@ const defaultPools = new Map<number, RankPool>();
  * with ADP. `rank` = his ADP rank (1 = first) among them; null without ADP
  * (ranked just past the deepest, R + 1).
  */
-export function availability(rank: number | null, m: number, s: number, ranked = DEFAULT_RANKED_POOL): number {
+export function availability(
+  rank: number | null,
+  m: number,
+  s: number,
+  ranked = DEFAULT_RANKED_POOL,
+  noise: AdpNoise = ADP_NOISE,
+): number {
   const share = Math.min(1, Math.max(0, s));
   const pmf = binomialPmf(m, share);
-  let pool = defaultPools.get(ranked);
+  const key = `${ranked}|${noise.sigma}|${noise.offset}`;
+  let pool = defaultPools.get(key);
   if (!pool) {
-    pool = rankPool(Array.from({ length: ranked }, (_, i) => i + 1));
-    defaultPools.set(ranked, pool);
+    pool = rankPool(Array.from({ length: ranked }, (_, i) => i + 1), noise);
+    defaultPools.set(key, pool);
   }
-  return availabilityFrom(rank ?? ranked + 1, pmf, goneCutoffs(pool, pmf.length - 1));
+  return availabilityFrom(rank ?? ranked + 1, pmf, goneCutoffs(pool, pmf.length - 1), noise);
 }
 
 export interface BestCandidate {
@@ -389,6 +425,8 @@ export interface DraftOutlookOptions {
    * by default, so every existing caller keeps its four cards.
    */
   groups?: readonly DraftGroup[];
+  /** The availability model's noise and ADP saturation (the fitted constants by default). */
+  adp?: Partial<AdpNoise> & { saturated?: number };
 }
 
 export function draftOutlook(
@@ -419,16 +457,18 @@ export function draftOutlook(
 
   // ADP rank among the still-available pool players who have one; the
   // unranked share the rank just past the deepest ranked player.
+  const noise: AdpNoise = { sigma: opts.adp?.sigma ?? ADP_NOISE.sigma, offset: opts.adp?.offset ?? ADP_NOISE.offset };
+  const saturated = opts.adp?.saturated ?? ADP_SATURATED;
   const ranked = available
-    .filter((p) => Number.isFinite(p.adp))
+    .filter((p) => Number.isFinite(p.adp) && p.adp < saturated)
     .sort((a, b) => a.adp - b.adp || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const rankOf = new Map(ranked.map((p, i) => [p.id, i + 1] as const));
   const rank = (id: string) => rankOf.get(id) ?? ranked.length + 1;
-  const availRanks = rankPool(available.map((p) => rank(p.id)));
+  const availRanks = rankPool(available.map((p) => rank(p.id)), noise);
   const availabilityAt = (m: number) => {
     const pmf = binomialPmf(m, share);
     const cut = goneCutoffs(availRanks, pmf.length - 1);
-    return new Map(available.map((p) => [p.id, availabilityFrom(rank(p.id), pmf, cut)] as const));
+    return new Map(available.map((p) => [p.id, availabilityFrom(rank(p.id), pmf, cut, noise)] as const));
   };
   const atNext = availabilityAt(picksBefore);
   const atFollowing = picksBeforeFollowing === null ? null : availabilityAt(picksBeforeFollowing);

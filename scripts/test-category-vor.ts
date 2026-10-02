@@ -8,7 +8,9 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import {
   applyCategoryVor,
+  CATEGORY_OVERDISPERSION,
   categoryZ,
+  GOALIE_WEIGHT_CALIBRATION,
   computeCategoryScales,
   predictability,
   smoothedShutouts,
@@ -235,7 +237,16 @@ assert.ok(
   gw.leverage.wins! > winSd / Math.sqrt(teamWins),
   "…which is above what a Poisson count would give",
 );
-assert.ok(Math.abs(gw.weight - gw.leverageRatio * gw.predictabilityRatio) < 1e-12);
+assert.ok(Math.abs(gw.weight - gw.leverageRatio * gw.predictabilityRatio * gw.calibration) < 1e-12);
+assert.equal(gw.calibration, GOALIE_WEIGHT_CALIBRATION, "the backtest-validated calibration is applied");
+// Over-dispersion: each category's noise variance is × φ², so its leverage ÷ φ.
+const poisson = applyCategoryVor(profile, pool, { r2, overdispersion: {} }).goalieWeight;
+for (const cat of ["shots", "hits", "blocks", "goals", "shutouts"] as const) {
+  assert.ok(
+    Math.abs(poisson.leverage[cat]! / gw.leverage[cat]! - CATEGORY_OVERDISPERSION[cat]!) < 1e-9,
+    `${cat}: leverage ÷ φ (${CATEGORY_OVERDISPERSION[cat]})`,
+  );
+}
 assert.ok(gw.weight > 0.2 && gw.weight < 2, `goalie weight ${gw.weight}`);
 assert.ok(gw.predictabilityRatio < 1, "goalie projections trusted less than skater ones");
 assert.equal(predictability(null), 1);
@@ -354,6 +365,68 @@ assert.deepEqual(
   real.players.slice(0, 50).map((p) => [p.id, p.vor]),
   "deterministic",
 );
+
+// ---- the SV% shrink composes SV% / GAA; it no longer sets the exchange rate
+// (CAT-2 / CAT-3). Before, the shrink constant alone moved the 2026-27 weight
+// from 0.51 (0.0023) to 0.59 (0.0051) to 0.81 (none): the leverage was read
+// off the shrunk spread while the predictability ratio discounted the same
+// weak goalie projections again.
+const realPool = data.players.map((p: LeaguePoolPlayer) => ({ ...p, position: p.primaryPosition ?? p.position }));
+const weightAt = (opts: Parameters<typeof applyCategoryVor>[2]) => applyCategoryVor(profile, realPool, { r2: realR2, ...opts }).goalieWeight.weight;
+const wTight = weightAt({ savePctSkillSd: 0.0023 });
+const wNone = weightAt({ savePctSkillSd: null });
+const wShipped = real.goalieWeight.weight;
+assert.ok(
+  Math.abs(wTight - wShipped) / wShipped < 0.03 && Math.abs(wNone - wShipped) / wShipped < 0.08,
+  `goalie weight barely moves with the shrink constant (${wTight.toFixed(3)} / ${wShipped.toFixed(3)} / ${wNone.toFixed(3)})`,
+);
+const coupled = (sd: number | null) =>
+  weightAt({ savePctSkillSd: sd, goalieLeverageOnShrunk: true, overdispersion: {}, goalieWeightCalibration: 1 });
+assert.ok(coupled(null) / coupled(0.0023) > 1.4, "…where the old coupling moved it by half (kept as a backtest option only)");
+
+// ---- φ re-measured on the committed weekly team totals (CAT-1)
+// Two-factor residual (week + team effects removed: what survives into
+// A − B), divided by the Poisson SD (binomial at the realized appearance count
+// for wins), averaged over the five seasons of the fixture.
+{
+  const fx = JSON.parse(readFileSync(join(process.cwd(), "scripts/fixtures/category-weekly-totals.json"), "utf8")) as {
+    seasons: Record<string, Record<string, number[][]>>;
+  };
+  const phi: Record<string, number[]> = {};
+  for (const series of Object.values(fx.seasons)) {
+    for (const cat of [...profile.categories.skater, "wins", "shutouts"]) {
+      const X = series[cat]!;
+      const W = X.length;
+      const T = X[0]!.length;
+      const mu = X.flat().reduce((a, b) => a + b, 0) / (W * T);
+      const teamMean = Array.from({ length: T }, (_, t) => X.reduce((s, r) => s + r[t]!, 0) / W);
+      const weekMean = X.map((r) => r.reduce((a, b) => a + b, 0) / T);
+      let ss = 0;
+      for (let w = 0; w < W; w++) for (let t = 0; t < T; t++) ss += (X[w]![t]! - teamMean[t]! - weekMean[w]! + mu) ** 2;
+      const sd = Math.sqrt(ss / ((T - 1) * (W - 1)));
+      let model = mu;
+      if (cat === "wins") {
+        const gp = series.goalieGp!.flat().reduce((a, b) => a + b, 0) / (W * T);
+        const p = mu / gp;
+        model = gp * p * (1 - p);
+      }
+      (phi[cat] ??= []).push(sd / Math.sqrt(model));
+    }
+  }
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  assert.equal(Object.values(fx.seasons).length, 5, "five seasons of weekly totals");
+  for (const cat of [...profile.categories.skater, "shutouts"] as const) {
+    const measured = avg(phi[cat]!);
+    assert.ok(
+      Math.abs(measured - CATEGORY_OVERDISPERSION[cat]!) <= 0.03,
+      `φ ${cat}: engine ${CATEGORY_OVERDISPERSION[cat]} vs measured ${measured.toFixed(3)}`,
+    );
+  }
+  // Wins: measured with the appearance count left random; the engine treats
+  // it as managed (streamed to the weekly minimum) and keeps 1.
+  const wins = avg(phi.wins!);
+  assert.ok(wins > 1.15 && wins < 1.35 && CATEGORY_OVERDISPERSION.wins === 1, `φ wins: ${wins.toFixed(3)} random, 1 managed`);
+}
 
 console.log(
   `OK: category-vor (goalie weight ${real.goalieWeight.weight.toFixed(3)}, first G #${goalieRanks[0]})`,

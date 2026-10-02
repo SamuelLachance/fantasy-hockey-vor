@@ -21,7 +21,7 @@ import {
 } from "../src/lib/fantrax/points-model";
 import { parseScoringTable } from "../src/lib/fantrax/scoring";
 import { bestFpg, seasonFp } from "../src/lib/fantrax/draft-inputs";
-import { CAPTAINS_DYNASTY, SLAPSHOT } from "../src/lib/fantrax/config";
+import { CAPTAINS_DYNASTY, fantasySeasonShare, SLAPSHOT } from "../src/lib/fantrax/config";
 import type { ValueRecord } from "../src/lib/fantrax/snapshot-types";
 
 let failed = 0;
@@ -142,8 +142,14 @@ assert(near(b2b.get("a")! + b2b.get("b")!, 1, 1e-9), "b2b share moves to the par
   assert(near(bestFpg(rec("D", 3.234, -0.829), SLAPSHOT), 2.405, 1e-3), "a D-only player with a negative D extra is valued at off + dx");
   assert(near(bestFpg(rec("LW,D", 3.234, -0.829), SLAPSHOT), 3.234, 1e-9), "a player who can also take a wing keeps the better slot");
   // Slapshot's fantasy season ends in February: season totals cover its share of the NHL games.
-  const share = SLAPSHOT.cadence.seasonShare!;
-  assert(share > 0.7 && share < 0.8, `Slapshot season share ${share}`);
+  // A DET player: DET plays 63 of its 84 games through period 82.
+  const share = 63 / 84;
+  assert(near(fantasySeasonShare(SLAPSHOT, "DET"), share, 1e-12), `Slapshot season share of a DET player ${share}`);
+  assert(near(fantasySeasonShare(SLAPSHOT, "WSH"), 60 / 84, 1e-12) && near(fantasySeasonShare(SLAPSHOT, "ANA"), 64 / 84, 1e-12), "each club's own calendar (WSH 60, ANA 64 of 84)");
+  assert(fantasySeasonShare(SLAPSHOT, "(N/A)") === SLAPSHOT.cadence.seasonShare, "no club: the league-wide share");
+  assert(fantasySeasonShare(CAPTAINS_DYNASTY, "DET") === 1, "Captains: the whole season");
+  const games = Object.values(SLAPSHOT.cadence.fantasySeasonGames!.byTeam).reduce((a, b) => a + b, 0) / 2;
+  assert(Math.abs(games / 1344 - SLAPSHOT.cadence.seasonShare!) < 5e-4, `the clubs add up to the league-wide share (${games} of 1,344 games)`);
   assert(near(seasonFp(rec("D", 3.234, -0.829), SLAPSHOT), 80 * 2.405 * share, 1e-1), "the season total follows the same slot, over the league's season");
   assert(near(seasonFp(rec("D,Skt", 2, 0.5), CAPTAINS_DYNASTY), 80 * 2.5, 1e-9), "Captains: the whole NHL season");
   // A goalie never goes through the skater branch.

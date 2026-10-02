@@ -101,11 +101,12 @@ export interface FantraxEligibility {
  *   It OMITS every row worth 0, so a league that configures a category to 0
  *   for each of its slots looks like it never configured it at all.
  * - "categories": `scoringSystem.scoringCategories`, the `"points0.3"` map.
- *   Complete, zeros included — the only correct source for a league whose
- *   per-slot zeros carry meaning.
- * Captains stays on "settings": its zero rows are redundant there (Blk / Tk /
- * skater SHO fall back to 0 anyway), and switching it would add `Default: 0`
- * rows to the committed league.json.
+ *   Complete, zeros included — correct only for a league whose per-slot zeros
+ *   Fantrax actually applies.
+ * Both leagues read "settings". Captains' zero rows are redundant there (Blk /
+ * Tk / skater SHO fall back to 0 anyway). Slapshot's per-slot zeros are NOT
+ * applied by Fantrax: its first scoring period's team totals pay Hit 0.15 and
+ * SB 0.3 in every slot (see `SLAPSHOT` and scripts/test-fantrax-config.ts).
  */
 export type ScoringSource = "settings" | "categories";
 
@@ -118,25 +119,25 @@ export type ScoringSource = "settings" | "categories";
  * forward slots — Captains, where Blk / Tk / skater SHO list `D` alone and
  * every other slot falls through.
  *
- * Slapshot publishes an explicit `points0` for EACH of its five slots
- * (C / LW / RW / D / G) on Hit and SB while `Default` holds 0.15 / 0.3, so
- * `Default` is a row no slot can reach and reading it would credit hits and
- * blocked shots that no lineup ever scores (Seider 242 vs 183 season points,
- * a 74-rank swing).
+ * Slapshot's `scoringCategories` publishes an explicit `points0` for EACH of
+ * its five slots (C / LW / RW / D / G) on Hit and SB while `Default` holds
+ * 0.15 / 0.3. Read literally, hits and blocked shots would be worth nothing.
+ * Fantrax does not score it that way: it ignores those per-slot zeros and
+ * pays 0.15 a hit and 0.3 a block in every slot. Measured on scoring period 1
+ * (lineup periods 1-3, 28 teams with points): the literal reading left a
+ * median +6.90 points per team unexplained and matched no team; paying Hit /
+ * SB everywhere leaves a median 0.00 and reproduces Seattle (39.20) and Utah
+ * (18.40) to the centime — their old gap was exactly 0.15 x hits + 0.3 x
+ * blocks. `scripts/test-fantrax-config.ts` replays that period from
+ * `scripts/fixtures/slapshot-period1-totals.json`.
  *
- * THE OTHER READING, if week-1 scoring shows Fantrax really does pay those
- * 0.15 / 0.3, is that Fantrax ignores the per-slot rows altogether. That is
- * NOT `baseSlot: "Default"` on its own: the D column publishes the same zeros,
- * so `off` would then pay hits and blocks while `dx` subtracted them again
- * (measured on a Seider-shaped line: off 3.2340, dx −0.8289), `unmodeledSlots`
- * would fail C / LW / RW against an unreachable base, and `deadCategories`
- * would still call Hit and SB dead. The switch that expresses it is the pair
+ * The reading is expressed by the PAIR
  *   scoringSource: "settings",  baseSlot: "Default"
  * — "settings" omits every row worth 0, so the per-slot zeros disappear and
- * EVERY slot reads 0.15 / 0.3, D included (dx then 0). It needs one re-sync
- * (`npm run league:sync -- --league slapshot`) for league.json to be re-read
- * that way; `check:league` fails until then, naming the mismatch.
- * `scripts/test-fantrax-config.ts` pins both readings side by side.
+ * EVERY slot reads 0.15 / 0.3, D included (dx then 0). `baseSlot: "Default"`
+ * alone would be inconsistent: the D column of the complete view publishes
+ * the same zeros, so `off` would pay hits and blocks while `dx` subtracted
+ * them again, and `check:league` would refuse C / LW / RW.
  */
 export type ScoringBaseSlot = SlotId | "Default";
 
@@ -175,6 +176,14 @@ export interface FantraxCadence {
    * start before then (0.746, the dynasty profile's `season.fantasyShare`).
    */
   seasonShare?: number;
+  /**
+   * The same share per NHL club: its games that start before the fantasy
+   * regular season ends, over its whole schedule. Clubs differ by about ±3 %
+   * around `seasonShare` (Slapshot 2026-27: WSH 60 of 84, ANA 64 of 84), and a
+   * player's season points follow his own club's calendar. `check:league`
+   * recounts it from the committed schedule. Absent = `seasonShare` for all.
+   */
+  fantasySeasonGames?: { perTeam: number; byTeam: Readonly<Record<string, number>> };
   /** Live draft: how often the browser re-reads the picks while the draft runs (ms). */
   draftPollMs?: number;
   /**
@@ -453,9 +462,10 @@ export const CAPTAINS_DYNASTY: FantraxLeagueConfig = {
  * What makes it a different league, not a second copy of Captains:
  * - LW and RW are SEPARATE slots (Captains has one W plus a flex F), there
  *   is no captain slot; 20 starters (C4 LW4 RW4 D6 G2) instead of 15.
- * - Its scoring table carries per-slot zeros that MEAN zero (Hit and SB
- *   score 0 in every slot), so it is read from `scoringCategories` and
- *   scored in the `C` column (see `baseSlot`).
+ * - Its complete scoring view publishes per-slot zeros on Hit and SB that
+ *   Fantrax does NOT apply (period-1 team totals pay 0.15 / 0.3 in every
+ *   slot), so it is read from `scoringCategorySettings` and scored in the
+ *   `Default` column (see `ScoringBaseSlot`).
  * - 84 custom scoring periods of 1 to 4 days (playoffs: periods 83-84), daily
  *   lineups that lock 5 minutes before each game, no games-played caps.
  * - FULL DYNASTY, but not the Captains kind: every player carries over every
@@ -500,10 +510,11 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     groups: ["C", "LW", "RW", "D", "G"],
     groupTokens: { C: ["C"], LW: ["LW"], RW: ["RW"], D: ["D"], G: ["G"] },
   },
-  // Its Hit / SB zeros only exist in this structure.
-  scoringSource: "categories",
-  // C, LW, RW, D and G each publish their own row: Default is unreachable.
-  baseSlot: "C",
+  // Fantrax ignores the per-slot Hit / SB zeros of the complete view and pays
+  // 0.15 / 0.3 everywhere (period-1 team totals): read the typed list, which
+  // omits those zeros, and score a forward in the Default column.
+  scoringSource: "settings",
+  baseSlot: "Default",
   // No captain slot at all, so the fallback never applies.
   dInSkt: "default",
   cadence: {
@@ -517,6 +528,16 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     lock: { kind: "game", minutesBefore: 5 },
     /** Fantasy regular season = periods 1-82, through 2027-02-25 (the playoffs, 83-84, left out). */
     seasonShare: 0.746,
+    /** Each club's games through period 82 (2027-02-25) of its 84. */
+    fantasySeasonGames: {
+      perTeam: 84,
+      byTeam: {
+        ANA: 64, BOS: 62, BUF: 62, CAR: 62, CBJ: 64, CGY: 64, CHI: 61, COL: 61,
+        DAL: 62, DET: 63, EDM: 63, FLA: 63, LAK: 62, MIN: 63, MTL: 64, NJD: 64,
+        NSH: 64, NYI: 63, NYR: 64, OTT: 62, PHI: 64, PIT: 61, SEA: 62, SJS: 62,
+        STL: 62, TBL: 61, TOR: 62, UTA: 64, VAN: 64, VGK: 64, WPG: 63, WSH: 60,
+      },
+    },
     /** The 38-round draft runs for days, 6 minutes a pick: re-read the picks every 20 s. */
     draftPollMs: 20_000,
     // No weekly claim reset could be confirmed (fxpa is closed), and a
@@ -543,12 +564,13 @@ export const SLAPSHOT: FantraxLeagueConfig = {
   priors: {
     /**
      * Measured on Slapshot's own scoring by `npm run league:report -- --league
-     * slapshot --priors` (2026-09-26 projections): p25 FP/G of the PROJECTED
-     * regulars with >= 40 GP — 455 forwards, 211 defencemen. About half
-     * Captains' numbers, which is the scale difference between the two scoring
-     * tables, and proof enough that they cannot be shared.
+     * slapshot --priors` (2026-10-02 projections, Hit 0.15 / SB 0.3 paid in
+     * every slot): p25 FP/G of the PROJECTED regulars with >= 40 GP — 431
+     * forwards, 203 defencemen. (The per-slot-zero reading gave 1.28 / 0.89.)
+     * Below Captains' numbers, which is the scale difference between the two
+     * scoring tables, and proof enough that they cannot be shared.
      */
-    fpg: { F: 1.28, D: 0.89 },
+    fpg: { F: 1.66, D: 1.43 },
     /**
      * E per start of the goalie on the last seat once every team keeps a
      * spare (32 x (2 + 1) = 96th on the points ladder): Ales Stezka, 4.70.
@@ -557,7 +579,7 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     goalieE: 4.7,
     pPlay: 0.6,
     /** The p25 above: the same quantity, so the same number. */
-    regularMinFpg: 1.28,
+    regularMinFpg: 1.66,
   },
   /**
    * During the startup draft Fantrax seats every pick ACTIVE (221 ACTIVE, 5
@@ -765,6 +787,18 @@ export const IR_ELIGIBLE_ICONS: readonly string[] = [
 /** Day-to-day players dress about half the time; their nightly value is discounted. */
 export const DAY_TO_DAY_P_PLAY = 0.5;
 
+/**
+ * Share of a player's projected NHL games inside the league's fantasy regular
+ * season: his club's own (`fantasySeasonGames`), else the league-wide
+ * `seasonShare`, else all of them.
+ */
+export function fantasySeasonShare(cfg: Pick<FantraxLeagueConfig, "cadence">, team?: string): number {
+  const games = cfg.cadence.fantasySeasonGames;
+  const own = team ? games?.byTeam[team] : undefined;
+  if (own !== undefined && games && games.perTeam > 0) return own / games.perTeam;
+  return cfg.cadence.seasonShare ?? 1;
+}
+
 /** Fantrax team label for players without an NHL club. */
 export const FANTRAX_NO_TEAM = "(N/A)";
 
@@ -778,10 +812,32 @@ export const PRIOR_GOALIE_E = 3.65;
 /** Unprojected skaters rarely hold a nightly spot; discount their P(play). */
 export const PRIOR_P_PLAY = 0.6;
 
-/** Waiver targets below this gain over the rest of the scoring period are hidden. */
+/**
+ * Waiver targets below this gain over the rest of the scoring period are
+ * hidden — in Captains' points, over a period of a week or more.
+ */
 export const WAIVER_MIN_DELTA = 3;
+
+/**
+ * The same threshold in a league's own points and period length: scaled by
+ * its forward prior (its points scale; Captains' p25 FP/G 2.52) and by the
+ * scoring period's days over a week, at least 3 days and at most a week.
+ * Captains: 3. Slapshot (1-4 day periods, p25 1.66): 0.85 to 1.13 — a flat 3
+ * left its panel empty in 4 plans out of 5.
+ */
+export function waiverMinDelta(cfg: { priors: { fpg: { F: number } } }, periodDays: number): number {
+  const scale = cfg.priors.fpg.F / PRIOR_FPG.F;
+  const days = Math.min(7, Math.max(3, periodDays));
+  return Math.round(WAIVER_MIN_DELTA * scale * (days / 7) * 100) / 100;
+}
 /** Players this young with this Ros% are dynasty assets, never suggested as drops. */
 export const DROP_PROTECT_MAX_AGE = 24;
 export const DROP_PROTECT_MIN_ROS = 30;
+/**
+ * Players rostered in at least this share of Fantrax leagues are never
+ * suggested as drops, whatever their age (a 79 %-rostered starting goalie
+ * was offered as a drop for a fringe backup).
+ */
+export const DROP_PROTECT_ANY_AGE_MIN_ROS = 60;
 /** The top-N players by season value are the keeper core: never dropped. */
 export const DROP_PROTECT_TOP_N = 10;

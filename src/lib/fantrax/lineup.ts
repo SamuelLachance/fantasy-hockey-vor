@@ -24,6 +24,12 @@ export interface LineupCandidate {
   /** Expected points in each eligible slot for the period (0 = no game / out). */
   values: Partial<Record<SlotId, number>>;
   /**
+   * Expected games he plays (skater) or starts (goalie) that period if he is
+   * in the lineup: P(play) / P(start). Ignored by the optimizer; the games-cap
+   * accounting reads it (1 when absent).
+   */
+  games?: number;
+  /**
    * His game has locked (a league where each player locks on his own game):
    * he stays where he is, in his current Active slot or out of the lineup.
    */

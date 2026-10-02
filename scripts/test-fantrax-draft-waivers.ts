@@ -5,7 +5,8 @@
 import type { SlotId } from "../src/lib/fantrax/config";
 import { draftOutlook, draftValue, type DraftPickInfo, type DraftPoolPlayer } from "../src/lib/fantrax/draft";
 import { eligibleSlots, type LineupCandidate } from "../src/lib/fantrax/lineup";
-import { waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
+import { periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
+import { capBenchPolicy, withCapBench } from "../src/lib/fantrax/daily-plan";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -33,7 +34,11 @@ const pool: DraftPoolPlayer[] = [
   { id: "w2", groups: ["W"], seasonFp: 290, adp: 70 },
   { id: "c1", groups: ["C"], seasonFp: 280, adp: 80 },
 ];
-const o = draftOutlook(picks, "me", pool, {});
+// A steep synthetic board: checked under the narrow first-guess ADP noise,
+// where the mechanics bite hardest (the fitted noise is replayed on the real
+// drafts in test-fantrax-vona).
+const NARROW = { sigma: 0.35, offset: 5 } as const;
+const o = draftOutlook(picks, "me", pool, {}, { adp: NARROW });
 assert(o.state === "running" && o.made === 2, "2 of 10 made");
 assert(o.current?.pick === 3 && o.next?.pick === 4 && o.following?.pick === 8, "current #3, mine #4 then #8");
 assert(o.picksBefore === 1 && o.picksBeforeFollowing === 4, "one pick before mine, four before the next one");
@@ -67,13 +72,15 @@ const onClock = draftOutlook(
   picks.map((p) => (p.pick === 3 ? { ...p, playerId: "c1" } : p)),
   "me",
   pool,
+  {},
+  { adp: NARROW },
 );
 assert(onClock.picksBefore === 0 && onClock.next?.pick === 4, "on the clock → 0 picks before");
 assert(onClock.board.every((b) => b.available === 1), "on the clock → everyone is still there");
 assert(near(onClock.vona.W.now, 300) && onClock.vona.W.bestId === "w1" && onClock.vona.W.bestP === 1, "on the clock → best now is the best left");
 // When two picks in three go to prospects outside the pool, fewer pool
 // players are expected gone: w1 likely survives to #4 and G is less urgent.
-const third = draftOutlook(picks, "me", pool, {}, { poolShare: 1 / 3 });
+const third = draftOutlook(picks, "me", pool, {}, { poolShare: 1 / 3, adp: NARROW });
 assert(third.vona.W.bestId === "w1" && !row(third, "w1").likelyGone, "w1 likely survives to #4");
 assert(row(third, "w1").available > row(o, "w1").available, "fewer pool picks → better odds");
 assert(third.vona.G.vona! > 0 && third.vona.G.vona! < o.vona.G.vona!, "G less urgent with fewer pool picks");
@@ -99,14 +106,14 @@ const days: WaiverDay[] = [0, 1].map((i) => ({
 const t = waiverTargets(
   days,
   [
-    { id: "fa", status: "FA", fpg: 3, gamesLeftSeason: 80 },
-    { id: "ww", status: "WW", fpg: 3.2, gamesLeftSeason: 80 },
+    { id: "fa", status: "FA", fpg: 3 },
+    { id: "ww", status: "WW", fpg: 3.2 },
   ],
   { slotCounts: { C: 0, W: 2, F: 0, D: 2, Skt: 1, G: 0 }, needsDrop: false, drops: [], minDelta: 3 },
 );
 assert(t[0]?.id === "fa" && near(t[0].delta, 6) && t[0].days === 2, "FA plays both days (+6)");
 assert(t[1]?.id === "ww" && near(t[1].delta, 3.2) && t[1].days === 1, "WW only from day 2 (+3.2)");
-const filtered = waiverTargets(days, [{ id: "ww", status: "WW", fpg: 3.2, gamesLeftSeason: 80 }], {
+const filtered = waiverTargets(days, [{ id: "ww", status: "WW", fpg: 3.2 }], {
   slotCounts: { C: 0, W: 2, F: 0, D: 2, Skt: 1, G: 0 },
   needsDrop: false,
   drops: [],
@@ -114,7 +121,7 @@ const filtered = waiverTargets(days, [{ id: "ww", status: "WW", fpg: 3.2, gamesL
 });
 assert(filtered.length === 0, "gains below the threshold are hidden");
 // Full roster: the cheapest drop is used.
-const full = waiverTargets(days, [{ id: "fa", status: "FA", fpg: 3, gamesLeftSeason: 80 }], {
+const full = waiverTargets(days, [{ id: "fa", status: "FA", fpg: 3 }], {
   slotCounts: { C: 0, W: 2, F: 0, D: 1, Skt: 0, G: 0 },
   needsDrop: true,
   drops: [
@@ -124,6 +131,87 @@ const full = waiverTargets(days, [{ id: "fa", status: "FA", fpg: 3, gamesLeftSea
   minDelta: 1,
 });
 assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(full[0].delta, 2), "swap D for D, send the weaker to Minors");
+
+
+// ---- waivers over the rest of the season (FX-2): the drop d1 is out this
+// period (0) but back later at 3 a day, the pickup is a steady 2.5 D.
+{
+  const slotCounts = { C: 0, W: 2, F: 0, D: 1, Skt: 0, G: 0 };
+  const now = [cand("f1", "W,F,Skt", 3), cand("f2", "W,F,Skt", 2), cand("d1", "D,Skt", 0)];
+  const later = [cand("f1", "W,F,Skt", 3), cand("f2", "W,F,Skt", 2), cand("d1", "D,Skt", 3)];
+  const pc = (id: string) => (id === "fa" ? cand("fa", "D", 2.5, "FA") : null);
+  const period: WaiverDay[] = [0, 1].map(() => ({ candidates: now, wwUsable: true, poolCandidate: pc }));
+  const rosDays = (weight: number): WaiverDay[] => [{ candidates: later, wwUsable: true, poolCandidate: pc, weight }];
+  const run = (weight: number) =>
+    waiverTargets(period, [{ id: "fa", status: "FA", fpg: 2.5 }], {
+      slotCounts,
+      needsDrop: true,
+      drops: [{ id: "d1", action: "drop", fpg: 3 }],
+      minDelta: 3,
+      rosDays: rosDays(weight),
+    });
+  const short = run(4);
+  assert(short[0]?.id === "fa" && near(short[0].delta, 5) && near(short[0].ros, -2) && short[0].rental === true, "a pickup that costs points after the period is a rental (+5 now, -2 later)");
+  assert(run(20).length === 0, "a pickup that loses points over the season (+5 now, -10 later) is not shown");
+  // Ranking is on the season: a smaller period gain with a lasting edge goes first.
+  const pc2 = (id: string) => (id === "fa" ? cand("fa", "D", 2.5, "FA") : id === "fb" ? cand("fb", "D", 2, "FA") : null);
+  const two = waiverTargets(
+    period.map((d) => ({ ...d, poolCandidate: pc2 })),
+    [
+      { id: "fa", status: "FA", fpg: 2.5 },
+      { id: "fb", status: "FA", fpg: 2 },
+    ],
+    {
+      slotCounts: { ...slotCounts, D: 2 },
+      needsDrop: false,
+      drops: [],
+      minDelta: 3,
+      rosDays: [{ candidates: later, wwUsable: true, weight: 10, poolCandidate: (id) => (id === "fa" ? cand("fa", "D", 0) : id === "fb" ? cand("fb", "D", 2) : null) }],
+    },
+  );
+  assert(two.map((t) => t.id).join() === "fb,fa", "fb (+4 now, +20 later) ranks above fa (+5 now, nothing later)");
+}
+
+// ---- waivers under a games cap (FX-3): every lineup player plays one game.
+{
+  const slotCounts = { C: 0, W: 2, F: 0, D: 2, Skt: 0, G: 0 };
+  const games = (c: LineupCandidate) => ({ ...c, games: 1 });
+  const r = [cand("f1", "W,F,Skt", 3), cand("f2", "W,F,Skt", 2), cand("d1", "D,Skt", 2)].map(games);
+  const capDays: WaiverDay[] = [0, 1].map(() => ({ candidates: r, wwUsable: true, poolCandidate: (id) => (id === "fa" ? games(cand("fa", "D", 3, "FA")) : null) }));
+  const opts = { slotCounts, needsDrop: false, drops: [], minDelta: -100 };
+  const blind = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], opts);
+  assert(near(blind[0]!.delta, 6), "no cap: +3 a day for two days");
+  // Base: 3 games on day 1, under the cap, so day 2 counts (7 + 7). With him:
+  // 4 games on day 1 reach the cap, day 2 counts nothing (10).
+  const tightCap = { gpMax: 4, gpUsed: 0, gsMax: null, gsUsed: 0 };
+  const capped = (f: (d: WaiverDay) => LineupCandidate[]) => periodTotal(capDays, f, slotCounts, undefined, tightCap);
+  const fa = games(cand("fa", "D", 3, "FA"));
+  assert(near(capped((d) => d.candidates), 14) && near(capped((d) => [...d.candidates, fa]), 10), "the day the cap is reached counts in full, nothing after it");
+  const tight = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: tightCap });
+  assert(tight.length === 0, "an add that makes the team hit its cap a day earlier costs points (-4): not shown");
+  const loose = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 0, gsMax: null, gsUsed: 0 } });
+  assert(near(loose[0]!.delta, 6), "a cap that is not reached changes nothing");
+  const used = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 5, gsMax: null, gsUsed: 0 } });
+  assert(near(used[0]!.delta, 3), "games already played count toward the cap: only day 1 is left (+3)");
+}
+
+// ---- games-cap bench policy (FX-8): two weak wingers fill both W seats on
+// day 1 and reach the 2-game cap, so the star who only plays day 2 counts
+// nothing. Benching anyone under 1 point a game saves the games for him.
+{
+  const slotCounts = { C: 0, W: 2, F: 0, D: 0, Skt: 0, G: 0 };
+  const w = (id: string, v: number, games: number) => ({ ...cand(id, "W", v), games });
+  const day1 = [w("w1", 1, 1), w("w2", 1, 1), w("s", 0, 0)];
+  const day2 = [w("w1", 1, 1), w("w2", 1, 1), w("s", 4, 1)];
+  const capT = { gpMax: 2, gpUsed: 0, gsMax: null, gsUsed: 0 };
+  const policy = capBenchPolicy([day1, day2], slotCounts, ["W"], capT, { gp: true, gs: false });
+  assert(policy !== null && policy.skater! > 1 && policy.skater! < 4 && policy.goalie === null, `bench the 1-point wingers (${JSON.stringify(policy)})`);
+  assert(near(policy!.gain, 2), `gain 4 - 2 (${policy?.gain})`);
+  assert(withCapBench(day2, policy!).filter((c) => Object.keys(c.values).length > 0).map((c) => c.id).join() === "s", "only the star stays in the lineup");
+  assert(capBenchPolicy([day1, day2], slotCounts, ["W"], { ...capT, gpMax: 4 }, { gp: true, gs: false }) === null, "no policy when the cap does not bite");
+  const locked = { ...w("w1", 1, 1), locked: true };
+  assert(withCapBench([locked], { skater: 2, goalie: null })[0] === locked, "a locked player is never benched");
+}
 
 if (failed) process.exit(1);
 console.log("OK: fantrax draft + waivers");

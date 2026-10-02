@@ -120,6 +120,28 @@ if (league) {
   } else if (league.capsSource !== "none") {
     errors.push(`capsSource is ${league.capsSource} for a league without games caps`);
   }
+  // Each club's games inside the fantasy regular season (season points use
+  // its own share): recounted from the committed schedule.
+  const fsg = CFG.cadence.fantasySeasonGames;
+  if (fsg && schedule) {
+    const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
+    const regular = league.scoringPeriods.filter((p) => p.number < firstPlayoff);
+    const end = Date.parse(regular[regular.length - 1]?.end ?? "");
+    const total = new Map<string, number>();
+    const inside = new Map<string, number>();
+    for (const [at, away, home] of schedule.games) {
+      for (const t of [away, home]) {
+        total.set(t, (total.get(t) ?? 0) + 1);
+        if (Date.parse(at) <= end) inside.set(t, (inside.get(t) ?? 0) + 1);
+      }
+    }
+    const off = [...total.keys()].filter((t) => fsg.byTeam[t] !== (inside.get(t) ?? 0) || total.get(t) !== fsg.perTeam);
+    if (off.length > 0 || Object.keys(fsg.byTeam).length !== total.size) {
+      errors.push(
+        `cadence.fantasySeasonGames disagrees with the schedule (${off.map((t) => `${t} ${inside.get(t) ?? 0}/${total.get(t)}`).join(", ") || "club list"})`,
+      );
+    }
+  }
   const badDates = [...league.scoringPeriods, ...league.rosterPeriods].filter(
     (p) => !Number.isFinite(Date.parse(p.start)) || !Number.isFinite(Date.parse(p.end)) || p.start >= p.end,
   );

@@ -1,6 +1,6 @@
 import { CircleCheck, Gauge, TriangleAlert } from "lucide-react";
 import type { DailyPlan } from "@/lib/fantrax/daily-plan";
-import { fmtNum, fmtPct, fmtShortCalendarDate, plural } from "@/lib/fantrax/league-copy";
+import { fmtNum, fmtPct, fmtShortCalendarDate, fmtSigned, plural } from "@/lib/fantrax/league-copy";
 import { LeagueCard } from "./LeagueCard";
 
 interface MeterProps {
@@ -91,6 +91,17 @@ export function CapMeter({ plan }: { plan: DailyPlan }) {
                 {
                   "Un plafond sera atteint avant le dernier jour à ce rythme. Dès qu'il l'est au début d'une journée, toute l'équipe cesse de marquer jusqu'à la fin de la période : gardez des joueurs sur le banc les derniers jours."
                 }
+                {cap.bench ? (
+                  <>
+                    {" "}
+                    {`Conseil : d'ici la fin de la période, laissez sur le banc ${[
+                      cap.bench.skater !== null ? `les patineurs sous ${fmtNum(cap.bench.skater)} pts par match` : null,
+                      cap.bench.goalie !== null ? `les gardiens sous ${fmtNum(cap.bench.goalie)} pts par départ` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" et ")} (environ ${fmtSigned(cap.bench.gain, 1)} pts sur la période). L'alignement de ce soir en tient compte.`}
+                  </>
+                ) : null}
               </span>
             </p>
           ) : (

@@ -49,7 +49,7 @@ export function SlapshotMethodNote({ id = "methode" }: { id?: string }) {
       <ul className="list-disc space-y-1.5 border-t border-white/10 px-8 py-3">
         <li>
           <strong className="text-slate-100">Valeur dynastie</strong>
-          {`${NBSP}: les points de fantasy au-dessus du remplacement que le joueur devrait rapporter sur les 12 prochaines saisons (barème Slapshot${NBSP}: but 3,5, passe 2,5, point en avantage numérique 0,5, but en infériorité 1, tir 0,25, mises en échec et tirs bloqués 0; gardiens${NBSP}: victoire 3, arrêt 0,25, but accordé −1, blanchissage 5, passe 3), moins le coût de son salaire sous le plafond. Chaque saison, son propriétaire le fait jouer (valeur moins coût) ou l’envoie aux mineures (0 point, 0${NBSP}$). Carrières simulées (vieillissement, progression des jeunes, chances LNH des espoirs).`}
+          {`${NBSP}: les points de fantasy au-dessus du remplacement que le joueur devrait rapporter sur les 12 prochaines saisons (barème Slapshot${NBSP}: but 3,5, passe 2,5, point en avantage numérique 0,5, but en infériorité 1, tir 0,25, mise en échec 0,15, tir bloqué 0,3; gardiens${NBSP}: victoire 3, arrêt 0,25, but accordé −1, blanchissage 5, passe 3), moins le coût de son salaire sous le plafond. Chaque saison, son propriétaire le fait jouer (valeur moins coût) ou l’envoie aux mineures (0 point, 0${NBSP}$). Carrières simulées (vieillissement, progression des jeunes, chances LNH des espoirs).`}
         </li>
         <li>
           <strong className="text-slate-100">Horizons</strong>

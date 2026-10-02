@@ -11,13 +11,15 @@
  */
 import {
   CAPTAINS_DYNASTY,
+  DROP_PROTECT_ANY_AGE_MIN_ROS,
   DROP_PROTECT_MAX_AGE,
   DROP_PROTECT_MIN_ROS,
   DROP_PROTECT_TOP_N,
   eligibleGroups,
   FANTRAX_ICON,
-  WAIVER_MIN_DELTA,
+  waiverMinDelta,
   type FantraxLeagueConfig,
+  type SlotCounts,
   type SlotId,
 } from "./config";
 import {
@@ -65,7 +67,7 @@ import type {
   StateSnapshot,
   ValuesSnapshot,
 } from "./snapshot-types";
-import { waiverTargets, type DropOption, type WaiverDay, type WaiverTarget } from "./waivers";
+import { periodTotal, waiverTargets, type DropOption, type WaiverCap, type WaiverDay, type WaiverTarget } from "./waivers";
 import type { ContractsFile, SalaryUsage, salaryUsage } from "./salary-cap";
 
 // Shared with the browser's player table (see draft-inputs.ts).
@@ -113,6 +115,11 @@ export interface PlanInputs {
    * demand, so the planner's chunk carries none of it.
    */
   kit?: PlanKit | null;
+  /**
+   * Later lineup days sampled for the waiver targets' rest-of-season gain
+   * (`WAIVER_ROS_SAMPLE_DAYS`, every day, by default; 0 = none).
+   */
+  waiverRosSampleDays?: number;
 }
 
 /** A league's own planner rules, kept out of this module (`plan-kit.ts`, `PLAN_KIT`). */
@@ -265,6 +272,13 @@ export interface DailyPlan {
     gpBinds: boolean;
     gsBinds: boolean;
     known: boolean;
+    /**
+     * When a cap binds: bench the starters below these per-game values for
+     * the rest of the period (null = no bench for that group), so the games
+     * left under the cap go to the better players; `gain` = points the
+     * policy adds to the period's counted total. Absent when nothing gains.
+     */
+    bench?: { skater: number | null; goalie: number | null; gain: number };
   } | null;
   week: { days: string[]; rows: Array<{ id: string; games: number[]; total: number }> } | null;
   waivers: {
@@ -273,6 +287,10 @@ export interface DailyPlan {
     claimsUsed: number | null;
     claimsLeft: number | null;
     targets: WaiverTarget[];
+    /** Smallest gain over the rest of the period shown (this league's points and period length). */
+    minDelta: number;
+    /** The period's GP / GS cap binds: gains count only until it is reached. */
+    capLimited: boolean;
   };
   draft: (Omit<DraftOutlook, "remaining"> & { remaining: number[] }) | null;
   /**
@@ -345,14 +363,6 @@ export function lineupTarget<P extends IsoPeriod>(
   return requireKit(kit, config).gameLockTarget(periods, index, nowMs, lock.minutesBefore);
 }
 
-function gamesAfter(index: ScheduleIndex, team: string, ms: number): number {
-  const list = index.starts.get(team);
-  if (!list) return 0;
-  let n = 0;
-  for (let i = list.length - 1; i >= 0 && list[i]! > ms; i--) n++;
-  return n;
-}
-
 // ------------------------------------------------------------ values
 
 interface Ctx {
@@ -397,7 +407,9 @@ function candidateFor(
   if (isGoalieRecord(rec)) {
     const out = isRuledOut({ team: rec.t, icons });
     const { p } = out ? { p: 0 } : goalieShareForPeriod(ctx, id, period);
-    values.G = p * dayToDayFactor(icons) * (rec.gE ?? 0);
+    const start = p * dayToDayFactor(icons);
+    values.G = start * (rec.gE ?? 0);
+    return { id, eligible, status, currentSlot, values, games: start };
   } else {
     const hasGame = period === null ? true : !!ctx.index.byPeriod.get(period)?.has(rec.t);
     const p = skaterPlayProbability(
@@ -410,8 +422,8 @@ function candidateFor(
       if (s === "G") continue;
       values[s] = p * skaterSlotValue(rec.off ?? 0, rec.dx ?? 0, s, ctx.league.sktMultiplier, { isD });
     }
+    return { id, eligible, status, currentSlot, values, games: p };
   }
-  return { id, eligible, status, currentSlot, values };
 }
 
 /**
@@ -454,6 +466,101 @@ function toPlanLineup(res: LineupResult, ctx: Ctx, period: number | null): PlanL
 const round = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
 
 const WAIVER_TARGETS_PER_GROUP = 3;
+/**
+ * Later lineup days a waiver target's rest-of-season gain is solved on: all
+ * of them. A sample is not good enough — 24 evenly spaced days missed the
+ * full day-by-day replay by a median 22 points on Captains' targets (Sean
+ * Durzi: -4.9 sampled, +25.7 in full, +25.8 by replaying the whole plan
+ * every day), because who plays which night is the whole effect. Solving
+ * only the nights the pickup plays keeps a plan near 0.2 s.
+ */
+export const WAIVER_ROS_SAMPLE_DAYS = Number.POSITIVE_INFINITY;
+
+/** Smallest gain (points over the period) worth a bench policy. */
+export const CAP_BENCH_MIN_GAIN = 0.5;
+
+interface CapBench {
+  skater: number | null;
+  goalie: number | null;
+  gain: number;
+}
+
+const isGoalieCand = (c: LineupCandidate) => c.values.G !== undefined;
+
+/** Per-game value of a candidate (his best seat's value ÷ his expected games that day). */
+function perGameValue(c: LineupCandidate): number {
+  const g = c.games ?? 0;
+  if (!(g > 0)) return 0;
+  const goalie = isGoalieCand(c);
+  let best = 0;
+  for (const [slot, v] of Object.entries(c.values)) if ((slot === "G") === goalie) best = Math.max(best, v ?? 0);
+  return best / g;
+}
+
+/** The day's candidates with everyone below the policy's per-game bar benched (locked players stay). */
+export function withCapBench(cands: LineupCandidate[], policy: Pick<CapBench, "skater" | "goalie">): LineupCandidate[] {
+  return cands.map((c) => {
+    if (c.locked) return c;
+    const bar = isGoalieCand(c) ? policy.goalie : policy.skater;
+    return bar !== null && perGameValue(c) < bar ? { ...c, values: {} } : c;
+  });
+}
+
+/**
+ * The per-game bars (skaters, goalies) that maximize the period's counted
+ * points under its games caps, by a search over the roster's own per-game
+ * values (`periodTotal` with the cap: the day a cap is reached counts in
+ * full, nothing after it). Null when no bar gains `CAP_BENCH_MIN_GAIN`.
+ */
+export function capBenchPolicy(
+  days: LineupCandidate[][],
+  slots: SlotCounts,
+  slotOrder: readonly SlotId[],
+  cap: WaiverCap,
+  binds: { gp: boolean; gs: boolean },
+): CapBench | null {
+  const asDays: WaiverDay[] = days.map((candidates) => ({ candidates, wwUsable: true, poolCandidate: () => null }));
+  const counted = (policy: Pick<CapBench, "skater" | "goalie">) =>
+    periodTotal(asDays, (d) => withCapBench(d.candidates, policy), slots, slotOrder, cap);
+  const base = counted({ skater: null, goalie: null });
+  const bars = (goalie: boolean) =>
+    [...new Set(days.flat().filter((c) => isGoalieCand(c) === goalie).map(perGameValue).filter((v) => v > 0))].sort((a, b) => a - b);
+  let best: Pick<CapBench, "skater" | "goalie"> = { skater: null, goalie: null };
+  let bestTotal = base;
+  // One group at a time (skaters, then goalies on the skaters' best bar):
+  // a bar just above a player's per-game value benches him.
+  for (const group of ["skater", "goalie"] as const) {
+    if (!(group === "skater" ? binds.gp : binds.gs)) continue;
+    for (const v of bars(group === "goalie")) {
+      const policy = { ...best, [group]: Math.ceil((v + 1e-9) * 1e4) / 1e4 };
+      const total = counted(policy);
+      if (total > bestTotal + 1e-9) {
+        bestTotal = total;
+        best = policy;
+      }
+    }
+  }
+  const gain = bestTotal - base;
+  if (gain < CAP_BENCH_MIN_GAIN) return null;
+  // The bar sits just above the last benched player's value; 4 decimals,
+  // rounded UP, keep it there (a bar rounded down would let him play).
+  const up = (x: number | null) => (x === null ? null : Math.ceil(x * 1e4) / 1e4);
+  return { skater: up(best.skater), goalie: up(best.goalie), gain };
+}
+
+/**
+ * Lineup periods after scoring period `sp` through the end of the fantasy
+ * regular season (the playoffs left out).
+ */
+function rosRosterPeriods(league: LeagueSnapshot, sp: IsoPeriod & { number: number }): Array<IsoPeriod & { number: number }> {
+  const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
+  const regular = league.scoringPeriods.filter((p) => p.number < firstPlayoff);
+  const last = regular[regular.length - 1];
+  if (!last) return [];
+  const from = Date.parse(sp.end);
+  const to = Date.parse(last.end);
+  return league.rosterPeriods.filter((p) => Date.parse(p.start) > from && Date.parse(p.start) <= to);
+}
 
 /** One display group per player: G, then D, then C, then W. */
 function waiverGroup(eligiblePos: string): string {
@@ -537,7 +644,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   // ---- tonight
   const tonightCands = target ? withLocks(rosterCandidates(ctx, roster, target.number), target.number) : [];
   const tonightRes = target ? optimizeLineup(tonightCands, slotCounts, slotOrder) : null;
-  const lineup = tonightRes && target ? toPlanLineup(tonightRes, ctx, target.number) : null;
+  let lineup = tonightRes && target ? toPlanLineup(tonightRes, ctx, target.number) : null;
 
   // ---- legality moves
   // One after-moves count drives every piece of advice: playable Minors /
@@ -704,7 +811,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   // that the tool simply failed to read it. Slapshot's caps are not merely
   // unread — fxpa is closed for it, so whether they exist at all is unknown,
   // and the page says nothing rather than something wrong.
-  const cap = sp && config.features.gamesCaps
+  const cap: DailyPlan["cap"] = sp && config.features.gamesCaps
     ? {
         gp: usedGp,
         gpMax,
@@ -777,12 +884,58 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     const rec = values.players[r.id];
     if (!rec) continue;
     const eligibleForMinors = canReturnToMinors(r.id) && evaluation.counts.minors < league.limits.maxMinors;
+    const ros = state.ros[r.id] ?? 0;
     const protectedAsset =
       core.has(r.id) ||
-      ((rec.age ?? 99) <= DROP_PROTECT_MAX_AGE && (state.ros[r.id] ?? 0) >= DROP_PROTECT_MIN_ROS);
+      ros >= DROP_PROTECT_ANY_AGE_MIN_ROS ||
+      ((rec.age ?? 99) <= DROP_PROTECT_MAX_AGE && ros >= DROP_PROTECT_MIN_ROS);
     if (eligibleForMinors) drops.push({ id: r.id, action: "minors", fpg: bestFpg(rec, config) });
     else if (!protectedAsset) drops.push({ id: r.id, action: "drop", fpg: bestFpg(rec, config) });
   }
+  // The rest of the fantasy regular season after this period, on a sample
+  // of its lineup days: what an add (and the drop) does once the period ends.
+  const rosPeriods = sp ? rosRosterPeriods(league, sp) : [];
+  const rosSample = input.waiverRosSampleDays ?? WAIVER_ROS_SAMPLE_DAYS;
+  const rosStep = Math.max(1, rosPeriods.length / Math.max(1, Math.min(rosSample, rosPeriods.length)));
+  const rosDays: WaiverDay[] = [];
+  for (let k = 0; k < Math.min(rosPeriods.length, rosSample); k++) {
+    const p = rosPeriods[Math.min(rosPeriods.length - 1, Math.floor((k + 0.5) * rosStep))]!;
+    rosDays.push({
+      candidates: rosterCandidates(ctx, roster, p.number),
+      wwUsable: true,
+      weight: rosStep,
+      poolCandidate: (id) => {
+        const c = candidateFor(ctx, id, waiverSet.has(id) ? "WW" : "FA", undefined, p.number);
+        return c && Object.values(c.values).some((v) => (v ?? 0) > 0) ? c : null;
+      },
+    });
+  }
+  // Games caps: the waiver days start at the target; what the lineup is
+  // expected to play between the sync and the target is already used.
+  const before = (byDay: number[]) =>
+    sum(byDay.filter((_, i) => target !== null && capDays[i]!.number < target.number));
+  const waiverCap: WaiverCap | null =
+    cap && (gpMax !== null || gsMax !== null)
+      ? { gpMax, gsMax, gpUsed: usedGp + before(gpByDay), gsUsed: usedGs + before(gsByDay) }
+      : null;
+  // ---- games-cap bench policy (FX-8): the optimizer fills every seat every
+  // day, so a binding cap is reached early and the last days count nothing.
+  // Benching the weakest per-game starters keeps the games for the best ones.
+  if (cap && waiverCap && target && (cap.gpBinds || cap.gsBinds)) {
+    // On the counted roster only (Active + Reserve): Minors / IR players the
+    // per-day lineups may borrow cannot all come up at once (the counted
+    // maximum), and bars read off that deeper roster bench players the
+    // real one needs (-284 points over the season's binding periods).
+    const counted = dayCands.map((cands) => cands.filter((c) => c.status === "ACTIVE" || c.status === "RESERVE"));
+    const policy = capBenchPolicy(counted, slotCounts, slotOrder, waiverCap, { gp: cap.gpBinds, gs: cap.gsBinds });
+    if (policy) {
+      cap.bench = { skater: policy.skater, goalie: policy.goalie, gain: round(policy.gain, 1) };
+      const benched = withCapBench(tonightCands, policy);
+      const res = optimizeLineup(benched, slotCounts, slotOrder);
+      lineup = toPlanLineup(res, ctx, target.number);
+    }
+  }
+  const minDelta = waiverMinDelta(config, sp ? rosterPeriodsIn(league.rosterPeriods, sp).length : config.cadence.scoringPeriodDays);
   const allTargets = periodDays.length
     ? waiverTargets(
         waiverDays,
@@ -790,14 +943,15 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           id,
           status: waiverSet.has(id) ? ("WW" as const) : ("FA" as const),
           fpg: bestFpg(values.players[id]!, config),
-          gamesLeftSeason: gamesAfter(index, values.players[id]!.t, nowMs),
         })),
         {
           slotCounts,
           slotOrder,
           needsDrop: promotedCount >= maxCounted,
           drops,
-          minDelta: WAIVER_MIN_DELTA,
+          minDelta,
+          rosDays,
+          cap: waiverCap,
         },
       )
     : [];
@@ -811,6 +965,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       return n < WAIVER_TARGETS_PER_GROUP;
     })
     .map((t) => ({ ...t, delta: round(t.delta, 1), fpg: round(t.fpg), ros: round(t.ros, 1) }));
+  const capLimited = !!(cap?.gpBinds || cap?.gsBinds);
   // The counter resets Monday: a snapshot from an earlier claim week says
   // nothing about this one, so it starts from 0 until the next sync.
   const weekStart = claimWeekStart(nowMs, config.cadence.claimWeekStartsOn ?? 1);
@@ -1000,6 +1155,8 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           ? null
           : Math.max(0, config.features.claimsPerWeek - claimsUsed),
       targets,
+      minDelta,
+      capLimited,
     },
     draft,
     players,

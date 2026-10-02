@@ -154,6 +154,11 @@ export interface DraftBoard {
     weight: number;
     leverageRatio: number;
     predictabilityRatio: number;
+    /**
+     * Backtest-validated factor (`GOALIE_WEIGHT_CALIBRATION`); weight =
+     * leverage × predictability × calibration. Absent on a board built before it.
+     */
+    calibration?: number;
     /** Overall rank of the best goalie, and goalies inside the top 100. */
     firstGoalieRank: number | null;
     goaliesInTop100: number;

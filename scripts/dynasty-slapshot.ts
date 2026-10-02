@@ -357,6 +357,8 @@ export function runSlapshotBuild(
             assists: j.assists ?? 0,
             shots: j.shots ?? 0,
             ppp: j.powerplayPoints ?? 0,
+            hits: j.hits ?? 0,
+            blocks: j.blocks ?? 0,
           });
       if (x > 0.3 && fpg > 0 && pj.gamesPlayed >= 5) k = fpg / x;
     }

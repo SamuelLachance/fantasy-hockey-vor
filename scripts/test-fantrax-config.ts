@@ -14,13 +14,14 @@
  *     Minors 17 open to anyone, IR 5, 40 max, no games caps, a full dynasty
  *     without a cutdown (its own dynasty profile), a 105 M$ salary cap over
  *     the 23 Active + Reserve players, fxpa closed, 84 custom matchups of 1
- *     to 4 days, and a scoring table whose per-slot zeros are the rule. Every
+ *     to 4 days, and a scoring table whose per-slot Hit / SB zeros Fantrax
+ *     ignores (replayed against period 1's real team totals). Every
  *     value comes from the exported config, so a change to the real league's
  *     settings has to come through here.
  *
  * Run: npx tsx scripts/test-fantrax-config.ts
  */
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import {
   CAPTAINS_DYNASTY,
   CLAIMS_PER_WEEK,
@@ -53,6 +54,8 @@ import { evaluateRoster } from "../src/lib/fantrax/roster-rules";
 import {
   categoryPoints,
   deadCategories,
+  goaliePoints,
+  skaterSlotPoints,
   parseScoringCategories,
   parsePointsString,
   scoringShape,
@@ -60,7 +63,9 @@ import {
   skaterComponents,
   unmodeledSlots,
   unscoredCategories,
+  type ScoringTable,
 } from "../src/lib/fantrax/scoring";
+import type { LeagueSnapshot } from "../src/lib/fantrax/snapshot-types";
 import { LEAGUES, getLeague } from "../src/lib/leagues/registry";
 import { dynastyPaths } from "./dynasty-inputs";
 import { fantraxLeagueFromArgs, fantraxPaths } from "./fantrax-paths";
@@ -245,8 +250,10 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
     "Slapshot: 40 = Active + Reserve + Minors (IR apart)",
   );
   eq(CAPTAINS_DYNASTY.limits.maxTotal, undefined, "Captains publishes no total: none is checked");
+  const { fantasySeasonGames, ...cadence } = SLAPSHOT.cadence;
+  eq(fantasySeasonGames?.perTeam, 84, "Slapshot: each club plays 84 games in 2026-27 (check:league recounts every club)");
   eq(
-    SLAPSHOT.cadence,
+    cadence,
     {
       scoringPeriods: 84,
       rosterPeriods: 152,
@@ -287,9 +294,8 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   // pick ACTIVE, so unprojected juniors sit there until their owners move them.
   assert(SLAPSHOT.minActiveMatch < CAPTAINS_DYNASTY.minActiveMatch, "Slapshot: a lower ACTIVE floor");
   eq(CAPTAINS_DYNASTY.minActiveMatch, 0.95, "Captains parks its prospects in the minors, so 95% of ACTIVE is projected");
-  eq(SLAPSHOT.scoringSource, "categories", "Slapshot reads the complete scoring view");
-  eq(SLAPSHOT.baseSlot, "C", "Slapshot scores a forward in the C column, not the unreachable Default one");
-  assert(SLAPSHOT.slots.order.includes(SLAPSHOT.baseSlot as "C"), "Slapshot: baseSlot is one of its own slots");
+  eq(SLAPSHOT.scoringSource, "settings", "Slapshot reads the typed list: Fantrax ignores the per-slot Hit / SB zeros");
+  eq(SLAPSHOT.baseSlot, "Default", "Slapshot scores a forward in the Default column (Hit 0.15 / SB 0.3 everywhere)");
   eq(CAPTAINS_DYNASTY.baseSlot, "Default", "Captains still scores a forward in the Default column");
   // The priors are league points, so they must be this league's, measured.
   assert(SLAPSHOT.priors.fpg.F > 0 && SLAPSHOT.priors.fpg.D > 0, "Slapshot: skater priors measured on its own scoring");
@@ -452,38 +458,33 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   );
   eq(unscoredCategories({ skater: { Zzz: { Default: 0 } }, goalie: {} }), [], "a category configured to 0 everywhere is not a gap");
 
-  // ---- the OTHER reading of those per-slot zeros, and the switch for it.
+  // ---- which reading of those per-slot zeros Fantrax applies.
   //
-  // Slapshot's Hit row is {C 0, LW 0, RW 0, D 0, G 0, Default 0.15}. As
-  // shipped, the tool reads it as Fantrax documents it — per slot — so hits are
-  // worth nothing (`baseSlot: "C"`). If week-1 scoring ever shows Fantrax
-  // really pays the 0.15, the reading that expresses THAT is "Fantrax ignores
-  // the per-slot rows", i.e. the PAIR scoringSource "settings" + baseSlot
-  // "Default". These three checks are why it is a pair and not one field.
+  // Slapshot's Hit row is {C 0, LW 0, RW 0, D 0, G 0, Default 0.15} in the
+  // complete view. Fantrax IGNORES the per-slot zeros (period-1 team totals,
+  // replayed below): every slot pays 0.15 a hit and 0.3 a block. The reading
+  // that expresses it is the PAIR scoringSource "settings" + baseSlot
+  // "Default", and these checks are why it is a pair and not one field.
   const hits = { g: 1, a1: 0, a2: 0, sog: 0, hit: 10, otp: 0, ht: 0, blk: 0, tk: 0, sho: 0, a: 0 };
-  // As shipped: every slot agrees with the C column, hits are dead, D adds nothing.
-  eq(unmodeledSlots(complete, SLAPSHOT), [], "as shipped: C, LW and RW all score a skater alike");
-  eq(deadCategories(complete, SLAPSHOT), ["skater Hit"], "as shipped: Hit is configuration no slot can reach");
-  eq(skaterComponents(complete, hits, "C"), { off: 3.5, dx: 0 }, "as shipped: 10 hits are worth 0");
-  // Flipping baseSlot ALONE is inconsistent, and loudly so: the D column
-  // publishes the same zeros, so `off` would pay the hits and `dx` take them
-  // straight back out (a negative D extra), and three slots of the league would
-  // be valued off a column none of them can reach. `check:league` fails on it.
-  const baseOnly: FantraxLeagueConfig = { ...SLAPSHOT, baseSlot: "Default" };
+  const shipped = scoringTableFromInfo(scoringSystem, SLAPSHOT.scoringSource);
+  eq(unmodeledSlots(shipped, SLAPSHOT), [], "as shipped: no slot is left unmodelled");
+  eq(deadCategories(shipped, SLAPSHOT), [], "as shipped: Hit is live, so it is not dead configuration");
+  eq(skaterComponents(shipped, hits, SLAPSHOT.baseSlot), { off: 5, dx: 0 }, "as shipped: 10 hits are worth 1.5, D adds nothing");
+  // Flipping baseSlot ALONE on the complete view is inconsistent, and loudly
+  // so: the D column publishes the same zeros, so `off` would pay the hits and
+  // `dx` take them straight back out, and C / LW / RW would be valued off a
+  // column none of them reaches. `check:league` fails on it.
+  const baseOnly: FantraxLeagueConfig = { ...SLAPSHOT, scoringSource: "categories", baseSlot: "Default" };
   eq(
     unmodeledSlots(complete, baseOnly).map((d) => `${d.slot} ${d.category} ${d.points} vs ${d.base}`),
     ["C Hit 0 vs 0.15", "LW Hit 0 vs 0.15", "RW Hit 0 vs 0.15"],
     "baseSlot alone: check:league refuses it, naming every slot that disagrees",
   );
   assert(skaterComponents(complete, hits, "Default").dx < 0, "baseSlot alone: the D extra would go negative");
-  // The pair IS consistent: "settings" drops every row worth 0, so no per-slot
-  // row is left, every slot reads 0.15 (D included, so dx is 0), and both
-  // `unmodeledSlots` and `deadCategories` come out clean.
-  const alt: FantraxLeagueConfig = { ...SLAPSHOT, scoringSource: "settings", baseSlot: "Default" };
-  const altTable = scoringTableFromInfo(scoringSystem, alt.scoringSource);
-  eq(unmodeledSlots(altTable, alt), [], "the alternative reading: no slot is left unmodelled");
-  eq(deadCategories(altTable, alt), [], "the alternative reading: Hit is live, so it is not dead configuration");
-  eq(skaterComponents(altTable, hits, alt.baseSlot), { off: 5, dx: 0 }, "the alternative reading: 10 hits are worth 1.5, D adds nothing");
+  // The literal reading (complete view, C column) is the one period 1 refuted.
+  const literal: FantraxLeagueConfig = { ...SLAPSHOT, scoringSource: "categories", baseSlot: "C" };
+  eq(deadCategories(complete, literal), ["skater Hit"], "the literal reading calls Hit dead configuration");
+  eq(skaterComponents(complete, hits, literal.baseSlot), { off: 3.5, dx: 0 }, "the literal reading: 10 hits are worth 0");
 }
 
 // ---- the group vocabulary is the league's, and a pool `pos` round-trips
@@ -531,6 +532,75 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   eq(claimWeekStart(friday, 4), "2026-09-24", "Thursday reset");
   eq(claimWeekStart(friday, 5), "2026-09-25", "Friday reset, today");
   eq(claimWeekStart(friday, 7), "2026-09-20", "Sunday reset");
+}
+
+// ---- Slapshot's scoring, replayed against Fantrax's own period-1 totals
+/**
+ * The committed league.json scoring, applied to the real stat lines of every
+ * team's ACTIVE starters over scoring period 1 (lineup periods 1-3, by the
+ * slot each sat in), must reproduce Fantrax's `totalPointsFor`. Teams with no
+ * unmatched ACTIVE row are the clean test: their median gap is 0, and Seattle
+ * and Utah match to the centime. The literal per-slot-zero reading (Hit / SB
+ * worth 0) left Seattle 7.20 and Utah 4.65 short, a median +6.90 over all 28.
+ * Fixture: scripts/fixtures/slapshot-period1-totals.json (NHL boxscores and
+ * play-by-play, fxea lineups, fxea standings of 2026-10-02).
+ */
+{
+  type SkaterAgg = { g: number; a: number; ppp: number; shg: number; sog: number; hit: number; sb: number };
+  type GoalieAgg = { w: number; sv: number; ga: number; so: number; a: number };
+  interface FixtureTeam {
+    name: string;
+    fantraxTotal: number;
+    unmatchedActive: number;
+    slots: Partial<Record<string, SkaterAgg | GoalieAgg>>;
+  }
+  const fixture = JSON.parse(readFileSync("scripts/fixtures/slapshot-period1-totals.json", "utf8")) as { teams: FixtureTeam[] };
+  const league = JSON.parse(readFileSync(fantraxPaths(SLAPSHOT).league, "utf8")) as LeagueSnapshot;
+  const teamTotal = (table: ScoringTable, t: FixtureTeam) => {
+    let total = 0;
+    for (const [slot, agg] of Object.entries(t.slots)) {
+      if (!agg) continue;
+      if (slot === SLAPSHOT.eligibility.goalieToken) {
+        const g = agg as GoalieAgg;
+        total += goaliePoints(table, { w: g.w, sv: g.sv, ga: g.ga, so: g.so, a: g.a, otl: 0, osw: 0, g: 0 });
+      } else {
+        const k = agg as SkaterAgg;
+        const rates = { g: k.g, a1: 0, a2: 0, sog: k.sog, hit: k.hit, otp: 0, ht: 0, blk: 0, tk: 0, sho: 0, a: k.a, ppp: k.ppp, shg: k.shg, sb: k.sb };
+        total += skaterSlotPoints(table, rates, slot);
+      }
+    }
+    return total;
+  };
+  const median = (xs: number[]) => {
+    const a = [...xs].sort((x, y) => x - y);
+    return a.length % 2 ? a[a.length >> 1]! : (a[a.length / 2 - 1]! + a[a.length / 2]!) / 2;
+  };
+  const clean = fixture.teams.filter((t) => t.unmatchedActive === 0);
+  assert(fixture.teams.length === 28 && clean.length >= 15, "the period-1 fixture holds the 28 teams with points");
+  const gaps = clean.map((t) => t.fantraxTotal - teamTotal(league.scoring, t));
+  assert(Math.abs(median(gaps)) <= 0.3, `committed Slapshot scoring: median period-1 gap on clean teams ${median(gaps).toFixed(2)} (expected ~0)`);
+  for (const name of ["Seattle Kraken", "Utah Mammoth"]) {
+    const t = fixture.teams.find((x) => x.name === name);
+    assert(t !== undefined, `fixture has ${name}`);
+    if (t) {
+      const ours = teamTotal(league.scoring, t);
+      assert(Math.abs(ours - t.fantraxTotal) < 0.005, `${name}: league.json scores ${ours.toFixed(2)}, Fantrax ${t.fantraxTotal}`);
+    }
+  }
+  // The refuted reading stays refuted: zeroing Hit / SB opens the gap again.
+  const literal: ScoringTable = {
+    skater: Object.fromEntries(
+      Object.entries(league.scoring.skater).map(([cat, row]) => [cat, cat === "Hit" || cat === "SB" ? { ...row, C: 0, LW: 0, RW: 0, D: 0 } : row]),
+    ),
+    goalie: league.scoring.goalie,
+  };
+  const literalGaps = clean.map((t) => t.fantraxTotal - teamTotal(literal, t));
+  assert(median(literalGaps) > 5, `the per-slot-zero reading leaves a median gap of ${median(literalGaps).toFixed(2)} (> 5)`);
+  // Every slot of the committed table pays a hit and a block alike.
+  for (const s of SLAPSHOT.slots.order.filter((x) => x !== "G")) {
+    eq(categoryPoints(league.scoring.skater, "Hit", s), 0.15, `league.json: Hit pays 0.15 in ${s}`);
+    eq(categoryPoints(league.scoring.skater, "SB", s), 0.3, `league.json: SB pays 0.3 in ${s}`);
+  }
 }
 
 if (failed) process.exit(1);

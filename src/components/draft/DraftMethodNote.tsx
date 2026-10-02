@@ -84,9 +84,11 @@ export function DraftMethodNote({
                 {" "}
                 La SV% projetée est d’abord ramenée vers la moyenne ({formatFr(sv.mean, 3)}) : l’écart de
                 chaque gardien est divisé par {formatFr(sv.factor, 2)}, car les projections étalent les gardiens
-                réguliers sur un écart type de {formatFr(sv.spread, 4)}, alors que trois saisons d’historique
-                n’en justifient qu’environ {formatFr(sv.skillSd, 4)}. Arrêts, buts alloués et GAA suivent : ces
-                chiffres sont donc plus serrés que les projections générales du site.
+                réguliers sur un écart type de {formatFr(sv.spread, 4)}, ramené à {formatFr(sv.skillSd, 4)} (réglage
+                validé par backtest; la persistance réelle du talent, tendance de la ligue retirée, n’en
+                justifierait que 0,0023, mais ce resserrement classe moins bien les gardiens sur les saisons
+                passées). Arrêts, buts alloués et GAA suivent : ces chiffres sont donc plus serrés que les
+                projections générales du site. Ce resserrement ne touche pas le poids des gardiens.
               </>
             ) : null}{" "}
             Les blanchissages projetés sont arrondis à l’entier ; ils sont lissés (moitié projection, moitié
@@ -94,9 +96,15 @@ export function DraftMethodNote({
             gardien est multipliée par {formatFr(gw.weight, 2)} = levier hebdomadaire{" "}
             {formatFr(gw.leverageRatio, 2)} (calculé : deux gardiens portent 4 catégories, douze patineurs se
             partagent les 6 autres ; le minimum de {board.league.minGoalieAppearancesPerWeek} départs fixe le
-            volume) × prévisibilité {formatFr(gw.predictabilityRatio, 2)}. Ce second facteur est un choix de
-            modèle : les projections de gardiens battent à peine la moyenne, celles des patineurs expliquent
-            75 à 85 % de la variance, et l’escompte (0,75 + 0,25 × R² par catégorie) est appliqué tel quel.
+            volume ; tirs, mises en échec et tirs bloqués varient plus d’une semaine à l’autre que le hasard
+            pur, mesuré sur cinq saisons) × prévisibilité {formatFr(gw.predictabilityRatio, 2)}
+            {gw.calibration != null ? <> × calibration {formatFr(gw.calibration, 2)}</> : null}. La prévisibilité
+            est un choix de modèle : les projections de gardiens battent à peine la moyenne, celles des
+            patineurs expliquent 75 à 85 % de la variance, et l’escompte (0,75 + 0,25 × R² par catégorie) est
+            appliqué tel quel.{" "}
+            {gw.calibration != null
+              ? "La calibration vient d’un backtest sur cinq saisons de semaines réelles (repêchages simulés contre des adversaires) : sans elle, le poids monterait autour de 0,9 et ferait perdre des catégories chaque semaine."
+              : null}
             Sensibilité : escompte adouci de moitié ({formatFr(gw.alt.predictabilityRatio, 2)},
             poids {formatFr(gw.alt.weight, 2)}), le premier gardien passerait du {ordinal(gw.firstGoalieRank)} au{" "}
             {ordinal(gw.alt.firstGoalieRank)} rang ({gw.goaliesInTop100} → {gw.alt.goaliesInTop100} gardiens
