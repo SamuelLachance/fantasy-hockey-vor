@@ -1890,13 +1890,51 @@ function applyTeamCascadeRates(
   void league;
 }
 
+/** Games a club's goalies share in a season (the post-hoc allocation's budget). */
+export const GOALIE_TEAM_GAMES = 82;
+/** Ceiling on one goalie's expected games. */
+export const GOALIE_GP_CEILING = 65;
+/** Goalies of a club sharing its games: starter, backup and an injury spare. */
+export const GOALIE_TANDEM_SIZE = 3;
 /**
- * Post-hoc team GP renormalization for finished projections (generate + backtest).
- * Scales gamesPlayed so teammates sum to ~tandemGpTarget while preserving ranks.
+ * Elasticity of the starter's games to his club's budget (see
+ * renormalizeGoalieGamesByTeam), chosen out of sample by
+ * scripts/backtest-goalie-gp.ts (src/data/ml/goalie-gp-backtest.json):
+ * walk-forward 2015-16 .. 2025-26, the 1,085 goalies who played, MAE of
+ * their games on an 82-game basis 9.72 at 0.35-0.4 (9.71 at 0.45, 9.74 at
+ * 0.5), 10.07 at 0 (starter untouched) and 10.24 at 1 (pro rata); with one
+ * more org-depth goalie on each club 10.18 (flat 0.35-0.5). Picked season
+ * by season on the seasons before, α is 0.4-0.5 every year.
+ */
+export const GOALIE_STARTER_BUDGET_ELASTICITY = 0.4;
+
+/**
+ * Post-hoc team GP allocation of finished projections (generate, gp:recalibrate
+ * and the goalie GP backtest). Per club, the three goalies with the most
+ * model games share GOALIE_TEAM_GAMES:
+ *  - the starter (most model games) keeps his model games times
+ *    (budget / Σ top-3 model games)^α, α = GOALIE_STARTER_BUDGET_ELASTICITY,
+ *    capped at GOALIE_GP_CEILING: a crowded crease costs him part of the
+ *    excess, not all of it, and an empty one gives him part of the slack;
+ *  - the other two share what is left in proportion to their model games
+ *    (at least 4, at most the starter's);
+ *  - org depth beyond the three stays on the board at 4 games (streamers).
+ *
+ * It replaces a rule that kept a « clear » starter (1.35 × his backup)
+ * untouched and otherwise scaled the top three pro rata to 80 games: a
+ * starter next to a former starter (Hellebuyck 55 model games with Skinner
+ * 41 and a 15-game prospect: 37 published) lost the whole excess, i.e. a
+ * third of his season, while a starter just past the 1.35 line lost nothing
+ * (walk-forward MAE 10.10 against 9.72 now; starters 10.10 / 9.90,
+ * backups 12.29 / 11.31, starters of two 50-game seasons 8.78 / 8.22).
  */
 export function renormalizeGoalieGamesByTeam<
   T extends { team: string; gamesPlayed: number; isGoalie: boolean },
->(players: T[], teamBudget = HEURISTICS.tandemGpTarget): T[] {
+>(
+  players: T[],
+  teamBudget = GOALIE_TEAM_GAMES,
+  alpha = GOALIE_STARTER_BUDGET_ELASTICITY,
+): T[] {
   const groups = new Map<string, number[]>();
   for (let i = 0; i < players.length; i++) {
     if (!players[i].isGoalie) continue;
@@ -1907,55 +1945,28 @@ export function renormalizeGoalieGamesByTeam<
     groups.set(team, list);
   }
   const out = players.map((p) => ({ ...p }));
-  const MAX_TANDEM = 3; // starter + backup + injury spare; rest are org depth
   for (const idxs of groups.values()) {
     if (idxs.length < 2) continue;
-    // Rank by projected workload; only the top tandem shares the season budget.
-    const ordered = [...idxs].sort(
-      (a, b) => out[b]!.gamesPlayed - out[a]!.gamesPlayed,
-    );
-    const active = ordered.slice(0, MAX_TANDEM);
-    const depth = ordered.slice(MAX_TANDEM);
-    let sum = 0;
-    for (const i of active) sum += out[i]!.gamesPlayed;
+    const ordered = [...idxs].sort((a, b) => out[b]!.gamesPlayed - out[a]!.gamesPlayed);
+    const active = ordered.slice(0, GOALIE_TANDEM_SIZE);
+    const depth = ordered.slice(GOALIE_TANDEM_SIZE);
+    const sum = active.reduce((s, i) => s + Math.max(0, out[i]!.gamesPlayed), 0);
     if (!(sum > 0)) continue;
-
-    const lead = out[active[0]!]!.gamesPlayed;
-    const second = out[active[1]!]?.gamesPlayed ?? 0;
-    // Clear #1 (≈1.35× backup): keep the starter's own modeled workload and
-    // compress only the backups into the remaining budget, so workhorses
-    // don't get diluted by a new backup's prior GP. (The previous flat 62%
-    // share pinned every clear starter to the same 50 starts and erased the
-    // workhorse-vs-tandem signal.)
-    const clearStarter = second > 0 && lead / second >= 1.35;
-    if (clearStarter && active.length >= 2) {
-      const starterGp = Math.max(4, Math.min(65, Math.round(lead)));
-      out[active[0]!]!.gamesPlayed = starterGp;
-      const restModeled = active
-        .slice(1)
-        .reduce((s, i) => s + out[i]!.gamesPlayed, 0);
-      const remaining = Math.max(0, teamBudget - starterGp);
-      for (const i of active.slice(1)) {
-        const share = restModeled > 0 ? out[i]!.gamesPlayed / restModeled : 0.5;
-        out[i]!.gamesPlayed = Math.max(
-          4,
-          Math.min(starterGp, Math.round(remaining * share)),
-        );
-      }
-    } else if (Math.abs(sum - teamBudget) > 5) {
-      // Previously skipped sum≥150, which left overloaded org charts untouched.
-      const scale = teamBudget / sum;
-      for (const i of active) {
-        out[i]!.gamesPlayed = Math.max(
-          4,
-          Math.min(72, Math.round(out[i]!.gamesPlayed * scale)),
-        );
-      }
+    const starter = out[active[0]!]!;
+    const starterGp = Math.max(
+      4,
+      Math.min(GOALIE_GP_CEILING, Math.round(starter.gamesPlayed * Math.pow(teamBudget / sum, alpha))),
+    );
+    const rest = active.slice(1);
+    const restModeled = rest.reduce((s, i) => s + Math.max(0, out[i]!.gamesPlayed), 0);
+    const remaining = Math.max(0, teamBudget - starterGp);
+    starter.gamesPlayed = starterGp;
+    for (const i of rest) {
+      const share = restModeled > 0 ? Math.max(0, out[i]!.gamesPlayed) / restModeled : 1 / rest.length;
+      out[i]!.gamesPlayed = Math.max(4, Math.min(starterGp, Math.round(remaining * share)));
     }
     // Org depth stays on the board as streamers, not budget participants.
-    for (const i of depth) {
-      out[i]!.gamesPlayed = 4;
-    }
+    for (const i of depth) out[i]!.gamesPlayed = 4;
   }
   return out;
 }

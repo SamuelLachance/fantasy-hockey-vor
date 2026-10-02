@@ -8,7 +8,7 @@ import {
   top3GoalieGpSum,
   topGoalieGpTooLow,
 } from "../src/lib/goalie-tandem-guards";
-import { renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
+import { GOALIE_GP_CEILING, GOALIE_TEAM_GAMES, renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -51,6 +51,41 @@ const clear = renormalizeGoalieGamesByTeam(
 );
 assert(clear[0]!.gamesPlayed >= 48, `clear starter gets ≥48 (got ${clear[0]!.gamesPlayed})`);
 assert(clear[1]!.gamesPlayed <= 28, `backup capped (got ${clear[1]!.gamesPlayed})`);
+
+// Regression (2026-10-02 board): a starter next to a former starter and a
+// prospect lost the whole excess under the old pro-rata rule (Hellebuyck 55
+// model games, Skinner 41, DiVincentiis 15 → 37 published).
+const wpg = renormalizeGoalieGamesByTeam([
+  { team: "WPG", gamesPlayed: 55, isGoalie: true },
+  { team: "WPG", gamesPlayed: 41, isGoalie: true },
+  { team: "WPG", gamesPlayed: 15, isGoalie: true },
+  { team: "WPG", gamesPlayed: 8, isGoalie: true },
+]);
+assert(wpg[0]!.gamesPlayed >= 47 && wpg[0]!.gamesPlayed <= 55, `starter beside a former starter keeps most of his games (got ${wpg[0]!.gamesPlayed})`);
+assert(wpg[1]!.gamesPlayed < wpg[0]!.gamesPlayed && wpg[1]!.gamesPlayed >= 18, `backup gets the rest (got ${wpg[1]!.gamesPlayed})`);
+const wpgSum = wpg.slice(0, 3).reduce((s, p) => s + p.gamesPlayed, 0);
+assert(Math.abs(wpgSum - GOALIE_TEAM_GAMES) <= 2, `top three share the club's ${GOALIE_TEAM_GAMES} games (got ${wpgSum})`);
+assert(wpg[3]!.gamesPlayed === 4, "org depth at 4 GP");
+// An empty crease (two goalies without an NHL season) gives the starter part of the slack.
+const uta = renormalizeGoalieGamesByTeam([
+  { team: "UTA", gamesPlayed: 49, isGoalie: true },
+  { team: "UTA", gamesPlayed: 8, isGoalie: true },
+  { team: "UTA", gamesPlayed: 8, isGoalie: true },
+]);
+assert(uta[0]!.gamesPlayed > 49 && uta[0]!.gamesPlayed <= GOALIE_GP_CEILING, `starter of an empty crease gains (got ${uta[0]!.gamesPlayed})`);
+// Monotone: a crowded crease never lifts the starter, an emptier one never cuts him.
+for (const other of [10, 20, 30, 40, 50, 60]) {
+  const a = renormalizeGoalieGamesByTeam([
+    { team: "X", gamesPlayed: 60, isGoalie: true },
+    { team: "X", gamesPlayed: other, isGoalie: true },
+  ]);
+  const b = renormalizeGoalieGamesByTeam([
+    { team: "X", gamesPlayed: 60, isGoalie: true },
+    { team: "X", gamesPlayed: other + 10, isGoalie: true },
+  ]);
+  assert(b[0]!.gamesPlayed <= a[0]!.gamesPlayed, `starter GP monotone in his backup's (${other})`);
+  assert(a[0]!.gamesPlayed >= a[1]!.gamesPlayed, "starter stays ahead");
+}
 
 assert(top3GoalieGpSum([50, 22, 8, 4]) === 80, "top3 sums three largest");
 assert(topGoalieGpTooLow(39), "39 GP fails top-goalie floor");

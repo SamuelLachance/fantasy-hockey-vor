@@ -435,7 +435,8 @@ async function main() {
     );
   }
 
-  // Team tandem: goalie GP on a club should sum near a full season.
+  // Team tandem: a club's goalies share its 82 games (the starter keeps
+  // most of his model games, src/lib/ml/goalie-v2.ts).
   const { renormalizeGoalieGamesByTeam } = await import("../src/lib/ml/goalie-v2");
   const prevGp = new Map(activeBeforeTandem.map((p) => [p.id, p.gamesPlayed]));
   const tandemAdjusted = renormalizeGoalieGamesByTeam(activeBeforeTandem).map((p) => {
@@ -488,7 +489,8 @@ async function main() {
     );
   }
   const gpCalibrated = tandemAdjusted.map((p) => {
-    if (p.isGoalie) return { ...p, modelGamesPlayed: p.gamesPlayed };
+    // Goalies: the model's games before the team allocation (gp:recalibrate reallocates from it).
+    if (p.isGoalie) return { ...p, modelGamesPlayed: prevGp.get(p.id) ?? p.gamesPlayed };
     const decision = decideSkaterGp(p, profilesById.get(p.id), curveOf(p), splitRule);
     const newGp = decision.gamesPlayed;
     const availability = decision.availability ? { availability: decision.availability } : {};

@@ -1,0 +1,731 @@
+{
+ "version": 1,
+ "fittedAt": "2026-10-02T21:54:51.982Z",
+ "datasetSha1": "aa447b5356f7d37a3dfe192f6807a363e74c83a0",
+ "seasons": [
+  20152016,
+  20252026
+ ],
+ "goalies": 1085,
+ "teamGames": 82,
+ "alpha": 0.4,
+ "source": "scripts/backtest-goalie-gp.ts: walk-forward (base models and GP metas trained on the seasons before T, production inference), every goalie who played in T, scored on his games of T on an 82-game basis; roles from the history before T",
+ "played": {
+  "methods": {
+   "published": {
+    "all": {
+     "n": 1085,
+     "mae": 9.72,
+     "bias": -1.29,
+     "rmse": 12.64
+    },
+    "starter": {
+     "n": 419,
+     "mae": 9.9,
+     "bias": -1.29,
+     "rmse": 12.59
+    },
+    "backup": {
+     "n": 385,
+     "mae": 11.31,
+     "bias": -1.97,
+     "rmse": 14.09
+    },
+    "new": {
+     "n": 281,
+     "mae": 7.27,
+     "bias": -0.36,
+     "rmse": 10.4
+    },
+    "established": {
+     "n": 108,
+     "mae": 8.22,
+     "bias": 1.9,
+     "rmse": 11.4
+    }
+   },
+   "legacyRenorm": {
+    "all": {
+     "n": 1085,
+     "mae": 10.1,
+     "bias": -1.87,
+     "rmse": 13.24
+    },
+    "starter": {
+     "n": 419,
+     "mae": 10.1,
+     "bias": -1.1,
+     "rmse": 13.2
+    },
+    "backup": {
+     "n": 385,
+     "mae": 12.29,
+     "bias": -3.54,
+     "rmse": 15.04
+    },
+    "new": {
+     "n": 281,
+     "mae": 7.09,
+     "bias": -0.73,
+     "rmse": 10.36
+    },
+    "established": {
+     "n": 108,
+     "mae": 8.78,
+     "bias": 4.78,
+     "rmse": 12.84
+    }
+   },
+   "previousEngine": {
+    "all": {
+     "n": 1085,
+     "mae": 10.58,
+     "bias": -2.26,
+     "rmse": 14.04
+    },
+    "starter": {
+     "n": 419,
+     "mae": 11.28,
+     "bias": -0.24,
+     "rmse": 14.63
+    },
+    "backup": {
+     "n": 385,
+     "mae": 12.28,
+     "bias": -5.29,
+     "rmse": 15.52
+    },
+    "new": {
+     "n": 281,
+     "mae": 7.19,
+     "bias": -1.11,
+     "rmse": 10.6
+    },
+    "established": {
+     "n": 108,
+     "mae": 9.81,
+     "bias": 7.31,
+     "rmse": 14.16
+    }
+   },
+   "model": {
+    "all": {
+     "n": 1085,
+     "mae": 11.58,
+     "bias": 5.27,
+     "rmse": 14.22
+    },
+    "starter": {
+     "n": 419,
+     "mae": 10.57,
+     "bias": 4.39,
+     "rmse": 13.85
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13,
+     "bias": 6.03,
+     "rmse": 15.6
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 9.57,
+     "bias": 6.28,
+     "rmse": 13.78
+    }
+   },
+   "lag1": {
+    "all": {
+     "n": 1085,
+     "mae": 12.05,
+     "bias": 3.02,
+     "rmse": 15.1
+    },
+    "starter": {
+     "n": 419,
+     "mae": 12.05,
+     "bias": 6.5,
+     "rmse": 15.9
+    },
+    "backup": {
+     "n": 385,
+     "mae": 12.72,
+     "bias": -2.6,
+     "rmse": 15.79
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 11.08,
+     "bias": 9.32,
+     "rmse": 15.39
+    }
+   },
+   "ewma3": {
+    "all": {
+     "n": 1085,
+     "mae": 12.21,
+     "bias": 2.74,
+     "rmse": 15.04
+    },
+    "starter": {
+     "n": 419,
+     "mae": 12.05,
+     "bias": 3.61,
+     "rmse": 15.29
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13.17,
+     "bias": -0.24,
+     "rmse": 16.28
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 10.41,
+     "bias": 7.88,
+     "rmse": 14.8
+    }
+   },
+   "fixedRole": {
+    "all": {
+     "n": 1085,
+     "mae": 14.08,
+     "bias": 7.03,
+     "rmse": 17.86
+    },
+    "starter": {
+     "n": 419,
+     "mae": 16.55,
+     "bias": 14.81,
+     "rmse": 21.66
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13.55,
+     "bias": -0.34,
+     "rmse": 16.45
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 10.54,
+     "bias": 7.98,
+     "rmse": 14.76
+    }
+   }
+  },
+  "established": {
+   "published": {
+    "meanPred": 51.9,
+    "meanActual": 50,
+    "under45": 13
+   },
+   "legacyRenorm": {
+    "meanPred": 54.8,
+    "meanActual": 50,
+    "under45": 12
+   },
+   "previousEngine": {
+    "meanPred": 57.3,
+    "meanActual": 50,
+    "under45": 3
+   },
+   "model": {
+    "meanPred": 56.3,
+    "meanActual": 50,
+    "under45": 4
+   },
+   "lag1": {
+    "meanPred": 59.3,
+    "meanActual": 50,
+    "under45": 0
+   },
+   "ewma3": {
+    "meanPred": 57.9,
+    "meanActual": 50,
+    "under45": 0
+   },
+   "fixedRole": {
+    "meanPred": 58,
+    "meanActual": 50,
+    "under45": 0
+   }
+  },
+  "alphaSweep": {
+   "0": 10.07,
+   "1": 10.24,
+   "0.1": 9.93,
+   "0.2": 9.83,
+   "0.25": 9.77,
+   "0.3": 9.76,
+   "0.35": 9.72,
+   "0.4": 9.72,
+   "0.45": 9.71,
+   "0.5": 9.74,
+   "0.6": 9.8,
+   "0.75": 9.92
+  },
+  "walkForwardAlpha": {
+   "picks": [
+    [
+     20152016,
+     0.4
+    ],
+    [
+     20162017,
+     0.45
+    ],
+    [
+     20172018,
+     0.45
+    ],
+    [
+     20182019,
+     0.45
+    ],
+    [
+     20192020,
+     0.45
+    ],
+    [
+     20202021,
+     0.45
+    ],
+    [
+     20212022,
+     0.45
+    ],
+    [
+     20222023,
+     0.45
+    ],
+    [
+     20232024,
+     0.45
+    ],
+    [
+     20242025,
+     0.45
+    ],
+    [
+     20252026,
+     0.45
+    ]
+   ],
+   "scores": {
+    "all": {
+     "n": 993,
+     "mae": 9.66,
+     "bias": -1.25,
+     "rmse": 12.47
+    },
+    "starter": {
+     "n": 380,
+     "mae": 9.87,
+     "bias": -1.65,
+     "rmse": 12.49
+    },
+    "backup": {
+     "n": 355,
+     "mae": 11.35,
+     "bias": -1.67,
+     "rmse": 14.09
+    },
+    "new": {
+     "n": 258,
+     "mae": 7.02,
+     "bias": -0.1,
+     "rmse": 9.8
+    },
+    "established": {
+     "n": 91,
+     "mae": 7.64,
+     "bias": 0.58,
+     "rmse": 10.35
+    }
+   }
+  }
+ },
+ "depth": {
+  "methods": {
+   "published": {
+    "all": {
+     "n": 1085,
+     "mae": 10.18,
+     "bias": -2.17,
+     "rmse": 13.03
+    },
+    "starter": {
+     "n": 419,
+     "mae": 10.35,
+     "bias": -2.26,
+     "rmse": 12.97
+    },
+    "backup": {
+     "n": 385,
+     "mae": 11.81,
+     "bias": -3,
+     "rmse": 14.5
+    },
+    "new": {
+     "n": 281,
+     "mae": 7.69,
+     "bias": -0.89,
+     "rmse": 10.81
+    },
+    "established": {
+     "n": 108,
+     "mae": 8.81,
+     "bias": 0.47,
+     "rmse": 11.69
+    }
+   },
+   "legacyRenorm": {
+    "all": {
+     "n": 1085,
+     "mae": 10.57,
+     "bias": -2.7,
+     "rmse": 13.69
+    },
+    "starter": {
+     "n": 419,
+     "mae": 10.35,
+     "bias": -1.71,
+     "rmse": 13.46
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13.02,
+     "bias": -4.73,
+     "rmse": 15.67
+    },
+    "new": {
+     "n": 281,
+     "mae": 7.53,
+     "bias": -1.42,
+     "rmse": 10.81
+    },
+    "established": {
+     "n": 108,
+     "mae": 9.01,
+     "bias": 4.39,
+     "rmse": 13.02
+    }
+   },
+   "previousEngine": {
+    "all": {
+     "n": 1085,
+     "mae": 11.21,
+     "bias": -3.71,
+     "rmse": 14.89
+    },
+    "starter": {
+     "n": 419,
+     "mae": 11.79,
+     "bias": -0.98,
+     "rmse": 15.29
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13.48,
+     "bias": -7.58,
+     "rmse": 16.86
+    },
+    "new": {
+     "n": 281,
+     "mae": 7.25,
+     "bias": -2.46,
+     "rmse": 10.9
+    },
+    "established": {
+     "n": 108,
+     "mae": 9.88,
+     "bias": 7.24,
+     "rmse": 14.24
+    }
+   },
+   "model": {
+    "all": {
+     "n": 1085,
+     "mae": 11.58,
+     "bias": 5.27,
+     "rmse": 14.22
+    },
+    "starter": {
+     "n": 419,
+     "mae": 10.57,
+     "bias": 4.39,
+     "rmse": 13.85
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13,
+     "bias": 6.03,
+     "rmse": 15.6
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 9.57,
+     "bias": 6.28,
+     "rmse": 13.78
+    }
+   },
+   "lag1": {
+    "all": {
+     "n": 1085,
+     "mae": 12.05,
+     "bias": 3.02,
+     "rmse": 15.1
+    },
+    "starter": {
+     "n": 419,
+     "mae": 12.05,
+     "bias": 6.5,
+     "rmse": 15.9
+    },
+    "backup": {
+     "n": 385,
+     "mae": 12.72,
+     "bias": -2.6,
+     "rmse": 15.79
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 11.08,
+     "bias": 9.32,
+     "rmse": 15.39
+    }
+   },
+   "ewma3": {
+    "all": {
+     "n": 1085,
+     "mae": 12.21,
+     "bias": 2.74,
+     "rmse": 15.04
+    },
+    "starter": {
+     "n": 419,
+     "mae": 12.05,
+     "bias": 3.61,
+     "rmse": 15.29
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13.17,
+     "bias": -0.24,
+     "rmse": 16.28
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 10.41,
+     "bias": 7.88,
+     "rmse": 14.8
+    }
+   },
+   "fixedRole": {
+    "all": {
+     "n": 1085,
+     "mae": 14.08,
+     "bias": 7.03,
+     "rmse": 17.86
+    },
+    "starter": {
+     "n": 419,
+     "mae": 16.55,
+     "bias": 14.81,
+     "rmse": 21.66
+    },
+    "backup": {
+     "n": 385,
+     "mae": 13.55,
+     "bias": -0.34,
+     "rmse": 16.45
+    },
+    "new": {
+     "n": 281,
+     "mae": 11.13,
+     "bias": 5.53,
+     "rmse": 12.71
+    },
+    "established": {
+     "n": 108,
+     "mae": 10.54,
+     "bias": 7.98,
+     "rmse": 14.76
+    }
+   }
+  },
+  "established": {
+   "published": {
+    "meanPred": 50.5,
+    "meanActual": 50,
+    "under45": 15
+   },
+   "legacyRenorm": {
+    "meanPred": 54.4,
+    "meanActual": 50,
+    "under45": 16
+   },
+   "previousEngine": {
+    "meanPred": 57.3,
+    "meanActual": 50,
+    "under45": 3
+   },
+   "model": {
+    "meanPred": 56.3,
+    "meanActual": 50,
+    "under45": 4
+   },
+   "lag1": {
+    "meanPred": 59.3,
+    "meanActual": 50,
+    "under45": 0
+   },
+   "ewma3": {
+    "meanPred": 57.9,
+    "meanActual": 50,
+    "under45": 0
+   },
+   "fixedRole": {
+    "meanPred": 58,
+    "meanActual": 50,
+    "under45": 0
+   }
+  },
+  "alphaSweep": {
+   "0": 10.53,
+   "1": 10.64,
+   "0.1": 10.39,
+   "0.2": 10.27,
+   "0.25": 10.23,
+   "0.3": 10.22,
+   "0.35": 10.18,
+   "0.4": 10.18,
+   "0.45": 10.16,
+   "0.5": 10.18,
+   "0.6": 10.24,
+   "0.75": 10.34
+  },
+  "walkForwardAlpha": {
+   "picks": [
+    [
+     20152016,
+     0.4
+    ],
+    [
+     20162017,
+     0.5
+    ],
+    [
+     20172018,
+     0.4
+    ],
+    [
+     20182019,
+     0.5
+    ],
+    [
+     20192020,
+     0.4
+    ],
+    [
+     20202021,
+     0.45
+    ],
+    [
+     20212022,
+     0.5
+    ],
+    [
+     20222023,
+     0.45
+    ],
+    [
+     20232024,
+     0.45
+    ],
+    [
+     20242025,
+     0.45
+    ],
+    [
+     20252026,
+     0.45
+    ]
+   ],
+   "scores": {
+    "all": {
+     "n": 993,
+     "mae": 10.14,
+     "bias": -2.14,
+     "rmse": 12.89
+    },
+    "starter": {
+     "n": 380,
+     "mae": 10.36,
+     "bias": -2.71,
+     "rmse": 12.89
+    },
+    "backup": {
+     "n": 355,
+     "mae": 11.84,
+     "bias": -2.63,
+     "rmse": 14.5
+    },
+    "new": {
+     "n": 258,
+     "mae": 7.48,
+     "bias": -0.64,
+     "rmse": 10.27
+    },
+    "established": {
+     "n": 91,
+     "mae": 8.4,
+     "bias": -1.06,
+     "rmse": 10.77
+    }
+   }
+  }
+ }
+}

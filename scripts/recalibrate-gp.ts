@@ -9,8 +9,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { attachDraftEdge } from "../src/lib/draft-edge";
+import { renormalizeGoalieGamesByTeam } from "../src/lib/ml/goalie-v2";
 import {
-  calibratedGoalieGp,
   decideSkaterGp,
   gpCurveFor,
   loadGpCalibration,
@@ -80,7 +80,12 @@ const curveOf = (p: (typeof data.players)[number]) =>
       })
     : [];
 
-const goalieGp = calibratedGoalieGp(data.players, profilesById, season);
+// Goalies: the team allocation of generate, from the model's games.
+const goalieGp = new Map(
+  renormalizeGoalieGamesByTeam(
+    data.players.filter((p) => p.isGoalie).map((p) => ({ id: p.id, team: p.team, isGoalie: true, gamesPlayed: modelGp(p) })),
+  ).map((p) => [p.id, p.gamesPlayed]),
+);
 
 // Split / away last seasons (games in another league): the calibrated
 // split-season rule replaces the curve (src/lib/split-season-gp.ts).

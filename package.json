@@ -30,6 +30,7 @@
     "nhl:org-bios": "tsx scripts/fetch-nhl-org-bios.ts",
     "gp:recalibrate": "tsx scripts/recalibrate-gp.ts",
     "gp:fit": "tsx scripts/fit-gp-calibration.ts",
+    "gp:goalie-backtest": "tsx scripts/backtest-goalie-gp.ts",
     "ml:oos": "tsx scripts/backtest-skater-oos.ts",
     "gp:split-fit": "tsx scripts/fit-split-season-gp.ts",
     "rates:recalibrate": "tsx scripts/recalibrate-rates.ts",

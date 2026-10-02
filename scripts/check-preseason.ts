@@ -16,12 +16,24 @@
  * - Clubs: skater games within 18 × 82 ± 6 % (the ±5 % band and rounding).
  * - Nobody on no club list without an NHL game in two seasons.
  * - Goalie save% spread within the skill ceiling (0.0051).
+ * - Goalie games: every established starter (50+ GP in each of the last two
+ *   seasons) who leads his club's crease lands within 38-65 games, the group
+ *   averages 47-60 (walk-forward: such goalies play 50.0 on average), and
+ *   the team allocation keeps at least 80 % of his model games (the old
+ *   pro-rata rule published Hellebuyck at 37 of his 55).
+ * - Goalie GP backtest (src/data/ml/goalie-gp-backtest.json, npm run
+ *   gp:goalie-backtest): run on today's dataset with today's allocation
+ *   constants; the published allocation is at least as accurate as the
+ *   rule it replaced, the previous engine, the model alone and the
+ *   baselines (all goalies, starters, backups, established starters, both
+ *   club rosters), and its MAE does not regress.
  * Run: npx tsx scripts/check-preseason.ts
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { CALIBRATED_GP_CEILING } from "../src/lib/gp-calibration";
 import { GOALIE_SAVE_PCT_SKILL_SD, GOALIE_SHRINK_MIN_GP } from "../src/lib/leagues/goalie-shrink";
+import { GOALIE_STARTER_BUDGET_ELASTICITY, GOALIE_TEAM_GAMES } from "../src/lib/ml/goalie-v2";
 import { NHL_TEAMS } from "../src/lib/nhl-api";
 import type { NhlRostersFile } from "../src/lib/nhl-rosters";
 import { ROOKIE_OFF_ROSTER_MAX_GP, SKATER_GAMES_PER_TEAM, staleReason } from "../src/lib/projection-pool";
@@ -137,6 +149,65 @@ if (existsSync(rostersPath)) {
     const m = sv.reduce((s, x) => s + x, 0) / sv.length;
     const sd = Math.sqrt(sv.reduce((s, x) => s + (x - m) ** 2, 0) / (sv.length - 1));
     if (sd > GOALIE_SAVE_PCT_SKILL_SD) errors.push(`goalie save% spread ${sd.toFixed(4)} above the skill ceiling ${GOALIE_SAVE_PCT_SKILL_SD}`);
+  }
+}
+
+// Goalie games: established starters keep a starter's workload.
+{
+  const gpIn = (id: number, s: number) =>
+    (profiles.get(id)?.teamHistory ?? []).filter((h) => h.isGoalie && h.seasonId === s).reduce((a, h) => a + h.gamesPlayed, 0);
+  const teams = new Set<string>(NHL_TEAMS);
+  const goalies = board.players.filter((p) => p.isGoalie && teams.has(p.team));
+  const lead = new Map<string, number>();
+  for (const p of goalies) lead.set(p.team, Math.max(lead.get(p.team) ?? 0, p.gamesPlayed));
+  const established = goalies.filter(
+    (p) => gpIn(p.id, 20242025) >= 50 && gpIn(p.id, 20252026) >= 50 && p.gamesPlayed === lead.get(p.team),
+  );
+  if (established.length >= 8) {
+    const out = established.filter((p) => p.gamesPlayed < 38 || p.gamesPlayed > 65);
+    if (out.length > 0) errors.push(`established starter(s) outside 38-65 GP: ${out.map((p) => `${p.name} ${p.gamesPlayed}`).join(", ")}`);
+    const mean = established.reduce((s, p) => s + p.gamesPlayed, 0) / established.length;
+    if (mean < 47 || mean > 60) errors.push(`established starters (n ${established.length}) average ${mean.toFixed(1)} GP (expected 47-60)`);
+    const cut = established.filter((p) => p.modelGamesPlayed != null && p.gamesPlayed < 0.8 * p.modelGamesPlayed);
+    if (cut.length > 0) {
+      errors.push(`team allocation cut established starter(s) below 80 % of their model games: ${cut.map((p) => `${p.name} ${p.gamesPlayed}/${p.modelGamesPlayed}`).join(", ")}`);
+    }
+  } else {
+    errors.push(`only ${established.length} established starters on the board (expected ≥ 8)`);
+  }
+}
+
+// Goalie GP backtest: fresh, consistent with the code, and no regression.
+{
+  const path = join(root, "src", "data", "ml", "goalie-gp-backtest.json");
+  type Cell = { n: number; mae: number };
+  type Scenario = { methods: Record<string, Record<string, Cell>> };
+  if (!existsSync(path)) errors.push("src/data/ml/goalie-gp-backtest.json missing (npm run gp:goalie-backtest)");
+  else {
+    const bt = read<{ datasetSha1: string; alpha: number; teamGames: number; played: Scenario; depth: Scenario }>("src", "data", "ml", "goalie-gp-backtest.json");
+    if (bundleSha1 && bt.datasetSha1 !== bundleSha1) errors.push(`goalie GP backtest ran on dataset ${bt.datasetSha1.slice(0, 12)}, bundle trained on ${bundleSha1.slice(0, 12)} (npm run gp:goalie-backtest)`);
+    if (bt.alpha !== GOALIE_STARTER_BUDGET_ELASTICITY || bt.teamGames !== GOALIE_TEAM_GAMES) {
+      errors.push(`goalie GP backtest ran with α ${bt.alpha} / ${bt.teamGames} games, code has ${GOALIE_STARTER_BUDGET_ELASTICITY} / ${GOALIE_TEAM_GAMES} (npm run gp:goalie-backtest)`);
+    }
+    // MAE ceilings of the 2026-10-02 run (9.72 / 10.18) plus a little room.
+    const ceiling: Record<string, number> = { played: 9.85, depth: 10.3 };
+    for (const scen of ["played", "depth"] as const) {
+      const m = bt[scen]?.methods;
+      const pub = m?.published;
+      if (!pub) {
+        errors.push(`goalie GP backtest has no ${scen} scenario`);
+        continue;
+      }
+      if (pub.all!.mae > ceiling[scen]!) errors.push(`goalie GP backtest (${scen}) MAE ${pub.all!.mae} above ${ceiling[scen]}`);
+      for (const group of ["all", "starter", "backup", "established"]) {
+        for (const [name, cells] of Object.entries(m)) {
+          if (name === "published" || !cells[group] || !pub[group]) continue;
+          if (pub[group]!.mae > cells[group]!.mae + 0.05) {
+            errors.push(`goalie GP backtest (${scen}, ${group}): published MAE ${pub[group]!.mae} worse than ${name} ${cells[group]!.mae}`);
+          }
+        }
+      }
+    }
   }
 }
 

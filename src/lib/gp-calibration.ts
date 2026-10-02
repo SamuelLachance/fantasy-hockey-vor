@@ -373,6 +373,13 @@ export function goalieStarterShare(historicalStarts: number): number {
 /**
  * Recompute each team's goalie GP split from the committed workload ordering
  * and the starter's historical starts. Returns id → calibrated GP.
+ *
+ * The goalie games of the 2026-09-27 board (`gp:recalibrate`); no longer
+ * published since 2026-10-02 (gp:recalibrate and generate both allocate
+ * with renormalizeGoalieGamesByTeam of src/lib/ml/goalie-v2.ts). Kept as
+ * the « previous engine » of scripts/backtest-goalie-gp.ts: walk-forward
+ * MAE 10.58 against 9.72, backups −5.3 games of bias, established starters
+ * +7.3.
  */
 export function calibratedGoalieGp(
   players: CalibratablePlayer[],
