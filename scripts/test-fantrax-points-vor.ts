@@ -30,7 +30,6 @@ function eq(actual: unknown, expected: unknown, msg: string) {
   const b = JSON.stringify(expected);
   assert(a === b, `${msg} (got ${a}, expected ${b})`);
 }
-const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
 
 // ---------------------------------------------------- 1. which leagues it covers
 {
@@ -267,7 +266,10 @@ const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps;
     // Goalies are scarce here, but not 40% of the board.
     const gTop100 = v.rows.slice(0, 100).filter((r) => r.group === "G").length;
     assert(gTop100 <= 26, `goalies in the top 100 stay plausible (${gTop100}; 64 of 640 seats are goalie seats)`);
-    assert(near(v.byId.get(byName.get("Nathan MacKinnon")!)!.vor, v.rows[0]!.vor), "the best skater tops the board");
+    // In season the order moves with the stats (scripts/update-in-season.ts):
+    // a star stays near the top, whoever leads this week.
+    const mack = v.rows.findIndex((r) => r.id === byName.get("Nathan MacKinnon"));
+    assert(mack >= 0 && mack < 10, `MacKinnon stays in the top 10 of the board (${mack + 1})`);
   }
 }
 

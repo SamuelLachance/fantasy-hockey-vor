@@ -49,6 +49,9 @@ export interface PlayerCardData {
   };
   /** Snake: [key of his Snake page, verdict, trend]. */
   sn?: [string, string, string] | null;
+  /** This season so far (NHL), and a current injury with its estimated return. */
+  cur?: { gp: number; s: Record<string, number> } | null;
+  injNow?: { st: string; ret: string | null; out: number; note: string | null } | null;
   /** This season's projection. */
   proj:
     | { gp: number; g: number; a: number; ppp: number; sog: number; hit: number; blk: number; pim: number }

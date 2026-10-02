@@ -36,6 +36,36 @@ const VERDICT_TONE: Record<string, string> = {
 };
 const POS_FR: Record<string, string> = { C: "Centre", LW: "Ailier gauche", RW: "Ailier droit", L: "Ailier gauche", R: "Ailier droit", D: "Défenseur", G: "Gardien" };
 const SEASON0 = 2026;
+const INJ_FR: Record<string, string> = {
+  "Day-To-Day": "Au jour le jour",
+  Out: "Absent",
+  "Injured Reserve": "Liste des blessés",
+  Suspension: "Suspendu",
+};
+const INJ_TYPE_FR: Record<string, string> = {
+  Shoulder: "épaule",
+  "Upper Body": "haut du corps",
+  "Lower Body": "bas du corps",
+  Knee: "genou",
+  Ankle: "cheville",
+  Foot: "pied",
+  Hand: "main",
+  Wrist: "poignet",
+  Back: "dos",
+  Hip: "hanche",
+  Groin: "aine",
+  Concussion: "commotion",
+  Head: "tête",
+  Illness: "maladie",
+  Leg: "jambe",
+  Elbow: "coude",
+  Neck: "cou",
+  Undisclosed: "non divulguée",
+  Suspension: "suspension",
+  "Contract Dispute": "différend contractuel",
+  Personal: "raisons personnelles",
+};
+const dateFr = (iso: string) => new Date(`${iso}T12:00:00Z`).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" });
 const NBSP = " ";
 const fmt1 = (x: number) => x.toFixed(1).replace(".", ",");
 const fmt0 = (x: number) => Math.round(x).toLocaleString("fr-CA");
@@ -335,6 +365,15 @@ export function PlayerCardView({ leagues }: { leagues: LeagueInfo[] }) {
               {card.k ? ` · Contrat LNH : ${fmtMoney(card.k.cap)}${card.k.yrs != null ? `, ${card.k.yrs} an${card.k.yrs > 1 ? "s" : ""}` : ""}${card.k.st ? ` (${card.k.st === "RFA" ? "JAC" : "JAS"})` : ""}` : ""}
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              {card.injNow ? (
+                <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-rose-100 ring-1 ring-rose-500/40">
+                  <Activity className="mr-1 inline h-3 w-3" aria-hidden="true" />
+                  {INJ_FR[card.injNow.st] ?? card.injNow.st}
+                  {card.injNow.note && card.injNow.note !== card.injNow.st ? ` (${INJ_TYPE_FR[card.injNow.note] ?? card.injNow.note})` : ""}
+                  {card.injNow.ret ? ` · retour estimé le ${dateFr(card.injNow.ret)}` : " · retour non précisé"}
+                  {card.injNow.out > 0 ? ` · ${card.injNow.out} match${card.injNow.out > 1 ? "s" : ""} manqué${card.injNow.out > 1 ? "s" : ""}` : ""}
+                </span>
+              ) : null}
               {card.inj?.tr ? (
                 <span className={`rounded-full px-2 py-0.5 ring-1 ${card.inj.tr === "healthy" ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30" : "bg-amber-500/10 text-amber-200 ring-amber-500/30"}`}>
                   <ShieldCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />
@@ -370,13 +409,42 @@ export function PlayerCardView({ leagues }: { leagues: LeagueInfo[] }) {
         {!cap && !slap && !ltl ? <p className="text-sm text-slate-400">Ce joueur n’apparaît dans aucune de vos ligues.</p> : null}
       </section>
 
+      {/* ---- this season so far */}
+      {card.cur ? (
+        <Card title={`Saison ${season(SEASON0)} jusqu’ici`} icon={<Activity className="h-4 w-4" aria-hidden="true" />} accent="text-sky-300">
+          {card.g ? (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+              <Stat label="PJ" value={card.cur.gp} />
+              <Stat label="Victoires" value={card.cur.s.wins ?? 0} />
+              <Stat label="Arrêts" value={card.cur.s.saves ?? 0} />
+              <Stat
+                label="% arrêts"
+                value={card.cur.s.shotsAgainst ? ((card.cur.s.saves ?? 0) / card.cur.s.shotsAgainst).toFixed(3).replace("0.", ",") : "—"}
+              />
+              <Stat label="Blanchissages" value={card.cur.s.shutouts ?? 0} />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-8">
+              <Stat label="PJ" value={card.cur.gp} />
+              <Stat label="Buts" value={card.cur.s.goals ?? 0} />
+              <Stat label="Passes" value={card.cur.s.assists ?? 0} />
+              <Stat label="Points" value={(card.cur.s.goals ?? 0) + (card.cur.s.assists ?? 0)} />
+              <Stat label="Pts AN" value={card.cur.s.powerplayPoints ?? 0} />
+              <Stat label="Tirs" value={card.cur.s.shots ?? 0} />
+              <Stat label="Mises en échec" value={card.cur.s.hits ?? 0} />
+              <Stat label="Tirs bloqués" value={card.cur.s.blocks ?? 0} />
+            </div>
+          )}
+        </Card>
+      ) : null}
+
       {/* ---- projection */}
       {proj ? (
         <Card
-          title={`Projection ${season(SEASON0)}`}
+          title={`Projection ${season(SEASON0)} (réel + reste de la saison)`}
           icon={<LineChart className="h-4 w-4" aria-hidden="true" />}
           accent="text-emerald-300"
-          aside={projAt ? <span className="text-xs text-slate-400">calculée le {new Date(projAt).toLocaleDateString("fr-CA")}</span> : null}
+          aside={projAt ? <span className="text-xs text-slate-400">mise à jour le {new Date(projAt).toLocaleDateString("fr-CA")}</span> : null}
         >
           {"g" in proj ? (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:grid-cols-9">

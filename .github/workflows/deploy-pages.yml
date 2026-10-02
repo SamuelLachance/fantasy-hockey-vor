@@ -59,6 +59,18 @@ jobs:
       # with its salary-cap contracts) and its check gates both. Non-fatal: on
       # failure that league's committed snapshot (already validated by
       # `npm run check` above) is restored and used.
+      - name: In-season projections (non-fatal)
+        # Today's NHL stats, remaining schedule, injuries and estimated
+        # returns on top of the frozen pre-season projections, before every
+        # league sync, board and dynasty build below reads them.
+        run: |
+          if timeout 300 npm run season:update && npm run check:data; then
+            echo "In-season projections refreshed"
+          else
+            git checkout -- src/data/players.json public/player-details.json || true
+            echo "::warning::in-season projection update failed, using the committed projections"
+          fi
+
       - name: Refresh Captains Dynasty snapshot (non-fatal)
         run: |
           # 10 min budget (a sync takes ~1 min): a hung read counts as a failure.

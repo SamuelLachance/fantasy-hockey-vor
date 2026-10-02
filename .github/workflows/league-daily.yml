@@ -74,6 +74,18 @@ jobs:
       # every rostered player, K, ranks). Captains runs first and its restore
       # is recursive (src/data/fantrax, public/fantrax), so there is no fresh
       # Slapshot data yet for it to discard.
+      - name: In-season projections (non-fatal)
+        # Today's NHL stats, remaining schedule, injuries and estimated
+        # returns on top of the frozen pre-season projections, before every
+        # league sync, board and dynasty build below reads them.
+        run: |
+          if timeout 300 npm run season:update && npm run check:data; then
+            echo "In-season projections refreshed"
+          else
+            git checkout -- src/data/players.json public/player-details.json || true
+            echo "::warning::in-season projection update failed, using the committed projections"
+          fi
+
       - name: Refresh Captains Dynasty snapshot (non-fatal)
         run: |
           # 10 min budget (a sync takes ~1 min): a hung read counts as a failure.

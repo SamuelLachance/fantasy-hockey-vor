@@ -84,7 +84,9 @@ export function planOdds(p: number, sure: boolean): number {
  */
 export function availableProjected(state: StateSnapshot, values: ValuesSnapshot): string[] {
   const rosteredAnywhere = new Set(Object.values(state.rosters).flatMap((r) => r.map((x) => x.id)));
-  const draftedIds = new Set((state.draft?.picks ?? []).map((p) => p.playerId).filter(Boolean) as string[]);
+  // picks count only while the draft runs: after it, a pick since dropped is a free agent
+  const draftOver = !state.draft || state.draft.state === "completed" || state.draft.state === "done";
+  const draftedIds = new Set(draftOver ? [] : (state.draft!.picks.map((p) => p.playerId).filter(Boolean) as string[]));
   return Object.keys(values.players).filter(
     (id) =>
       !rosteredAnywhere.has(id) &&

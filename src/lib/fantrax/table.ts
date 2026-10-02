@@ -189,8 +189,12 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
     for (const [team, roster] of Object.entries(state.rosters)) {
       for (const r of roster) owners.set(r.id, { team, status: LETTER[r.status] ?? null });
     }
-    for (const p of state.draft?.picks ?? []) {
-      if (p.playerId && !owners.has(p.playerId)) owners.set(p.playerId, { team: p.teamId, status: null });
+    // Only while the draft runs: once it is over the rosters are the truth (a
+    // pick since dropped to free agency belongs to nobody).
+    if (state.draft && state.draft.state !== "completed" && state.draft.state !== "done") {
+      for (const p of state.draft.picks ?? []) {
+        if (p.playerId && !owners.has(p.playerId)) owners.set(p.playerId, { team: p.teamId, status: null });
+      }
     }
   }
   const need = input.baseLineup ? draftNeed(input.baseLineup) : {};

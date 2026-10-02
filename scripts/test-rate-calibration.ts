@@ -3,7 +3,7 @@
  * and the raised rate limits, plus invariants of the committed board.
  * Run: npx tsx scripts/test-rate-calibration.ts
  */
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import {
   clampSkaterProjection,
@@ -377,7 +377,13 @@ assert(SKATER_RATE_LIMITS.D.goals >= 0.4, "D goals limit sits above the realized
 // --- committed board ---
 {
   const root = process.cwd();
-  const data = JSON.parse(readFileSync(join(root, "src", "data", "players.json"), "utf8")) as ProjectionsDataset;
+  // The pre-season board carries the calibration's invariants; once the
+  // season starts, players.json adds each player's actual stats and his
+  // remaining games (scripts/update-in-season.ts) on top of that frozen copy.
+  const preseason = join(root, "src", "data", "players-preseason.json");
+  const data = JSON.parse(
+    readFileSync(existsSync(preseason) ? preseason : join(root, "src", "data", "players.json"), "utf8"),
+  ) as ProjectionsDataset;
   const details = JSON.parse(readFileSync(join(root, "public", "player-details.json"), "utf8")) as Record<string, PlayerDetailRecord>;
   const meta = data.rateCalibration;
   assert(meta?.version === 2, "players.json records the per-segment rate calibration");

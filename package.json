@@ -60,6 +60,7 @@
     "yahoo:fetch": "tsx scripts/fetch-yahoo-positions.ts fetch",
     "yahoo:gaps": "tsx scripts/report-yahoo-gaps.ts",
     "generate": "tsx scripts/generate-projections.ts",
+    "season:update": "tsx scripts/update-in-season.ts && tsx scripts/reapply-vor.ts",
     "league:sync": "tsx scripts/fantrax-sync.ts",
     "league:revalue": "tsx scripts/fantrax-revalue.ts && tsx scripts/build-dynasty.ts",
     "league:report": "tsx scripts/fantrax-report.ts",

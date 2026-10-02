@@ -43,7 +43,7 @@ interface Profile {
 }
 
 const profiles = read<{ profiles: Profile[] }>("src/data/player-profiles.json").profiles;
-const players = read<{ generatedAt: string; players: Array<{ id: number; name: string; team: string; positions?: string[]; isGoalie: boolean; gamesPlayed: number; projection: Record<string, number> }> }>(
+const players = read<{ generatedAt: string; players: Array<{ id: number; name: string; team: string; positions?: string[]; isGoalie: boolean; gamesPlayed: number; projection: Record<string, number>; inSeason?: { gp: number; stats: Record<string, number>; injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null } | null } }> }>(
   "src/data/players.json",
 );
 const projById = new Map(players.players.map((p) => [p.id, p]));
@@ -98,6 +98,10 @@ for (const pr of profiles) {
       : null,
     inj: pr.injury ? { tr: pr.injury.trend ?? null, d: pr.injury.durabilityScore ?? null } : null,
     hist,
+    cur: proj?.inSeason && proj.inSeason.gp > 0 ? { gp: proj.inSeason.gp, s: proj.inSeason.stats } : null,
+    injNow: proj?.inSeason?.injury
+      ? { st: proj.inSeason.injury.status, ret: proj.inSeason.injury.returnDate, out: proj.inSeason.injury.gamesOut, note: proj.inSeason.injury.note }
+      : null,
     proj: p
       ? pr.isGoalie
         ? { gp: proj!.gamesPlayed, w: r1(p.wins ?? 0), sv: r3(p.savePct ?? 0), gaa: proj!.gamesPlayed > 0 && (p.savePct ?? 0) > 0 ? Math.round((((p.saves ?? 0) * (1 - p.savePct!)) / p.savePct! / proj!.gamesPlayed) * 100) / 100 : 0, so: r1(p.shutouts ?? 0) }
@@ -246,7 +250,8 @@ fantraxLeague("slapshot", "public/fantrax/slapshot", "src/data/fantrax/slapshot/
 const dir = join(root, "public", "joueurs");
 rmSync(dir, { recursive: true, force: true });
 mkdirSync(dir, { recursive: true });
-const shards: CardFile[] = Array.from({ length: CARD_SHARDS }, () => ({ v: 1, projectionsAt: players.generatedAt, players: {} }));
+const projAt = (players as { inSeasonAt?: string }).inSeasonAt ?? players.generatedAt;
+const shards: CardFile[] = Array.from({ length: CARD_SHARDS }, () => ({ v: 1, projectionsAt: projAt, players: {} }));
 for (const c of cards.values()) shards[cardShard(c.id)]!.players[c.id] = c;
 shards.forEach((s, i) => writeFileSync(join(dir, `${String(i).padStart(2, "0")}.json`), `${JSON.stringify(s)}\n`));
 // a Fantrax id -> [NHL id (0: none), name], for /joueur?fx=...&ligue=...
