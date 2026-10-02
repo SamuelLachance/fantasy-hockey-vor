@@ -16,9 +16,6 @@ import {
 } from "@/lib/dynasty/asset-score";
 import { fxeaGet } from "@/lib/fantrax/client";
 import { fantraxPublicFile } from "@/lib/fantrax/config";
-import type { PoolSnapshot } from "@/lib/fantrax/pool";
-import { loadFantraxPool, peekFantraxPool } from "@/lib/fantrax/pool-client";
-import { poolSeasonFp } from "@/lib/fantrax/table";
 import { fetchSnapshotFile } from "@/lib/fantrax/snapshot-fetch";
 import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { useFantraxLeague } from "./fantrax-league-context";
@@ -82,8 +79,7 @@ export function AssetsTab() {
   const [err, setErr] = useState(false);
   const [horizon, setHorizon] = useState<AssetHorizon>("balanced");
   // season points: the asset score's tie-break, the same as the player table's
-  const [pool, setPool] = useState<PoolSnapshot | null>(() => peekFantraxPool(config));
-  const [poolSettled, setPoolSettled] = useState(() => peekFantraxPool(config) !== null);
+  const [fpState, setFpState] = useState<{ slug: string; fp: Record<string, number | null> | null } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,26 +107,26 @@ export function AssetsTab() {
   }, [config]);
 
   useEffect(() => {
-    if (poolSettled) return;
     let cancelled = false;
-    loadFantraxPool(config).then(
-      (p) => {
-        if (cancelled) return;
-        setPool(p);
-        setPoolSettled(true);
-      },
-      // without the pool the scores break no ties (the values stand)
-      () => !cancelled && setPoolSettled(true),
-    );
+    // season points (the asset score's tie-break, the player table's own): the
+    // pool and its helper load on demand, off this tab's first-load JavaScript
+    Promise.all([import("@/lib/fantrax/pool-client"), import("@/lib/fantrax/season-points")])
+      .then(([pc, sp]) => pc.loadFantraxPool(config).then((pool) => sp.poolSeasonFp(pool, bundle?.values ?? null, config)))
+      .then(
+        (fp) => !cancelled && setFpState({ slug: config.slug, fp }),
+        // without the pool the scores break no ties (the values stand)
+        () => !cancelled && setFpState({ slug: config.slug, fp: null }),
+      );
     return () => {
       cancelled = true;
     };
-  }, [config, poolSettled]);
-  const seasonFp = useMemo(() => (pool ? poolSeasonFp(pool, bundle?.values ?? null, config) : undefined), [pool, bundle, config]);
+  }, [config, bundle]);
+  const fpSettled = fpState?.slug === config.slug;
+  const seasonFp = fpSettled ? fpState.fp : null;
 
   const kind: AssetLeague = LEAGUE_KIND[config.slug] ?? "dynasty";
   const all: TeamAssets[] | null = useMemo(() => {
-    if (!records || !state || !picks || !poolSettled) return null;
+    if (!records || !state || !picks || !fpSettled) return null;
     const rosters: Record<string, string[]> = {};
     const src = live?.rosters ?? state.rosters;
     for (const t of teams) rosters[t.id] = (src[t.id] ?? []).map((e) => e.id);
@@ -150,7 +146,7 @@ export function AssetsTab() {
       },
       horizon,
     );
-  }, [records, state, live, picks, teams, kind, horizon, poolSettled, seasonFp, config.slug]);
+  }, [records, state, live, picks, teams, kind, horizon, fpSettled, seasonFp, config.slug]);
 
   if (err) return <p className="text-sm text-rose-200">Les valeurs dynastie n’ont pas pu être lues. Actualisez la page pour réessayer.</p>;
   if (!all) return <p className="text-sm text-slate-400">Calcul des actifs de chaque équipe…</p>;

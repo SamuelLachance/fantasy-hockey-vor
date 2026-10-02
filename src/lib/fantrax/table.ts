@@ -18,7 +18,8 @@ import { FANTRAX_ICON, NON_PLAYING_ICONS } from "./config";
 import type { DailyPlan, PlanLineup, PlanPlayer } from "./daily-plan";
 import { draftOutlook, draftValue, type DraftPickInfo } from "./draft";
 import { draftIsOpen, draftNeed, draftPoolInputs, planOdds, seasonFp } from "./draft-inputs";
-import { assetKey, assetScale, assetScore, type AssetKey } from "@/lib/dynasty/asset-score";
+import { assetKey, assetScale, assetScore, type AssetKey } from "@/lib/dynasty/asset-key";
+import { poolRowSeasonFp } from "./season-points";
 import type { DynastyRecord, KeeperStatus, Phase } from "@/lib/dynasty/types";
 import { keeperView } from "@/lib/dynasty/keeper-view";
 import {
@@ -275,30 +276,6 @@ export function withAssetScores(rows: FantraxRow[]): FantraxRow[] {
     r.asset = Object.fromEntries(DYNASTY_MODES.map((m) => [m, assetScore(scales[m], key(r, m))])) as Record<DynastyMode, number>;
   }
   return rows;
-}
-
-/**
- * A pool row's season points as the table shows them (`FantraxRow.fp`): a
- * projected row's season total follows the league's config (its season
- * length: Slapshot's fantasy season ends in February), not the pool's bake.
- */
-export function poolRowSeasonFp(
-  r: Pick<PoolSnapshot["players"][number], "fp">,
-  rec: ValuesSnapshot["players"][string] | undefined,
-  config: FantraxLeagueConfig,
-): number | null {
-  return r.fp == null ? null : rec?.src === "proj" ? Math.round(seasonFp(rec, config) * 10) / 10 : r.fp;
-}
-
-/** Season points by Fantrax id (`poolRowSeasonFp`): the asset score's tie-break outside the table. */
-export function poolSeasonFp(
-  pool: Pick<PoolSnapshot, "players">,
-  values: Pick<ValuesSnapshot, "players"> | null,
-  config: FantraxLeagueConfig,
-): Record<string, number | null> {
-  const out: Record<string, number | null> = {};
-  for (const r of pool.players) out[r.id] = poolRowSeasonFp(r, values?.players[r.id], config);
-  return out;
 }
 
 const CLUBLESS = new Set(["", "(N/A)", "FA"]);
