@@ -247,6 +247,15 @@ export interface CategoryVorOptions {
  * 0.65, first goalie 30th → 22nd, goalies in the top 100 9 → 12.
  * Re-fit it with the backtest whenever the projections, the noise model or
  * the replacement model change.
+ *
+ * Re-checked 2026-10-02 once the pre-season board shrinks save% toward the
+ * league (spread 0.0022, so the structural weight on the 2026-27 board
+ * falls to 0.43 and the first goalie to #71): the same backtest with the
+ * proxy's SV% shrunk the same way (`--sv-f 0.3`) derives 0.46-0.56 (mean
+ * 0.505) and its best pinned weights are 0.3-0.4 (+0.151 / +0.121 ± 0.057
+ * in the old engine's field, +0.141 / +0.145 ± 0.048 in this engine's own,
+ * 0.817 / 0.813 vs last season's actuals) against 0.6 (−0.055, −0.057) and
+ * 0.7 (−0.117, −0.173). The board's 0.43 sits in that band, so 0.69 stays.
  */
 export const GOALIE_WEIGHT_CALIBRATION = 0.69;
 

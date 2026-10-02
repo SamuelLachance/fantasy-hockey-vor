@@ -7,7 +7,7 @@
  * bench goalies, the soft cap) is a method here; change one only with this
  * backtest run before and after.
  *
- *   npx tsx scripts/backtest-category-vor.ts --cache <dir> [--fetch]
+ *   npx tsx scripts/backtest-category-vor.ts --cache <dir> [--fetch] [--sv-f 0.3]
  *       [--seasons 20212022,...] [--draft-fields E_old,E_new,LAG1] [--fixture]
  *
  * --cache    directory of cached responses (or env CATEGORY_BACKTEST_CACHE)
@@ -51,6 +51,13 @@ const arg = (k: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const RAW = arg("--cache") ?? process.env.CATEGORY_BACKTEST_CACHE;
+/**
+ * --sv-f f: the proxy's goalie SV% = league + f x (its Marcel SV% - league).
+ * 1 (default) keeps the Marcel proxy (1500 shots of regression, close to the
+ * raw three-season record); ~0.3 matches the production board, whose save%
+ * is shrunk toward the league out of sample (spread 0.0022 on 2026-27).
+ */
+const SV_F = Number(arg("--sv-f") ?? 1);
 const ROOT = process.cwd();
 
 // ---------------------------------------------------------------- fetch
@@ -263,7 +270,7 @@ function marcelPool(sid: number): LeaguePoolPlayer[] {
       });
       const gp = gpProj(lines.map((l, i) => (l ? (l.gp * 82) / sched(prevSid(sid, i + 1)) : hist[i] ? 0 : null)));
       if (gp < 5) continue;
-      const svPct = (n.sv + 1500 * lgSvPct) / (n.sh + 1500);
+      const svPct = lgSvPct + SV_F * ((n.sv + 1500 * lgSvPct) / (n.sh + 1500) - lgSvPct);
       const shotsPg = (n.sh + 10 * lgShotsPg) / (n.gp + 10);
       const any = lines.find(Boolean)!;
       out.push(pool({ id, name: any.name, team: any.team, position: "G", primaryPosition: "G", positions: ["G"], isGoalie: true, gamesPlayed: gp, projection: { wins: ((n.w + 15 * lgWinPg) / (n.gp + 15)) * gp, shutouts: ((n.so + 20 * lgSoPg) / (n.gp + 20)) * gp, saves: shotsPg * gp * svPct, savePct: svPct } }));

@@ -353,7 +353,11 @@ assert.ok(
   "MacKinnon and McDavid in the top 10",
 );
 const goalieRanks = real.players.filter((p) => p.isGoalie).map((p) => p.rank);
-assert.ok(goalieRanks[0]! > 10 && goalieRanks[0]! < 60, `first goalie mid-early (${goalieRanks[0]})`);
+// < 100 since 2026-10-02 (was < 60): the board's save% is now shrunk toward
+// the league (spread 0.0022), so the derived weight falls to ~0.43 and the
+// first goalie to ~#71 — where the decision backtest on production-like
+// projections (--sv-f 0.3) puts its best pinned weights (0.3-0.4).
+assert.ok(goalieRanks[0]! > 10 && goalieRanks[0]! < 100, `first goalie mid-early (${goalieRanks[0]})`);
 assert.ok(goalieRanks[23]! < 216, "24 starting goalies all go inside the draft");
 const again = applyCategoryVor(
   profile,
@@ -380,9 +384,22 @@ assert.ok(
   Math.abs(wTight - wShipped) / wShipped < 0.03 && Math.abs(wNone - wShipped) / wShipped < 0.08,
   `goalie weight barely moves with the shrink constant (${wTight.toFixed(3)} / ${wShipped.toFixed(3)} / ${wNone.toFixed(3)})`,
 );
+// The board's own save% is shrunk toward the league since 2026-10-02 (spread
+// ~0.0022, under both ceilings), so the coupling is shown on a copy whose
+// goalie save% spread is widened 5x — the spread of the boards before.
+const svMean = (() => {
+  const g = realPool.filter((p: LeaguePoolPlayer) => p.isGoalie && (p.projection as { savePct?: number }).savePct);
+  return g.reduce((s: number, p: LeaguePoolPlayer) => s + (p.projection as { savePct: number }).savePct, 0) / g.length;
+})();
+const widePool = realPool.map((p: LeaguePoolPlayer) => {
+  if (!p.isGoalie) return p;
+  const pr = p.projection as { savePct?: number; saves?: number };
+  if (!pr.savePct) return p;
+  return { ...p, projection: { ...pr, savePct: svMean + 5 * (pr.savePct - svMean) } } as LeaguePoolPlayer;
+});
 const coupled = (sd: number | null) =>
-  weightAt({ savePctSkillSd: sd, goalieLeverageOnShrunk: true, overdispersion: {}, goalieWeightCalibration: 1 });
-assert.ok(coupled(null) / coupled(0.0023) > 1.4, "…where the old coupling moved it by half (kept as a backtest option only)");
+  applyCategoryVor(profile, widePool, { r2: realR2, savePctSkillSd: sd, goalieLeverageOnShrunk: true, overdispersion: {}, goalieWeightCalibration: 1 }).goalieWeight.weight;
+assert.ok(coupled(null) / coupled(0.0023) > 1.4, `…where the old coupling moved it by half on the wide boards (${coupled(0.0023).toFixed(3)} → ${coupled(null).toFixed(3)}; kept as a backtest option only)`);
 
 // ---- φ re-measured on the committed weekly team totals (CAT-1)
 // Two-factor residual (week + team effects removed: what survives into

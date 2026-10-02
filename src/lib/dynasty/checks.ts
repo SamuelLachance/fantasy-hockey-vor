@@ -24,7 +24,17 @@ export interface GateResult {
 
 export const GATES = {
   K: [30, 55] as const,
-  top100: { G: [10, 20], D: [10, 20], prospect: [1, 6] } as const,
+  /**
+   * Goalies 6-20 since 2026-10-02 (was 10-20): the pre-season board now
+   * shrinks save% toward the league (trend + 0.2 x the model's distinct
+   * part; out-of-sample R² 0.136 vs -0.62 for the old spread), which takes
+   * most of the goalies' edge in saves / goals against away. On that board
+   * the balanced top 100 holds 7 goalies (Vasilevskiy #60 ... Sorokin #81);
+   * restoring the old save% alone gives 12, and a 1.5x wider spread (the
+   * 0.3 factor a three-season prior fits best on 2011-2025) still 7. The
+   * Fantrax ADP top 100 of the real draft holds 10.
+   */
+  top100: { G: [6, 20], D: [10, 20], prospect: [1, 6] } as const,
   top200ProspectsLongTerm: [20, 45] as const,
   /**
    * Long-term mode (audit 2026-09-25): its top 100 is at least this much

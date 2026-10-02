@@ -381,7 +381,16 @@ const BUDGETS: Budget[] = [
     // taken tags, the pool's names for the latest picks), the table's
     // per-league caps and presets. 73 keeps 2.5 KB of room and still catches
     // a Slapshot piece that slips back into a shared chunk.
-    js: 73,
+    //
+    // 2026-10-02 audit fixes, three branches merged (local build): Repêchage
+    // 71.4 (projection fixes only) → 72.7 with the Fantrax fixes alone (the
+    // rest-of-season waiver gain, cap-aware period totals and bench policy,
+    // the fitted draft-availability noise) and 72.6 with the dynasty fixes
+    // alone (one shared asset-score module, lottery / order odds for the
+    // picks) → 73.9 with both. Each branch stayed under 73; together they
+    // add ~2.5 KB to the same shared chunks. 74.5 keeps ~0.6 KB of room:
+    // measure again before adding anything here.
+    js: 74.5,
     htmlRaw: 200,
     htmlGz: 35,
   },
@@ -402,8 +411,10 @@ const BUDGETS: Budget[] = [
     // CapLeagueShell, cap-league-parts.tsx, contracts-client.ts). Its model
     // (points over replacement, plan kit) and every piece's body stay lazy
     // chunks outside this count. 75.5 leaves about the room Captains has
-    // (2.7 KB); over it, look for a shared import first.
-    js: 75.5,
+    // (2.7 KB); over it, look for a shared import first. 2026-10-02: 74.9-75.0
+    // on each audit-fix branch alone, 76.2 merged (the same ~2.5 KB as
+    // Captains above); 77 keeps ~0.8 KB.
+    js: 77,
     htmlRaw: 200,
     htmlGz: 35,
   },
