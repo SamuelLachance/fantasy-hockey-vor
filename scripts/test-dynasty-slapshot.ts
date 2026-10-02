@@ -65,9 +65,9 @@ const T = params.T;
 // ---------------------------------------------------------------- scoring
 {
   // 40 G, 50 A, 30 PPP, 250 SOG in 80 GP; SHG = 0.0283 x goals
-  const f = skaterFpg(prof, "F", { gp: 80, goals: 40, assists: 50, shots: 250, ppp: 30 });
-  const expect = (3.5 * 40 + 2.5 * 50 + 0.5 * 30 + 0.0283 * 40 + 0.25 * 250) / 80;
-  assert(near(f, expect, 1e-9), `skater FP/G ${f} = ${expect} (hits and blocks score 0)`);
+  const f = skaterFpg(prof, "F", { gp: 80, goals: 40, assists: 50, shots: 250, ppp: 30, hits: 100, blocks: 40 });
+  const expect = (3.5 * 40 + 2.5 * 50 + 0.5 * 30 + 0.0283 * 40 + 0.25 * 250 + 0.15 * 100 + 0.3 * 40) / 80;
+  assert(near(f, expect, 1e-9), `skater FP/G ${f} = ${expect} (Fantrax pays Hit 0.15 and SB 0.3 in every slot)`);
   // 30 W, 3 SO, 1500 SV at .910 in 55 GP: GA = 1500 x .09 / .91
   const g = goalieFpg(prof, { gp: 55, wins: 30, shutouts: 3, saves: 1500, savePct: 0.91 });
   const ga = (1500 * 0.09) / 0.91;

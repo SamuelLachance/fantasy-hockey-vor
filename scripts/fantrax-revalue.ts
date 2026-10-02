@@ -14,13 +14,19 @@
  * time), then `npm run dynasty:build` rebuilds the dynasty values.
  * Rows, identities, ages and every Fantrax field are kept as synced.
  *
- * Run: npm run league:revalue
+ * `--league <slug>` re-values another league's snapshot (its own paths,
+ * scoring column, priors and plan inputs, as the sync passes them); the
+ * dynasty rebuild is then `npm run dynasty:build -- --league <slug>`.
+ *
+ * Run: npm run league:revalue [-- --league <slug>]
  */
-import { readFileSync } from "fs";
-import { join } from "path";
+import { existsSync, readFileSync } from "fs";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { buildDailyPlan } from "../src/lib/fantrax/daily-plan";
 import { bestFpg, seasonFp } from "../src/lib/fantrax/draft-inputs";
+import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
+import { leagueVor } from "../src/lib/fantrax/points-vor";
+import type { ContractsFile } from "../src/lib/fantrax/salary-cap";
 import type { PoolSnapshot } from "../src/lib/fantrax/pool";
 import type {
   LeagueSnapshot,
@@ -31,22 +37,13 @@ import type {
   ValuesSnapshot,
 } from "../src/lib/fantrax/snapshot-types";
 import { attachGoalieStartShares, valueRecord } from "../src/lib/fantrax/values-build";
-import { NHL_SEASON_ID } from "../src/lib/fantrax/config";
 import type { PlayerProfile } from "../src/lib/profile-types";
 import type { ProjectionsDataset } from "../src/lib/types";
+import { writeClientDynasty } from "./dynasty-client";
+import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
 
-const ROOT = process.cwd();
-const PATHS = {
-  league: join(ROOT, "src", "data", "fantrax", "league.json"),
-  nhlIds: join(ROOT, "src", "data", "fantrax", "nhl-ids.json"),
-  today: join(ROOT, "src", "data", "fantrax", "today.json"),
-  values: join(ROOT, "public", "fantrax", "values.json"),
-  state: join(ROOT, "public", "fantrax", "state.json"),
-  pool: join(ROOT, "public", "fantrax", "pool.json"),
-  schedule: join(ROOT, "public", "fantrax", `schedule-${NHL_SEASON_ID}.json`),
-  players: join(ROOT, "src", "data", "players.json"),
-  profiles: join(ROOT, "src", "data", "player-profiles.json"),
-};
+const CFG = fantraxLeagueArg(process.argv.slice(2), "league:revalue");
+const PATHS = fantraxPaths(CFG, process.cwd());
 const read = <T>(path: string): T => JSON.parse(readFileSync(path, "utf8")) as T;
 const round = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
 
@@ -69,7 +66,7 @@ for (const [fid, row] of Object.entries(values.players)) {
   const proj = nhlId !== undefined ? board.get(nhlId) : undefined;
   const profile = nhlId !== undefined ? profileById.get(nhlId) : undefined;
   const { n, t, e, age } = row;
-  const { record } = valueRecord(league.scoring, { n, t, e, ...(age !== undefined ? { age } : {}) }, proj, profile);
+  const { record } = valueRecord(league.scoring, { n, t, e, ...(age !== undefined ? { age } : {}) }, proj, profile, CFG);
   players[fid] = record;
 }
 attachGoalieStartShares(players, (id) => state.icons[id]);
@@ -91,13 +88,21 @@ const nextPool: PoolSnapshot = {
     if (rec.src !== "p" || value?.src !== "proj") return rec;
     return {
       ...rec,
-      fp: round(seasonFp(value), 1),
-      fpg: round(rec.pos === "G" ? (value.gE ?? 0) : bestFpg(value), 2),
+      fp: round(seasonFp(value, CFG), 1),
+      fpg: round(rec.pos === "G" ? (value.gE ?? 0) : bestFpg(value, CFG), 2),
       gp: value.gp,
     };
   }),
 };
 
+// The same plan inputs as the sync: the league's value model and, for a
+// salary-cap league, the committed contracts (the cap line).
+const vor = leagueVor(CFG, nextValues.players, (id) => seasonFp(nextValues.players[id]!, CFG), league.slotCounts);
+// contracts.json is derived from dynasty.json (not committed): rebuild the
+// browser copies first, as the sync does.
+if (CFG.salaryCap && existsSync(PATHS.dynasty)) writeClientDynasty(PATHS.dynasty);
+const contracts = CFG.salaryCap && existsSync(PATHS.contracts) ? read<ContractsFile>(PATHS.contracts) : null;
+if (CFG.salaryCap && !contracts) console.warn("WARN: no contracts.json: the plan carries no cap line");
 const plan = buildDailyPlan({
   league,
   state,
@@ -105,6 +110,10 @@ const plan = buildDailyPlan({
   schedule,
   teamId: today.teamId,
   nowMs: Date.parse(today.generatedAt),
+  config: CFG,
+  vor,
+  contracts,
+  kit: PLAN_KIT,
 });
 
 writeFileAtomic(PATHS.values, `${JSON.stringify(nextValues)}\n`);
@@ -113,4 +122,4 @@ writeFileAtomic(PATHS.today, `${JSON.stringify(plan)}\n`);
 console.log(
   `values: ${Object.keys(players).length} rows re-valued from players.json ${dataset.generatedAt}; ${changed.length} changed${changed.length ? ` (${changed.slice(0, 12).map((id) => players[id]!.n).join(", ")}${changed.length > 12 ? ", …" : ""})` : ""}`,
 );
-console.log("Next: npm run dynasty:build");
+console.log(`Next: npm run dynasty:build${CFG.slug === "captains-dynasty" ? "" : ` -- --league ${CFG.dynastyProfile ?? CFG.slug}`}`);

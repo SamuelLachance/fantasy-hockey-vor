@@ -103,6 +103,9 @@ export interface SkaterLine {
   assists: number;
   shots: number;
   ppp: number;
+  /** Hits and shots blocked: Fantrax pays Hit 0.15 / SB 0.3 in every slot (period-1 totals). */
+  hits?: number;
+  blocks?: number;
 }
 export interface GoalieLine {
   gp: number;
@@ -112,12 +115,13 @@ export interface GoalieLine {
   savePct: number;
 }
 
-/** Slapshot FP per game from a skater's projected season (SHG estimated from goals). */
+/** Slapshot FP per game from a skater's projected season (SHG estimated from goals; hits and blocks score). */
 export function skaterFpg(prof: SlapshotProfile, g: "F" | "D", s: SkaterLine): number {
   if (!(s.gp > 0)) return 0;
   const k = prof.scoring.skater;
   const shg = prof.scoring.shgPerGoal[g] * s.goals;
-  return (k.G * s.goals + k.A * s.assists + k.PPP * s.ppp + k.SHG * shg + k.SOG * s.shots) / s.gp;
+  const physical = k.Hit * (s.hits ?? 0) + k.SB * (s.blocks ?? 0);
+  return (k.G * s.goals + k.A * s.assists + k.PPP * s.ppp + k.SHG * shg + k.SOG * s.shots + physical) / s.gp;
 }
 
 /** Slapshot FP per goalie game: GA = saves × (1 − sv%) / sv%; assists at the league rate. */
