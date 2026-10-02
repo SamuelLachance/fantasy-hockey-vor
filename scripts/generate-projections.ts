@@ -36,11 +36,22 @@ import {
   clampSkaterProjection,
 } from "../src/lib/projection-sanity";
 import {
+  CALIBRATED_GP_CEILING,
   decideSkaterGp,
-  fitSkaterGpCurve,
+  gpCurveFor,
+  loadGpCalibration,
+  priorSeasonIdsFor,
   scaleSkaterProjection,
   splitSeasonRuleFromFiles,
 } from "../src/lib/gp-calibration";
+import { datasetMismatch, readDatasetManifest } from "../src/lib/ml/dataset-manifest";
+import { NHL_TEAMS } from "../src/lib/nhl-api";
+import type { NhlListKind, NhlRostersFile } from "../src/lib/nhl-rosters";
+import {
+  normalizeTeamSkaterGp,
+  rookieGpPrior,
+  staleReason,
+} from "../src/lib/projection-pool";
 import {
   buildGoalieRoleMap,
   projectedGoalieGames,
@@ -66,6 +77,30 @@ import type {
 } from "../src/lib/types";
 
 const PROFILES_PATH = join(process.cwd(), "src", "data", "player-profiles.json");
+const ROSTERS_PATH = join(process.cwd(), "src", "data", "nhl-rosters.json");
+/** Largest residual-model level shift the rate calibration may remove (healthy: a few %). */
+const MAX_RATE_DRIFT = 0.1;
+const NHL_TEAM_SET = new Set<string>(NHL_TEAMS);
+
+/**
+ * Who each club lists today (src/data/nhl-rosters.json), or null when the
+ * snapshot is missing or predates this season's training camps (then no
+ * one is dropped for being on no list).
+ */
+function loadClubLists(): Map<number, NhlListKind> | null {
+  if (!existsSync(ROSTERS_PATH)) {
+    console.warn("WARN: src/data/nhl-rosters.json missing: no club-list rules (npm run nhl:rosters)");
+    return null;
+  }
+  const file = JSON.parse(readFileSync(ROSTERS_PATH, "utf8")) as NhlRostersFile;
+  const fetched = Date.parse(file.fetchedAt);
+  const campsOpen = Date.UTC(Number(PROJECTION_SEASON.slice(0, 4)), 8, 1);
+  if (!(fetched >= campsOpen) || Date.now() - fetched > 60 * 24 * 60 * 60 * 1000) {
+    console.warn(`WARN: nhl-rosters.json fetched ${file.fetchedAt}: before camps or > 60 days old, no club-list rules`);
+    return null;
+  }
+  return new Map(file.players.map((p) => [p.id, p.list]));
+}
 /** Hard rebuild after this; warn-but-reuse between soft and hard (matches site stale banner). */
 const PROFILE_SOFT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const PROFILE_HARD_AGE_MS = 21 * 24 * 60 * 60 * 1000;
@@ -80,7 +115,11 @@ async function loadProfiles(): Promise<{
       profiles: PlayerProfile[];
     };
     const age = Date.now() - new Date(data.collectedAt).getTime();
-    if (data.profiles.length > 0 && age < PROFILE_HARD_AGE_MS) {
+    // REUSE_PROFILES=1: keep the committed dossiers whatever their age (a
+    // full rebuild also scrapes contracts); `npm run collect:missing` tops
+    // them up with today's roster players.
+    const reuse = process.env.REUSE_PROFILES === "1";
+    if (data.profiles.length > 0 && (age < PROFILE_HARD_AGE_MS || reuse)) {
       const days = age / (24 * 60 * 60 * 1000);
       if (age >= PROFILE_SOFT_AGE_MS) {
         console.warn(
@@ -288,10 +327,25 @@ async function main() {
     );
   }
 
+  // The dataset inference reads must be the one the bundle was trained on
+  // (src/lib/ml/dataset-manifest.ts): the 2026-07-30 board was generated
+  // with another one and published drifted games and rates.
+  const datasetManifest = readDatasetManifest();
   if (v2Runtime) {
     console.log(
       `Using v2 stacked ensemble (trained ${v2Runtime.bundle.trainedAt}, dataset ${v2Runtime.bundle.datasetBuiltAt})`,
     );
+    const mismatch = datasetManifest ? datasetMismatch(v2Runtime.bundle, datasetManifest) : "dataset.json missing";
+    if (mismatch) {
+      if (process.env.ALLOW_DATASET_MISMATCH !== "1") {
+        throw new Error(
+          `${mismatch}. Refusing to project from a dataset the bundle was not trained on: retrain (npm run ml:train-v2) or restore the training dataset (ALLOW_DATASET_MISMATCH=1 to override, inspection only).`,
+        );
+      }
+      console.warn(`WARN: ${mismatch} (ALLOW_DATASET_MISMATCH=1)`);
+    } else {
+      console.log(`Dataset matches the bundle (sha1 ${datasetManifest!.sha1.slice(0, 12)}, ${datasetManifest!.rows} rows)`);
+    }
   } else if (process.env.ALLOW_NON_V2 !== "1") {
     // dataset.json is gitignored, so a fresh clone would otherwise silently
     // publish v1/contextual rankings under the v2 branding.
@@ -325,9 +379,25 @@ async function main() {
   setInferenceTeamDepthCache(buildTeamDepthFromProfiles(profilesWithPositions));
 
   const teamGoalies = profilesWithPositions.filter((p) => p.isGoalie);
-  const raw = profilesWithPositions.map((p) =>
+  const clubLists = loadClubLists();
+  const lastTwo = priorSeasonIdsFor(DEFAULT_LEAGUE.season);
+  const built = profilesWithPositions.map((p) =>
     buildFromProfile(p, aiCache, mlModels, goalieRoleMap, teamGoalies),
   );
+  // A skater without a recent NHL game has no model GP (the contextual path
+  // gave all of them 62): his draft slot's first-season games, by the list
+  // his club has him on (src/lib/projection-pool.ts).
+  let rookies = 0;
+  const raw = built.map((p) => {
+    const profile = profilesWithPositions.find((q) => q.id === p.id);
+    if (p.isGoalie || p.projectionMethod !== "contextual" || !profile) return p;
+    const recent = profile.teamHistory.some((h) => !h.isGoalie && h.gamesPlayed > 0);
+    if (recent) return p;
+    const gp = rookieGpPrior(profile.draft?.overallPick, clubLists?.get(p.id));
+    rookies++;
+    return { ...p, gamesPlayed: gp, projection: projectSkaterFromProfile(profile, gp).projection };
+  });
+  console.log(`Rookie games prior: ${rookies} skaters without a recent NHL game`);
 
   // Stamp the position each projection was clamped at BEFORE Yahoo (and later
   // VOR) can remap `position`; rate limits are position-specific, so any
@@ -343,12 +413,25 @@ async function main() {
   // retired/inactive goalie never absorbs part of a team's starts budget.
   const inactiveIds = loadInactivePlayerIds();
   const droppedInactive = withYahooPositions.filter((p) => inactiveIds.has(p.id));
-  const activeBeforeTandem = filterActivePlayers(withYahooPositions);
+  const profileById = new Map(profilesWithPositions.map((p) => [p.id, p]));
+  // On no club list today and no NHL game in two seasons: retired, unsigned
+  // or gone to Europe — not projected (src/lib/projection-pool.ts).
+  const stale = filterActivePlayers(withYahooPositions)
+    .map((p) => ({ p, reason: staleReason(p.id, clubLists, profileById.get(p.id), lastTwo) }))
+    .filter((x) => x.reason);
+  const staleIds = new Set(stale.map((x) => x.p.id));
+  const activeBeforeTandem = filterActivePlayers(withYahooPositions).filter((p) => !staleIds.has(p.id));
   if (droppedInactive.length > 0) {
     console.log(
       `Dropped ${droppedInactive.length} curated inactive player(s): ${droppedInactive
         .map((p) => p.name)
         .join(", ")}`,
+    );
+  }
+  if (stale.length > 0) {
+    const big = stale.filter((x) => x.p.gamesPlayed >= 30).map((x) => `${x.p.name} (${x.p.gamesPlayed})`);
+    console.log(
+      `Dropped ${stale.length} player(s) on no NHL club list and without an NHL game in two seasons${big.length ? `, ${big.length} of them at 30+ GP: ${big.join(", ")}` : ""}`,
     );
   }
 
@@ -379,18 +462,23 @@ async function main() {
     };
   });
 
-  // Post-hoc GP calibration: the GP heads regress toward the population mean
-  // (top-150 skaters projected ~61 GP vs ~74 realized) — map projections onto
-  // the realized prior-season distribution, preserving per-game rates.
-  const profilesById = new Map(profilesWithPositions.map((p) => [p.id, p]));
-  const gpCurve = fitSkaterGpCurve(
-    tandemAdjusted,
-    profilesById,
-    DEFAULT_LEAGUE.season,
-  );
-  console.log(
-    `GP calibration: ${gpCurve.curve.length} isotonic blocks from ${gpCurve.pairCount} pairs`,
-  );
+  // Post-hoc GP calibration: the GP model predicts the games of a player who
+  // plays (trained on 10+ game seasons); the out-of-sample curves of
+  // src/data/ml/gp-calibration.json map it onto next season's expected games
+  // (0 included), per young / veteran × F / D, preserving per-game rates.
+  const profilesById = profileById;
+  const gpCal = loadGpCalibration();
+  if (!gpCal) {
+    throw new Error("src/data/ml/gp-calibration.json missing: run scripts/backtest-skater-oos.ts then npm run gp:fit");
+  }
+  if (gpCal.bundleTrainedAt && v2Runtime && gpCal.bundleTrainedAt !== v2Runtime.bundle.trainedAt) {
+    console.warn(
+      `WARN: GP calibration fitted with bundle ${gpCal.bundleTrainedAt}, running ${v2Runtime.bundle.trainedAt} — refit it (scripts/backtest-skater-oos.ts, npm run gp:fit)`,
+    );
+  }
+  console.log(`GP calibration: ${gpCal.source}`);
+  const curveOf = (p: (typeof tandemAdjusted)[number]) =>
+    p.projectionMethod === "ml" ? gpCurveFor(gpCal, p as Parameters<typeof gpCurveFor>[1]) : [];
   // Split / away last seasons (games in another league) take the calibrated
   // split-season rule instead of the curve (src/lib/split-season-gp.ts).
   const splitRule = splitSeasonRuleFromFiles(PROJECTION_SEASON_ID);
@@ -401,7 +489,7 @@ async function main() {
   }
   const gpCalibrated = tandemAdjusted.map((p) => {
     if (p.isGoalie) return { ...p, modelGamesPlayed: p.gamesPlayed };
-    const decision = decideSkaterGp(p, profilesById.get(p.id), gpCurve.curve, splitRule);
+    const decision = decideSkaterGp(p, profilesById.get(p.id), curveOf(p), splitRule);
     const newGp = decision.gamesPlayed;
     const availability = decision.availability ? { availability: decision.availability } : {};
     if (p.gamesPlayed <= 0 || newGp === p.gamesPlayed) {
@@ -426,6 +514,26 @@ async function main() {
     `Split-season rule: ${gpCalibrated.filter((p) => "availability" in p && p.availability).length} skaters`,
   );
 
+  // Club budget: 18 skaters × 82 games, ±5 % (src/lib/projection-pool.ts).
+  const teamGp = normalizeTeamSkaterGp(
+    gpCalibrated.filter((p) => !p.isGoalie && NHL_TEAM_SET.has(p.team)),
+    CALIBRATED_GP_CEILING,
+  );
+  let budgetMoved = 0;
+  const budgeted = gpCalibrated.map((p) => {
+    const next = teamGp.get(p.id);
+    if (next == null || p.isGoalie || !(p.gamesPlayed > 0)) return p;
+    const gp = Math.round(next);
+    if (gp === p.gamesPlayed) return p;
+    budgetMoved += Math.abs(gp - p.gamesPlayed);
+    return {
+      ...p,
+      gamesPlayed: gp,
+      projection: scaleSkaterProjection(p.projection as never, gp / p.gamesPlayed),
+    };
+  });
+  console.log(`Club skater-games budget: ${Math.round(budgetMoved)} games moved`);
+
   // Post-hoc rate calibration: the edge of the residual models should rank
   // players against the synthetic market, not move the league's level. Per
   // meta segment (young / veteran × F / D) and stat, move the edge's fit
@@ -434,30 +542,32 @@ async function main() {
   // raw rates at the calibrated games. RATE_CALIBRATION=0 publishes the raw
   // model (inspection only).
   let rateCalibration: ReturnType<typeof rateCalibrationMeta> | undefined;
-  let activePool = gpCalibrated;
+  let activePool = budgeted;
   if (process.env.RATE_CALIBRATION !== "0") {
     const { reference, note } = loadRateReference();
     console.log(`Rate calibration target: ${note}`);
-    const rates = applyRateCalibration(gpCalibrated, { reference });
+    const rates = applyRateCalibration(budgeted, { reference });
     activePool = rates.players;
     rateCalibration = rateCalibrationMeta(rates.params, rates.calibrated);
-    const worst = driftShare(gpCalibrated, rates.params);
+    const worst = driftShare(budgeted, rates.params);
     console.log(`Rate calibration: ${rates.calibrated} skaters; mean shift removed per 82 GP:`);
     for (const seg of RATE_SEGMENTS) {
       const key = rates.params.keyOf[seg];
       const s = (c: "goals" | "assists" | "shots" | "powerplayPoints") =>
-        meanShiftPer82(gpCalibrated, rates.params, key, c).toFixed(1);
+        meanShiftPer82(budgeted, rates.params, key, c).toFixed(1);
       console.log(
         `  ${seg} (fit ${key}, n ${rates.params.poolSize[key]}): goals ${s("goals")}, assists ${s("assists")}, PPP ${s("powerplayPoints")}, shots ${s("shots")}`,
       );
     }
-    if (worst.share > 0.15) {
+    console.log(`Rate calibration: largest level shift ${(worst.share * 100).toFixed(1)}% (${worst.key} ${worst.cat})`);
+    if (worst.share > MAX_RATE_DRIFT) {
       // A healthy regeneration moves the level by a few percent at most. A
       // large shift means the inference dataset no longer matches what the
-      // bundle was trained on (the 2026-07-30 board: +50% forward goals).
-      console.warn(
-        `WARN: residual-model level drift ${(worst.share * 100).toFixed(0)}% on ${worst.key} ${worst.cat} — calibrated away, but rebuild dataset.json / retrain before trusting the edge`,
-      );
+      // bundle was trained on (the 2026-07-30 board: +50% forward goals), or
+      // that the reference was not refitted after a retrain.
+      const msg = `residual-model level drift ${(worst.share * 100).toFixed(0)}% on ${worst.key} ${worst.cat} (> ${MAX_RATE_DRIFT * 100}%): rebuild dataset.json and retrain, or refit the reference from this bundle's raw board (RATE_CALIBRATION=0 npm run generate, then npm run rates:reference -- --players … --details …)`;
+      if (process.env.ALLOW_RATE_DRIFT !== "1") throw new Error(msg);
+      console.warn(`WARN: ${msg} (ALLOW_RATE_DRIFT=1)`);
     }
   }
 
@@ -537,15 +647,21 @@ async function main() {
     generatedAt: new Date().toISOString(),
     season: PROJECTION_SEASON,
     league: DEFAULT_LEAGUE,
-    dataManifest,
+    dataManifest: {
+      ...dataManifest,
+      // What inference read and what the bundle was trained on (they match:
+      // generate refuses otherwise).
+      dataset: datasetManifest,
+      bundleTrainedAt: v2Runtime?.bundle.trainedAt ?? null,
+      bundleDatasetSha1: v2Runtime?.bundle.datasetSha1 ?? null,
+    },
     gpCalibration: {
-      version: 1 as const,
+      version: 2 as const,
       appliedAt: new Date().toISOString(),
-      skaterCurve: gpCurve.curve.map((c) => ({
-        x: Math.round(c.x * 100) / 100,
-        y: Math.round(c.y * 100) / 100,
-      })),
-      pairCount: gpCurve.pairCount,
+      fittedAt: gpCal.fittedAt,
+      source: gpCal.source,
+      skaterCurves: gpCal.curves,
+      pairCount: gpCal.pairCount,
     },
     ...(rateCalibration ? { rateCalibration } : {}),
     projectionEngine: engine,
@@ -559,12 +675,14 @@ async function main() {
 
   const outPath = join(process.cwd(), "src", "data", "players.json");
   // Compact JSON: ~half the bytes of indent-2, faster Pages / client parse.
-  writeFileAtomic(
-    outPath,
-    JSON.stringify(dataset, (_k, v) =>
-      typeof v === "number" && !Number.isFinite(v) ? 0 : v,
-    ),
+  const json = JSON.stringify(dataset, (_k, v) =>
+    typeof v === "number" && !Number.isFinite(v) ? 0 : v,
   );
+  writeFileAtomic(outPath, json);
+  // The pre-season baseline of the daily in-season update
+  // (scripts/update-in-season.ts): run `npm run season:update` next during
+  // the season, players.json is then actual + rest of season again.
+  writeFileAtomic(join(process.cwd(), "src", "data", "players-preseason.json"), json);
 
   writeFileAtomic(
     join(process.cwd(), "public", "player-details.json"),

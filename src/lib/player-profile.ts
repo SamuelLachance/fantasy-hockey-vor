@@ -14,6 +14,7 @@ import {
   seasonIdToLabel,
   type PlayerLanding,
   type RosterPlayer,
+  type TeamStanding,
 } from "./nhl-api";
 import {
   advancedFieldsToProfileRecord,
@@ -528,6 +529,90 @@ export async function collectAllProfiles(
       landing?.lastName.default ?? base.name.split(" ").slice(1).join(" ");
 
     const contractData = await fetchContractByNhlId(id, firstName, lastName);
+    return buildPlayerProfile(id, base, landing, teamCtx, contractData);
+  });
+
+  const profiles = results.filter((p): p is PlayerProfile => p !== null);
+  onProgress?.(profiles.length, ids.length);
+  return profiles.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** NHL regular-season lines of a landing within the dossier seasons (basic stats only). */
+function landingNhlSeasons(landing: PlayerLanding | null, isGoalie: boolean, team: string): SeasonHistory[] {
+  const seasons: SeasonHistory[] = [];
+  for (const raw of landing?.seasonTotals ?? []) {
+    const line = raw as Record<string, unknown>;
+    const seasonId = finite(line.season);
+    if (line.leagueAbbrev !== "NHL" || finite(line.gameTypeId) !== 2) continue;
+    if (!(BASE_SEASON_IDS as readonly number[]).includes(seasonId)) continue;
+    const s: SeasonHistory = {
+      season: seasonIdToLabel(seasonId),
+      seasonId,
+      team,
+      gamesPlayed: finite(line.gamesPlayed),
+      isGoalie,
+      stats: isGoalie
+        ? {
+            wins: finite(line.wins),
+            losses: finite(line.losses),
+            shutouts: finite(line.shutouts),
+            gamesStarted: finite(line.gamesStarted),
+            savePct: finite(line.savePctg),
+            gaa: finite(line.goalsAgainstAvg),
+          }
+        : {
+            goals: finite(line.goals),
+            assists: finite(line.assists),
+            points: finite(line.points),
+            shots: finite(line.shots),
+            ppPoints: finite(line.powerPlayPoints),
+            pim: finite(line.pim),
+            plusMinus: finite(line.plusMinus),
+          },
+      advanced: {},
+    };
+    upsertSeason(seasons, s);
+  }
+  return seasons;
+}
+
+/**
+ * Dossiers of players the full collection missed (a club's roster today,
+ * no NHL game in the dossier seasons' stats): public NHL landing only, one
+ * request each (≥ 1.1 s apart through fetchJson), no contract lookup.
+ */
+export async function collectProfilesForPlayers(
+  players: Array<{ id: number; name: string; team: string; code: string }>,
+  onProgress?: (done: number, total: number) => void,
+): Promise<PlayerProfile[]> {
+  const standings = await fetchTeamStandings();
+  const teamMap = new Map(standings.map((t) => [t.teamAbbrev, t]));
+  const out: PlayerProfile[] = [];
+  for (const p of players) {
+    const landing = await fetchPlayerLanding(p.id);
+    const position = mapNhlPosition(p.code);
+    const isGoalie = p.code === "G";
+    const base = {
+      name: p.name,
+      team: p.team,
+      position,
+      isGoalie,
+      seasons: landingNhlSeasons(landing, isGoalie, p.team),
+    };
+    out.push(buildPlayerProfile(p.id, base, landing, teamMap.get(p.team) ?? standings[0], EMPTY_CONTRACT));
+    onProgress?.(out.length, players.length);
+  }
+  return out;
+}
+
+function buildPlayerProfile(
+  id: number,
+  base: { name: string; team: string; position: Position; isGoalie: boolean; seasons: SeasonHistory[] },
+  landing: PlayerLanding | null,
+  teamCtx: TeamStanding,
+  contractData: ContractInfo,
+): PlayerProfile {
+  {
 
     const birthDate =
       parseBirthDate(contractData.birthDate ?? "") ??
@@ -618,9 +703,5 @@ export async function collectAllProfiles(
       contextNarrative: buildContextNarrative(partial),
       collectedAt: new Date().toISOString(),
     } satisfies PlayerProfile;
-  });
-
-  const profiles = results.filter((p): p is PlayerProfile => p !== null);
-  onProgress?.(profiles.length, ids.length);
-  return profiles.sort((a, b) => a.name.localeCompare(b.name));
+  }
 }
