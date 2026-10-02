@@ -78,25 +78,25 @@
   "goalieUnseatedAvg": 3
  },
  "kDrift": {
-  "source": "Audit 2026-10-02 (SLAP-K-DRIFT): the Slapshot / league-1 per-game ratio k of a skater falls with age after 27 (Slapshot scores no hits or blocks, whose share of league-1 points grows as scoring declines). NHL 2008-09 .. 2025-26 (MoneyPuck season totals; Slapshot points with G 3.5, A 2.5, PPP 0.5 from 5-on-4 points, SHG 1 from 4-on-5 goals, SOG 0.25; league-1 FP/G by dynasty/growth.ts seasonFpgLeague), players with 40+ GP in seasons y and y + 3: mean ln(k_{y+3} / k_y) by age on Oct 1 of y — forwards < 23 +1.4 %, 23-26 −0.3 %, 27-30 −3.5 % (se 0.5), 31+ −4.8 % (se 0.7); defensemen < 23 +0.5 %, 23-26 −0.7 %, 27-30 −5.8 % (se 1.0), 31+ −8.1 % (se 1.3). Rows [from age, ln k per season] = the 3-season drifts / 3 from 27 on; before 27 no drift (the young bands, near 0, are the control against an era effect).",
+  "source": "Audit 2026-10-02 (SLAP-K-DRIFT), refit after FX-1 (Slapshot pays Hit 0.15 / SB 0.3 in every slot): the Slapshot / league-1 per-game ratio k of a skater by age. NHL 2008-09 .. 2025-26 (MoneyPuck season totals, audit cache dynasty-hist-skaters-goalies-2008-2025.json; Slapshot points with G 3.5, A 2.5, SOG 0.25, Hit 0.15, SB 0.3 — PPP and SHG are not in that file and are left out, which reproduces the earlier no-hit fit within 0.4 point; league-1 FP/G by dynasty/growth.ts seasonFpgLeague), players with 40+ GP in seasons y and y + 3: mean ln(k_{y+3} / k_y) by age on Oct 1 of y — forwards < 23 +0.8 %, 23-26 +0.6 %, 27-30 +0.2 % (se 0.2), 31+ −0.2 % (se 0.3); defensemen < 23 +1.4 %, 23-26 +0.9 %, 27-30 −0.2 % (se 0.3), 31+ −1.6 % (se 0.4). With hits and blocks scored the drift the no-hit fit found (forwards 27-30 −3.4 %, defensemen 31+ −7.7 %) is gone. Rows [from age, ln k per season] = the 3-season drifts / 3 from 27 on; before 27 no drift.",
   "F": [
    [
     27,
-    -0.0119
+    0.0006
    ],
    [
     31,
-    -0.0164
+    -0.0008
    ]
   ],
   "D": [
    [
     27,
-    -0.0199
+    -0.0007
    ],
    [
     31,
-    -0.0282
+    -0.0055
    ]
   ]
  },

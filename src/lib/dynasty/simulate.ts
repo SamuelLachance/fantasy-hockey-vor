@@ -59,8 +59,8 @@ export interface SimLeague {
   k: number;
   /**
    * k of season t relative to season 0 (absent = 1 every season): the
-   * league's scoring ages apart from league 1's (Slapshot counts no hits or
-   * blocks, so its points fall faster after 27, slapshot.ts kDriftPath).
+   * league's scoring ages apart from league 1's (slapshot.ts kDriftPath;
+   * nearly flat once Slapshot scores hits and blocks).
    */
   kDrift?: number[];
   /** Skater replacement per NHL game, league points (same fantasy-season share). */

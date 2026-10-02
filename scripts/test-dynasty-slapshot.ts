@@ -137,11 +137,12 @@ const T = params.T;
   assert(poolCapHit({ cap: [0, 0, 1, 1], nhl: [0, 0, 1, 1], plan: { end: 12 } as never }, 0, 0.85, 4) === 0, "before his first contract: 0");
   // CAP-4: λ's Monte Carlo error with 100 replications
   assert(SNAKE_REPS >= 100, `snake replications ${SNAKE_REPS}`);
-  // SLAP-K-DRIFT: k falls after 27, faster for defensemen; goalies and young skaters stay
+  // SLAP-K-DRIFT (refit with Hit / SB scored): k about flat for forwards, a small fall for defensemen from 31
   const f26 = kDriftPath(prof, "F", 26, 6);
   const d30 = kDriftPath(prof, "D", 30, 6);
-  assert(f26[0] === 1 && f26[1] === 1 && near(f26[4]!, Math.exp(-0.0119 * 3), 1e-9), `a 26-year-old forward's k: flat, then −1.2 %/season (${f26.map((x) => x.toFixed(3))})`);
-  assert(near(d30[3]!, Math.exp(-0.0199 - 0.0282 * 2), 1e-9), "a 30-year-old defenseman: −2.0 % then −2.8 %/season from 31");
+  assert(f26[0] === 1 && f26[1] === 1 && near(f26[4]!, Math.exp(0.0006 * 3), 1e-9), `a 26-year-old forward's k: flat, then +0.06 %/season (${f26.map((x) => x.toFixed(3))})`);
+  assert(near(d30[3]!, Math.exp(-0.0007 - 0.0055 * 2), 1e-9), "a 30-year-old defenseman: −0.07 % then −0.55 %/season from 31");
+  assert(Math.abs(Math.log(kDriftPath(prof, "F", 33, 6)[5]!)) < 0.01, "an old forward's k stays within 1 % over 5 seasons once hits and blocks are scored");
   assert(kDriftPath(prof, "G", 33, 6).every((x) => x === 1) && kDriftPath(prof, "F", 20, 6).every((x) => x === 1), "goalies and young forwards: no drift");
   // CAP-6: the control λ on real rosters (two teams, one over the cap)
   const P = (id: string, pos: SeatPlayer["pos"], fp: number, cap: number): SeatPlayer => ({ id, pos, fp, cap });

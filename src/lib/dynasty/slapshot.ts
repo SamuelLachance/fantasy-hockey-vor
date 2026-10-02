@@ -918,10 +918,11 @@ export function lambdaBySeason(
 
 /**
  * A skater's k by season relative to season 0 (profile `kDrift`): ln k moves
- * by the rate of his age band each season (audit 2026-10-02, SLAP-K-DRIFT:
- * Slapshot counts no hits or blocks, so its points age faster than league
- * 1's after 27 — ln(k three seasons on / k) forwards 27-30 −3.5 %, 31+
- * −4.8 %, defensemen −5.8 % and −8.1 %, under 27 about 0). Goalies: 1.
+ * by the rate of his age band each season (audit 2026-10-02, SLAP-K-DRIFT,
+ * refit once Slapshot pays Hit 0.15 / SB 0.3: ln(k three seasons on / k)
+ * forwards 27-30 +0.2 %, 31+ −0.2 %, defensemen −0.2 % and −1.6 %; the
+ * −3.5 … −8.1 % of the no-hit fit came from not scoring hits and blocks).
+ * Goalies: 1.
  */
 export function kDriftPath(prof: SlapshotProfile, g: Group, age0: number, T: number): number[] {
   const rows = g === "G" ? null : prof.kDrift?.[g];
