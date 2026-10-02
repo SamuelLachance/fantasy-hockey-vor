@@ -105,7 +105,8 @@ const SOFT_BANDS: Array<{ n: string; bal?: [number, number]; lt?: [number, numbe
   { n: "Matthew Schaefer", bal: [25, 75], lt: [12, 40] },
   { n: "Matvei Michkov", bal: [80, 180], lt: [40, 120] },
   { n: "Ivan Demidov", bal: [55, 140], lt: [20, 90] },
-  { n: "Alex Ovechkin", bal: [50, 100], lt: [130, 400] },
+  // lt [130, 400] until the 2026-10-02 role refit (young part-timers around him lost value: #129-130)
+  { n: "Alex Ovechkin", bal: [50, 100], lt: [120, 400] },
   { n: "Sidney Crosby", bal: [50, 100], lt: [120, 400] },
   { n: "Brad Marchand", bal: [130, 230], lt: [250, 600] },
   { n: "Gavin McKenna", bal: [65, 120], lt: [15, 60] },

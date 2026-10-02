@@ -2,7 +2,7 @@
 
 import { BookOpen, Coins, FileSignature } from "lucide-react";
 import { useEffect, useState } from "react";
-import { salarySchedule, type LeagueContractRules } from "@/lib/dynasty/league-contracts";
+import { equivalentLengths, recommendedLength, salarySchedule, type LeagueContractRules } from "@/lib/dynasty/league-contracts";
 import type { CapPlanFile, CapPlanRow } from "@/lib/dynasty/slapshot-client";
 import { fantraxPublicFile } from "@/lib/fantrax/config";
 import { fmtMoney } from "@/lib/fantrax/money";
@@ -56,18 +56,20 @@ interface Choice {
 
 function choiceOf(p: CapPlanRow, f: CapPlanFile, h: Horizon, years: number, rules: LeagueContractRules): Choice {
   const [total, ext] = p.by[h][years - 1] ?? [0, 0];
-  const sch = salarySchedule(p.s, p.b, years, ext, p.n, f.min, p.n.length, rules);
+  const sch = salarySchedule(p.s, p.b, years, ext, p.n, f.min, p.n.length, rules, {
+    base0: p.b0 ?? null,
+    ...(p.bt != null ? { base0Through: p.bt } : {}),
+  });
   return { years, ext, start: p.s, base: p.b, ...sch, total };
 }
 
-/** The recommended length: the largest simulated surplus (ties to the shorter); a confirmed one stays. */
+/**
+ * The recommended length (the build's rule, league-contracts.ts
+ * recommendedLength): the shortest control within a near-tie of the largest
+ * simulated surplus; a confirmed one stays.
+ */
 function recommended(p: CapPlanRow, h: Horizon): number {
-  if (p.f) return p.y;
-  let best = 1;
-  p.by[h].forEach(([t], j) => {
-    if (t > (p.by[h][best - 1]?.[0] ?? -Infinity) + 1e-9) best = j + 1;
-  });
-  return best;
+  return p.f ? p.y : recommendedLength(p.by[h]);
 }
 
 const PHASE_FR: Record<string, string> = {
@@ -380,7 +382,7 @@ export function SlapshotCapTab() {
                             {Array.from({ length: file.rules.maxYears }, (_, j) => j + 1).map((n) => (
                               <option key={n} value={n}>
                                 {ans(n)}
-                                {n === r.rec.years ? " (conseil)" : ""}
+                                {n === r.rec.years ? " (conseil)" : equivalentLengths(r.p.by[horizon]).includes(n) ? " (équivalent)" : ""}
                               </option>
                             ))}
                           </select>
@@ -435,8 +437,10 @@ export function SlapshotCapTab() {
             on prend sa valeur (points de ligue au-dessus du remplacement à sa position) moins le prix du plafond de son salaire (λ ={" "}
             {fmt1(file.lambda[0] ?? 0)} point par M$ au-dessus du minimum cette saison, {fmt1(file.lambda[1] ?? 0)} ensuite); une saison où il coûte plus
             qu’il ne rapporte vaut 0 (il va aux mineures, qui ne comptent pas). La moyenne sur les carrières est actualisée selon l’horizon (
-            {(["W", "B", "L"] as Horizon[]).map((h) => `${HORIZON_FR[h]} ${file.deltas[h]}`).join(", ")} par saison); la durée conseillée est celle qui
-            donne le plus gros surplus. Le risque compte donc : un long contrat pour un joueur qui peut décliner ou se blesser coûte des saisons perdues.
+            {(["W", "B", "L"] as Horizon[]).map((h) => `${HORIZON_FR[h]} ${file.deltas[h]}`).join(", ")} par saison). Les durées dont le surplus est à
+            moins de 0,5 point (ou 1 %) du meilleur sont « équivalentes » : la durée conseillée est la plus courte d’entre elles, prolongation comprise
+            (garder un joueur aux mineures ne coûte rien dans le calcul, mais un contrôle plus long engage une place et repose sur plus d’hypothèses). Le
+            risque compte donc : un long contrat pour un joueur qui peut décliner ou se blesser coûte des saisons perdues.
           </p>
           <p>
             <strong className="text-white">Ce que ça donne.</strong> Les hausses étant cumulées, l’an 5 coûte 1,6 fois la base et l’an 7, 2,2 fois. Un
@@ -445,7 +449,8 @@ export function SlapshotCapTab() {
             ans.
           </p>
           <p className="text-xs text-slate-400">
-            Hypothèses à confirmer : la prolongation repart du salaire LNH de la saison où elle commence; un espoir sans contrat LNH ne signe son contrat de
+            Hypothèses à confirmer : la prolongation repart du salaire LNH de la saison où elle commence (pendant son contrat LNH actuel, au moins son
+            salaire Fantrax, bonis du contrat d’entrée compris); un espoir sans contrat LNH ne signe son contrat de
             ligue qu’à son arrivée (il reste aux mineures, sans salaire, d’ici là); le plafond et le plancher restent fixes; le prix du plafond λ est celui
             d’une équipe moyenne de la ligue.
           </p>

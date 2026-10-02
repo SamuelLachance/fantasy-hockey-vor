@@ -681,6 +681,51 @@
   ],
   "absentYear0": 0.3,
   "retireIfOutAge": 30,
+  "roleAbsent": {
+   "source": "Audit 2026-10-02 (ROLE-ABSENT), refit on the NHL history 2008-09 .. 2024-25 (MoneyPuck season totals in the audit's cache; seasons y = 2008..2023, next season y + 1): P(0 NHL games next | not a regular next) by this season's games share (< 0.25, 0.25-0.5, >= 0.5) and age on Oct 1 (< 23, 23-29, 30-33, 34+), as an odds multiplier on retention.ts pAbsentIfNotRegular (the age-only availability table), fitted by bisection to each cell's observed rate. Observed / old model: < 0.25 at 23-29 0.552 / 0.277 (n 1615), < 23 0.352 / 0.188, 30-33 0.706 / 0.452; 0.25-0.5 at 23-29 0.380 / 0.277. Shares >= 0.5 keep the age table (multiplier 1): their cells, 0.80-1.00 fitted (< 23 0.85, 30-33 0.82, 34+ 0.80), are within 1-2 se of 1 (not significant): only the part-timers' bands move. Walk-forward check: fitted on 2008-2013 only, < 0.25 23-29 3.56, < 23 2.74, 0.25-0.5 23-29 1.82. After a season with 0 NHL games (having played the one before), under the retirement age: P(regular next) and P(any game next) observed < 23 0.171 / 0.502 (n 205; old model 0.068 / 0.814), 23-29 0.033 / 0.165 (n 1314; old 0.052 / 0.727).",
+   "shareCuts": [
+    0.25,
+    0.5
+   ],
+   "ageCuts": [
+    23,
+    30,
+    34
+   ],
+   "oddsMult": [
+    [
+     2.38,
+     3.29,
+     2.99,
+     4.83
+    ],
+    [
+     1.02,
+     1.61,
+     2.39,
+     1.27
+    ],
+    [
+     1,
+     1,
+     1,
+     1
+    ]
+   ],
+   "afterZero": {
+    "ageCuts": [
+     23
+    ],
+    "pRegular": [
+     0.171,
+     0.033
+    ],
+    "pAny": [
+     0.502,
+     0.165
+    ]
+   }
+  },
   "goalie": {
    "starterNext": {
     "a": 0.547,
@@ -705,7 +750,25 @@
    "svLeague": 3.708,
    "svWorkload": 0.812,
    "svFpPerPt": 0.0735,
-   "maxShare": 0.85
+   "maxShare": 0.85,
+   "lowShare": {
+    "source": "Audit 2026-10-02 (GOALIE-PERSIST), refit on the goalie history 2006-07 .. 2025-26 (NHL stats REST goalie summaries in the audit's cache; seasons y = 2006..2024, ages < 32 on Oct 1 — the simulator retires an absent goalie from 32): the role next season after a season with no NHL game (having played the one before) or under 10 % of the starts, as odds multipliers [starter >= 50 %, at least 30 %, any start] on the starter / tandem / present logistics (each goalie's own save % relative to the league, regressed 1,500 shots toward it, as their sv input; fitted by bisection to the observed rates; the starter and tandem cells, 0-8 events, pooled over ages and shrunk). Observed / logistics: no starts < 27 0.006 / 0.037 / 0.286 vs 0.039 / 0.158 / 0.806 (n 161; multipliers 0.15 / 0.21 / 0.092), 27-31 0 / 0.022 / 0.161 vs 0.025 / 0.132 / 0.745 (n 93; 0 / 0.15 / 0.063); under 10 % < 27 0.021 / 0.104 / 0.509 vs 0.055 / 0.204 / 0.805 (n 336; 0.36 / 0.45 / 0.24), 27-31 0.008 / 0.074 / 0.393 vs 0.032 / 0.161 / 0.785 (n 122; 0.25 / 0.41 / 0.17). 2006-2013 only (walk-forward check): present multipliers 0.105 / 0.030 / 0.22 / 0.13. Multipliers rather than flat rates keep the level in: a strong young goalie who falls out on a path keeps better odds than the marginal goalies the rates come from. Only the no-start cell (`none`) is applied: the under-10 % one lowered the historical starters' and tandems' FP four seasons on to 0.71 of year 1 at 26-28 against 0.79 observed (scripts/test-dynasty-goalies.ts end to end; 0.75 without it, 0.73 with `none` alone) — the simulator's backup share, U(0.04, 0.29), puts a quarter of its backups under 10 %, not the population the cell was fitted on. From 10 % on the logistics stand (10-20 %: present 0.758-0.862 observed, 0.865-0.895 modelled). Level persistence (FP per start regressing toward the mean) is not refit: it needs historical production projections, not the Marcel inputs of the backtest.",
+    "maxShare": 0.1,
+    "maxAge": 32,
+    "ageCut": 27,
+    "none": [
+     [
+      0.1,
+      0.2,
+      0.092
+     ],
+     [
+      0.1,
+      0.15,
+      0.063
+     ]
+    ]
+   }
   },
   "prospectFirstSeason": {
    "pRegular": 0.85,
@@ -764,14 +827,14 @@
   },
   "slotPrime": {
    "F": {
-    "a": 3.49,
-    "b": -0.304,
-    "sd": 0.75
+    "a": 3.518,
+    "b": -0.296,
+    "sd": 0.737
    },
    "D": {
-    "a": 2.9,
-    "b": -0.189,
-    "sd": 0.58
+    "a": 2.843,
+    "b": -0.138,
+    "sd": 0.584
    },
    "G": {
     "mu": 4.3,
@@ -784,12 +847,14 @@
   },
   "decay": [
    1,
-   0.65,
-   0.35,
-   0.14,
-   0.08,
-   0.05
+   1,
+   0.89,
+   0.63,
+   0.36,
+   0.19,
+   0.09
   ],
+  "decaySource": "Refit 2026-10-02 (audit PROSPECT-DECAY): draftees of the 2008-2017 classes with 0 NHL games in their k completed post-draft seasons, outcome 200+ career NHL GP (NHL stats via the audit's history cache), odds multiplier on slotPMake fitted by bisection to the observed rate per k: k = 0 1.07 (n.s., kept 1), 1 1.03 (kept 1), 2 0.89, 3 0.63, 4 0.36, 5 0.19, 6 0.09 (observed P(200 GP) 0.274 / 0.244 / 0.195 / 0.132 / 0.072 / 0.037 / 0.018; the old table [1, 0.65, 0.35, 0.14, 0.08, 0.05], never fitted, gave 0.181 at k = 1 and 0.036 at k = 3). Walk-forward backtest (scripts/backtest-dynasty.ts, no K): slot-route calibration 0.41 -> 0.57 (2015) and 0.64 -> 0.93 (2021), prospect ranking unchanged. Caveat: fitted on every draftee; the slot route only takes players missing from prospects.json.",
   "etaLag": [
    [
     3,
@@ -801,6 +866,10 @@
    ],
    [
     20,
+    1
+   ],
+   [
+    32,
     2
    ],
    [
@@ -809,13 +878,14 @@
    ],
    [
     128,
-    4
+    3
    ],
    [
     100000,
-    5
+    3
    ]
   ],
+  "freshSource": "Refit 2026-10-02 (audit FRESH-CLASS), walk-forward: fitted on the 2005-2012 classes, checked on 2013-2016 (NHL history in the audit's cache). slotPrime F / D: GP-weighted league-1 FP/G at ages 24-26 (seasons with 20+ GP, 40+ GP in all) of the skaters who made it (200+ NHL GP), each season rescaled to the 2023-2025 scoring level (mean FP/G of 40+ GP skaters per season and group: the model's realized scale is today's), OLS on ln(pick): F 3.49 - 0.304 ln(pick) sd 0.75 -> 3.518 - 0.296 sd 0.737, D 2.9 - 0.189 sd 0.58 -> 2.843 - 0.138 sd 0.584 (validation mean residual F 0.157 -> 0.099, D 0.160 -> 0.031). etaLag: the makers' first season with 10+ games after the draft, mean by pick band 0.20 / 1.03 / 1.73 / 2.58 / 2.89 / 3.60 / 3.62 for picks 1-3 / 4-10 / 11-20 / 21-32 / 33-64 / 65-128 / 129+ (2013-2016: 0.42 / 0.80 / 1.97 / 1.87 / 2.71 / 3.38 / 4.06), the lag whose mean with the jitter (+0.3) is nearest (the old table was a year late from pick 11: 2 / 3 / 3 / 4 / 5). Discounted realized / model season gains (delta 0.75, no keeper cost) on the slot route: fresh classes, picks 1-64, 1.54 -> 1.34 (train) and 2.06 -> 1.78 (validation); classes 1-3 seasons after their draft 1.22 -> 1.04 and 1.14 -> 0.94. The fresh class's remaining gap sits in its first seasons at the top of the draft (picks 1-3 1.73 / 2.29): the early-age arrival level (growth.ts arrivalCentre), not refit here.",
   "etaLagGoalie": 5,
   "etaJitter": [
    [

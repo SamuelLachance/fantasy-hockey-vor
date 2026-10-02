@@ -523,7 +523,22 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const f10 = slotProspect(params, "F", { year: 2026, pick: 10 });
   assert(near(f10.pMake, 0.8, 0.02), `pMake F pick 10, fresh ≈ 0.80 (${f10.pMake.toFixed(3)})`);
   const f10old = slotProspect(params, "F", { year: 2023, pick: 10 });
-  assert(f10old.pMake < f10.pMake * 0.5, "no-arrival decay lowers the odds");
+  assert(f10old.pMake < f10.pMake, "no-arrival decay lowers the odds");
+  // Audit 2026-10-02 (PROSPECT-DECAY): the odds multiplier per completed
+  // post-draft season without an NHL game, fitted on the 2008-2017 classes
+  // (P(200 GP) observed 0.244 one season out, 0.132 three out; the old
+  // table [1, 0.65, 0.35, 0.14, 0.08, 0.05] read 0.181 and 0.036).
+  const fitted = [1, 1, 0.89, 0.63, 0.36, 0.19, 0.09];
+  const dec = params.prospect.decay;
+  assert(dec.length === fitted.length && dec.every((x, k) => near(x, fitted[k]!, 0.05)), `decay is the fitted table (${dec.join(", ")})`);
+  assert(dec.every((x, k) => k === 0 || x <= dec[k - 1]!), "decay never rises with the seasons out");
+  const f10one = slotProspect(params, "F", { year: 2025, pick: 10 });
+  assert(near(f10one.pMake, f10.pMake, 1e-9), "one season out with no NHL game: the fresh odds (fitted multiplier 1.03)");
+  assert(near(f10old.pMake / (1 - f10old.pMake), (0.63 * f10.pMake) / (1 - f10.pMake), 0.05 * f10.pMake), "three seasons out: odds × 0.63");
+  // Audit 2026-10-02 (FRESH-CLASS): arrival lags and primes refit walk-forward (classes 2005-2012, today's scoring level)
+  const lagOf = (pick: number) => slotProspect(params, "F", { year: 2026, pick }).eta - 2026;
+  assert([1, 7, 15, 25, 50, 100, 200].map(lagOf).join(",") === "0,1,1,2,3,3,3", `arrival lag by pick (${[1, 7, 15, 25, 50, 100, 200].map(lagOf).join(",")}; makers' first 10-game season 0.2 / 1.0 / 1.7 / 2.6 / 2.9 / 3.6 / 3.6 after the draft)`);
+  assert(near(slotProspect(params, "F", { year: 2026, pick: 1 }).pi.mu, 3.52, 0.05) && near(slotProspect(params, "D", { year: 2026, pick: 100 }).pi.mu, 2.21, 0.05), "prime of makers at today's scoring (F #1 3.52, D #100 2.21)");
   const d6 = slotProspect(params, "D", { year: 2026, pick: 6 });
   assert(near(d6.pMake, 0.84, 0.02), `pMake D pick 6 ≈ 0.84 (${d6.pMake.toFixed(3)})`);
   assert(slotPMakeRaw(params, "G", 20) === 0.44 && slotPMakeRaw(params, "G", 200) === 0.05, "goalie buckets");
@@ -677,6 +692,40 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const drift6 = level("F", base.age0 + 6) / level("F", base.age0 + 5);
   assert(near(on.lvlRel![6]! / on.lvlRel![5]!, drift6, 1e-12), "the curve takes over after the window");
   assert(mean(on.fp[3]!) > mean(off.fp[3]!), "a growth path above the curve raises season 3");
+}
+
+// ---- 8. Role transitions refit on history (audit 2026-10-02: ROLE-ABSENT, GOALIE-PERSIST)
+{
+  const odds = (x: number) => x / (1 - x);
+  // a part-timer who is not a regular next season leaves the NHL far more often than his age alone says
+  const base25 = ret.pAbsentIfNotRegular("F", 25);
+  assert(near(odds(ret.pAbsentIfNotRegular("F", 25, 0.1)) / odds(base25), 3.29, 0.01), "share < 0.25 at 23-29: absence odds × 3.29");
+  assert(near(odds(ret.pAbsentIfNotRegular("F", 25, 0.35)) / odds(base25), 1.61, 0.01), "share 0.25-0.5 at 23-29: × 1.61");
+  assert(near(ret.pAbsentIfNotRegular("F", 25, 0.8), base25, 1e-12), "a regular's share at 23-29: the age table");
+  assert(ret.pAbsentIfNotRegular("F", 21, 0.1) > ret.pAbsentIfNotRegular("F", 21), "under 23 too");
+  // observed: P(absent | not regular), share < 0.25, 23-29 0.552 (the age table read 0.277)
+  assert(ret.pAbsentIfNotRegular("F", 26, 0.1) > 0.45, `share < 0.25 at 26: ${ret.pAbsentIfNotRegular("F", 26, 0.1).toFixed(3)}`);
+  const z25 = ret.afterZero(25)!;
+  const z21 = ret.afterZero(21)!;
+  assert(near(z25.pRegular, 0.033, 1e-9) && near(z25.pAny, 0.165, 1e-9), "after a season out at 23-29: 3.3 % regular, 16.5 % any game");
+  assert(near(z21.pRegular, 0.171, 1e-9) && near(z21.pAny, 0.502, 1e-9), "under 23: 17.1 % / 50.2 %");
+  // end to end: a 25-year-old out of the NHL in season 1 is back in season 2 on ~16.5 % of the paths (the logistics: ~73 %)
+  const fringe: SimPlayer = { id: "fringe-out", g: "F", age0: 25, birthDate: null, gp0: 150, eligNow: false, path: "nhl", theta0: 1.6, share0: 0.25, sigma0: 0.1, elite: false };
+  const r = simulatePlayer(fringe, ctx({ N: 6000, recordGames: true, keepGate: false, K: 0 }));
+  let out1 = 0;
+  let back2 = 0;
+  for (let n = 0; n < r.N; n++) {
+    if (r.gamesPath![1]![n]! > 0) continue;
+    out1++;
+    if (r.gamesPath![2]![n]! > 0) back2++;
+  }
+  assert(out1 > 500 && near(back2 / out1, 0.165, 0.04), `after a season out at 26: back ${(back2 / out1).toFixed(3)} (observed 0.165; ${out1} paths out)`);
+  // goalies: after a season with no start, the observed odds of any start (0.29 under 27, the logistic alone 0.81)
+  const gNone = ret.goalieRoleNext(25, 0, 0);
+  assert(gNone.pP < 0.4 && gNone.pT < 0.1 && gNone.pS <= gNone.pT && gNone.pT <= gNone.pP, `goalie 25 after no start: present ${gNone.pP.toFixed(3)}, ≥ tandem ${gNone.pT.toFixed(3)}`);
+  const gLow = ret.goalieRoleNext(25, 0.05, 0);
+  assert(gLow.pP > 0.7, `a goalie with a few starts keeps the logistics (present ${gLow.pP.toFixed(3)})`);
+  assert(ret.goalieRoleNext(33, 0, 0).pP > gNone.pP, "32+: the logistics (the simulator retires an absent goalie anyway)");
 }
 
 if (failed > 0) {

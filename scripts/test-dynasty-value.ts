@@ -413,8 +413,15 @@ const gamesOf = (projGp: number) => (params.games.seasonGames * projGp) / params
   assert(ranks.every((r, i) => r === i + 1), "ranks are 1..n");
   const kid = res.snapshot.players.kid!;
   assert(kid.phase === "prospect" && kid.path === "prospect" && kid.keeper.status === "free", "prospect record → prospect / free");
-  // a regular from 2026-27 passes 100 GP during 2027-28: free through 2027-28 only
-  assert(kid.elig.freeThrough === 2027 && kid.elig.binding === "gp", `free through ${kid.elig.freeThrough} (${kid.elig.binding})`);
+  // a regular from 2026-27 passes 100 GP during 2027-28, but ~38 % of his
+  // paths (not made, or arriving from 2027-28 by the ETA jitter) are still
+  // eligible at the 2028 cutdown, so P(eligible then) sits at the 0.5 line
+  // (the 2026-10-02 role refit — part-timers out of the league more often —
+  // moved it a hair above): free through 2027-28 or 2028-29, binding the games
+  assert(
+    (kid.elig.freeThrough === 2027 || kid.elig.freeThrough === 2028) && kid.elig.binding === "gp",
+    `free through ${kid.elig.freeThrough} (${kid.elig.binding})`,
+  );
   for (const r of [...recs.slice(0, 40), kid] as DynastyRecord[]) {
     const s = explainFr(r);
     assert(s.length > 0 && s.length <= 220, `explanation length ${s.length}: ${s}`);

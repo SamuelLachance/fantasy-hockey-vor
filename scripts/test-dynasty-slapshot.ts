@@ -16,7 +16,7 @@ import { makeRetention } from "../src/lib/dynasty/retention";
 import { mean } from "../src/lib/dynasty/rng";
 import { replacement } from "../src/lib/dynasty/scale";
 import { simulatePlayer, type SimContext, type SimLeague, type SimPlayer } from "../src/lib/dynasty/simulate";
-import { contractSalaries, planContract, seasonGain } from "../src/lib/dynasty/league-contracts";
+import { contractBaseAt, contractSalaries, contractTie, equivalentLengths, planContract, recommendedLength, salarySchedule, seasonGain } from "../src/lib/dynasty/league-contracts";
 import {
   capLambda,
   capSeries,
@@ -26,13 +26,17 @@ import {
   fitSalaryModel,
   goalieFpg,
   lambdaBySeason,
+  kDriftPath,
   lambdaPath,
   nhlCapOf,
   parseSlapshotProfile,
   playerReplacement,
+  poolCapHit,
   predictCapPct,
   replacementLevels,
+  rosterLambda,
   rosterSpotCost,
+  SNAKE_REPS,
   skaterFpg,
   type KnownContract,
   type SalaryRow,
@@ -98,6 +102,56 @@ const T = params.T;
   // a prospect without an NHL contract starts his league contract at arrival
   const pros = planContract({ start: 3, nhl: [0, 0, 0, 0.975, 0.975, 0.975, 5, 5, 5, 5, 5, 5], value: [0, 0, 0, 30, 35, 40, 45, 45, 45, 45, 45, 45], lambda: flat(1.4), min: flat(0.85), delta: 0.75 }, R);
   assert(pros.start === 3 && pros.salary[2] === 0 && pros.salary[3] === 0.98, `prospect contract from his arrival (${pros.salary.slice(0, 5)})`);
+
+  // Audit 2026-10-02, CAP-2: near-ties (max(0.5 pt, 1 %)) go to the shortest total control
+  assert(contractTie(10) === 0.5 && contractTie(300) === 3, "tie: max(0.5 pt, 1 %)");
+  assert(recommendedLength([[100, 0], [100.6, 7], [99.7, 0]]) === 1, "1 + 0 within 0.6 of 1 + 7: the shorter control");
+  assert(recommendedLength([[100, 6], [100.4, 1], [90, 0]]) === 2, "control 2 + 1 beats 1 + 6 inside the tie");
+  assert(recommendedLength([[50, 0], [60, 0], [59.5, 0]]) === 3 || recommendedLength([[50, 0], [60, 0], [59.5, 0]]) === 2, "the best still wins outside the tie");
+  assert(recommendedLength([[50, 0], [60, 0], [70, 0]]) === 3, "a clear best is kept");
+  assert(JSON.stringify(equivalentLengths([[100, 0], [100.6, 7], [99.7, 0], [80, 0]])) === "[1,2,3]", "equivalent lengths listed");
+  // a 41-year-old worth a little each season: no 6-year extension on a near-tie (Perry 1+3 at 49.5 vs 49.4)
+  const old = planContract(
+    { start: 0, nhl: flat(1.2), value: [30, 12, 6, 0.6, 0.3, 0.1, 0, 0, 0, 0, 0, 0], lambda: flat(1.4), min: flat(0.85), delta: 0.75 },
+    R,
+  );
+  assert(old.end - old.start <= 3, `an old player's control stays short on near-ties (${old.years} + ${old.ext})`);
+  const opts = old.options.map((o) => [o.total, o.ext] as const);
+  assert(old.years === recommendedLength(opts), "the plan follows recommendedLength over its own options (the tab's rule)");
+
+  // CAP-7: an extension starting inside his current signed contract keeps at least his league salary (ELC bonuses)
+  const nowIn = { nhl: [0.97, 0.97, 0.97, 9, 9, 9, 9, 9, 9, 9, 9, 9], min: flat(0.85), base0: 2.97, base0Through: 3 };
+  assert(contractBaseAt(nowIn, 0) === 2.97 && contractBaseAt(nowIn, 1) === 2.97 && contractBaseAt(nowIn, 2) === 2.97, "inside the ELC: Fantrax's salary");
+  assert(contractBaseAt(nowIn, 3) === 9 && contractBaseAt({ ...nowIn, base0: null }, 1) === 0.97, "after it (or without a league salary): the NHL cap hit");
+  const yurov = planContract({ start: 0, ...nowIn, value: flat(25), lambda: flat(1.4), delta: 0.75 }, R);
+  assert(yurov.ext === 0 || (yurov.extBase ?? 0) >= 2.97, `no extension at the capwages ELC hit (${yurov.years} + ${yurov.ext} at ${yurov.extBase})`);
+  const sch = salarySchedule(0, 2.97, 1, 7, nowIn.nhl, nowIn.min, 12, R, { base0: 2.97, base0Through: 3 });
+  assert(sch.extBase === 2.97, `the tab's schedule uses the same base (${sch.extBase})`);
+}
+
+// ---------------------------------------------------------------- λ pools, k drift, λ precision (audit 2026-10-02)
+{
+  // CAP-1: once his league control is over he signs again at his NHL cap hit, never 0 $
+  const c = { cap: [5, 5.5, 0, 0], nhl: [5, 5, 7, 8], plan: { end: 2 } as never };
+  assert(poolCapHit(c, 0, 0.85, 4) === 5 && poolCapHit(c, 2, 0.9, 4) === 7, "after control: his NHL cap hit in the λ pool");
+  assert(poolCapHit({ cap: [0, 0, 1, 1], nhl: [0, 0, 1, 1], plan: { end: 12 } as never }, 0, 0.85, 4) === 0, "before his first contract: 0");
+  // CAP-4: λ's Monte Carlo error with 100 replications
+  assert(SNAKE_REPS >= 100, `snake replications ${SNAKE_REPS}`);
+  // SLAP-K-DRIFT: k falls after 27, faster for defensemen; goalies and young skaters stay
+  const f26 = kDriftPath(prof, "F", 26, 6);
+  const d30 = kDriftPath(prof, "D", 30, 6);
+  assert(f26[0] === 1 && f26[1] === 1 && near(f26[4]!, Math.exp(-0.0119 * 3), 1e-9), `a 26-year-old forward's k: flat, then −1.2 %/season (${f26.map((x) => x.toFixed(3))})`);
+  assert(near(d30[3]!, Math.exp(-0.0199 - 0.0282 * 2), 1e-9), "a 30-year-old defenseman: −2.0 % then −2.8 %/season from 31");
+  assert(kDriftPath(prof, "G", 33, 6).every((x) => x === 1) && kDriftPath(prof, "F", 20, 6).every((x) => x === 1), "goalies and young forwards: no drift");
+  // CAP-6: the control λ on real rosters (two teams, one over the cap)
+  const P = (id: string, pos: SeatPlayer["pos"], fp: number, cap: number): SeatPlayer => ({ id, pos, fp, cap });
+  const tiny: SlapshotProfile = { ...prof, roster: { ...prof.roster, active: { C: 1, LW: 0, RW: 0, D: 1, G: 0 }, reserve: 0 } };
+  const players = new Map(
+    [P("a", ["C"], 300, 60), P("b", ["D"], 200, 60), P("c", ["C"], 250, 10), P("d", ["D"], 150, 10), P("fa1", ["C"], 200, 1), P("fa2", ["D"], 120, 1)].map((x) => [x.id, x]),
+  );
+  const rl = rosterLambda(tiny, [["a", "b"], ["c", "d"]], players, 105);
+  assert(rl.over === 1 && rl.teamCap.max === 120, `one team over (${rl.over}, caps ${JSON.stringify(rl.teamCap)})`);
+  assert(near(rl.mean, (80 / 59 + 0) / 2, 1e-9), `its λ: the cheapest points per M$ swap (D 80 pts for 59 M$) (${rl.mean})`);
 }
 
 // ---------------------------------------------------------------- cap series
