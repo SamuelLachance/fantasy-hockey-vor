@@ -14,7 +14,10 @@
  * each season he holds the player he either plays him (value − λ × (salary −
  * league minimum)) or sends him to the minors (0 points, 0 cap), so a season
  * is worth max(0, value − charge); after control ends it is worth 0. λ is the
- * cap's shadow price (league points per M$), from the dynasty build.
+ * cap's shadow price (league points per M$), from the dynasty build. Since
+ * a stashed season costs nothing in that objective, many lengths come within
+ * a hair of the best: near-ties (`contractTie`) go to the shortest total
+ * control (`recommendedLength`), the « Plafond » tab's rule too.
  *
  * Pure: used by the dynasty build and by the browser's « Plafond » tab.
  */
@@ -66,6 +69,13 @@ export interface ContractPlanInput {
   /** The league's own first-season salary (Fantrax, ELC bonuses included): the base of a contract starting now. */
   base0?: number | null;
   /**
+   * Seasons 0 … base0Through − 1 are his current signed NHL contract, whose
+   * league salary is base0: a contract or extension starting in them takes
+   * max(NHL cap hit, base0) (capwages' entry-level hits leave out the
+   * bonuses Fantrax counts). Default 1 (season 0 only).
+   */
+  base0Through?: number;
+  /**
    * Expected season gain at a salary, from the dynasty simulation's career
    * paths (phase, aging, retirement, role, injuries); replaces
    * max(0, value − charge) on the expected value when given.
@@ -112,9 +122,66 @@ export function breakEvenSalary(value: number, lambda: number, min: number): num
   return lambda > 0 ? min + value / lambda : Infinity;
 }
 
-function baseAt(inp: Pick<ContractPlanInput, "nhl" | "min" | "base0">, t: number): number {
-  if (t === 0 && inp.base0 && inp.base0 > 0) return r2(inp.base0);
-  return r2(Math.max(inp.nhl[t] ?? 0, inp.min[t] ?? 0));
+/**
+ * Base of a contract (or extension) starting in season t: his NHL cap hit
+ * then (at least the league minimum); during his current signed contract
+ * whose league salary is known (base0, Fantrax), at least that salary —
+ * exactly it in season 0. Audit 2026-10-02 (CAP-7): an extension starting
+ * inside an entry-level deal took capwages' 0.97 M$ (no bonuses) against a
+ * first contract at Fantrax's 1.9-4.3 M$, and the planner advised « 1-2
+ * years + 7-year extension » for six such players on that artefact alone.
+ */
+export function contractBaseAt(
+  inp: Pick<ContractPlanInput, "nhl" | "min" | "base0" | "base0Through">,
+  t: number,
+): number {
+  const b0 = inp.base0 && inp.base0 > 0 ? inp.base0 : null;
+  if (b0 != null && t === 0) return r2(b0);
+  const nhl = Math.max(inp.nhl[t] ?? 0, inp.min[t] ?? 0);
+  if (b0 != null && t < (inp.base0Through ?? 1)) return r2(Math.max(nhl, b0));
+  return r2(nhl);
+}
+const baseAt = contractBaseAt;
+
+/** A surplus within max(0.5 pt, 1 %) of the best counts as a tie (the simulation's noise and the model's precision). */
+export function contractTie(best: number): number {
+  return Math.max(0.5, 0.01 * Math.abs(best));
+}
+
+/**
+ * The recommended first-contract length among `options` ([surplus, best
+ * extension] for lengths 1..n): the shortest total control (length +
+ * extension) whose surplus is within `contractTie` of the best, then the
+ * larger surplus, then the shorter first contract. Audit 2026-10-02
+ * (CAP-2): minors stashing is free in the objective, so long controls cost
+ * almost nothing and the strict maximum fell among ~18 near-ties, often a
+ * 7-year extension running to 40+.
+ */
+export function recommendedLength(options: ReadonlyArray<readonly [number, number]>): number {
+  if (!options.length) return 1;
+  const best = Math.max(...options.map((o) => o[0]));
+  const tol = contractTie(best);
+  let pick = -1;
+  options.forEach(([total, ext], j) => {
+    if (total < best - tol - 1e-9) return;
+    if (pick < 0) {
+      pick = j;
+      return;
+    }
+    const [pt, pe] = options[pick]!;
+    const ctl = j + 1 + ext;
+    const pctl = pick + 1 + pe;
+    if (ctl < pctl || (ctl === pctl && total > pt + 1e-9)) pick = j;
+  });
+  return Math.max(1, pick + 1);
+}
+
+/** Lengths whose surplus is within `contractTie` of the best (the « Plafond » tab's equivalent choices). */
+export function equivalentLengths(options: ReadonlyArray<readonly [number, number]>): number[] {
+  if (!options.length) return [];
+  const best = Math.max(...options.map((o) => o[0]));
+  const tol = contractTie(best);
+  return options.flatMap(([total], j) => (total >= best - tol - 1e-9 ? [j + 1] : []));
 }
 
 /** Salary path and gains of one (first contract, extension) choice. */
@@ -150,8 +217,10 @@ function evaluate(inp: ContractPlanInput, T: number, years: number, ext: number,
 
 /**
  * The best league contract for a player: the first-contract length (or the
- * confirmed one) and the extension, by discounted surplus. Ties go to the
- * shorter commitment.
+ * confirmed one) and the extension, by discounted surplus. Near-ties
+ * (`contractTie`) go to the shorter total control: for each length the
+ * shortest extension within the tie of that length's best, then
+ * `recommendedLength` over the lengths.
  */
 export function planContract(inp: ContractPlanInput, rules: LeagueContractRules = SLAPSHOT_CONTRACT_RULES): ContractPlan {
   const T = inp.value.length;
@@ -159,25 +228,22 @@ export function planContract(inp: ContractPlanInput, rules: LeagueContractRules 
   const exts = inp.extended || rules.extensions < 1 ? [0] : Array.from({ length: rules.maxYears + 1 }, (_, j) => j);
   const lengths = Array.from({ length: rules.maxYears }, (_, j) => j + 1);
   const options: ContractOption[] = [];
-  let best: { years: number; ext: number; total: number } | null = null;
   for (const years of lengths) {
-    let bestExt = 0;
-    let bestTotal = -Infinity;
-    for (const ext of exts) {
-      const { total } = evaluate(inp, T, years, ext, base, rules);
-      if (total > bestTotal + 1e-9) {
-        bestTotal = total;
-        bestExt = ext;
-      }
-    }
-    options.push({ years, ext: bestExt, total: Math.round(bestTotal * 10) / 10 });
-    const allowed = inp.fixed ? years === Math.floor(inp.fixed.years) : true;
-    if (allowed && (!best || bestTotal > best.total + 1e-9)) best = { years, ext: bestExt, total: bestTotal };
+    const totals = exts.map((ext) => evaluate(inp, T, years, ext, base, rules).total);
+    const rowBest = Math.max(...totals);
+    const tol = contractTie(rowBest);
+    const k = totals.findIndex((x) => x >= rowBest - tol - 1e-9);
+    options.push({ years, ext: exts[k]!, total: Math.round(totals[k]! * 10) / 10 });
   }
-  if (!best) {
-    // a confirmed length outside 1..maxYears: keep it as given, no extension
-    const years = Math.max(1, Math.floor(inp.fixed?.years ?? 1));
-    best = { years, ext: 0, total: evaluate(inp, T, years, 0, base, rules).total };
+  let best: { years: number; ext: number };
+  const fixedYears = inp.fixed ? Math.floor(inp.fixed.years) : null;
+  if (fixedYears != null) {
+    // a confirmed length (outside 1..maxYears: as given, no extension)
+    const o = options.find((x) => x.years === fixedYears);
+    best = o ? { years: o.years, ext: o.ext } : { years: Math.max(1, fixedYears), ext: 0 };
+  } else {
+    const years = recommendedLength(options.map((o) => [o.total, o.ext] as const));
+    best = { years, ext: options[years - 1]!.ext };
   }
   const ev = evaluate(inp, T, best.years, best.ext, base, rules);
   return {
@@ -223,6 +289,8 @@ export function salarySchedule(
   min: readonly number[],
   T: number,
   rules: LeagueContractRules = SLAPSHOT_CONTRACT_RULES,
+  /** His league salary now and the seasons of his current signed contract (`contractBaseAt`). */
+  now: { base0?: number | null; base0Through?: number } = {},
 ): { salary: number[]; extBase: number | null; end: number } {
   const salary = new Array<number>(T).fill(0);
   let t = start;
@@ -231,7 +299,7 @@ export function salarySchedule(
     salary[t++] = s;
   }
   const e = start + years;
-  const extBase = ext > 0 ? r2(Math.max(nhl[Math.min(e, T - 1)] ?? 0, min[Math.min(e, T - 1)] ?? 0)) : null;
+  const extBase = ext > 0 ? contractBaseAt({ nhl, min, ...now }, Math.min(e, T - 1)) : null;
   if (ext > 0) {
     for (const s of contractSalaries(extBase!, ext, rules)) {
       if (t >= T) break;
@@ -246,7 +314,7 @@ export function salarySchedule(
  * choices, 0 included: what the simulation averages its season gains at.
  */
 export function contractLevels(
-  inp: Pick<ContractPlanInput, "start" | "nhl" | "min" | "fixed" | "extended" | "base0">,
+  inp: Pick<ContractPlanInput, "start" | "nhl" | "min" | "fixed" | "extended" | "base0" | "base0Through">,
   T: number,
   rules: LeagueContractRules = SLAPSHOT_CONTRACT_RULES,
 ): number[][] {
@@ -254,9 +322,10 @@ export function contractLevels(
   const sets = Array.from({ length: T }, () => new Set<number>([0]));
   const lengths = inp.fixed ? [Math.floor(inp.fixed.years)] : Array.from({ length: rules.maxYears }, (_, j) => j + 1);
   const exts = inp.extended || rules.extensions < 1 ? [0] : Array.from({ length: rules.maxYears + 1 }, (_, j) => j);
+  const now = { base0: inp.base0 ?? null, ...(inp.base0Through != null ? { base0Through: inp.base0Through } : {}) };
   for (const y of lengths) {
     for (const e of exts) {
-      const { salary } = salarySchedule(inp.start, base, y, e, inp.nhl, inp.min, T, rules);
+      const { salary } = salarySchedule(inp.start, base, y, e, inp.nhl, inp.min, T, rules, now);
       salary.forEach((s, t) => sets[t]!.add(s));
     }
   }

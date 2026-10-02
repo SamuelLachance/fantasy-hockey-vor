@@ -57,6 +57,12 @@ import type { Group } from "./types";
 export interface SimLeague {
   /** League fantasy points per league-1 realized point, × the share of NHL games inside the fantasy season. */
   k: number;
+  /**
+   * k of season t relative to season 0 (absent = 1 every season): the
+   * league's scoring ages apart from league 1's (Slapshot counts no hits or
+   * blocks, so its points fall faster after 27, slapshot.ts kDriftPath).
+   */
+  kDrift?: number[];
   /** Skater replacement per NHL game, league points (same fantasy-season share). */
   r: number;
   /** Goalie replacement per season slot, league points. */
@@ -378,7 +384,7 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       if (!live || Y0 + t + j < arrival) continue;
       const th = thetaGate !== null ? thetaGate * fwd : (pi * lv[t + j + PRE]!) / lvl25;
       thPrev = th;
-      idx += kdW[j]! * surv * Math.max(0, lg ? seasonValue(th, SG * sh) - capCharge(t + j, sh) : seasonValue(th, SG * sh));
+      idx += kdW[j]! * surv * Math.max(0, lg ? seasonValue(th, SG * sh, t + j) - capCharge(t + j, sh) : seasonValue(th, SG * sh, t + j));
     }
     return idx / kdSum;
   };
@@ -396,9 +402,10 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
   let lostGp = 0;
 
   const lg = pl.lg ?? null;
+  const kAt = (t: number) => (lg ? lg.k * (lg.kDrift?.[Math.min(t, lg.kDrift.length - 1)] ?? 1) : 1);
   const seasonValue = lg
-    ? (th: number, games: number) => (g === "G" ? lg.k * th * games - lg.rG : (lg.k * th - lg.r) * games)
-    : (th: number, games: number) =>
+    ? (th: number, games: number, t: number) => (g === "G" ? kAt(t) * th * games - lg.rG : (kAt(t) * th - lg.r) * games)
+    : (th: number, games: number, _t: number) =>
         (g === "G" ? th * games - repl.Gseason : (th - R) * games) +
         (g === "F" ? 0.5 * Math.max(0, th - repl.offRef) * games : 0);
   /** Cap charge of season t for a role share (league profile only). */
@@ -568,12 +575,12 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       // (league profile: play him — value less the cap charge — or stash him in the minors for 0)
       const inSeason = playing
         ? lg
-          ? Math.max(0, seasonValue(thetaT, games) - capCharge(t, gShare)) * seasonScale
-          : Math.max(0, seasonValue(thetaT, games)) * seasonScale
+          ? Math.max(0, seasonValue(thetaT, games, t) - capCharge(t, gShare)) * seasonScale
+          : Math.max(0, seasonValue(thetaT, games, t)) * seasonScale
         : 0;
       vorPre[t]![n] = alive ? inSeason : 0;
       if (ct && ctSum && playing) {
-        const v = seasonValue(thetaT, games) * seasonScale;
+        const v = seasonValue(thetaT, games, t) * seasonScale;
         const sc = g === "G" ? 1 : Math.min(1, gShare / G.regShareMean);
         const lv = ct.levels[t]!;
         const acc = ctSum[t]!;

@@ -32,6 +32,8 @@ import {
   parseSlapshotProfile,
   lambdaBySeason,
   prepareSlapshot,
+  poolCapHit,
+  rosterLambda,
   rosterSpotCost,
   skaterFpg,
   slapshotRecord,
@@ -129,8 +131,13 @@ export interface SlapshotSnapshot {
         aggregate: number;
         capUsedAt0: number;
         budget: number;
-        snake: { mean: number; sd: number; reps: number; median: number; over: number; teamCap: { min: number; median: number; max: number } };
+        /** sd: spread of the replications; se: λ's Monte Carlo standard error (sd / √reps). */
+        snake: { mean: number; sd: number; se: number; reps: number; median: number; over: number; teamCap: { min: number; median: number; max: number } };
       }>;
+      /** λ the calibration pass planned the contracts at (the first solve, before the plans followed it). */
+      calibration: number[];
+      /** Control: λ on the league's real rosters this season (slapshot.ts rosterLambda; not used). */
+      rosters: { mean: number; median: number; over: number; teamCap: { min: number; median: number; max: number } };
     };
     /** Roster-spot rent charged per held season from 2027-28 (and the keep / drop gate), league points. */
     rosterSpot: { cost: number; rank: number };
@@ -417,23 +424,49 @@ export function runSlapshotBuild(
   // It also averages, over each player's simulated careers (growth, prime,
   // decline, retirement, role, injuries), the season gain at every salary a
   // league contract could pay him: pass 2 plans the contracts on those.
-  const pass1 = run(Math.min(N, PASS1_PATHS), null, undefined, false, { record: true });
+  const pass0 = run(Math.min(N, PASS1_PATHS), null, undefined, false);
+  /**
+   * Season pools for λ_t from a calibration pass: each player's expected
+   * league points and his cap hit that season — the planned league salary
+   * (0 before it starts); once his league control is over he is a free agent
+   * and signs again at his NHL cap hit (audit 2026-10-02, CAP-1: counting him
+   * at 0 $ put 40 players worth 1,921 points at no cost in the 2027-28 pool
+   * and pulled λ_2027 from ~3.0 to ~2.1).
+   */
+  const poolsOf = (pass: ReturnType<typeof run>) => {
+    const out: SeatPlayer[][] = [];
+    for (let t = 0; t < LAMBDA_SEASONS; t++) {
+      const pool: SeatPlayer[] = [];
+      for (const [id, rec] of Object.entries(pass.result.all)) {
+        const fp = (rec.eFP[t] ?? 0) * (pass.prep.kEff.get(id) ?? 0) * (pass.prep.kDrift.get(id)?.[t] ?? 1);
+        if (!(fp > 0)) continue;
+        const cap = poolCapHit(pass.prep.contracts.get(id)!, t, pass.prep.capSeries.min[t]!, T);
+        pool.push({ id, pos: pass.prep.pos.get(id) ?? [], fp, cap });
+      }
+      out.push(pool);
+    }
+    return out;
+  };
+  // The calibration pass plans the contracts at the solved λ, so its season
+  // gains (and pass 2's plans) follow the λ pass 2 charges (audit 2026-10-02,
+  // CAP-5: the plans used to come from a pass at the 2026-27 λ held per
+  // share of the cap, 2.15, whatever λ pass 2 then solved).
+  const lam0 = lambdaBySeason(profile, pass0.prep.capSeries, poolsOf(pass0));
+  const pass1 = run(Math.min(N, PASS1_PATHS), null, lam0.lambda, false, { record: true });
   const contractGain = new Map<string, (t: number, salary: number) => number>();
   for (const [id, lg] of pass1.prep.lgs) {
     const c = lg.contract;
     if (c?.sum && c.n) contractGain.set(id, gainFromLevels(c.levels, c.sum, c.n));
   }
-  const pools: SeatPlayer[][] = [];
-  for (let t = 0; t < LAMBDA_SEASONS; t++) {
-    const pool: SeatPlayer[] = [];
-    for (const [id, rec] of Object.entries(pass1.result.all)) {
-      const fp = (rec.eFP[t] ?? 0) * (pass1.prep.kEff.get(id) ?? 0);
-      if (!(fp > 0)) continue;
-      pool.push({ id, pos: pass1.prep.pos.get(id) ?? [], fp, cap: pass1.prep.contracts.get(id)!.cap[t]! });
-    }
-    pools.push(pool);
-  }
+  const pools = poolsOf(pass1);
   const lam = lambdaBySeason(profile, pass1.prep.capSeries, pools);
+  // control: λ on the league's real rosters this season (published, not used)
+  const realLambda = rosterLambda(
+    profile,
+    Object.values(pool.rosters),
+    new Map(pools[0]!.map((x) => [x.id, x])),
+    pass1.prep.capSeries.league[0]!,
+  );
   const rosterRank = profile.league.teams * profile.roster.max;
   const spot = rosterSpotCost(
     Object.values(pass1.result.all).map((r) => r.dv.balanced),
@@ -523,6 +556,7 @@ export function runSlapshotBuild(
           snake: {
             mean: r3(d.snake.mean),
             sd: r3(d.snake.sd),
+            se: r3(d.snake.se),
             reps: d.snake.reps,
             median: r3(d.snake.median),
             over: Math.round(d.snake.over * 10) / 10,
@@ -533,6 +567,17 @@ export function runSlapshotBuild(
             },
           },
         })),
+        calibration: lam0.lambda.slice(0, LAMBDA_SEASONS).map(r3),
+        rosters: {
+          mean: r3(realLambda.mean),
+          median: r3(realLambda.median),
+          over: realLambda.over,
+          teamCap: {
+            min: Math.round(realLambda.teamCap.min * 10) / 10,
+            median: Math.round(realLambda.teamCap.median * 10) / 10,
+            max: Math.round(realLambda.teamCap.max * 10) / 10,
+          },
+        },
       },
       rosterSpot: { cost: r3(spot), rank: rosterRank },
       salaryModel: {
@@ -562,6 +607,8 @@ export function slapshotChecks(b: SlapshotBuild): string[] {
   const finite = (x: number) => Number.isFinite(x);
   const lam = s.params.lambda;
   if (!lam.every((x) => finite(x) && x >= 0)) errors.push(`λ not finite / negative: ${lam.join(",")}`);
+  // λ's Monte Carlo error (audit 2026-10-02, CAP-4: 0.115 with 12 replications)
+  for (const d of s.params.lambdaDiag.seasons) if (!(d.snake.se <= 0.08)) errors.push(`${d.season}: λ Monte Carlo error ${d.snake.se} > 0.08 (${d.snake.reps} replications)`);
   const rp = s.params.repl;
   for (const [k, v] of Object.entries(rp.perGame)) if (!(v > 0.3 && v < 3)) errors.push(`replacement ${k} ${v} pts/GP outside 0.3-3`);
   if (!(rp.G > 0)) errors.push(`goalie replacement ${rp.G}`);
@@ -609,8 +656,9 @@ export function slapshotReport(b: SlapshotBuild): string[] {
     `cap league ${P.cap.league.slice(0, 5).join(", ")} … ; min ${P.cap.min.slice(0, 3).join(", ")}; λ ${P.lambda.slice(0, 6).join(", ")} … (${P.lambdaDiag.method}); roster-spot rent ${P.rosterSpot.cost} pts/season (asset #${P.rosterSpot.rank})`,
     ...P.lambdaDiag.seasons.map(
       (d) =>
-        `  ${d.season}: aggregate λ ${d.aggregate} (points-optimal counting set costs ${d.capUsedAt0} of ${d.budget} M$); snake λ mean ${d.snake.mean} (sd ${d.snake.sd} over ${d.snake.reps} draft orders) median team ${d.snake.median}, ${d.snake.over} teams over, team caps ${JSON.stringify(d.snake.teamCap)}`,
+        `  ${d.season}: aggregate λ ${d.aggregate} (points-optimal counting set costs ${d.capUsedAt0} of ${d.budget} M$); snake λ mean ${d.snake.mean} ± ${d.snake.se} (sd ${d.snake.sd} over ${d.snake.reps} draft orders) median team ${d.snake.median}, ${d.snake.over} teams over, team caps ${JSON.stringify(d.snake.teamCap)}`,
     ),
+    `  control on the real rosters (2026-27): λ mean ${P.lambdaDiag.rosters.mean} median ${P.lambdaDiag.rosters.median}, ${P.lambdaDiag.rosters.over} teams over, team caps ${JSON.stringify(P.lambdaDiag.rosters.teamCap)}; calibration pass planned at λ ${P.lambdaDiag.calibration.join(", ")}`,
   );
   const fpRank = new Map(
     all

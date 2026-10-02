@@ -75,6 +75,12 @@ export interface SlapshotProfile {
     solvedSeasons?: number;
   };
   replacement: Sourced & { unseatedAvg: number; goalieUnseatedAvg: number };
+  /**
+   * Drift of the scoring ratio k with age (ln k per season), skaters: [from
+   * age, rate] rows by position, the last row whose age he has reached
+   * applies (absent: k fixed for the whole career).
+   */
+  kDrift?: Sourced & { F: Array<[number, number]>; D: Array<[number, number]> };
   contracts: Sourced & {
     /** Term of a projected new contract by age at signing: [max age, years]. */
     termByAge: Array<[number, number]>;
@@ -371,6 +377,8 @@ export interface ContractPath {
   cap: number[];
   /** Seasons 0 … known − 1 are signed contracts. */
   known: number;
+  /** An unsigned rookie: the first season index after his assumed entry-level deal. */
+  rookieEnd?: number;
   /** First start year without a signed contract (null: signed through the horizon). */
   expiry: number | null;
   status: "UFA" | "RFA" | null;
@@ -386,6 +394,9 @@ export interface ContractPath {
   optionsBy?: Record<"W" | "B" | "L", ContractOption[]>;
   /** League contracts: the plan's inputs came from the simulation's career paths (else the expected-value path). */
   simulated?: boolean;
+  /** League contracts: his league salary now (Fantrax) and the seasons of his current signed NHL contract (league-contracts.ts contractBaseAt). */
+  base0?: number;
+  base0Through?: number;
 }
 
 /**
@@ -426,6 +437,7 @@ export function contractPath(
   let nextAav: number | null = null;
   let nextStatus: "UFA" | "RFA" | null = null;
   let elc = pl.known.elc;
+  let rookieEnd: number | undefined;
   if (known === 0 && pl.rookie) {
     // unsigned prospect: no NHL contract, so no cap hit, before his
     // expected arrival (he sits in the minors); an entry-level deal from it
@@ -435,6 +447,7 @@ export function contractPath(
     for (let j = 0; j < prof.cap.elcYears && t < T; j++, t++) cap[t] = prof.cap.elcCapHit;
     status = "RFA";
     expiry = t < T ? y0 + t : null;
+    rookieEnd = t;
   }
   while (t < T) {
     const age = pl.age0 + t - 0.25;
@@ -450,7 +463,7 @@ export function contractPath(
     for (let j = 0; j < term && t < T; j++, t++) cap[t] = aav;
     status = pl.age0 + t - 0.25 >= prof.contracts.ufaAge ? "UFA" : "RFA";
   }
-  return { cap, known, expiry, status: nextStatus ?? pl.known.exp, nextAav, elc, source: pl.known.source };
+  return { cap, known, expiry, status: nextStatus ?? pl.known.exp, nextAav, elc, source: pl.known.source, ...(rookieEnd != null ? { rookieEnd } : {}) };
 }
 
 // ---------------------------------------------------------------- replacement and λ
@@ -532,7 +545,10 @@ export interface LambdaResult {
    */
   snake: {
     mean: number;
+    /** Spread of the replications' means (not λ's error). */
     sd: number;
+    /** Monte Carlo standard error of `mean` (sd / √reps): the uncertainty of λ from the replications. */
+    se: number;
     reps: number;
     median: number;
     over: number;
@@ -606,6 +622,7 @@ export function capLambda(prof: SlapshotProfile, players: readonly SeatPlayer[],
     snake: {
       mean: m,
       sd,
+      se: sd / Math.sqrt(reps.length),
       reps: reps.length,
       median: med[med.length >> 1]!,
       over: reps.reduce((s, r) => s + r.caps.filter((c) => c > capM).length, 0) / reps.length,
@@ -615,8 +632,13 @@ export function capLambda(prof: SlapshotProfile, players: readonly SeatPlayer[],
   };
 }
 
-/** Snake replications of the λ estimator, and the log-sd of the draft-order noise. */
-const SNAKE_REPS = 12;
+/**
+ * Snake replications of the λ estimator, and the log-sd of the draft-order
+ * noise. Audit 2026-10-02 (CAP-4): the replications' spread is ~0.40 pt/M$,
+ * so 12 left a Monte Carlo error of ~0.115 on λ (1.79-2.14 across seeds,
+ * ±1 % on the values); 100 bring it to ~0.04 for ~1 s per solve.
+ */
+export const SNAKE_REPS = 100;
 const SNAKE_JITTER = 0.15;
 
 interface SnakeLambda {
@@ -649,6 +671,20 @@ function snakeLambda(prof: SlapshotProfile, order: readonly SeatPlayer[], fa: re
       tm.pl.push({ p, seat: e ?? "R" });
     }
   }
+  return swapToCap(rosters, fa, capM);
+}
+
+/**
+ * Each team over the cap swaps starters for free agents (each one taken
+ * once, teams in order) at the fewest points lost per M$ saved until it
+ * fits; its λ is the last swap's rate (0 under the cap).
+ */
+function swapToCap(
+  rosters: ReadonlyArray<{ pl: Array<{ p: SeatPlayer; seat: SlapPos | "R" }> }>,
+  fa: readonly SeatPlayer[],
+  capM: number,
+): SnakeLambda {
+  const teams = rosters.length;
   const usedFa = new Set<string>();
   const perTeam: number[] = [];
   const caps: number[] = [];
@@ -679,7 +715,66 @@ function snakeLambda(prof: SlapshotProfile, order: readonly SeatPlayer[], fa: re
     }
     perTeam.push(last);
   }
-  return { mean: perTeam.reduce((s, x) => s + x, 0) / teams, perTeam, caps };
+  return { mean: perTeam.reduce((s, x) => s + x, 0) / Math.max(1, teams), perTeam, caps };
+}
+
+/** λ on the league's real rosters (a control for the snake's): what `rosterLambda` returns. */
+export interface RosterLambda {
+  mean: number;
+  median: number;
+  /** Teams over the cap before any swap. */
+  over: number;
+  teamCap: { min: number; median: number; max: number };
+}
+
+/**
+ * Cap shadow price on the league's real rosters (audit 2026-10-02, CAP-6:
+ * the snake allocation is fictitious, and its structure — jitter, last-swap
+ * rule — moves λ 1.74-2.33): each team's counting players (its best by
+ * expected points into its starting seats, then the reserves), the same
+ * over-cap swaps against the players nobody rosters (each one taken once).
+ * A diagnostic published beside the snake λ, not the λ used.
+ */
+export function rosterLambda(
+  prof: SlapshotProfile,
+  teamIds: ReadonlyArray<readonly string[]>,
+  players: ReadonlyMap<string, SeatPlayer>,
+  capM: number,
+): RosterLambda {
+  const rostered = new Set(teamIds.flat());
+  const rosters = teamIds.map((ids) => {
+    const need = { ...prof.roster.active } as Record<SlapPos, number>;
+    let res = prof.roster.reserve;
+    const pl: Array<{ p: SeatPlayer; seat: SlapPos | "R" }> = [];
+    const mine = ids
+      .map((id) => players.get(id))
+      .filter((x): x is SeatPlayer => !!x && x.pos.length > 0)
+      .sort((a, b) => b.fp - a.fp || a.id.localeCompare(b.id));
+    for (const p of mine) {
+      const e = p.pos.find((k) => need[k] > 0);
+      if (e) {
+        need[e]--;
+        pl.push({ p, seat: e });
+      } else if (res > 0) {
+        res--;
+        pl.push({ p, seat: "R" });
+      }
+    }
+    return { pl };
+  });
+  const fa = [...players.values()]
+    .filter((p) => !rostered.has(p.id) && p.pos.length)
+    .sort((a, b) => b.fp - a.fp || a.id.localeCompare(b.id))
+    .slice(0, 400);
+  const r = swapToCap(rosters, fa, capM);
+  const sorted = [...r.perTeam].sort((a, b) => a - b);
+  const caps = [...r.caps].sort((a, b) => a - b);
+  return {
+    mean: r.mean,
+    median: sorted.length ? sorted[sorted.length >> 1]! : 0,
+    over: r.caps.filter((c) => c > capM).length,
+    teamCap: { min: caps[0] ?? 0, median: caps.length ? caps[caps.length >> 1]! : 0, max: caps[caps.length - 1] ?? 0 },
+  };
 }
 
 // ---------------------------------------------------------------- expected level path
@@ -738,6 +833,8 @@ export interface SlapPrepared {
   contracts: Map<string, ContractPath>;
   /** k × fantasy share per player (the sim's lg.k), for the eFP conversion. */
   kEff: Map<string, number>;
+  /** k of each season relative to season 0 per player (kDriftPath; the sim's lg.kDrift). */
+  kDrift: Map<string, number[]>;
   pos: Map<string, SlapPos[]>;
   /** Expected 2026-27 season points (league scoring) of NHL-path players. */
   seasonFp0: Map<string, number>;
@@ -764,6 +861,19 @@ export function contractRules(prof: SlapshotProfile): LeagueContractRules | null
 
 /** A season charge that no value can beat: the player has left (a free agent after his league contract). */
 export const LOST_CHARGE = 1e6;
+
+/**
+ * A player's cap hit in a λ season pool (M$): his planned league salary (0
+ * before it starts); once his league control is over he is a free agent who
+ * signs again at his NHL cap hit (at least the minimum) — never 0 $ (audit
+ * 2026-10-02, CAP-1: 40 such players worth 1,921 points sat free in the
+ * 2027-28 pool and pulled λ_2027 down by about a third).
+ */
+export function poolCapHit(c: Pick<ContractPath, "cap" | "nhl" | "plan">, t: number, minT: number, T: number): number {
+  const plan = c.plan;
+  if (plan && t >= plan.end && plan.end < T) return Math.max(c.nhl?.[t] ?? 0, minT);
+  return c.cap[t] ?? 0;
+}
 
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
@@ -800,6 +910,28 @@ export function lambdaBySeason(
   const last = known.length - 1;
   const lambda = cs.league.map((c, t) => (t <= last ? known[t]! : (known[last]! * cs.league[last]!) / c));
   return { lambda, diag };
+}
+
+/**
+ * A skater's k by season relative to season 0 (profile `kDrift`): ln k moves
+ * by the rate of his age band each season (audit 2026-10-02, SLAP-K-DRIFT:
+ * Slapshot counts no hits or blocks, so its points age faster than league
+ * 1's after 27 — ln(k three seasons on / k) forwards 27-30 −3.5 %, 31+
+ * −4.8 %, defensemen −5.8 % and −8.1 %, under 27 about 0). Goalies: 1.
+ */
+export function kDriftPath(prof: SlapshotProfile, g: Group, age0: number, T: number): number[] {
+  const rows = g === "G" ? null : prof.kDrift?.[g];
+  const out = new Array<number>(T).fill(1);
+  if (!rows?.length) return out;
+  let ln = 0;
+  for (let t = 1; t < T; t++) {
+    const a = age0 + t - 1;
+    let rate = 0;
+    for (const [from, r] of rows) if (a >= from) rate = r;
+    ln += rate;
+    out[t] = Math.exp(ln);
+  }
+  return out;
 }
 
 /** λ by season: the λ-method value in 2026-27, held constant per share of the cap afterwards (λ_t = λ_0 · C_0 / C_t). */
@@ -844,6 +976,7 @@ export function prepareSlapshot(
   }
   const kDefault: Record<Group, number> = { F: median(kd.F), D: median(kd.D), G: median(kd.G) };
   const kEff = new Map<string, number>();
+  const kDrift = new Map<string, number[]>();
   const pos = new Map<string, SlapPos[]>();
   const theta = new Map<string, number[]>();
   const contracts = new Map<string, ContractPath>();
@@ -851,6 +984,7 @@ export function prepareSlapshot(
     const d = data.get(r.input.id);
     const k = (d?.k ?? kDefault[r.g]) * phi;
     kEff.set(r.input.id, k);
+    kDrift.set(r.input.id, kDriftPath(prof, r.g, r.age0, T));
     const ps = d?.pos.length ? d.pos : r.g === "G" ? (["G"] as SlapPos[]) : r.g === "D" ? (["D"] as SlapPos[]) : fallbackPos(r.input.e);
     pos.set(r.input.id, ps);
     const th = expectedTheta(level, p, r, T);
@@ -901,6 +1035,7 @@ export function prepareSlapshot(
       const nhlPath = contracts.get(id)!;
       const th = theta.get(id)!;
       const k = kEff.get(id)!;
+      const kd = kDrift.get(id)!;
       const rr = playerReplacement(repl, r.g, pos.get(id)!);
       const pMake = r.sim?.path === "prospect" ? (r.sim.pm?.pMake ?? 0) : 1;
       const share0 = r.sim?.path === "nhl" ? (r.sim.share0 ?? 0) : p.games.regShareMean;
@@ -908,21 +1043,28 @@ export function prepareSlapshot(
         if (!(x > 0)) return 0;
         if (r.g === "G") return pMake * (k * x * share0 * SG - repl.G);
         const games = (t === 0 ? share0 : p.games.regShareMean) * SG;
-        return pMake * (k * x - rr) * games;
+        return pMake * (k * kd[t]! * x - rr) * games;
       });
       value.set(id, v);
-      const start = Math.max(0, nhlPath.cap.findIndex((x) => x > 0));
       const fixed = data.get(id)?.league ?? null;
       const gainAt = opts.contractGain?.get(id);
+      const fx = data.get(id)?.fxSalary ?? null;
+      // A rostered player with a league salary on Fantrax is under a league
+      // contract now, whatever capwages knows of 2026-27 (audit 2026-10-02,
+      // CAP-3: 96 such players read as starting later at ~0.98 M$, Smits
+      // ACTIVE at 4.23 M$ with no cap charge this season).
+      const start = fx != null && fx > 0 ? 0 : nhlPath.cap.some((x) => x > 0) ? nhlPath.cap.findIndex((x) => x > 0) : T;
       const base = {
-        start: nhlPath.cap.some((x) => x > 0) ? start : T,
+        start,
         nhl: nhlPath.cap,
         value: v,
         lambda,
         min: cs.min,
         fixed: fixed ? { years: fixed.years, ...(fixed.base != null ? { base: fixed.base } : {}) } : null,
         extended: !!fixed?.extended,
-        base0: data.get(id)?.fxSalary ?? null,
+        base0: fx,
+        // his current signed NHL contract: an extension starting inside it keeps at least this salary (CAP-7)
+        base0Through: Math.max(1, nhlPath.known || (nhlPath.rookieEnd ?? 1)),
         ...(gainAt ? { gainAt } : {}),
       };
       const plan = planContract({ ...base, delta }, rules);
@@ -943,6 +1085,7 @@ export function prepareSlapshot(
         plan,
         optionsBy,
         simulated: !!gainAt,
+        ...(fx != null && fx > 0 ? { base0: fx, base0Through: base.base0Through } : {}),
       });
     }
   }
@@ -952,8 +1095,10 @@ export function prepareSlapshot(
     const id = r.input.id;
     const c = contracts.get(id)!;
     const lost = c.plan ? c.plan.end : Infinity;
+    const kd = kDrift.get(id)!;
     const lg: SimLeague = {
       k: kEff.get(id)!,
+      ...(kd.some((x) => x !== 1) ? { kDrift: kd } : {}),
       r: playerReplacement(repl, r.g, pos.get(id)!),
       rG: repl.G,
       capCost: c.cap.map((x, t) => (t >= lost ? LOST_CHARGE : lambda[t]! * Math.max(0, x - cs.min[t]!))),
@@ -963,7 +1108,7 @@ export function prepareSlapshot(
     r.sim.lg = lg;
     lgs.set(id, lg);
   }
-  return { capSeries: cs, lambda, lambdaDiag, repl, kDefault, contracts, kEff, pos, seasonFp0, regularGames, value, rules, lgs };
+  return { capSeries: cs, lambda, lambdaDiag, repl, kDefault, contracts, kEff, kDrift, pos, seasonFp0, regularGames, value, rules, lgs };
 }
 
 function fallbackPos(e: string): SlapPos[] {
@@ -1021,6 +1166,9 @@ export interface SlapLeagueContractOut {
   by: Record<"W" | "B" | "L", Array<[number, number]>>;
   /** The surpluses come from the simulation's career paths (phase, aging, retirement, role, injuries). */
   simulated: boolean;
+  /** His league salary now (Fantrax) and the seasons of his current signed NHL contract: an extension starting inside it keeps at least that salary. */
+  base0?: number;
+  base0Through?: number;
 }
 
 export interface SlapshotRecord
@@ -1064,7 +1212,7 @@ export function slapshotRecord(rec: DynastyRecord, prep: SlapPrepared, id: strin
     band: rec.band,
     eG: rec.eG,
     p50G: rec.p50G,
-    eFP: rec.eFP.map((x) => Math.round(x * k)),
+    eFP: rec.eFP.map((x, t) => Math.round(x * k * (prep.kDrift.get(id)?.[t] ?? 1))),
     fp0: prep.seasonFp0.has(id) ? Math.round(prep.seasonFp0.get(id)!) : null,
     trend: rec.trend ?? null,
     ...(rec.growth ? { growth: rec.growth } : {}),
@@ -1099,6 +1247,7 @@ export function slapshotRecord(rec: DynastyRecord, prep: SlapPrepared, id: strin
                 L: (c.optionsBy?.L ?? c.plan.options).map((o) => [o.total, o.ext] as [number, number]),
               },
               simulated: !!c.simulated,
+              ...(c.base0 != null ? { base0: c.base0, base0Through: c.base0Through ?? 1 } : {}),
             },
           }
         : {}),

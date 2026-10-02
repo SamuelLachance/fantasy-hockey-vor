@@ -12,7 +12,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
-import { salarySchedule } from "../src/lib/dynasty/league-contracts";
+import { recommendedLength, salarySchedule } from "../src/lib/dynasty/league-contracts";
 import { CARD_SHARDS, cardShard, type CardFile, type FantraxCardPart, type PlayerCardData } from "../src/lib/player-card";
 
 const root = process.cwd();
@@ -171,7 +171,7 @@ function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: s
   const teams = new Map(read<{ teams: Array<{ id: string; name: string }> }>(leagueFile).teams.map((t) => [t.id, t.name]));
   const plan =
     slug === "slapshot" && existsSync(join(root, dir, "cap-plan.json"))
-      ? read<{ min: number[]; rules: { mult: number[]; maxYears: number; extensions: number }; cap: number; floor: number; players: Record<string, { s: number; n: number[]; y: number; e: number; b: number; eb: number | null; f?: 1; by: Record<"B", Array<[number, number]>> }> }>(
+      ? read<{ min: number[]; rules: { mult: number[]; maxYears: number; extensions: number }; cap: number; floor: number; players: Record<string, { s: number; n: number[]; y: number; e: number; b: number; eb: number | null; f?: 1; b0?: number; bt?: number; by: Record<"B", Array<[number, number]>> }> }>(
           join(dir, "cap-plan.json"),
         )
       : null;
@@ -224,11 +224,13 @@ function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: s
     const pp = plan?.players[r.id];
     if (plan && pp) {
       // the balanced recommendation (a confirmed contract stays)
-      let y = pp.y;
-      if (!pp.f) pp.by.B.forEach(([t], j) => (t > (pp.by.B[y - 1]?.[0] ?? -Infinity) + 1e-9 ? (y = j + 1) : null));
+      const y = pp.f ? pp.y : recommendedLength(pp.by.B);
       const e = pp.by.B[y - 1]?.[1] ?? pp.e;
       const rules = { ...plan.rules, cap: plan.cap, floor: plan.floor };
-      const sch = salarySchedule(pp.s, pp.b, y, e, pp.n, plan.min, pp.n.length, rules);
+      const sch = salarySchedule(pp.s, pp.b, y, e, pp.n, plan.min, pp.n.length, rules, {
+        base0: pp.b0 ?? null,
+        ...(pp.bt != null ? { base0Through: pp.bt } : {}),
+      });
       part.ct = { y, e, b: pp.b, eb: sch.extBase, f: !!pp.f, sal: sch.salary.slice(0, 7), start: pp.s };
     }
     card.lg = { ...card.lg, [slug]: part };

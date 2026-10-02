@@ -194,6 +194,9 @@ export interface CapPlanRow {
   eb: number | null;
   /** The first contract is confirmed. */
   f?: 1;
+  /** His league salary now and the seasons of his current signed NHL contract (an extension inside it keeps at least that salary). */
+  b0?: number;
+  bt?: number;
 }
 
 export interface CapPlanFile {
@@ -240,6 +243,7 @@ export function slapshotCapPlan(
       b: L.base,
       eb: L.extBase,
       ...(L.fixed ? { f: 1 as const } : {}),
+      ...(L.base0 != null ? { b0: L.base0, bt: L.base0Through ?? 1 } : {}),
     };
   }
   return {
