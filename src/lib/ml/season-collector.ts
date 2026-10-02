@@ -68,28 +68,20 @@ function mergeRow(existing: PlayerSeasonRow, incoming: PlayerSeasonRow): PlayerS
 }
 
 async function collectSeason(seasonId: number): Promise<PlayerSeasonRow[]> {
-  // Chunked (4 at a time) — a 12-wide burst trips the stats API rate limiter.
-  const pause = () => new Promise((r) => setTimeout(r, 700));
-  const [skaters, realtime, faceoffs, goalies] = await Promise.all([
-    fetchSkaterSummaries(seasonId),
-    fetchSkaterRealtime(seasonId),
-    fetchSkaterFaceoffs(seasonId),
-    fetchGoalieSummaries(seasonId),
-  ]);
-  await pause();
-  const [puckPoss, penalties, timeonice, powerplay] = await Promise.all([
-    fetchSkaterStatReport("puckPossessions", seasonId),
-    fetchSkaterStatReport("penalties", seasonId),
-    fetchSkaterStatReport("timeonice", seasonId),
-    fetchSkaterStatReport("powerplay", seasonId),
-  ]);
-  await pause();
-  const [penaltykill, percentages, goalsForAgainst, faceoffwins] = await Promise.all([
-    fetchSkaterStatReport("penaltykill", seasonId),
-    fetchSkaterStatReport("percentages", seasonId),
-    fetchSkaterStatReport("goalsForAgainst", seasonId),
-    fetchSkaterStatReport("faceoffwins", seasonId),
-  ]);
+  // One request at a time: fetchJson spaces every NHL request ≥ 1.1 s apart
+  // with a descriptive User-Agent (and serves a script's disk cache first).
+  const skaters = await fetchSkaterSummaries(seasonId);
+  const realtime = await fetchSkaterRealtime(seasonId);
+  const faceoffs = await fetchSkaterFaceoffs(seasonId);
+  const goalies = await fetchGoalieSummaries(seasonId);
+  const puckPoss = await fetchSkaterStatReport("puckPossessions", seasonId);
+  const penalties = await fetchSkaterStatReport("penalties", seasonId);
+  const timeonice = await fetchSkaterStatReport("timeonice", seasonId);
+  const powerplay = await fetchSkaterStatReport("powerplay", seasonId);
+  const penaltykill = await fetchSkaterStatReport("penaltykill", seasonId);
+  const percentages = await fetchSkaterStatReport("percentages", seasonId);
+  const goalsForAgainst = await fetchSkaterStatReport("goalsForAgainst", seasonId);
+  const faceoffwins = await fetchSkaterStatReport("faceoffwins", seasonId);
 
   const rtMap = new Map(realtime.map((r) => [r.playerId, r]));
   const foMap = new Map(faceoffs.map((f) => [f.playerId, f]));
@@ -200,7 +192,6 @@ export async function buildMlDataset(
     onProgress?.(seasonId, i + 1, seasonIds.length);
     const seasonRows = await collectSeason(seasonId);
     rows.push(...seasonRows);
-    await new Promise((r) => setTimeout(r, 400));
   }
 
   console.log(`Enriching ${rows.length} player-seasons with bio, contract, team ELO, coach...`);

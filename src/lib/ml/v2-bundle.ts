@@ -11,6 +11,10 @@ export interface V2Bundle {
   trainedAt: string;
   projectionSeasonId: number;
   datasetBuiltAt: string;
+  /** sha1 of dataset.json's bytes at training (src/lib/ml/dataset-manifest.ts). */
+  datasetSha1?: string;
+  /** Row count of that dataset. */
+  datasetRows?: number;
   /** Present when models were trained with synthetic-market residual mode. */
   marketTraining?: MarketTrainingConfig;
   skater: {

@@ -47,6 +47,7 @@ import { loadMoneyPuckRegistrySync } from "../src/lib/moneypuck-goalies";
 import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import type { MlDataset, PlayerSeasonRow } from "../src/lib/ml/types";
 import type { V2Bundle } from "../src/lib/ml/v2-bundle";
+import { datasetManifestOf } from "../src/lib/ml/dataset-manifest";
 
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
 const BUNDLE_PATH = join(process.cwd(), "src", "data", "ml", "v2-bundle.json");
@@ -57,7 +58,10 @@ const META_POOL_SEASONS = [
 ];
 
 async function main() {
-  const dataset = JSON.parse(readFileSync(DATA_PATH, "utf8")) as MlDataset;
+  const rawDataset = readFileSync(DATA_PATH);
+  const dataset = JSON.parse(rawDataset.toString("utf8")) as MlDataset;
+  // Stamp the exact bytes trained on: generate refuses any other dataset.
+  const manifest = datasetManifestOf(rawDataset, dataset);
   const rows = dataset.rows;
   const durAttached = attachDurability(rows);
   console.log(
@@ -150,6 +154,8 @@ async function main() {
     trainedAt: new Date().toISOString(),
     projectionSeasonId: PROJECTION_SEASON_ID,
     datasetBuiltAt: dataset.builtAt,
+    datasetSha1: manifest.sha1,
+    datasetRows: manifest.rows,
     marketTraining,
     skater: {
       gbdt: finalSkater.gbdt,

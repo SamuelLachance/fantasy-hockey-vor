@@ -134,18 +134,56 @@ export interface TeamStanding {
   clinchIndicator: string;
 }
 
-/** NHL CDN throttles Node's default UA aggressively; a browser UA avoids it. */
-const BROWSER_UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+/**
+ * Every public NHL request says who sends it (a personal read-only helper,
+ * not a browser) and goes out one at a time, at least NHL_MIN_INTERVAL_MS
+ * after the previous one, whatever the caller's concurrency.
+ */
+export const NHL_USER_AGENT =
+  "fantasy-hockey-vor (personal read-only helper; github.com/SamuelLachance/fantasy-hockey-vor)";
+export const NHL_MIN_INTERVAL_MS = 1100;
+
+let nhlQueue: Promise<unknown> = Promise.resolve();
+let nhlLastStart = 0;
+
+/** Run `fn` after every queued request, ≥ NHL_MIN_INTERVAL_MS after the last start. */
+export function nhlThrottled<T>(fn: () => Promise<T>, minIntervalMs = NHL_MIN_INTERVAL_MS): Promise<T> {
+  const run = nhlQueue.then(async () => {
+    const wait = nhlLastStart + minIntervalMs - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    nhlLastStart = Date.now();
+    return fn();
+  });
+  nhlQueue = run.catch(() => undefined);
+  return run;
+}
+
+/**
+ * Optional response cache (scripts install a disk one with
+ * installNhlHttpDiskCache from src/lib/nhl-http-cache.ts): a cached URL is
+ * not requested again, so a dataset rebuild is reproducible and cheap.
+ */
+export interface NhlHttpCache {
+  get(url: string): string | null;
+  set(url: string, body: string): void;
+}
+let nhlHttpCache: NhlHttpCache | null = null;
+export function setNhlHttpCache(cache: NhlHttpCache | null): void {
+  nhlHttpCache = cache;
+}
 
 export async function fetchJson<T>(url: string, retries = 7): Promise<T> {
+  const cached = nhlHttpCache?.get(url);
+  if (cached != null) return JSON.parse(cached) as T;
   for (let attempt = 0; attempt < retries; attempt++) {
     let res: Response | null = null;
     try {
-      res = await fetch(url, {
-        headers: { Accept: "application/json", "User-Agent": BROWSER_UA },
-        next: { revalidate: 3600 },
-      });
+      res = await nhlThrottled(() =>
+        fetch(url, {
+          headers: { Accept: "application/json", "User-Agent": NHL_USER_AGENT },
+          next: { revalidate: 3600 },
+        }),
+      );
     } catch {
       res = null; // network hiccup — treat like a retryable failure
     }
@@ -158,6 +196,11 @@ export async function fetchJson<T>(url: string, retries = 7): Promise<T> {
     }
     if (!res || !res.ok) {
       throw new Error(`NHL API error ${res?.status ?? "network"}: ${url}`);
+    }
+    if (nhlHttpCache) {
+      const body = await res.text();
+      nhlHttpCache.set(url, body);
+      return JSON.parse(body) as T;
     }
     return res.json() as Promise<T>;
   }
