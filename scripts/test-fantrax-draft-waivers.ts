@@ -5,7 +5,7 @@
 import type { SlotId } from "../src/lib/fantrax/config";
 import { draftOutlook, draftValue, type DraftPickInfo, type DraftPoolPlayer } from "../src/lib/fantrax/draft";
 import { eligibleSlots, type LineupCandidate } from "../src/lib/fantrax/lineup";
-import { cappedTotal, periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
+import { cappedTotal, dayParts, periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
 import { capBenchPolicy, withCapBench } from "../src/lib/fantrax/daily-plan";
 
 let failed = 0;
@@ -230,6 +230,16 @@ assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(fu
   const five = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps: new Map([9, 10].map((n) => [n, { gpMax: 5, gsMax: null }] as const)) });
   assert(near(five[0]!.ros, 6), `Reserve players accrue no games toward the cap (${five[0]?.ros})`);
   assert(cappedTotal([{ skaterPoints: 5, goaliePoints: 2, gp: 3, gs: 1 }, { skaterPoints: 5, goaliePoints: 2, gp: 3, gs: 1 }], [1, 1], () => ({ key: 1, cap: { gpMax: 3, gsMax: 1, gpUsed: 0, gsUsed: 0 } })) === 7, "cappedTotal: day 1 in full, nothing after either cap");
+  // A dressed player projected at 0 points still uses his games.
+  const zero = dayParts(
+    [
+      { id: "z", eligible: ["C"], status: "ACTIVE", values: { C: 0 }, games: 1 },
+      { id: "zg", eligible: ["G"], status: "ACTIVE", values: { G: 0 }, games: 0.6 },
+    ],
+    { C: 1, W: 0, F: 0, D: 0, Skt: 0, G: 1 },
+    undefined,
+  );
+  assert(zero.gp === 1 && near(zero.gs, 0.6) && zero.skaterPoints === 0, `0-point active players count their games (${JSON.stringify(zero)})`);
 }
 
 // ---- games-cap bench policy (FX-8): two weak wingers fill both W seats on

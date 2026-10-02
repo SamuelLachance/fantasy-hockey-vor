@@ -130,13 +130,16 @@ export function dayParts(
   const byId = new Map(cands.map((c) => [c.id, c]));
   const out: DayParts = { skaterPoints: 0, goaliePoints: 0, gp: 0, gs: 0 };
   for (const a of res.assignments) {
-    if (!a.playerId || a.value <= 0) continue;
-    const games = byId.get(a.playerId)?.games ?? 1;
+    if (!a.playerId) continue;
+    // A dressed player uses games even when projected at 0 points; without a
+    // `games` estimate, only a scoring assignment counts one.
+    const games = Math.max(0, byId.get(a.playerId)?.games ?? (a.value > 0 ? 1 : 0));
+    const points = Math.max(0, a.value);
     if (a.slot === "G") {
-      out.goaliePoints += a.value;
+      out.goaliePoints += points;
       out.gs += games;
     } else {
-      out.skaterPoints += a.value;
+      out.skaterPoints += points;
       out.gp += games;
     }
   }

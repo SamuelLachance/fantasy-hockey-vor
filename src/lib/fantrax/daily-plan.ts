@@ -507,7 +507,9 @@ export function withCapBench(cands: LineupCandidate[], policy: Pick<CapBench, "s
   return cands.map((c) => {
     if (c.locked) return c;
     const bar = isGoalieCand(c) ? policy.goalie : policy.skater;
-    return bar !== null && perGameValue(c) < bar ? { ...c, values: {} } : c;
+    // Benched: no points and no games toward the caps, even if the optimizer
+    // seats him at 0.
+    return bar !== null && perGameValue(c) < bar ? { ...c, values: {}, games: 0 } : c;
   });
 }
 
