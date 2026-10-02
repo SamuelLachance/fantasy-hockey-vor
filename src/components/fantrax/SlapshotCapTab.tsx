@@ -2,12 +2,7 @@
 
 import { BookOpen, Coins, FileSignature } from "lucide-react";
 import { useEffect, useState } from "react";
-import {
-  planContract,
-  type ContractPlan,
-  type ContractPlanInput,
-  type LeagueContractRules,
-} from "@/lib/dynasty/league-contracts";
+import { salarySchedule, type LeagueContractRules } from "@/lib/dynasty/league-contracts";
 import type { CapPlanFile, CapPlanRow } from "@/lib/dynasty/slapshot-client";
 import { fantraxPublicFile } from "@/lib/fantrax/config";
 import { fmtMoney } from "@/lib/fantrax/money";
@@ -46,16 +41,50 @@ function writeChoices(key: string, v: Record<string, number>) {
   }
 }
 
-function inputOf(p: CapPlanRow, f: CapPlanFile, delta: number): ContractPlanInput {
-  return { start: p.s, nhl: p.n, value: p.v, lambda: f.lambda, min: f.min, delta };
+/** A length's contract as the tab shows it: salaries, extension, surplus. */
+interface Choice {
+  years: number;
+  ext: number;
+  start: number;
+  base: number;
+  salary: number[];
+  extBase: number | null;
+  end: number;
+  total: number;
 }
+
+function choiceOf(p: CapPlanRow, f: CapPlanFile, h: Horizon, years: number, rules: LeagueContractRules): Choice {
+  const [total, ext] = p.by[h][years - 1] ?? [0, 0];
+  const sch = salarySchedule(p.s, p.b, years, ext, p.n, f.min, p.n.length, rules);
+  return { years, ext, start: p.s, base: p.b, ...sch, total };
+}
+
+/** The recommended length: the largest simulated surplus (ties to the shorter); a confirmed one stays. */
+function recommended(p: CapPlanRow, h: Horizon): number {
+  if (p.f) return p.y;
+  let best = 1;
+  p.by[h].forEach(([t], j) => {
+    if (t > (p.by[h][best - 1]?.[0] ?? -Infinity) + 1e-9) best = j + 1;
+  });
+  return best;
+}
+
+const PHASE_FR: Record<string, string> = {
+  prospect: "Espoir",
+  rising: "En progression",
+  entering_prime: "Entre dans son prime",
+  prime: "Prime",
+  plateau: "Plateau",
+  declining: "Déclin",
+  late_career: "Fin de carrière",
+};
 
 interface Row {
   id: string;
   status: string;
   p: CapPlanRow;
-  rec: ContractPlan;
-  chosen: ContractPlan;
+  rec: Choice;
+  chosen: Choice;
   years: number;
   /** Surplus given up against the recommendation (league points, ≥ 0). */
   loss: number;
@@ -114,16 +143,13 @@ export function SlapshotCapTab() {
   const roster = (live?.rosters ?? state?.rosters)?.[teamId] ?? [];
   const rows: Row[] = (() => {
     if (!file || !rules) return [];
-    const delta = file.deltas[horizon];
     const out: Row[] = [];
     for (const e of roster) {
       const p = file.players[e.id];
       if (!p) continue;
-      const inp = inputOf(p, file, delta);
-      const fixed = p.f ? { years: p.y, base: p.b } : null;
-      const rec = planContract({ ...inp, fixed }, rules);
+      const rec = choiceOf(p, file, horizon, recommended(p, horizon), rules);
       const years = p.f ? p.y : (choices[e.id] ?? rec.years);
-      const chosen = years === rec.years ? rec : planContract({ ...inp, fixed: { years } }, rules);
+      const chosen = years === rec.years ? rec : choiceOf(p, file, horizon, years, rules);
       out.push({ id: e.id, status: e.status, p, rec, chosen, years, loss: Math.max(0, rec.total - chosen.total) });
     }
     return out.sort((a, b) => b.p.dv.B - a.p.dv.B);
@@ -291,14 +317,14 @@ export function SlapshotCapTab() {
               {rows.map((r) => {
                 const startYear = y0 + r.p.s;
                 const notYet = r.p.s >= SHOWN;
-                const perM = r.p.s === 0 && r.chosen.base > 0 ? Math.max(0, r.p.v[0] ?? 0) / r.chosen.base : null;
+                const perM = r.p.s === 0 && r.chosen.base > 0 ? Math.max(0, r.p.v0) / r.chosen.base : null;
                 const end = y0 + r.chosen.end;
                 return (
                   <tr key={r.id} className="border-t border-white/5 align-top">
                     <th scope="row" className="py-1.5 pr-2 text-left font-normal">
                       <span className="block font-medium text-white">{r.p.nm}</span>
                       <span className="text-xs text-slate-400">
-                        {r.p.pos.join("/")} · {Math.floor(r.p.age)} ans · {STATUS_FR[r.status] ?? r.status}
+                        {r.p.pos.join("/")} · {Math.floor(r.p.age)} ans · {PHASE_FR[r.p.ph] ?? r.p.ph} · {STATUS_FR[r.status] ?? r.status}
                       </span>
                     </th>
                     <td className="py-1.5 pr-2 text-right text-slate-200">{Math.round(r.p.dv.B)}</td>
@@ -378,17 +404,20 @@ export function SlapshotCapTab() {
             Plafond {fmtMoney(file.cap)}, plancher {fmtMoney(file.floor)}, sur les {config.salaryCap.countedSpots} Actifs + Réserve.
           </p>
           <p>
-            <strong className="text-white">Algorithme.</strong> Pour chaque durée de 1 à {file.rules.maxYears} ans, puis chaque prolongation possible, on
-            calcule saison par saison sa valeur (points de ligue au-dessus du remplacement à sa position, projetés par le modèle dynastie) moins le prix du
-            plafond de son salaire (λ = {fmt1(file.lambda[0] ?? 0)} point par M$ au-dessus du minimum cette saison, {fmt1(file.lambda[1] ?? 0)} ensuite).
-            Une saison où il coûte plus qu’il ne rapporte vaut 0 (il va aux mineures, qui ne comptent pas). La somme est actualisée selon l’horizon (
+            <strong className="text-white">Algorithme.</strong> Chaque durée de 1 à {file.rules.maxYears} ans, puis chaque prolongation possible, est
+            évaluée sur les milliers de carrières que le modèle dynastie simule pour le joueur : progression des jeunes, entrée dans le prime, plateau,
+            déclin et fin de carrière selon son âge et son profil, rôle, blessures, retraite, arrivée des espoirs. Dans chaque carrière et chaque saison,
+            on prend sa valeur (points de ligue au-dessus du remplacement à sa position) moins le prix du plafond de son salaire (λ ={" "}
+            {fmt1(file.lambda[0] ?? 0)} point par M$ au-dessus du minimum cette saison, {fmt1(file.lambda[1] ?? 0)} ensuite); une saison où il coûte plus
+            qu’il ne rapporte vaut 0 (il va aux mineures, qui ne comptent pas). La moyenne sur les carrières est actualisée selon l’horizon (
             {(["W", "B", "L"] as Horizon[]).map((h) => `${HORIZON_FR[h]} ${file.deltas[h]}`).join(", ")} par saison); la durée conseillée est celle qui
-            donne le plus gros surplus.
+            donne le plus gros surplus. Le risque compte donc : un long contrat pour un joueur qui peut décliner ou se blesser coûte des saisons perdues.
           </p>
           <p>
-            <strong className="text-white">Ce que ça donne.</strong> Un jeune sur contrat d’entrée (base ~1 M$) se signe au plus long : 7 ans à un salaire
-            minime. Un joueur payé au prix du marché se signe souvent 5 ans puis se prolonge : la prolongation repart de son salaire LNH du moment, ce qui
-            évite les hausses de 15 à 20 % des années 6 et 7. Un vétéran en déclin se signe court.
+            <strong className="text-white">Ce que ça donne.</strong> Espoirs et jeunes en progression ou qui entrent dans leur prime : le plus long
+            possible (7 ans à un salaire d’entrée minime). Joueurs dans leur prime payés au prix du marché : souvent 5 ans puis une prolongation, qui
+            repart de leur salaire LNH du moment et évite les hausses de 15 à 20 % des années 6 et 7. Plateau : plus court. Déclin et fin de carrière :
+            1 à 3 ans.
           </p>
           <p className="text-xs text-slate-400">
             Hypothèses à confirmer : la prolongation repart du salaire LNH de la saison où elle commence; un espoir sans contrat LNH ne signe son contrat de

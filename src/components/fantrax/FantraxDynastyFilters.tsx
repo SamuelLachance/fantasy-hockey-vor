@@ -34,7 +34,7 @@ export function FantraxDynastyFilters({
       <legend className="px-1 text-xs font-medium uppercase tracking-wider text-cyan-200">
         Dynastie · mode {DYNASTY_MODE_LABEL[mode]}
       </legend>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
         <Select label="Phase de carrière" value={f.phase} onChange={(phase) => onFilters({ phase: isPhase(phase) ? (phase as Phase) : "" })}>
           <option value="">Toutes</option>
           {phases.filter(isPhase).map((p) => (
@@ -44,6 +44,7 @@ export function FantraxDynastyFilters({
           ))}
         </Select>
         <RangeField label="Valeur dynastie" value={f.dyn} onChange={(dyn) => onFilters({ dyn })} />
+        <RangeField label="Score d’actif (0-100)" value={f.actif} onChange={(actif) => onFilters({ actif })} />
         {cutdown ? (
           <>
             <Select

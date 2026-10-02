@@ -20,7 +20,7 @@ import { fillSlots, type SlotSpec } from "../leagues/slot-fill";
 import type { Position } from "../types";
 import type { LevelFn } from "./aging";
 import type { DynastyParams } from "./params";
-import { planContract, type ContractPlan, type LeagueContractRules, SLAPSHOT_CONTRACT_RULES } from "./league-contracts";
+import { contractLevels, planContract, type ContractOption, type ContractPlan, type LeagueContractRules, SLAPSHOT_CONTRACT_RULES } from "./league-contracts";
 import { rngFor } from "./rng";
 import type { Routed } from "./segment";
 import type { SimLeague } from "./simulate";
@@ -382,6 +382,10 @@ export interface ContractPath {
   nhl?: number[];
   /** League contracts: the planned (or confirmed) contract and extension. */
   plan?: ContractPlan;
+  /** League contracts: every first-contract length with its best extension, per horizon (W, B, L). */
+  optionsBy?: Record<"W" | "B" | "L", ContractOption[]>;
+  /** League contracts: the plan's inputs came from the simulation's career paths (else the expected-value path). */
+  simulated?: boolean;
 }
 
 /**
@@ -739,6 +743,8 @@ export interface SlapPrepared {
   /** League contracts: expected value per season before the cap (league points above replacement). */
   value: Map<string, number[]>;
   rules: LeagueContractRules | null;
+  /** The season profiles the simulation ran with (contract levels read back after a pass). */
+  lgs: Map<string, SimLeague>;
 }
 
 /** The league-contract rules of a profile (null: salaries follow the NHL contracts). */
@@ -816,6 +822,10 @@ export function prepareSlapshot(
     lambda?: readonly number[];
     /** Gate every season (roster spot) instead of a free minors stash. */
     rosterGate?: boolean;
+    /** Have the simulation average each contract salary's season gain over its career paths (the calibration pass). */
+    recordContracts?: boolean;
+    /** Expected season gain at a salary per player, from such a pass: the contract plans use it. */
+    contractGain?: ReadonlyMap<string, (t: number, salary: number) => number>;
   } = {},
 ): SlapPrepared {
   const T = p.T;
@@ -881,6 +891,7 @@ export function prepareSlapshot(
   // and its one extension end.
   const rules = contractRules(prof);
   const value = new Map<string, number[]>();
+  const levels = new Map<string, number[][]>();
   if (rules) {
     const delta = p.modes.balanced.delta;
     for (const r of routed) {
@@ -900,19 +911,24 @@ export function prepareSlapshot(
       value.set(id, v);
       const start = Math.max(0, nhlPath.cap.findIndex((x) => x > 0));
       const fixed = data.get(id)?.league ?? null;
-      const plan = planContract(
-        {
-          start: nhlPath.cap.some((x) => x > 0) ? start : T,
-          nhl: nhlPath.cap,
-          value: v,
-          lambda,
-          min: cs.min,
-          delta,
-          fixed: fixed ? { years: fixed.years, ...(fixed.base != null ? { base: fixed.base } : {}) } : null,
-          extended: !!fixed?.extended,
-        },
-        rules,
-      );
+      const gainAt = opts.contractGain?.get(id);
+      const base = {
+        start: nhlPath.cap.some((x) => x > 0) ? start : T,
+        nhl: nhlPath.cap,
+        value: v,
+        lambda,
+        min: cs.min,
+        fixed: fixed ? { years: fixed.years, ...(fixed.base != null ? { base: fixed.base } : {}) } : null,
+        extended: !!fixed?.extended,
+        ...(gainAt ? { gainAt } : {}),
+      };
+      const plan = planContract({ ...base, delta }, rules);
+      const optionsBy = {
+        W: planContract({ ...base, delta: p.modes.winNow.delta }, rules).options,
+        B: plan.options,
+        L: planContract({ ...base, delta: p.modes.longTerm.delta }, rules).options,
+      };
+      if (opts.recordContracts) levels.set(id, contractLevels(base, T, rules));
       contracts.set(id, {
         ...nhlPath,
         nhl: nhlPath.cap,
@@ -922,9 +938,12 @@ export function prepareSlapshot(
         status: "UFA",
         nextAav: plan.extBase,
         plan,
+        optionsBy,
+        simulated: !!gainAt,
       });
     }
   }
+  const lgs = new Map<string, SimLeague>();
   for (const r of routed) {
     if (!r.sim) continue;
     const id = r.input.id;
@@ -936,10 +955,12 @@ export function prepareSlapshot(
       rG: repl.G,
       capCost: c.cap.map((x, t) => (t >= lost ? LOST_CHARGE : lambda[t]! * Math.max(0, x - cs.min[t]!))),
       ...(opts.rosterGate ? { noEligibility: true } : {}),
+      ...(levels.has(id) ? { contract: { levels: levels.get(id)!, lambda, min: cs.min } } : {}),
     };
     r.sim.lg = lg;
+    lgs.set(id, lg);
   }
-  return { capSeries: cs, lambda, lambdaDiag, repl, kDefault, contracts, kEff, pos, seasonFp0, regularGames, value, rules };
+  return { capSeries: cs, lambda, lambdaDiag, repl, kDefault, contracts, kEff, pos, seasonFp0, regularGames, value, rules, lgs };
 }
 
 function fallbackPos(e: string): SlapPos[] {
@@ -993,6 +1014,10 @@ export interface SlapLeagueContractOut {
   options: number[];
   /** Expected value per season before the cap, league points above replacement. */
   value: number[];
+  /** Per horizon (W, B, L): each first-contract length 1..7 as [discounted surplus, best extension]. */
+  by: Record<"W" | "B" | "L", Array<[number, number]>>;
+  /** The surpluses come from the simulation's career paths (phase, aging, retirement, role, injuries). */
+  simulated: boolean;
 }
 
 export interface SlapshotRecord
@@ -1065,6 +1090,12 @@ export function slapshotRecord(rec: DynastyRecord, prep: SlapPrepared, id: strin
               fixed: c.plan.fixed,
               options: c.plan.options.map((o) => o.total),
               value: (prep.value.get(id) ?? []).map(r1),
+              by: {
+                W: (c.optionsBy?.W ?? c.plan.options).map((o) => [o.total, o.ext] as [number, number]),
+                B: (c.optionsBy?.B ?? c.plan.options).map((o) => [o.total, o.ext] as [number, number]),
+                L: (c.optionsBy?.L ?? c.plan.options).map((o) => [o.total, o.ext] as [number, number]),
+              },
+              simulated: !!c.simulated,
             },
           }
         : {}),

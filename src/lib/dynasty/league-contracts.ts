@@ -63,6 +63,12 @@ export interface ContractPlanInput {
   fixed?: { years: number; base?: number } | null;
   /** The extension is already used (no further control after the first contract). */
   extended?: boolean;
+  /**
+   * Expected season gain at a salary, from the dynasty simulation's career
+   * paths (phase, aging, retirement, role, injuries); replaces
+   * max(0, value − charge) on the expected value when given.
+   */
+  gainAt?: (t: number, salary: number) => number;
 }
 
 export interface ContractOption {
@@ -113,7 +119,7 @@ function evaluate(inp: ContractPlanInput, T: number, years: number, ext: number,
   const salary = new Array<number>(T).fill(0);
   const gain = new Array<number>(T).fill(0);
   // before the first contract (a prospect without an NHL contract): minors, no cap
-  for (let t = 0; t < Math.min(T, inp.start); t++) gain[t] = Math.max(0, inp.value[t] ?? 0);
+  for (let t = 0; t < Math.min(T, inp.start); t++) gain[t] = inp.gainAt ? inp.gainAt(t, 0) : Math.max(0, inp.value[t] ?? 0);
   const first = contractSalaries(base, years, rules);
   let t = inp.start;
   for (const s of first) {
@@ -133,7 +139,7 @@ function evaluate(inp: ContractPlanInput, T: number, years: number, ext: number,
   const end = inp.start + years + ext;
   let total = 0;
   for (let u = inp.start; u < Math.min(T, end); u++) {
-    gain[u] = seasonGain(inp.value[u] ?? 0, salary[u]!, inp.lambda[u] ?? 0, inp.min[u] ?? 0);
+    gain[u] = inp.gainAt ? inp.gainAt(u, salary[u]!) : seasonGain(inp.value[u] ?? 0, salary[u]!, inp.lambda[u] ?? 0, inp.min[u] ?? 0);
   }
   for (let u = 0; u < T; u++) total += Math.pow(inp.delta, u) * gain[u]!;
   return { salary, gain, total, extBase, end };
@@ -197,4 +203,78 @@ export function evaluateContract(
   const base = inp.fixed?.base != null ? r2(inp.fixed.base) : baseAt(inp, Math.min(inp.start, T - 1));
   const ev = evaluate(inp, T, years, inp.extended ? 0 : ext, base, rules);
   return { ...ev, base, total: Math.round(ev.total * 10) / 10 };
+}
+
+/**
+ * Salary per season of a (first contract, extension) choice: 0 before the
+ * start and after control. The extension's base is his NHL cap hit (at least
+ * the league minimum) of its first season. Shared by the build and the
+ * « Plafond » tab.
+ */
+export function salarySchedule(
+  start: number,
+  base: number,
+  years: number,
+  ext: number,
+  nhl: readonly number[],
+  min: readonly number[],
+  T: number,
+  rules: LeagueContractRules = SLAPSHOT_CONTRACT_RULES,
+): { salary: number[]; extBase: number | null; end: number } {
+  const salary = new Array<number>(T).fill(0);
+  let t = start;
+  for (const s of contractSalaries(base, years, rules)) {
+    if (t >= T) break;
+    salary[t++] = s;
+  }
+  const e = start + years;
+  const extBase = ext > 0 ? r2(Math.max(nhl[Math.min(e, T - 1)] ?? 0, min[Math.min(e, T - 1)] ?? 0)) : null;
+  if (ext > 0) {
+    for (const s of contractSalaries(extBase!, ext, rules)) {
+      if (t >= T) break;
+      salary[t++] = s;
+    }
+  }
+  return { salary, extBase, end: start + years + ext };
+}
+
+/**
+ * Every salary a season can carry over all (first contract, extension)
+ * choices, 0 included: what the simulation averages its season gains at.
+ */
+export function contractLevels(
+  inp: Pick<ContractPlanInput, "start" | "nhl" | "min" | "fixed" | "extended">,
+  T: number,
+  rules: LeagueContractRules = SLAPSHOT_CONTRACT_RULES,
+): number[][] {
+  const base = inp.fixed?.base != null ? r2(inp.fixed.base) : r2(Math.max(inp.nhl[Math.min(inp.start, T - 1)] ?? 0, inp.min[Math.min(inp.start, T - 1)] ?? 0));
+  const sets = Array.from({ length: T }, () => new Set<number>([0]));
+  const lengths = inp.fixed ? [Math.floor(inp.fixed.years)] : Array.from({ length: rules.maxYears }, (_, j) => j + 1);
+  const exts = inp.extended || rules.extensions < 1 ? [0] : Array.from({ length: rules.maxYears + 1 }, (_, j) => j);
+  for (const y of lengths) {
+    for (const e of exts) {
+      const { salary } = salarySchedule(inp.start, base, y, e, inp.nhl, inp.min, T, rules);
+      salary.forEach((s, t) => sets[t]!.add(s));
+    }
+  }
+  return sets.map((s) => [...s].sort((a, b) => a - b));
+}
+
+/** A gain function from the simulation's averages at those levels (nearest level; 0 outside). */
+export function gainFromLevels(levels: readonly (readonly number[])[], sums: readonly (readonly number[])[], n: number): (t: number, salary: number) => number {
+  return (t, salary) => {
+    const lv = levels[t];
+    const sm = sums[t];
+    if (!lv || !sm || !(n > 0)) return 0;
+    let j = 0;
+    let best = Infinity;
+    for (let k = 0; k < lv.length; k++) {
+      const d = Math.abs(lv[k]! - salary);
+      if (d < best) {
+        best = d;
+        j = k;
+      }
+    }
+    return sm[j]! / n;
+  };
 }

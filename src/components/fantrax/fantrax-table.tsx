@@ -132,6 +132,22 @@ const CELLS: Record<ColumnKey, (r: FantraxRow, ctx: FantraxCtx) => CellOut> = {
       className: "font-semibold text-cyan-100",
     };
   },
+  actif: (r, ctx) => {
+    const s = r.asset?.[ctx.mode];
+    return s == null
+      ? { node: "—", className: MUTED }
+      : {
+          node: (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-1.5 w-10 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
+                <span className="block h-full rounded-full bg-cyan-400" style={{ width: `${s}%` }} />
+              </span>
+              {s}
+            </span>
+          ),
+          className: s >= 88 ? "font-semibold text-white" : "text-slate-200",
+        };
+  },
   fp: (r) => ({ node: numCell(r.fp, 0), className: MUTED }),
   // Salary-cap league: this season's and next season's cap hit (projected ones
   // in italics), contract end. The cells come with its league pack (`ctx.parts`).

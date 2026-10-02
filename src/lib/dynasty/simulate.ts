@@ -75,6 +75,15 @@ export interface SimLeague {
    * spot, ctx.K) while his keep index beats ctx.Kgate, else drops him for good.
    */
   noEligibility?: boolean;
+  /**
+   * League-contract planning: per season t, the salaries (M$) whose season
+   * gain to average over the paths — max(0, value − λ_t × (salary − min_t))
+   * when he plays, 0 when he does not (minors, retired, not arrived) — on the
+   * same career paths as the value (growth, prime, decline, retirement, role,
+   * injuries). The simulation adds each path's gains to `sum` and its paths
+   * to `n` (both sides of a blended player add up).
+   */
+  contract?: { levels: number[][]; lambda: number[]; min: number[]; sum?: number[][]; n?: number };
 }
 
 export interface SimPlayer {
@@ -394,6 +403,8 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
   /** Cap charge of season t for a role share (league profile only). */
   const capCharge = (t: number, sh: number) =>
     lg ? (lg.capCost[t] ?? 0) * (g === "G" ? 1 : Math.min(1, sh / G.regShareMean)) : 0;
+  const ct = lg?.contract ?? null;
+  const ctSum = ct ? ct.levels.map((lv) => new Float64Array(lv.length)) : null;
 
   for (let n = 0; n < N; n++) {
     let alive = true;
@@ -546,6 +557,18 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
           : Math.max(0, seasonValue(thetaT, games)) * seasonScale
         : 0;
       vorPre[t]![n] = alive ? inSeason : 0;
+      if (ct && ctSum && playing) {
+        const v = seasonValue(thetaT, games) * seasonScale;
+        const sc = g === "G" ? 1 : Math.min(1, gShare / G.regShareMean);
+        const lv = ct.levels[t]!;
+        const acc = ctSum[t]!;
+        const lam = ct.lambda[t] ?? 0;
+        const mn = ct.min[t] ?? 0;
+        for (let j = 0; j < lv.length; j++) {
+          const x = v - lam * Math.max(0, lv[j]! - mn) * sc;
+          if (x > 0) acc[j] += x;
+        }
+      }
       fp[t]![n] = playing ? fpgReal * games * seasonScale : 0;
       if (playing) inNhl[t]++;
       gamesSum[t] += games * seasonScale;
@@ -574,6 +597,11 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       careerGp += (g === "G" ? games * gg.appearancesPerStart : games) * seasonScale;
       lastFpg = playing ? fpgReal : null;
     }
+  }
+  if (ct && ctSum) {
+    if (!ct.sum) ct.sum = ct.levels.map((lv) => new Array<number>(lv.length).fill(0));
+    ctSum.forEach((acc, t) => acc.forEach((x, j) => (ct.sum![t]![j]! += x)));
+    ct.n = (ct.n ?? 0) + N;
   }
   const norm = (a: Float64Array) => Array.from(a, (x) => x / N);
   return {

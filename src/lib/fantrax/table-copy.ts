@@ -83,6 +83,11 @@ export function columnCopy(col: ColumnKey, ctx: ColumnCopyCtx): ColumnCopy {
         label: "Valeur dyn.",
         title: `Valeur dynastie, mode ${DYNASTY_MODE_LABEL[mode]} (${DYNASTY_UNITS}), et son rang dans la ligue. Autre unité que la valeur de la saison${NBSP}: ne pas les additionner`,
       };
+    case "actif":
+      return {
+        label: "Score d’actif",
+        title: `Score d’actif 0-100, mode ${DYNASTY_MODE_LABEL[mode]}${NBSP}: le pourcentage des joueurs possédés de la ligue que sa valeur dynastie dépasse (le même score que l’onglet Actifs). 90 et plus${NBSP}: pilier ou élite`,
+      };
     case "phase":
       return {
         label: "Phase",
@@ -144,6 +149,7 @@ export const SORT_LABEL: Record<SortKey, string> = {
   lnh: "Rang au repêchage LNH",
   nom: "Nom",
   dyn: "Valeur dynastie",
+  actif: "Score d’actif",
   phase: "Phase de carrière",
   evol: "Tendance par an",
   pnhl: "Chances LNH",

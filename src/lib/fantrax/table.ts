@@ -31,7 +31,7 @@ import {
   phaseFromToken,
   phaseToken,
 } from "./dynasty-hints";
-import { DEFAULT_DYNASTY_MODE, type DynastyMode } from "./dynasty-mode";
+import { DEFAULT_DYNASTY_MODE, DYNASTY_MODES, type DynastyMode } from "./dynasty-mode";
 import type { DynastyIndex } from "./dynasty-index";
 import { lookupExtra, VERDICT_POSITIVE, verdictRank, type SnakeIndex, type SnakeInfo } from "./extras";
 import { POOL_GROUPS, type PoolGroup, type PoolRosterStatus, type PoolSnapshot, type PoolSource } from "./pool";
@@ -99,6 +99,12 @@ export interface FantraxRow {
   /** dynasty.json lists him as modeled but worth 0 in every mode. */
   dynZero: boolean;
   snake: SnakeInfo | null;
+  /**
+   * Asset score 0-100 per dynasty mode: the percentile of his dynasty value
+   * among the league's rostered players (the « Actifs » tab's scale); null
+   * without a dynasty record.
+   */
+  asset?: Record<DynastyMode, number> | null;
 }
 
 /** Icons that make a player « blessé » for the « exclure les blessés » toggle (day-to-day is not). */
@@ -242,6 +248,41 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
       dynZero: !dyn && !!input.dynasty?.zero.has(r.id),
       snake: lookupExtra(input.snake, r.id, r.nhl),
     });
+  }
+  return withAssetScores(rows);
+}
+
+/**
+ * Sets each row's asset score (src/lib/dynasty/asset-score.ts): per mode, the
+ * share of the league's rostered players his dynasty value beats.
+ */
+export function withAssetScores(rows: FantraxRow[]): FantraxRow[] {
+  const scales = Object.fromEntries(
+    DYNASTY_MODES.map((m) => [
+      m,
+      rows
+        .filter((r) => r.owner)
+        .map((r) => rowDynastyValue(r, m))
+        .filter((v): v is number => v !== null)
+        .sort((a, b) => a - b),
+    ]),
+  ) as Record<DynastyMode, number[]>;
+  const pct = (sorted: number[], v: number) => {
+    let lo = 0;
+    let hi = sorted.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (sorted[mid]! < v) lo = mid + 1;
+      else hi = mid;
+    }
+    return sorted.length ? Math.max(0, Math.min(100, Math.round((lo / sorted.length) * 100))) : 0;
+  };
+  for (const r of rows) {
+    if (!r.dynasty && !r.dynZero) {
+      r.asset = null;
+      continue;
+    }
+    r.asset = Object.fromEntries(DYNASTY_MODES.map((m) => [m, pct(scales[m], rowDynastyValue(r, m) ?? 0)])) as Record<DynastyMode, number>;
   }
   return rows;
 }
@@ -388,6 +429,8 @@ export interface FantraxFilters {
   eta: Range;
   /** Dynasty value in the page's mode. */
   dyn: Range;
+  /** Asset score 0-100 in the page's mode. */
+  actif: Range;
   /** 2027 cutdown outlook (his team's 10 slots when rostered). */
   keeper: KeeperStatus | "";
   /** Still minors-eligible (free) at the cutdown of this year or later. */
@@ -416,6 +459,7 @@ export const DEFAULT_FILTERS: FantraxFilters = {
   pNhl: ANY,
   eta: ANY,
   dyn: ANY,
+  actif: ANY,
   keeper: "",
   freeAt: null,
   sal: ANY,
@@ -570,6 +614,7 @@ export function matchesFilters(r: FantraxRow, f: FantraxFilters, ctx: Pick<Fantr
   if (f.phase && d?.phase !== f.phase) return false;
   if (!inRange(d ? Math.round(d.pNhl * 1000) / 10 : null, f.pNhl)) return false;
   if (!inRange(d?.eta ?? null, f.eta) || !inRange(rowDynastyValue(r, modeOf(ctx)), f.dyn)) return false;
+  if (!inRange(r.asset?.[modeOf(ctx)] ?? null, f.actif)) return false;
   if (f.keeper && (!d || keeperView(d).status !== f.keeper)) return false;
   if (f.freeAt !== null && !(d?.elig.now && d.elig.freeThrough !== null && d.elig.freeThrough >= f.freeAt)) return false;
   if (!inRange(rowSalary(r), f.sal)) return false;
@@ -593,6 +638,7 @@ const RANGE_PARAMS = {
   pnhl: "pNhl",
   eta: "eta",
   dyn: "dyn",
+  actif: "actif",
   sal: "sal",
 } as const satisfies Record<string, keyof FantraxFilters>;
 const RANGE_KEYS = Object.values(RANGE_PARAMS);
@@ -651,6 +697,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     "pnhl",
     "eta",
     "dyn",
+    "actif",
     "conservation",
     "gratuit",
     "sal",
@@ -724,6 +771,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
       pNhl: caps.dynasty ? f.pNhl : ANY,
       eta: caps.dynasty ? f.eta : ANY,
       dyn: caps.dynasty ? f.dyn : ANY,
+      actif: caps.dynasty ? f.actif : ANY,
       keeper: caps.dynasty && caps.cutdown ? f.keeper : "",
       freeAt: caps.dynasty && caps.cutdown ? f.freeAt : null,
       sal: caps.salary ? f.sal : ANY,
@@ -735,7 +783,7 @@ export const FANTRAX_FILTERS: FilterModel<FantraxFilters, FantraxRow, FantraxCap
     const set = (r: Range) => r.min !== null || r.max !== null;
     const out: ExtraKind[] = [];
     if (f.verdict || f.trend) out.push("snake");
-    if (f.phase || set(f.pNhl) || set(f.eta) || set(f.dyn) || f.keeper || f.freeAt !== null || set(f.sal)) out.push("dynasty");
+    if (f.phase || set(f.pNhl) || set(f.eta) || set(f.dyn) || set(f.actif) || f.keeper || f.freeAt !== null || set(f.sal)) out.push("dynasty");
     return out;
   },
   query: (f) => f.q,
@@ -754,6 +802,7 @@ export const COLUMN_KEYS = [
   "vona",
   "dispo",
   "dyn",
+  "actif",
   "fp",
   "fpm",
   "sal",
@@ -781,6 +830,7 @@ export const SORT_KEYS = [
   "vona",
   "dispo",
   "dyn",
+  "actif",
   "fp",
   "fpm",
   "age",
@@ -810,6 +860,7 @@ export const DEFAULT_COLUMNS: readonly ColumnKey[] = [
   "vona",
   "dispo",
   "dyn",
+  "actif",
   "fpm",
   "age",
   "ros",
@@ -837,6 +888,7 @@ const COLUMN_GROUP: Record<ColumnKey, string> = {
   vona: GROUP.draft,
   dispo: GROUP.draft,
   dyn: GROUP.dynasty,
+  actif: GROUP.dynasty,
   fp: GROUP.projection,
   fpm: GROUP.projection,
   sal: GROUP.contract,
@@ -862,7 +914,7 @@ const COLUMN_GROUP: Record<ColumnKey, string> = {
 const LEFT: ReadonlySet<ColumnKey> = new Set(["statut", "phase", "conservation", "conseil", "verdict", "tendance", "synthese", "contrat"]);
 
 /** Columns dynasty.json fills (shown once it is in; sorting by one waits for it). */
-const DYNASTY_COLUMNS: readonly ColumnKey[] = ["dyn", "phase", "evol", "pnhl", "eta", "conservation", "fourchette", "conseil"];
+const DYNASTY_COLUMNS: readonly ColumnKey[] = ["dyn", "actif", "phase", "evol", "pnhl", "eta", "conservation", "fourchette", "conseil"];
 /** Columns the salary-cap league's contracts fill (from the same dynasty copy). */
 const CONTRACT_COLUMNS: readonly ColumnKey[] = ["sal", "sal2", "contrat"];
 /** Columns of the Captains cutdown only. */
@@ -874,6 +926,7 @@ const SORTS: Partial<Record<ColumnKey, Omit<SortSpec, "label">>> = {
   vona: { value: (r) => r.vona, defaultDir: "desc" },
   dispo: { value: (r) => r.available, defaultDir: "desc" },
   dyn: { value: (r, ctx) => rowDynastyValue(r, modeOf(ctx)), defaultDir: "desc" },
+  actif: { value: (r, ctx) => r.asset?.[modeOf(ctx)] ?? null, defaultDir: "desc" },
   fp: { value: (r) => r.fp, defaultDir: "desc" },
   fpm: { value: (r) => r.fpg, defaultDir: "desc" },
   age: { value: (r) => r.age, defaultDir: "asc" },
@@ -1036,10 +1089,10 @@ const EQUIPE_COLUMNS: readonly ColumnKey[] = [
  * other league's views keep their own columns (`cols` is a function of caps).
  */
 const SLAP_REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase"];
-const SLAP_DEFAULT_COLUMNS: readonly ColumnKey[] = ["statut", "verdict", "valeur", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase"];
-const SLAP_DYNASTIE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "dispo", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase", "pnhl", "eta"];
-const SLAP_ESPOIRS_COLUMNS: readonly ColumnKey[] = ["dyn", "sal", "contrat", "adp", "lnh", "phase", "pnhl", "eta", "fourchette", "verdict"];
-const SLAP_EQUIPE_COLUMNS: readonly ColumnKey[] = ["statut", "valeur", "dyn", "fp", "sal", "sal2", "contrat", "phase", "evol", "verdict"];
+const SLAP_DEFAULT_COLUMNS: readonly ColumnKey[] = ["statut", "verdict", "valeur", "dyn", "actif", "fp", "sal", "sal2", "contrat", "adp", "phase"];
+const SLAP_DYNASTIE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "dispo", "dyn", "actif", "fp", "sal", "sal2", "contrat", "adp", "phase", "pnhl", "eta"];
+const SLAP_ESPOIRS_COLUMNS: readonly ColumnKey[] = ["dyn", "actif", "sal", "contrat", "adp", "lnh", "phase", "pnhl", "eta", "fourchette", "verdict"];
+const SLAP_EQUIPE_COLUMNS: readonly ColumnKey[] = ["statut", "valeur", "dyn", "actif", "fp", "sal", "sal2", "contrat", "phase", "evol", "verdict"];
 const withSalary =
   (plain: readonly ColumnKey[], salary: readonly ColumnKey[]) =>
   (caps: FantraxCaps): readonly ColumnKey[] =>

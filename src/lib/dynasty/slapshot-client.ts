@@ -183,8 +183,10 @@ export interface CapPlanRow {
   s: number;
   /** Real NHL cap hit per season (the bases), M$. */
   n: number[];
-  /** Expected value per season before the cap, league points above replacement. */
-  v: number[];
+  /** Expected value this season before the cap, league points above replacement. */
+  v0: number;
+  /** Per horizon: each first-contract length 1..7 as [discounted surplus, best extension] (simulated careers). */
+  by: Record<"W" | "B" | "L", Array<[number, number]>>;
   /** Planned first-contract length, extension, bases. */
   y: number;
   e: number;
@@ -231,7 +233,8 @@ export function slapshotCapPlan(
       dv: { W: r1(r.dv.winNow), B: r1(r.dv.balanced), L: r1(r.dv.longTerm) },
       s: L.start,
       n: c.nhl.map(r2),
-      v: L.value.map(r1),
+      v0: r1(L.value[0] ?? 0),
+      by: L.by,
       y: L.years,
       e: L.ext,
       b: L.base,

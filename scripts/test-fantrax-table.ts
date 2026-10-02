@@ -847,7 +847,7 @@ eq(
   "the resolved view replaces ?vue=",
 );
 eq(visibleColumns(DEFAULT_VIEW, { ...noExtras, draft: false }).join(), "statut,valeur,fpm,age,ros,adp,lnh", "no draft: no VONA / odds");
-eq(visibleColumns(DEFAULT_VIEW, withExtras).join(), "statut,verdict,valeur,vona,dispo,dyn,fpm,age,ros,adp,lnh,phase", "extras appear");
+eq(visibleColumns(DEFAULT_VIEW, withExtras).join(), "statut,verdict,valeur,vona,dispo,dyn,actif,fpm,age,ros,adp,lnh,phase", "extras appear");
 eq(visibleColumns(presetView(espoirsPreset, DEFAULT_VIEW), noExtras).join(), "age,ros,adp,lnh", "available prospects without dynasty data: age, Ros%, ADP, NHL draft");
 eq(
   visibleColumns(presetView(presetOf(withExtras, "espoirs"), DEFAULT_VIEW), withExtras).join(),

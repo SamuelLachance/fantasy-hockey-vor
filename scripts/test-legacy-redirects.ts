@@ -87,7 +87,7 @@ for (const [, , , want] of CASES) {
   eq(draft.tab, "repechage", "the draft address is pinned to Repêchage, not the league's default tab");
 }
 // Filters added after the move (dynasty cutdown and minors eligibility, the salary-cap league's salary bound) never were in a /league bookmark.
-const NEWER_TABLE_PARAMS = ["conservation", "gratuit", "sal"];
+const NEWER_TABLE_PARAMS = ["conservation", "gratuit", "sal", "actif"];
 eq(
   [...OLD_EXPLORER_PARAMS].sort(),
   ownedParams(FANTRAX_TABLE)

@@ -19,6 +19,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { makeLevel } from "../src/lib/dynasty/aging";
+import { gainFromLevels } from "../src/lib/dynasty/league-contracts";
 import { buildDynasty, DEFAULT_PATHS, type BuildResult, type DynastyRecord, type Group, type Mode } from "../src/lib/dynasty/index";
 import type { DynastyParams } from "../src/lib/dynasty/params";
 import { projectedX } from "../src/lib/dynasty/scale";
@@ -375,7 +376,13 @@ export function runSlapshotBuild(
   const T = p.T;
   let salaryRowCount = 0;
   let model: SalaryModel | null = null;
-  const run = (paths: number, gate: { K: number } | null, lambda: number[] | undefined, progress: boolean) => {
+  const run = (
+    paths: number,
+    gate: { K: number } | null,
+    lambda: number[] | undefined,
+    progress: boolean,
+    contracts: { record?: boolean; gain?: ReadonlyMap<string, (t: number, salary: number) => number> } = {},
+  ) => {
     let prep: SlapPrepared | null = null;
     const result = buildDynasty(inputs, p, {
       paths,
@@ -393,6 +400,8 @@ export function runSlapshotBuild(
           prep = prepareSlapshot(profile, p, level, routed, data, model, {
             ...(lambda ? { lambda } : {}),
             rosterGate: !!gate,
+            ...(contracts.record ? { recordContracts: true } : {}),
+            ...(contracts.gain ? { contractGain: contracts.gain } : {}),
           });
         },
       },
@@ -401,7 +410,15 @@ export function runSlapshotBuild(
   };
   // Pass 1 (ungated, 2026-27 λ held per share of the cap): season-t pools for
   // λ_t, and the marginal rostered asset for the roster-spot rent.
-  const pass1 = run(Math.min(N, PASS1_PATHS), null, undefined, false);
+  // It also averages, over each player's simulated careers (growth, prime,
+  // decline, retirement, role, injuries), the season gain at every salary a
+  // league contract could pay him: pass 2 plans the contracts on those.
+  const pass1 = run(Math.min(N, PASS1_PATHS), null, undefined, false, { record: true });
+  const contractGain = new Map<string, (t: number, salary: number) => number>();
+  for (const [id, lg] of pass1.prep.lgs) {
+    const c = lg.contract;
+    if (c?.sum && c.n) contractGain.set(id, gainFromLevels(c.levels, c.sum, c.n));
+  }
   const pools: SeatPlayer[][] = [];
   for (let t = 0; t < LAMBDA_SEASONS; t++) {
     const pool: SeatPlayer[] = [];
@@ -420,7 +437,7 @@ export function runSlapshotBuild(
     p.modes.balanced.delta,
   );
   // Pass 2: λ by season, roster-spot rent and the keep / drop gate every September.
-  const { result, prep: pr } = run(N, { K: spot }, lam.lambda, true);
+  const { result, prep: pr } = run(N, { K: spot }, lam.lambda, true, { gain: contractGain });
   // Report only: the same build with λ = 0 (what the contracts alone move).
   const noCap = opts.compareNoCap ? run(N, { K: spot }, new Array<number>(T).fill(0), false).result.all : null;
   const md = model as unknown as SalaryModel;
