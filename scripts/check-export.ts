@@ -414,6 +414,7 @@ const BUDGETS: Budget[] = [
   // Fantrax or the player table. Over it: fix the import graph, not the number.
   { label: "LTL · Duel", match: isTab("light-the-lamp", ["duel"]), js: 5, htmlRaw: 60, htmlGz: 12 },
   { label: "Snake", match: (p) => p === "snake.html", js: 25, htmlRaw: 80, htmlGz: 15 },
+  { label: "Fiche de joueur", match: (p) => p === "joueur.html", js: 25, htmlRaw: 60, htmlGz: 12 },
   { label: "/league (stub), 404", match: (p) => ["league.html", "404.html", "_not-found.html"].includes(p), js: 5, htmlRaw: 60, htmlGz: 12 },
   { label: "/draft/light-the-lamp", match: (p) => p === "draft/light-the-lamp.html", js: 45, htmlRaw: 700, htmlGz: 75 },
   // Stand-alone live draft page for the Slapshot league (public/, no Next chunks):

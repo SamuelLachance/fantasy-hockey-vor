@@ -49,6 +49,8 @@
   .ph { font-size:12px; }
   .ph-prospect { color:#c4b5fd; } .ph-rising, .ph-entering_prime { color:#86efac; } .ph-prime { color:#67e8f9; } .ph-plateau { color:#cbd5e1; } .ph-declining { color:#fbbf24; } .ph-late_career { color:#fb7185; }
   .up { color:var(--warn); }
+  a.pl { color: inherit; text-decoration: none; }
+  a.pl:hover { text-decoration: underline; color: #67e8f9; }
 </style>
 </head>
 <body>
@@ -369,7 +371,7 @@
       const next = p.c2 && p.c2.length > 1 ? p.c2[1] : null;
       const changes = next != null && p.c != null && Math.abs(next - p.c) > 0.005;
       rows.push(`<tr class="${gone ? "gone" : ""}"><td class="n">${k + 1}</td>`
-        + `<td>${esc(p.n)}${who ? `<span class="tag">${esc(who)}</span>` : ""}</td><td>${esc(p.t)}</td><td>${posTags(p.e)}</td>`
+        + `<td><a class="pl" href="joueur?fx=${encodeURIComponent(p.i)}&amp;ligue=slapshot">${esc(p.n)}</a>${who ? `<span class="tag">${esc(who)}</span>` : ""}</td><td>${esc(p.t)}</td><td>${posTags(p.e)}</td>`
         + `<td class="n"><b>${num(dyn(p))}</b></td><td class="n">${rank(p) ?? "—"}</td>`
         + `<td class="ph ph-${esc(p.ph || "")}">${esc(PHASE_FR[p.ph] || "—")}</td>`
         + `<td class="n">${num(p.p)}</td><td class="n">${num(p.v)}</td>`

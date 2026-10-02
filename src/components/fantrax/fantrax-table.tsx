@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { CellOut, NameCellProps, TableAdapter, TableData } from "@/components/player-table/adapter";
 import { PlayerTable } from "@/components/player-table/PlayerTable";
@@ -255,7 +256,9 @@ function FantraxNameCell({ row: r, ctx, query, visible }: NameCellProps<FantraxR
         }`}
         title={r.name}
       >
-        {highlightMatch(r.name, query)}
+        <PlayerCardLink nhl={r.nhl} fx={r.id} league={ctx.league}>
+          {highlightMatch(r.name, query)}
+        </PlayerCardLink>
       </span>
       {taken ? (
         <span className={`block text-xs ${taken.mine ? "text-cyan-200" : "text-amber-200"}`}>{taken.text}</span>
@@ -495,6 +498,7 @@ export function useFantraxTableData({
       ...(pack ? { column: pack.copy.column } : {}),
       ...(pack?.parts ? { parts: pack.parts } : {}),
       pickOf,
+      league: config.slug,
     }),
     [teamId, draftOpen, nextPick, teamName, teamIds, mode, hasDynastyData, config, pack, pickOf],
   );

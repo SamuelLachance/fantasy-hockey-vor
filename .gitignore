@@ -55,3 +55,4 @@ src/data/ml/gamelog-cache/
 /public/fantrax/*/dynasty-table.json
 /public/fantrax/*/contracts.json
 /public/fantrax/*/cap-plan.json
+/public/joueurs/

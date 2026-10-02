@@ -548,6 +548,8 @@ export interface FantraxCtx {
   capSeason?: number;
   /** Pick number of each player drafted in the league's current draft (live picks included). */
   pickOf?: ReadonlyMap<string, number>;
+  /** The league's slug (player card links of players without an NHL id). */
+  league?: string;
   /** A salary-cap league's cells (its league pack: `cap-league-parts.tsx`). */
   parts?: Pick<LeagueParts, "SalaryNode" | "ContractEndNode">;
 }

@@ -8,6 +8,7 @@ import { fantraxPublicFile } from "@/lib/fantrax/config";
 import { fmtMoney } from "@/lib/fantrax/money";
 import { capSeasonLabel } from "@/lib/fantrax/salary-copy";
 import { fetchSnapshotFile } from "@/lib/fantrax/snapshot-fetch";
+import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { useFantraxLeague } from "./fantrax-league-context";
 import { LeagueCard, Tag } from "./LeagueCard";
 
@@ -322,7 +323,11 @@ export function SlapshotCapTab() {
                 return (
                   <tr key={r.id} className="border-t border-white/5 align-top">
                     <th scope="row" className="py-1.5 pr-2 text-left font-normal">
-                      <span className="block font-medium text-white">{r.p.nm}</span>
+                      <span className="block font-medium text-white">
+                        <PlayerCardLink fx={r.id} league={config.slug}>
+                          {r.p.nm}
+                        </PlayerCardLink>
+                      </span>
                       <span className="text-xs text-slate-400">
                         {r.p.pos.join("/")} · {Math.floor(r.p.age)} ans · {PHASE_FR[r.p.ph] ?? r.p.ph} · {STATUS_FR[r.status] ?? r.status}
                       </span>

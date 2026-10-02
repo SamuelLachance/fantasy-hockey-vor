@@ -15,6 +15,7 @@ import {
 import { fxeaGet } from "@/lib/fantrax/client";
 import { fantraxPublicFile } from "@/lib/fantrax/config";
 import { fetchSnapshotFile } from "@/lib/fantrax/snapshot-fetch";
+import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { useFantraxLeague } from "./fantrax-league-context";
 import { LeagueCard, Tag } from "./LeagueCard";
 
@@ -223,7 +224,15 @@ export function AssetsTab() {
               {mine.assets.map((a: Asset) => (
                 <tr key={`${a.kind}-${a.id}`} className="border-t border-white/5 align-top">
                   <th scope="row" className="py-1.5 pr-2 text-left font-normal">
-                    <span className="block font-medium text-white">{a.name}</span>
+                    <span className="block font-medium text-white">
+                      {a.kind === "player" ? (
+                        <PlayerCardLink fx={a.id} league={config.slug}>
+                          {a.name}
+                        </PlayerCardLink>
+                      ) : (
+                        a.name
+                      )}
+                    </span>
                     <span className="text-xs text-slate-400">
                       {a.kind === "pick"
                         ? `choix de repêchage${a.original !== a.team ? ` (de ${teamName(a.original)})` : ""} · ~${a.slot}e au total`
@@ -265,7 +274,11 @@ export function AssetsTab() {
             <ul className="divide-y divide-white/5 text-sm">
               {targets.map((a) => (
                 <li key={a.id} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5">
-                  <span className="min-w-0 flex-1 font-medium text-white">{a.name}</span>
+                  <span className="min-w-0 flex-1 font-medium text-white">
+                    <PlayerCardLink fx={a.id} league={config.slug}>
+                      {a.name}
+                    </PlayerCardLink>
+                  </span>
                   <span className="text-xs text-slate-400">{teamName(a.team)}</span>
                   <ScoreBar score={a.score} />
                   <span className="text-xs text-slate-300">{TIMELINE_FR[a.timeline]}</span>

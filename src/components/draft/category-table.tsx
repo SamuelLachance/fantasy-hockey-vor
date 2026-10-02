@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { CellOut, NameCellProps, TableAdapter, TableData } from "@/components/player-table/adapter";
+import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { PlayerTable } from "@/components/player-table/PlayerTable";
 import { SnakeDetail } from "@/components/player-table/SnakeDetail";
 import { SnakeVerdictsProvider, useSnakeNhlRows } from "@/components/snake/SnakeVerdicts";
@@ -187,7 +188,7 @@ function CategoryNameCell({ row: r, ctx, query, visible }: NameCellProps<Categor
   return (
     <>
       <span className="block max-w-[9rem] break-words font-medium text-white sm:max-w-[16rem] sm:truncate" title={r.name}>
-        {highlightMatch(r.name, query)}
+        <PlayerCardLink nhl={Number(r.key) || null}>{highlightMatch(r.name, query)}</PlayerCardLink>
       </span>
       <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-slate-400">
         <span className="whitespace-nowrap">{r.team}</span>
