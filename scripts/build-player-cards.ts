@@ -164,7 +164,10 @@ const fxIndex: Record<string, Record<string, [number, string]>> = {};
 
 function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: string) {
   const pool = existsSync(join(root, dir, "pool.json")) ? read<{ players: Array<{ id: string; n: string; nhl?: number }> }>(join(dir, "pool.json")).players : [];
-  const dyn = existsSync(join(root, dir, "dynasty-table.json")) ? read<{ players: Record<string, DynRec> }>(join(dir, "dynasty-table.json")).players : {};
+  const dynFile = existsSync(join(root, dir, "dynasty-table.json")) ? read<{ players: Record<string, DynRec>; zero?: string[] }>(join(dir, "dynasty-table.json")) : null;
+  const dyn = dynFile?.players ?? {};
+  /** Modeled, but worth less than 0.5 in every horizon (below replacement here). */
+  const zero = new Set(dynFile?.zero ?? []);
   const state = existsSync(join(root, dir, "state.json")) ? read<{ rosters: Record<string, Array<{ id: string; status: string }>> }>(join(dir, "state.json")).rosters : {};
   const teams = new Map(read<{ teams: Array<{ id: string; name: string }> }>(leagueFile).teams.map((t) => [t.id, t.name]));
   const plan =
@@ -197,11 +200,14 @@ function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: s
       own: o?.team ?? null,
       ownName: o ? (teams.get(o.team) ?? null) : null,
       st: o?.status ?? null,
-      dv: d ? trio(d.dv) : null,
+      dv: d ? trio(d.dv) : zero.has(r.id) ? { W: 0, B: 0, L: 0 } : null,
       rk: d ? { W: d.rank.winNow, B: d.rank.balanced, L: d.rank.longTerm } : null,
       sc: d
         ? { W: percentileOf(scales.W, d.dv.winNow), B: percentileOf(scales.B, d.dv.balanced), L: percentileOf(scales.L, d.dv.longTerm) }
-        : null,
+        : zero.has(r.id)
+          ? { W: percentileOf(scales.W, 0), B: percentileOf(scales.B, 0), L: percentileOf(scales.L, 0) }
+          : null,
+      ...(zero.has(r.id) && !d ? { zero: true } : {}),
       ph: d?.phase ?? null,
       eG: d ? d.eG.slice(0, 6).map(r1) : null,
     };

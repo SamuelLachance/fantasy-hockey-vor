@@ -154,7 +154,15 @@ function FantraxLeagueCard({ part, league }: { part: FantraxCardPart; league: Le
       }
     >
       <OwnerLine part={part} league={league} />
-      {part.dv && part.sc && part.rk ? (
+      {part.zero && part.sc ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <Stat label="Score d’actif" value={<ScoreBar score={part.sc.B} />} hint="Horizon équilibré; percentile parmi les joueurs possédés" />
+          <Stat label="Valeur dynastie" value="0" hint="Dans les trois horizons" />
+          <p className="col-span-2 text-xs text-slate-400">
+            Sous le niveau de remplacement dans cette ligue, maintenant comme plus tard : un joueur disponible au ballottage rapporte autant ou plus.
+          </p>
+        </div>
+      ) : part.dv && part.sc && part.rk ? (
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Stat label="Score d’actif" value={<ScoreBar score={part.sc.B} />} hint="Horizon équilibré; percentile parmi les joueurs possédés" />
           <Stat label="Valeur dynastie" value={`${fmt0(part.dv.B)} · ${ord(part.rk.B)}`} hint="Horizon équilibré, rang dans la ligue" />

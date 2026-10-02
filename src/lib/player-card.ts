@@ -103,6 +103,8 @@ export interface FantraxCardPart {
   dv: { W: number; B: number; L: number } | null;
   rk: { W: number; B: number; L: number } | null;
   sc: { W: number; B: number; L: number } | null;
+  /** Modeled but worth 0 here (below replacement in every horizon). */
+  zero?: boolean;
   ph: string | null;
   /** Expected value per season (the model's units), first six. */
   eG: number[] | null;
