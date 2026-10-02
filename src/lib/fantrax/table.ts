@@ -18,6 +18,7 @@ import { FANTRAX_ICON, NON_PLAYING_ICONS } from "./config";
 import type { DailyPlan, PlanLineup, PlanPlayer } from "./daily-plan";
 import { draftOutlook, draftValue, type DraftPickInfo } from "./draft";
 import { draftIsOpen, draftNeed, draftPoolInputs, planOdds, seasonFp } from "./draft-inputs";
+import { assetKey, assetScale, assetScore, type AssetKey } from "@/lib/dynasty/asset-score";
 import type { DynastyRecord, KeeperStatus, Phase } from "@/lib/dynasty/types";
 import { keeperView } from "@/lib/dynasty/keeper-view";
 import {
@@ -209,7 +210,7 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
     const rec = values?.players[r.id];
     // A projected row's season total follows the league's config (its season
     // length: Slapshot's fantasy season ends in February), not the pool's bake.
-    const fp = r.fp == null ? null : rec?.src === "proj" ? Math.round(seasonFp(rec, config) * 10) / 10 : r.fp;
+    const fp = poolRowSeasonFp(r, rec, config);
     let value: number | null = null;
     if (fp !== null) {
       const sFp = rec?.src === "proj" ? seasonFp(rec, config) : fp;
@@ -262,33 +263,42 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
  */
 export function withAssetScores(rows: FantraxRow[]): FantraxRow[] {
   // Every player gets one: his dynasty value (0 when the model has none or
-  // values him at 0), ties split by season points — so among the many free
-  // agents worth 0 in dynasty terms, the one who helps now ranks higher.
-  const key = (r: FantraxRow, m: DynastyMode): [number, number] => [rowDynastyValue(r, m) ?? 0, r.fp ?? -1];
-  const less = (a: [number, number], b: [number, number]) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
+  // values him at 0, never below 0), ties split by season points — so among
+  // the many free agents worth 0 in dynasty terms, the one who helps now
+  // ranks higher. The key and the percentile are the « Actifs » tab's own
+  // (asset-score.ts assetKey / assetScore): one score in every view.
+  const key = (r: FantraxRow, m: DynastyMode) => assetKey(Math.max(0, rowDynastyValue(r, m) ?? 0), r.fp);
   const scales = Object.fromEntries(
-    DYNASTY_MODES.map((m) => [
-      m,
-      rows
-        .filter((r) => r.owner)
-        .map((r) => key(r, m))
-        .sort((a, b) => a[0] - b[0] || a[1] - b[1]),
-    ]),
-  ) as Record<DynastyMode, Array<[number, number]>>;
-  const pct = (sorted: Array<[number, number]>, v: [number, number]) => {
-    let lo = 0;
-    let hi = sorted.length;
-    while (lo < hi) {
-      const mid = (lo + hi) >> 1;
-      if (less(sorted[mid]!, v)) lo = mid + 1;
-      else hi = mid;
-    }
-    return sorted.length ? Math.max(0, Math.min(100, Math.round((lo / sorted.length) * 100))) : 0;
-  };
+    DYNASTY_MODES.map((m) => [m, assetScale(rows.filter((r) => r.owner).map((r) => key(r, m)))]),
+  ) as Record<DynastyMode, AssetKey[]>;
   for (const r of rows) {
-    r.asset = Object.fromEntries(DYNASTY_MODES.map((m) => [m, pct(scales[m], key(r, m))])) as Record<DynastyMode, number>;
+    r.asset = Object.fromEntries(DYNASTY_MODES.map((m) => [m, assetScore(scales[m], key(r, m))])) as Record<DynastyMode, number>;
   }
   return rows;
+}
+
+/**
+ * A pool row's season points as the table shows them (`FantraxRow.fp`): a
+ * projected row's season total follows the league's config (its season
+ * length: Slapshot's fantasy season ends in February), not the pool's bake.
+ */
+export function poolRowSeasonFp(
+  r: Pick<PoolSnapshot["players"][number], "fp">,
+  rec: ValuesSnapshot["players"][string] | undefined,
+  config: FantraxLeagueConfig,
+): number | null {
+  return r.fp == null ? null : rec?.src === "proj" ? Math.round(seasonFp(rec, config) * 10) / 10 : r.fp;
+}
+
+/** Season points by Fantrax id (`poolRowSeasonFp`): the asset score's tie-break outside the table. */
+export function poolSeasonFp(
+  pool: Pick<PoolSnapshot, "players">,
+  values: Pick<ValuesSnapshot, "players"> | null,
+  config: FantraxLeagueConfig,
+): Record<string, number | null> {
+  const out: Record<string, number | null> = {};
+  for (const r of pool.players) out[r.id] = poolRowSeasonFp(r, values?.players[r.id], config);
+  return out;
 }
 
 const CLUBLESS = new Set(["", "(N/A)", "FA"]);

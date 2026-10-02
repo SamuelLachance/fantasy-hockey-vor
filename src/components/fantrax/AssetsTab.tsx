@@ -4,16 +4,21 @@ import { BookOpen, Briefcase, Crosshair, Trophy } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   assetsOf,
+  CAPTAINS_LOTTERY,
   tradeTargets,
   type Asset,
   type AssetHorizon,
   type AssetLeague,
   type AssetRecord,
+  type DraftLottery,
   type PickInput,
   type TeamAssets,
 } from "@/lib/dynasty/asset-score";
 import { fxeaGet } from "@/lib/fantrax/client";
 import { fantraxPublicFile } from "@/lib/fantrax/config";
+import type { PoolSnapshot } from "@/lib/fantrax/pool";
+import { loadFantraxPool, peekFantraxPool } from "@/lib/fantrax/pool-client";
+import { poolSeasonFp } from "@/lib/fantrax/table";
 import { fetchSnapshotFile } from "@/lib/fantrax/snapshot-fetch";
 import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { useFantraxLeague } from "./fantrax-league-context";
@@ -21,6 +26,15 @@ import { LeagueCard, Tag } from "./LeagueCard";
 
 /** How each dynasty league turns over (the pick pool and the keeper risk follow it). */
 const LEAGUE_KIND: Record<string, AssetLeague> = { "captains-dynasty": "keeper" };
+/** The next draft's lottery (Captains constitution: the 11 non-playoff teams, top 3 drawn). */
+const LEAGUE_LOTTERY: Record<string, DraftLottery> = { "captains-dynasty": CAPTAINS_LOTTERY };
+/**
+ * Order of the annual drafts. Captains: fixed (its rules page; the API's
+ * « snake » is its first draft's setting). Slapshot: the API also says
+ * « snake », unconfirmed for its annual drafts (audit 2026-10-02): fixed
+ * until the league confirms it.
+ */
+const LEAGUE_DRAFT_ORDER: Record<string, "fixed" | "snake"> = {};
 const HORIZON_FR: Record<AssetHorizon, string> = { winNow: "Gagner maintenant", balanced: "Équilibré", longTerm: "Long terme" };
 /** Discount per season of each horizon (the dynasty engine's modes). */
 const DELTAS: Record<AssetHorizon, number> = { winNow: 0.35, balanced: 0.75, longTerm: 0.95 };
@@ -61,12 +75,15 @@ function ScoreBar({ score }: { score: number }) {
  * user's team.
  */
 export function AssetsTab() {
-  const { config, teamId, chooseTeam, state, live, teamName, teams } = useFantraxLeague();
+  const { config, teamId, chooseTeam, state, live, teamName, teams, bundle } = useFantraxLeague();
   const [records, setRecords] = useState<Record<string, AssetRecord> | null>(null);
   const [picks, setPicks] = useState<PickInput[] | null>(null);
   const [picksState, setPicksState] = useState<"loading" | "ready" | "error">("loading");
   const [err, setErr] = useState(false);
   const [horizon, setHorizon] = useState<AssetHorizon>("balanced");
+  // season points: the asset score's tie-break, the same as the player table's
+  const [pool, setPool] = useState<PoolSnapshot | null>(() => peekFantraxPool(config));
+  const [poolSettled, setPoolSettled] = useState(() => peekFantraxPool(config) !== null);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,17 +110,47 @@ export function AssetsTab() {
     };
   }, [config]);
 
+  useEffect(() => {
+    if (poolSettled) return;
+    let cancelled = false;
+    loadFantraxPool(config).then(
+      (p) => {
+        if (cancelled) return;
+        setPool(p);
+        setPoolSettled(true);
+      },
+      // without the pool the scores break no ties (the values stand)
+      () => !cancelled && setPoolSettled(true),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [config, poolSettled]);
+  const seasonFp = useMemo(() => (pool ? poolSeasonFp(pool, bundle?.values ?? null, config) : undefined), [pool, bundle, config]);
+
   const kind: AssetLeague = LEAGUE_KIND[config.slug] ?? "dynasty";
   const all: TeamAssets[] | null = useMemo(() => {
-    if (!records || !state || !picks) return null;
+    if (!records || !state || !picks || !poolSettled) return null;
     const rosters: Record<string, string[]> = {};
     const src = live?.rosters ?? state.rosters;
     for (const t of teams) rosters[t.id] = (src[t.id] ?? []).map((e) => e.id);
     return assetsOf(
-      { kind, firstSeason: FIRST_SEASON, teams: teams.map((t) => t.id), rosters, records, picks, deltas: DELTAS, keepers: 10 },
+      {
+        kind,
+        firstSeason: FIRST_SEASON,
+        teams: teams.map((t) => t.id),
+        rosters,
+        records,
+        picks,
+        deltas: DELTAS,
+        keepers: 10,
+        ...(seasonFp ? { seasonFp } : {}),
+        lottery: LEAGUE_LOTTERY[config.slug] ?? null,
+        draftOrder: LEAGUE_DRAFT_ORDER[config.slug] ?? "fixed",
+      },
       horizon,
     );
-  }, [records, state, live, picks, teams, kind, horizon]);
+  }, [records, state, live, picks, teams, kind, horizon, poolSettled, seasonFp, config.slug]);
 
   if (err) return <p className="text-sm text-rose-200">Les valeurs dynastie n’ont pas pu être lues. Actualisez la page pour réessayer.</p>;
   if (!all) return <p className="text-sm text-slate-400">Calcul des actifs de chaque équipe…</p>;
@@ -299,16 +346,19 @@ export function AssetsTab() {
             {kind === "keeper"
               ? ", et l’écrémage keeper 10 (un joueur qui ne sera pas protégé ne vaut que ce qu’il rapporte d’ici là, sauf s’il peut aller aux mineures)"
               : ", le plafond salarial et les contrats de ligue (un salaire au-dessus de sa production réduit sa valeur, et il part comme agent libre à la fin de son contrôle)"}
-            . Le score est son rang centile parmi tous les joueurs possédés de la ligue.
+            . Le score est son rang centile parmi tous les joueurs possédés de la ligue; à valeur égale, les points de la saison départagent (le même
+            score que dans le tableau des joueurs).
           </p>
           <p>
             <strong className="text-white">Choix de repêchage.</strong> Un choix vaut le joueur qu’on peut s’attendre à y prendre :{" "}
             {kind === "keeper"
-              ? "les joueurs non protégés à l’écrémage"
+              ? "les joueurs non protégés à l’écrémage (jamais un espoir encore admissible aux mineures, protégé hors des 10)"
               : "les joueurs qu’aucune équipe ne possède"}{" "}
-            et une nouvelle cuvée du repêchage LNH semblable à la dernière, du meilleur au moins bon, actualisé selon l’année du choix. Le rang dans la
-            ronde de l’an prochain suit la force actuelle de l’équipe d’origine (la plus faible choisit en premier); les années suivantes, le milieu de
-            la ronde. Propriétaires des choix lus en direct sur Fantrax.
+            et une nouvelle cuvée du repêchage LNH semblable à la dernière, du meilleur au moins bon. Un joueur déjà dans la ligue compte à partir de la
+            saison du repêchage; tout est actualisé selon l’année du choix. Le rang dans la ronde de l’an prochain est une moyenne : le classement final
+            autour de la force actuelle de l’équipe d’origine (la plus faible choisit en premier)
+            {kind === "keeper" ? ", puis la loterie des 11 équipes hors séries pour les 3 premiers choix" : ""}; les années suivantes, toutes les
+            positions de la ronde également probables. Propriétaires des choix lus en direct sur Fantrax.
           </p>
           <p>
             <strong className="text-white">Actions.</strong> La fenêtre d’une équipe vient de sa force cette saison (premier tiers : Aspirant; sinon premier tiers pour l’avenir : En montée; seconde moitié des deux : Reconstruction). « Vendre haut » quand le marché le paie nettement plus que sa valeur pour la ligue;{" "}
