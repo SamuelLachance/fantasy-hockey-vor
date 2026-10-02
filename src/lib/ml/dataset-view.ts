@@ -644,7 +644,45 @@ export function buildTargetLevels(
     }
     levels[t] = lm;
   }
+  // Position-group levels of the stats whose trend differs by group (see
+  // POSITION_LEVEL_TARGETS), keyed `${target}@D` / `${target}@F`.
+  if (!isGoalie) {
+    for (const t of targets) {
+      if (!(POSITION_LEVEL_TARGETS as readonly string[]).includes(t)) continue;
+      for (const g of ["D", "F"] as const) {
+        const acc = new Map<number, { sum: number; gp: number }>();
+        for (const row of rows) {
+          if (row.isGoalie || row.gamesPlayed < minGp || (row.position === "D") !== (g === "D")) continue;
+          const a = acc.get(row.seasonId) ?? { sum: 0, gp: 0 };
+          a.sum += (row as unknown as Record<string, number>)[t] ?? 0;
+          a.gp += row.gamesPlayed;
+          acc.set(row.seasonId, a);
+        }
+        const lm: Record<number, number> = {};
+        for (const [s, a] of acc) if (a.gp > 0) lm[s] = a.sum / a.gp;
+        levels[`${t}@${g}`] = lm;
+      }
+    }
+  }
   return levels;
+}
+
+/**
+ * Stats whose league level moves differently for defensemen and forwards,
+ * so their era factor uses the player's own group: defensemen's hits fell
+ * from 110 to 80 per 82 games between 2022-23 and 2025-26 while forwards'
+ * stayed near 100, and the pooled level left every method (market, Marcel,
+ * the stack, last season) 7-9 hits per 82 too high on defensemen.
+ */
+export const POSITION_LEVEL_TARGETS = ["hits"] as const;
+
+/** The league levels the era factor of `target` uses for a player at `position`. */
+export function levelsFor(
+  levels: Record<string, LevelRecord>,
+  target: string,
+  position: string | undefined,
+): LevelRecord | undefined {
+  return levels[`${target}@${position === "D" ? "D" : "F"}`] ?? levels[target];
 }
 
 /** Serializable per-season league levels for one target. */

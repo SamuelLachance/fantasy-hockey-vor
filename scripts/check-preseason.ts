@@ -15,11 +15,13 @@
  *   no flat value shared by most of them (the old contextual path: all 62).
  * - Clubs: skater games within 18 × 82 ± 6 % (the ±5 % band and rounding).
  * - Nobody on no club list without an NHL game in two seasons.
+ * - Goalie save% spread within the skill ceiling (0.0051).
  * Run: npx tsx scripts/check-preseason.ts
  */
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { CALIBRATED_GP_CEILING } from "../src/lib/gp-calibration";
+import { GOALIE_SAVE_PCT_SKILL_SD, GOALIE_SHRINK_MIN_GP } from "../src/lib/leagues/goalie-shrink";
 import { NHL_TEAMS } from "../src/lib/nhl-api";
 import type { NhlRostersFile } from "../src/lib/nhl-rosters";
 import { ROOKIE_OFF_ROSTER_MAX_GP, SKATER_GAMES_PER_TEAM, staleReason } from "../src/lib/projection-pool";
@@ -118,6 +120,20 @@ if (existsSync(rostersPath)) {
   if (off.length > 0) errors.push(`club skater games outside 18 × 82 ± 6 %: ${off.map(([t, s]) => `${t} ${s}`).join(", ")}`);
   const over = skaters.filter((p) => p.gamesPlayed > CALIBRATED_GP_CEILING && !p.availability);
   if (over.length > 0) errors.push(`${over.length} skater(s) above the ${CALIBRATED_GP_CEILING}-GP ceiling`);
+}
+
+// Goalie save% spread: at most the skill a three-season history can show
+// (src/lib/leagues/goalie-shrink.ts); the board spread 0.0096 before, for an
+// out-of-sample R² of −0.62.
+{
+  const sv = board.players
+    .filter((p) => p.isGoalie && p.gamesPlayed >= GOALIE_SHRINK_MIN_GP)
+    .map((p) => (p.projection as { savePct: number }).savePct);
+  if (sv.length >= 20) {
+    const m = sv.reduce((s, x) => s + x, 0) / sv.length;
+    const sd = Math.sqrt(sv.reduce((s, x) => s + (x - m) ** 2, 0) / (sv.length - 1));
+    if (sd > GOALIE_SAVE_PCT_SKILL_SD) errors.push(`goalie save% spread ${sd.toFixed(4)} above the skill ceiling ${GOALIE_SAVE_PCT_SKILL_SD}`);
+  }
 }
 
 for (const w of warnings) console.warn(`WARN: ${w}`);

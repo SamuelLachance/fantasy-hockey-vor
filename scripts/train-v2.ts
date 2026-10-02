@@ -22,6 +22,7 @@ import {
 } from "../src/lib/ml/team-depth";
 import {
   fitRateCalibrators,
+  NO_AFFINE_CALIBRATION,
   fitStackedMetas,
   marketTrainingEnabled,
   runWalkForward,
@@ -106,8 +107,16 @@ async function main() {
       `calib[${t}] slope=${c.slope.toFixed(3)} intercept=${c.intercept.toFixed(4)}`,
     );
   }
+  // Never on the production stats: walk-forward, the affine calibrator
+  // doubled the under-projection of the stars (forwards at 0.6-0.9 P/GP:
+  // -1.8 -> -3.0 points per 82; 0.9+: -0.5 -> -2.8) for a ΔR² ≤ 0 on every
+  // stat. The shipped stack is within ±1 point per 82 for 0.6+ P/GP.
   const rateCalibrators =
-    process.env.ML_RATE_CALIBRATION === "1" ? fittedCalibrators : undefined;
+    process.env.ML_RATE_CALIBRATION === "1"
+      ? Object.fromEntries(
+          Object.entries(fittedCalibrators).filter(([t]) => !NO_AFFINE_CALIBRATION.includes(t)),
+        )
+      : undefined;
   console.log(
     `rate calibration ${rateCalibrators ? "ON (baked into bundle)" : "OFF (set ML_RATE_CALIBRATION=1 to enable)"}`,
   );

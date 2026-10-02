@@ -17,6 +17,7 @@ import {
   durabilityGpSignal,
   eligibleHistory,
   eraFactor,
+  levelsFor,
   gp82,
   skaterFeatureVector,
   actualRate,
@@ -512,7 +513,7 @@ export function trainBoundary(
   // per-player bias of market × (era − 1)).
   const eraLevels = levels ?? buildTargetLevels(allRows, V2_SKATER_TARGETS, false);
   const exampleEra = (ex: SkaterExample, target: string): number =>
-    eraFactor(eraLevels[target], eligibleHistory(ex.history), ex.seasonId);
+    eraFactor(levelsFor(eraLevels, target, ex.targetRow.position), eligibleHistory(ex.history), ex.seasonId);
 
   // Fit Marcel first — needed as the synthetic-market anchor for residual targets.
   for (const target of V2_SKATER_TARGETS) {
@@ -675,7 +676,7 @@ export function computeBaseSignals(
       const ex = examples[k];
       // Era drift: persistence signals are anchored to the player's history
       // era; rescale them to the target season's expected league level.
-      const era = eraFactor(levels[target], eligibleHistory(ex.history), ex.seasonId);
+      const era = eraFactor(levelsFor(levels, target, ex.targetRow.position), eligibleHistory(ex.history), ex.seasonId);
       const m = marcelRate(models.marcel[target], ex.history, ex.targetRow) * era;
       set.marcel[k] = m;
       const e = ewmaRate(ex.history, target);
@@ -1081,6 +1082,14 @@ export interface RateCalibrator {
   intercept: number;
 }
 
+/**
+ * Production stats never shipped with an affine calibrator: walk-forward
+ * (2021-26) it doubled the stars' under-projection (forwards at 0.6-0.9
+ * P/GP: -1.8 -> -3.0 points per 82; 0.9+: -0.5 -> -2.8) for a ΔR² ≤ 0 on
+ * every stat. Without it the stack is within ±1 point per 82 for 0.6+ P/GP.
+ */
+export const NO_AFFINE_CALIBRATION: readonly string[] = ["goals", "assists", "shots", "powerplayPoints"];
+
 export function applyRateCalibrator(
   cal: RateCalibrator | undefined,
   pred: number,
@@ -1238,7 +1247,7 @@ export function inferBaseSignalsForPlayer(
   const useMarket = input.residualModels ?? marketTrainingEnabled();
 
   for (const target of V2_SKATER_TARGETS) {
-    const era = eraFactor(input.levels[target], eligible, input.targetRow.seasonId);
+    const era = eraFactor(levelsFor(input.levels, target, input.targetRow.position), eligible, input.targetRow.seasonId);
     const m = marcelRate(models.marcel[target], input.history, input.targetRow) * era;
     const e = ewmaRate(input.history, target);
     const l = lag1Rate(input.history, target);

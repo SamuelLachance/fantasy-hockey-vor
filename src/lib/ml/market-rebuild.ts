@@ -22,7 +22,7 @@ import { PROJECTION_SEASON_ID } from "../nhl-api";
 import { loadMoneyPuckSkaterRegistrySync } from "../moneypuck-skaters";
 import type { PlayerProfile } from "../profile-types";
 import type { SkaterCategory } from "../types";
-import { buildTargetLevels, eligibleHistory, eraFactor } from "./dataset-view";
+import { buildTargetLevels, eligibleHistory, eraFactor, levelsFor } from "./dataset-view";
 import { loadContextCaches } from "./enrich-rows";
 import { sanitizeTargetSeasonRow } from "./features";
 import { buildProjectionTargetRow, profileToSeasonRows } from "./inference-context";
@@ -119,7 +119,7 @@ export function buildMarketRebuilder(
     for (const t of V2_SKATER_TARGETS) {
       const params = bundle.skater.marcel[t];
       if (!params) continue;
-      const era = eraFactor(levels[t], eligible, target.seasonId);
+      const era = eraFactor(levelsFor(levels, t, target.position), eligible, target.seasonId);
       out[t as SkaterCategory] = marketRate(history, target, t, params, era);
     }
     return { rates: out, ...(coverage.get(id) ?? { profileGames: 0, olderSeasonGames: 0 }) };
