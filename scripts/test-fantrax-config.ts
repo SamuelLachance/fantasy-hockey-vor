@@ -250,8 +250,10 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
     "Slapshot: 40 = Active + Reserve + Minors (IR apart)",
   );
   eq(CAPTAINS_DYNASTY.limits.maxTotal, undefined, "Captains publishes no total: none is checked");
+  const { fantasySeasonGames, ...cadence } = SLAPSHOT.cadence;
+  eq(fantasySeasonGames?.perTeam, 84, "Slapshot: each club plays 84 games in 2026-27 (check:league recounts every club)");
   eq(
-    SLAPSHOT.cadence,
+    cadence,
     {
       scoringPeriods: 84,
       rosterPeriods: 152,

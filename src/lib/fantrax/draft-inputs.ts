@@ -6,7 +6,7 @@
  * player table does not ship the lineup optimizer and the rest of the
  * planner a second time.
  */
-import { CAPTAINS_DYNASTY, eligibleGroups, eligibleSlots, type FantraxLeagueConfig } from "./config";
+import { CAPTAINS_DYNASTY, eligibleGroups, eligibleSlots, fantasySeasonShare, type FantraxLeagueConfig } from "./config";
 import type { PlanLineup } from "./daily-plan";
 import type { DraftGroup, DraftPoolPlayer } from "./draft";
 import { isRuledOut } from "./points-model";
@@ -49,11 +49,11 @@ export function bestFpg(r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNA
 
 /**
  * Season value: projected games × best per-game value (starts × E for
- * goalies), over the league's own fantasy season (`cadence.seasonShare` of
- * the NHL games: Slapshot's ends in February).
+ * goalies), over the league's own fantasy season (the share of his club's
+ * games inside it, `fantasySeasonShare`: Slapshot's ends in February).
  */
 export function seasonFp(r: ValueRecord, cfg: FantraxLeagueConfig = CAPTAINS_DYNASTY): number {
-  const share = cfg.cadence.seasonShare ?? 1;
+  const share = fantasySeasonShare(cfg, r.t);
   if (isGoalieRecord(r, cfg)) return r.gp * (r.gE ?? 0) * share;
   return r.gp * bestFpg(r, cfg) * share;
 }

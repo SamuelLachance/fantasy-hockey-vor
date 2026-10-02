@@ -176,6 +176,14 @@ export interface FantraxCadence {
    * start before then (0.746, the dynasty profile's `season.fantasyShare`).
    */
   seasonShare?: number;
+  /**
+   * The same share per NHL club: its games that start before the fantasy
+   * regular season ends, over its whole schedule. Clubs differ by about ±3 %
+   * around `seasonShare` (Slapshot 2026-27: WSH 60 of 84, ANA 64 of 84), and a
+   * player's season points follow his own club's calendar. `check:league`
+   * recounts it from the committed schedule. Absent = `seasonShare` for all.
+   */
+  fantasySeasonGames?: { perTeam: number; byTeam: Readonly<Record<string, number>> };
   /** Live draft: how often the browser re-reads the picks while the draft runs (ms). */
   draftPollMs?: number;
   /**
@@ -520,6 +528,16 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     lock: { kind: "game", minutesBefore: 5 },
     /** Fantasy regular season = periods 1-82, through 2027-02-25 (the playoffs, 83-84, left out). */
     seasonShare: 0.746,
+    /** Each club's games through period 82 (2027-02-25) of its 84. */
+    fantasySeasonGames: {
+      perTeam: 84,
+      byTeam: {
+        ANA: 64, BOS: 62, BUF: 62, CAR: 62, CBJ: 64, CGY: 64, CHI: 61, COL: 61,
+        DAL: 62, DET: 63, EDM: 63, FLA: 63, LAK: 62, MIN: 63, MTL: 64, NJD: 64,
+        NSH: 64, NYI: 63, NYR: 64, OTT: 62, PHI: 64, PIT: 61, SEA: 62, SJS: 62,
+        STL: 62, TBL: 61, TOR: 62, UTA: 64, VAN: 64, VGK: 64, WPG: 63, WSH: 60,
+      },
+    },
     /** The 38-round draft runs for days, 6 minutes a pick: re-read the picks every 20 s. */
     draftPollMs: 20_000,
     // No weekly claim reset could be confirmed (fxpa is closed), and a
@@ -768,6 +786,18 @@ export const IR_ELIGIBLE_ICONS: readonly string[] = [
 
 /** Day-to-day players dress about half the time; their nightly value is discounted. */
 export const DAY_TO_DAY_P_PLAY = 0.5;
+
+/**
+ * Share of a player's projected NHL games inside the league's fantasy regular
+ * season: his club's own (`fantasySeasonGames`), else the league-wide
+ * `seasonShare`, else all of them.
+ */
+export function fantasySeasonShare(cfg: Pick<FantraxLeagueConfig, "cadence">, team?: string): number {
+  const games = cfg.cadence.fantasySeasonGames;
+  const own = team ? games?.byTeam[team] : undefined;
+  if (own !== undefined && games && games.perTeam > 0) return own / games.perTeam;
+  return cfg.cadence.seasonShare ?? 1;
+}
 
 /** Fantrax team label for players without an NHL club. */
 export const FANTRAX_NO_TEAM = "(N/A)";
