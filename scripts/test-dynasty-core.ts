@@ -535,6 +535,10 @@ const input = (over: Partial<DynastyInput>): DynastyInput => ({
   const f10one = slotProspect(params, "F", { year: 2025, pick: 10 });
   assert(near(f10one.pMake, f10.pMake, 1e-9), "one season out with no NHL game: the fresh odds (fitted multiplier 1.03)");
   assert(near(f10old.pMake / (1 - f10old.pMake), (0.63 * f10.pMake) / (1 - f10.pMake), 0.05 * f10.pMake), "three seasons out: odds × 0.63");
+  // Audit 2026-10-02 (FRESH-CLASS): arrival lags and primes refit walk-forward (classes 2005-2012, today's scoring level)
+  const lagOf = (pick: number) => slotProspect(params, "F", { year: 2026, pick }).eta - 2026;
+  assert([1, 7, 15, 25, 50, 100, 200].map(lagOf).join(",") === "0,1,1,2,3,3,3", `arrival lag by pick (${[1, 7, 15, 25, 50, 100, 200].map(lagOf).join(",")}; makers' first 10-game season 0.2 / 1.0 / 1.7 / 2.6 / 2.9 / 3.6 / 3.6 after the draft)`);
+  assert(near(slotProspect(params, "F", { year: 2026, pick: 1 }).pi.mu, 3.52, 0.05) && near(slotProspect(params, "D", { year: 2026, pick: 100 }).pi.mu, 2.21, 0.05), "prime of makers at today's scoring (F #1 3.52, D #100 2.21)");
   const d6 = slotProspect(params, "D", { year: 2026, pick: 6 });
   assert(near(d6.pMake, 0.84, 0.02), `pMake D pick 6 ≈ 0.84 (${d6.pMake.toFixed(3)})`);
   assert(slotPMakeRaw(params, "G", 20) === 0.44 && slotPMakeRaw(params, "G", 200) === 0.05, "goalie buckets");

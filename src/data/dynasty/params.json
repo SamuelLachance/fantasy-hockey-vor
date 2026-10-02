@@ -827,14 +827,14 @@
   },
   "slotPrime": {
    "F": {
-    "a": 3.49,
-    "b": -0.304,
-    "sd": 0.75
+    "a": 3.518,
+    "b": -0.296,
+    "sd": 0.737
    },
    "D": {
-    "a": 2.9,
-    "b": -0.189,
-    "sd": 0.58
+    "a": 2.843,
+    "b": -0.138,
+    "sd": 0.584
    },
    "G": {
     "mu": 4.3,
@@ -866,6 +866,10 @@
    ],
    [
     20,
+    1
+   ],
+   [
+    32,
     2
    ],
    [
@@ -874,13 +878,14 @@
    ],
    [
     128,
-    4
+    3
    ],
    [
     100000,
-    5
+    3
    ]
   ],
+  "freshSource": "Refit 2026-10-02 (audit FRESH-CLASS), walk-forward: fitted on the 2005-2012 classes, checked on 2013-2016 (NHL history in the audit's cache). slotPrime F / D: GP-weighted league-1 FP/G at ages 24-26 (seasons with 20+ GP, 40+ GP in all) of the skaters who made it (200+ NHL GP), each season rescaled to the 2023-2025 scoring level (mean FP/G of 40+ GP skaters per season and group: the model's realized scale is today's), OLS on ln(pick): F 3.49 - 0.304 ln(pick) sd 0.75 -> 3.518 - 0.296 sd 0.737, D 2.9 - 0.189 sd 0.58 -> 2.843 - 0.138 sd 0.584 (validation mean residual F 0.157 -> 0.099, D 0.160 -> 0.031). etaLag: the makers' first season with 10+ games after the draft, mean by pick band 0.20 / 1.03 / 1.73 / 2.58 / 2.89 / 3.60 / 3.62 for picks 1-3 / 4-10 / 11-20 / 21-32 / 33-64 / 65-128 / 129+ (2013-2016: 0.42 / 0.80 / 1.97 / 1.87 / 2.71 / 3.38 / 4.06), the lag whose mean with the jitter (+0.3) is nearest (the old table was a year late from pick 11: 2 / 3 / 3 / 4 / 5). Discounted realized / model season gains (delta 0.75, no keeper cost) on the slot route: fresh classes, picks 1-64, 1.54 -> 1.34 (train) and 2.06 -> 1.78 (validation); classes 1-3 seasons after their draft 1.22 -> 1.04 and 1.14 -> 0.94. The fresh class's remaining gap sits in its first seasons at the top of the draft (picks 1-3 1.73 / 2.29): the early-age arrival level (growth.ts arrivalCentre), not refit here.",
   "etaLagGoalie": 5,
   "etaJitter": [
    [

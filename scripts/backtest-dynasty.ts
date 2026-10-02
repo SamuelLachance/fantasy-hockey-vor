@@ -140,6 +140,11 @@ interface Row {
   bAge: number;
   bProj: number;
   bLast: number;
+  /** Per season from Y0 (season gains realized; the model's expected gains), for the analyses. */
+  gains: number[];
+  eG: number[];
+  draftYear: number | null;
+  games: number[];
 }
 
 export interface YearSummary {
@@ -175,7 +180,7 @@ function runYear(y0: number): YearSummary {
   const R_MARCEL = 125;
   const W = [5, 4, 3];
   const inputs: DynastyInput[] = [];
-  const meta = new Map<string, { g: "F" | "D"; age: number | null; projFpg: number | null; projGp: number | null; lastFP: number; prospect: boolean; pick: number | null }>();
+  const meta = new Map<string, { g: "F" | "D"; age: number | null; projFpg: number | null; projGp: number | null; lastFP: number; prospect: boolean; pick: number | null; draftYear: number | null }>();
   for (const [id, pl] of Object.entries(H.players)) {
     if (pl.pos === "G") continue;
     const g = pl.pos;
@@ -222,7 +227,7 @@ function runYear(y0: number): YearSummary {
       history: past.map(([y, s]) => line(y, s)),
       rostered: false,
     });
-    meta.set(id, { g, age: ageOn(pl.birth, y0), projFpg, projGp, lastFP: lastS ? fpgOf(g, y0 - 1, lastS) * lastS.gp * (82 / sg(y0 - 1)) : 0, prospect: false, pick: pl.draft?.pick ?? null });
+    meta.set(id, { g, age: ageOn(pl.birth, y0), projFpg, projGp, lastFP: lastS ? fpgOf(g, y0 - 1, lastS) * lastS.gp * (82 / sg(y0 - 1)) : 0, prospect: false, pick: pl.draft?.pick ?? null, draftYear: pl.draft?.year ?? null });
   }
   for (const d of H.draftees) {
     if (d.year < y0 - 6 || d.year > y0 || d.pos === "G") continue;
@@ -233,7 +238,7 @@ function runYear(y0: number): YearSummary {
     const g = d.pos === "D" ? "D" : "F";
     const birth = d.birth ?? pl?.birth ?? `${d.year - 18}-01-01`;
     inputs.push({ id, n: d.name, e: g === "D" ? "D,Skt" : "C,F,Skt", team: null, birthDate: birth, careerGp: 0, seasonGp: 0, draft: { year: d.year, pick: d.pick }, draftSource: "profile", eligNow: null, rostered: false });
-    meta.set(id, { g, age: ageOn(birth, y0), projFpg: null, projGp: null, lastFP: 0, prospect: true, pick: d.pick });
+    meta.set(id, { g, age: ageOn(birth, y0), projFpg: null, projGp: null, lastFP: 0, prospect: true, pick: d.pick, draftYear: d.year });
   }
   const res = buildDynasty(
     { players: inputs, meta: { valuesFetchedAt: "x", stateFetchedAt: "x", projectionsAt: "x", prospectsBuiltAt: "x" } },
@@ -263,12 +268,17 @@ function runYear(y0: number): YearSummary {
     const capt = (x: number) => (g === "F" ? 0.5 * Math.max(0, x - repl.offRef) : 0);
     const pl = H.players[inp.id];
     let real = 0;
+    const gains = new Array<number>(LAST - y0 + 1).fill(0);
+    const gamesBy = new Array<number>(LAST - y0 + 1).fill(0);
     for (let y = y0; y <= LAST; y++) {
       const s = pl?.sk[y];
       if (!s || !(s.gp > 0)) continue;
       const fpg = fpgOf(g, y, s);
       const games = s.gp * (82 / sg(y));
-      real += w(y - y0) * Math.max(0, (fpg - R) * games + capt(fpg) * games);
+      gamesBy[y - y0] = Math.round(games);
+      const gn = Math.max(0, (fpg - R) * games + capt(fpg) * games);
+      gains[y - y0] = Math.round(gn * 10) / 10;
+      real += w(y - y0) * gn;
     }
     let bAge = 0;
     if (mt.projFpg != null && mt.age != null)
@@ -288,6 +298,10 @@ function runYear(y0: number): YearSummary {
       bAge,
       bProj: mt.projFpg != null ? Math.max(0, (mt.projFpg - R + capt(mt.projFpg)) * mt.projGp!) : 0,
       bLast: mt.lastFP,
+      gains,
+      eG: rec.eG.slice(0, LAST - y0 + 1),
+      draftYear: mt.draftYear,
+      games: gamesBy,
     });
   }
   const nhl = rows.filter((r) => !r.prospect);
