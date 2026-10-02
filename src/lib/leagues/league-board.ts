@@ -214,7 +214,8 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
   });
   // Sensitivity of the goalie exchange rate (shown in the method note): the
   // same board with the softer, half-shrunk predictability ratio.
-  const altWeight = vor.goalieWeight.leverageRatio * vor.goalieWeight.predictabilityRatioShrunk;
+  const altWeight =
+    vor.goalieWeight.leverageRatio * vor.goalieWeight.predictabilityRatioShrunk * vor.goalieWeight.calibration;
   const alt = applyCategoryVor(profile, enginePool, { r2: inputs.r2, goalieWeight: altWeight });
   const adp = matchAdp(
     vor.players.map((p) => ({
@@ -372,6 +373,7 @@ export function buildLeagueBoard(inputs: BoardInputs): BuiltBoard {
       weight: round(vor.goalieWeight.weight, 4),
       leverageRatio: round(vor.goalieWeight.leverageRatio, 4),
       predictabilityRatio: round(vor.goalieWeight.predictabilityRatio, 4),
+      calibration: round(vor.goalieWeight.calibration, 4),
       ...goalieRankSummary(players.map((p) => ({ isGoalie: goalieIds.has(p.id) }))),
       // The sensitivity run gets the same hand moves (apples to apples).
       alt: {

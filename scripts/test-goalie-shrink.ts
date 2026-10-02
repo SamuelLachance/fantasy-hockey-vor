@@ -23,10 +23,13 @@ const sd = (v: number[]) => {
   return Math.sqrt(v.reduce((s, x) => s + (x - m) ** 2, 0) / (v.length - 1));
 };
 
-// --- The ceiling, recomputed from src/data/moneypuck-goalies.json ------------
+// --- The ceilings, recomputed from src/data/moneypuck-goalies.json ----------
 // Adjacent-season SV% correlation over goalies with a real workload in both
 // years; read as a one-season reliability it bounds how far a projection built
-// on three seasons may spread (Spearman-Brown).
+// on three seasons may spread (Spearman-Brown). On RAW SV% the correlation
+// also carries the league's SV% drift (every goalie of a high-SV% season
+// "persists" into the next one), so the skill figure is the one on SV%
+// centred on each season's mean.
 interface MpRow {
   playerId: number;
   seasonId: number;
@@ -40,42 +43,57 @@ const mp = JSON.parse(
 const rows = Object.values(mp.byKey);
 const byKey = new Map(rows.map((r) => [`${r.playerId}-${r.seasonId}`, r]));
 const savePct = (r: MpRow) => 1 - r.goalsAgainst / r.shotsOnGoalAgainst;
-const x: number[] = [];
-const y: number[] = [];
+const ok = (v: MpRow) => v.gamesPlayed >= 25 && v.shotsOnGoalAgainst >= 400;
+// Each season's mean SV% over the same workload filter.
+const seasonVals = new Map<number, number[]>();
+for (const r of rows) if (ok(r)) seasonVals.set(r.seasonId, [...(seasonVals.get(r.seasonId) ?? []), savePct(r)]);
+const seasonMean = (sid: number) => {
+  const v = seasonVals.get(sid)!;
+  return v.reduce((a, b) => a + b, 0) / v.length;
+};
+const pairs: Array<[MpRow, MpRow]> = [];
 for (const r of rows) {
   const start = Number(String(r.seasonId).slice(0, 4)) + 1;
   const next = byKey.get(`${r.playerId}-${start}${start + 1}`);
-  if (!next) continue;
-  const ok = (v: MpRow) => v.gamesPlayed >= 25 && v.shotsOnGoalAgainst >= 400;
-  if (!ok(r) || !ok(next)) continue;
-  x.push(savePct(r));
-  y.push(savePct(next));
+  if (next && ok(r) && ok(next)) pairs.push([r, next]);
 }
-assert.ok(x.length > 500, `persistence sample (${x.length} season pairs)`);
-const mx = x.reduce((a, b) => a + b, 0) / x.length;
-const my = y.reduce((a, b) => a + b, 0) / y.length;
-let sxy = 0;
-let sxx = 0;
-let syy = 0;
-for (let i = 0; i < x.length; i++) {
-  sxy += (x[i]! - mx) * (y[i]! - my);
-  sxx += (x[i]! - mx) ** 2;
-  syy += (y[i]! - my) ** 2;
-}
-const r = sxy / Math.sqrt(sxx * syy);
-const sdObserved = sd(y);
-assert.ok(r > 0.2 && r < 0.45, `SV% year-over-year r = ${r.toFixed(3)}`);
+assert.ok(pairs.length > 500, `persistence sample (${pairs.length} season pairs)`);
+const corr = (x: number[], y: number[]) => {
+  const mx = x.reduce((a, b) => a + b, 0) / x.length;
+  const my = y.reduce((a, b) => a + b, 0) / y.length;
+  let sxy = 0;
+  let sxx = 0;
+  let syy = 0;
+  for (let i = 0; i < x.length; i++) {
+    sxy += (x[i]! - mx) * (y[i]! - my);
+    sxx += (x[i]! - mx) ** 2;
+    syy += (y[i]! - my) ** 2;
+  }
+  return sxy / Math.sqrt(sxx * syy);
+};
 // Three seasons of history (what player-profiles.json holds).
 const seasons = 3;
-const reliability = (seasons * r) / (1 + (seasons - 1) * r);
-const ceiling = reliability * sdObserved * Math.sqrt((1 + (seasons - 1) * r) / seasons);
+const ceilingOf = (r: number, sdY: number) =>
+  ((seasons * r) / (1 + (seasons - 1) * r)) * sdY * Math.sqrt((1 + (seasons - 1) * r) / seasons);
+const rawX = pairs.map(([a]) => savePct(a));
+const rawY = pairs.map(([, b]) => savePct(b));
+const r = corr(rawX, rawY);
+const rawCeiling = ceilingOf(r, sd(rawY));
+const cX = pairs.map(([a]) => savePct(a) - seasonMean(a.seasonId));
+const cY = pairs.map(([, b]) => savePct(b) - seasonMean(b.seasonId));
+const rc = corr(cX, cY);
+const skillCeiling = ceilingOf(rc, sd(cY));
+assert.ok(r > 0.2 && r < 0.45, `raw SV% year-over-year r = ${r.toFixed(3)}`);
+assert.ok(rc > 0.08 && rc < 0.22 && rc < r - 0.1, `season-centred r = ${rc.toFixed(3)}: most of the raw r is league drift`);
+assert.ok(Math.abs(skillCeiling - 0.0023) < 0.0004, `skill ceiling ${skillCeiling.toFixed(5)} ≈ 0.0023`);
+// The shipped constant is the RAW figure, kept as a backtested setting (see
+// goalie-shrink.ts): it must stay the raw ceiling, and stay milder than the
+// skill one, until the backtest says otherwise.
 assert.ok(
-  Math.abs(GOALIE_SAVE_PCT_SKILL_SD - ceiling) < 0.0004,
-  `skill SD constant ${GOALIE_SAVE_PCT_SKILL_SD} ≈ derived ${ceiling.toFixed(5)}`,
+  Math.abs(GOALIE_SAVE_PCT_SKILL_SD - rawCeiling) < 0.0004,
+  `skill SD constant ${GOALIE_SAVE_PCT_SKILL_SD} ≈ raw-r figure ${rawCeiling.toFixed(5)}`,
 );
-// Bounds either side of it: one season is tighter, unlimited history looser.
-assert.ok(r * sdObserved < GOALIE_SAVE_PCT_SKILL_SD, "one-season figure is tighter");
-assert.ok(Math.sqrt(r) * sdObserved > GOALIE_SAVE_PCT_SKILL_SD, "unlimited-history ceiling is looser");
+assert.ok(GOALIE_SAVE_PCT_SKILL_SD > skillCeiling, "the shipped shrink is milder than the skill ceiling");
 
 // --- The shrink on the committed pool ---------------------------------------
 const data = JSON.parse(
@@ -136,5 +154,5 @@ assert.equal(tightShrink.shrink.factor, 1);
 assert.deepEqual(tightShrink.players, tight, "no change when the spread is justified");
 
 console.log(
-  `OK: goalie-shrink (r ${r.toFixed(3)} over ${x.length} pairs → ceiling ${ceiling.toFixed(5)}; pool spread ${before.spread.toFixed(5)} ÷ ${before.factor.toFixed(3)})`,
+  `OK: goalie-shrink (r ${r.toFixed(3)} raw / ${rc.toFixed(3)} season-centred over ${pairs.length} pairs → ceilings ${rawCeiling.toFixed(5)} / ${skillCeiling.toFixed(5)}; pool spread ${before.spread.toFixed(5)} ÷ ${before.factor.toFixed(3)})`,
 );

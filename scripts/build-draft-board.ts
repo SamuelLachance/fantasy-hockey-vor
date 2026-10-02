@@ -44,7 +44,7 @@ for (const slug of slugs) {
     );
   }
   console.log(
-    `goalie weight ${gw.weight.toFixed(3)} = leverage ${gw.leverageRatio.toFixed(3)} × predictability ${gw.predictabilityRatio.toFixed(3)}`,
+    `goalie weight ${gw.weight.toFixed(3)} = leverage ${gw.leverageRatio.toFixed(3)} × predictability ${gw.predictabilityRatio.toFixed(3)} × calibration ${gw.calibration.toFixed(2)}`,
   );
   const gs = vor.goalieSavePctShrink;
   console.log(

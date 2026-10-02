@@ -83,8 +83,10 @@ export interface CategoryScales {
 }
 
 export interface GoalieWeightBreakdown {
-  /** Multiplier applied to a goalie's summed category z. */
+  /** Multiplier applied to a goalie's summed category z: leverage × predictability × calibration. */
   weight: number;
+  /** The backtest-validated factor of the weight (`GOALIE_WEIGHT_CALIBRATION`). */
+  calibration: number;
   /** Mean goalie-category leverage ÷ mean skater-category leverage. */
   leverageRatio: number;
   /**
@@ -188,7 +190,97 @@ export interface CategoryVorOptions {
    * not a neutral change.
    */
   benchGoaliesPerTeam?: number;
+  /**
+   * Weekly over-dispersion φ_c of each category (SD ÷ the Poisson / binomial
+   * SD) in the leverage noise model; `CATEGORY_OVERDISPERSION` by default,
+   * {} = pure Poisson (the model before it was measured).
+   */
+  overdispersion?: Partial<Record<LeagueCategory, number>>;
+  /**
+   * SV% skill-spread ceiling of the goalie shrink (`goalie-shrink.ts`); null
+   * = no shrink. Backtests and what-ifs only.
+   */
+  savePctSkillSd?: number | null;
+  /** The tanh soft cap on hits / blocks z (default on). Backtests only. */
+  softCap?: boolean;
+  /**
+   * Read the goalie leverage off the SHRUNK SV% / GAA spread, as the engine
+   * did before the shrink and the exchange rate were decoupled. Backtests only.
+   */
+  goalieLeverageOnShrunk?: boolean;
+  /** Override `GOALIE_WEIGHT_CALIBRATION` (backtests: 1 = the uncalibrated weight). */
+  goalieWeightCalibration?: number;
 }
+
+/**
+ * The explicit, validated channel of the goalie weight: the structural
+ * exchange rate (leverage with measured over-dispersion, on the projections'
+ * own goalie spread, × the predictability discount) times this factor.
+ *
+ * Why a factor at all. Every structural piece of the rate is measured, and
+ * each one alone raises it: the over-dispersion of shots / hits / blocks
+ * (`CATEGORY_OVERDISPERSION`) and reading the goalie spread before the SV%
+ * shrink (which used to set the weight through the back door: 0.51 to 0.81
+ * on the same board depending on the shrink constant alone). Uncalibrated,
+ * the 2026-27 board would put the first goalie 5th overall (weight 0.94).
+ * The decision-level backtest disagrees (`scripts/backtest-category-vor.ts`:
+ * 5 seasons of real weeks, goalie appearances streamed up to the weekly
+ * minimum, one team drafting by the method against 11 drafting by a field).
+ * Category points per week against the field, by pinned weight, in three
+ * fields (the engine before these fixes; the uncalibrated structural engine;
+ * last season's actual lines through that engine):
+ *   weight     old engine    uncalibrated   last season
+ *   0.50       +0.035        +0.098         +0.718
+ *   0.55       +0.062        +0.094         +0.727
+ *   0.60       +0.017        +0.107         +0.732
+ *   0.70       −0.013        +0.096         +0.757
+ *   0.75       −0.017        +0.116         +0.768
+ *   0.80       −0.098        +0.127         +0.665
+ *   0.90       −0.149        +0.007         +0.652
+ * a plateau from 0.5 to 0.75 and a loss beyond it, where the uncalibrated
+ * weight lands (0.81 to 0.96 on the backtest's projections, mean 0.87;
+ * −0.148 ± 0.061 against the old engine's field). 0.69 brings that mean to
+ * 0.60. Checked after the fact, the calibrated engine against the old one:
+ * +0.053 ± 0.051 in the old engine's field, +0.112 ± 0.063 in its own, and
+ * 0.877 vs 0.868 against last season's actuals, with the same ranking
+ * quality (Spearman 0.780 vs 0.779). On the 2026-27 board: weight 0.59 →
+ * 0.65, first goalie 30th → 22nd, goalies in the top 100 9 → 12.
+ * Re-fit it with the backtest whenever the projections, the noise model or
+ * the replacement model change.
+ */
+export const GOALIE_WEIGHT_CALIBRATION = 0.69;
+
+/**
+ * Weekly over-dispersion of a team's category total, φ = SD ÷ √(Poisson
+ * variance) (binomial at the managed appearance count for wins), measured on
+ * five seasons of real NHL weeks (2021-22 → 2025-26, Monday-Sunday) for
+ * 12 snake-balanced Light-the-Lamp teams, AFTER removing both the week effect
+ * and the team effect: what is left is the noise that survives into A − B in
+ * a matchup. (The plain within-team SD is roughly twice as over-dispersed for
+ * shots / hits / blocks, but half of that is league-wide schedule shocks —
+ * every team plays more games some weeks — which cancel inside a matchup.)
+ * Shots, hits and blocks are clearly over-dispersed (player usage swings,
+ * scorer bias); scoring categories and shutouts are near Poisson.
+ *
+ * Wins: 1.0 because the engine treats the goalie appearance count as managed
+ * (teams stream to the weekly minimum, see `deriveGoalieWeight`); measured
+ * with the count left random (no streaming) it is 1.25. SV% and GAA were not
+ * measured and stay at their binomial / Poisson models.
+ *
+ * `scripts/test-category-vor.ts` recomputes every value from the committed
+ * weekly team totals (`scripts/fixtures/category-weekly-totals.json`, built
+ * by `scripts/backtest-category-vor.ts --fixture`).
+ */
+export const CATEGORY_OVERDISPERSION: Readonly<Partial<Record<LeagueCategory, number>>> = {
+  goals: 1.03,
+  assists: 1.05,
+  powerplayPoints: 1.01,
+  shots: 1.35,
+  hits: 1.37,
+  blocks: 1.23,
+  wins: 1.0,
+  shutouts: 0.98,
+};
 
 /** Only for the "F" position *rank* (a board column), never for eligibility. */
 const FORWARDS: readonly Position[] = ["C", "LW", "RW"];
@@ -417,6 +509,7 @@ export function categoryZ(
   profile: Pick<CategoryLeagueProfile, "categories">,
   player: LeaguePoolPlayer,
   scales: CategoryScales,
+  softCap = true,
 ): Partial<Record<LeagueCategory, number>> {
   const z: Partial<Record<LeagueCategory, number>> = {};
   if (player.isGoalie) {
@@ -435,7 +528,7 @@ export function categoryZ(
     const x = (player.projection as SkaterProjection)[cat] ?? 0;
     const offset = (s.groupMeans[group] - s.mean) / s.sd;
     const deviation = (x - s.groupMeans[group]) / s.sd;
-    z[cat] = offset + softCapCategoryZ(cat, deviation);
+    z[cat] = offset + (softCap ? softCapCategoryZ(cat, deviation) : deviation);
   }
   return z;
 }
@@ -477,9 +570,10 @@ function valuePool(
   players: LeaguePoolPlayer[],
   scales: CategoryScales,
   goalieWeight: number,
+  softCap = true,
 ): Valued[] {
   return players.map((player) => {
-    const z = categoryZ(profile, player, scales);
+    const z = categoryZ(profile, player, scales, softCap);
     const zSum = sumZ(z);
     return {
       player,
@@ -554,7 +648,10 @@ function fillLeague(
  * (weeks cancel between categories). Noise model: the per-game counting stats
  * (goals … blocks, shutouts, goals against) Poisson; SV% binomial per shot
  * faced, in saves units; wins binomial per goalie appearance, because there
- * the per-trial outcome is a coin flip and the trial count is managed.
+ * the per-trial outcome is a coin flip and the trial count is managed. Each
+ * variance is then multiplied by φ_c², the over-dispersion measured on real
+ * weeks (`CATEGORY_OVERDISPERSION`): shots, hits and blocks swing more than
+ * Poisson even after the league-wide weekly shocks are removed.
  * The average team's goalie volume is floored at the league's weekly
  * appearance minimum — teams stream to reach it.
  *
@@ -569,20 +666,41 @@ function fillLeague(
  * — that is real: a hitter moves weekly HIT more reliably than a scorer
  * moves G).
  *
+ * The goalie z units here are those of the projections BEFORE the SV% shrink:
+ * the shrink composes SV% and GAA, and the weak goalie projections it exists
+ * for are already discounted by the predictability ratio below — one channel,
+ * not two (it used to be both, so the shrink constant alone moved the weight
+ * from 0.51 to 0.81).
+ *
  * The result is then scaled by a predictability ratio: goalie projections
  * barely beat a flat mean out of sample while skater ones explain ~75–85 %.
  * This cross-group discount is a *modelling choice*, not a rule the main
  * board applies (it discounts goalies with its own hand-set factor): it uses
  * the per-category factor 0.75 + 0.25·R² unshrunk. The main board's
  * half-shrink applied across all ten categories would give a softer ratio;
- * it is reported as `predictabilityRatioShrunk` for sensitivity.
+ * it is reported as `predictabilityRatioShrunk` for sensitivity. Finally the
+ * backtest-validated `GOALIE_WEIGHT_CALIBRATION`.
  */
 export function deriveGoalieWeight(
   profile: CategoryLeagueProfile,
   scales: CategoryScales,
   starters: Map<StartingSlot, Valued[]>,
   r2: CategoryVorOptions["r2"] = {},
+  opts: {
+    /** Weekly over-dispersion per category (`CATEGORY_OVERDISPERSION`); absent = Poisson. */
+    overdispersion?: Partial<Record<LeagueCategory, number>>;
+    /**
+     * Goalie z units for the leverage, from the pool BEFORE the SV% shrink.
+     * The shrink is for composing SV% and GAA; it must not also set the
+     * exchange rate, which the predictability ratio already discounts for
+     * the same weak goalie projections (counted once, not twice).
+     */
+    goalieSd?: Partial<Record<LeagueGoalieCategory, number>>;
+    /** `GOALIE_WEIGHT_CALIBRATION` by default. */
+    calibration?: number;
+  } = {},
 ): GoalieWeightBreakdown {
+  const phi2 = (cat: LeagueCategory) => (opts.overdispersion?.[cat] ?? 1) ** 2;
   const teams = profile.teams;
   const leverage: Partial<Record<LeagueCategory, number>> = {};
 
@@ -605,7 +723,7 @@ export function deriveGoalieWeight(
     // the goalie weight ~7 %; that convention would re-inflate in the exchange
     // rate what the cap deliberately deflates in the tails.)
     const sd = scales.skater[cat]?.sd ?? 1;
-    leverage[cat] = total > 0 ? sd / Math.sqrt(total) : 0;
+    leverage[cat] = total > 0 ? sd / Math.sqrt(total * phi2(cat)) : 0;
   }
 
   const vol = goalieStarters.map((v) => goalieVolumes(v.player, scales.goalieBaseline));
@@ -641,8 +759,8 @@ export function deriveGoalieWeight(
     goalsAgainstAverage: team.ga,
   };
   for (const cat of profile.categories.goalie) {
-    const sd = scales.goalie[cat]?.sd ?? 1;
-    leverage[cat] = variance[cat] > 0 ? sd / Math.sqrt(variance[cat]) : 0;
+    const sd = opts.goalieSd?.[cat] ?? scales.goalie[cat]?.sd ?? 1;
+    leverage[cat] = variance[cat] > 0 ? sd / Math.sqrt(variance[cat] * phi2(cat)) : 0;
   }
 
   const skaterLev = mean(profile.categories.skater.map((c) => leverage[c] ?? 0));
@@ -672,8 +790,10 @@ export function deriveGoalieWeight(
   const shrink = (x: number) => 1 + PREDICTABILITY_SHRINK * (allMean > 0 ? x / allMean - 1 : 0);
   const predictabilityRatioShrunk = shrink(skaterPred) > 0 ? shrink(goaliePred) / shrink(skaterPred) : 1;
 
+  const calibration = opts.calibration ?? GOALIE_WEIGHT_CALIBRATION;
   return {
-    weight: leverageRatio * predictabilityRatio,
+    weight: leverageRatio * predictabilityRatio * calibration,
+    calibration,
     leverageRatio,
     predictabilityRatio,
     predictabilityRatioShrunk,
@@ -874,16 +994,20 @@ export function applyCategoryVor(
   options: CategoryVorOptions = {},
 ): CategoryVorResult {
   const benchGoalies = options.benchGoaliesPerTeam ?? 1;
+  const softCap = options.softCap ?? true;
   // Before anything is valued: goalie SV% only gets the spread real goalie
   // skill supports, with shots against and GP untouched so GA and GAA follow.
-  const { players, shrink } = shrinkGoalieSavePct(rawPlayers);
+  const { players, shrink } =
+    options.savePctSkillSd === null
+      ? { players: rawPlayers, shrink: { factor: 1, mean: 0, spread: 0, count: 0 } }
+      : shrinkGoalieSavePct(rawPlayers, options.savePctSkillSd);
 
   // Pass 1. The goalie weight cannot change who is drafted — goalie and
   // skater seats never overlap, bench composition is fixed — so 1 is fine.
   const passOneScales = computeCategoryScales(profile, players);
   const passOne = fillLeague(
     profile,
-    valuePool(profile, players, passOneScales, 1),
+    valuePool(profile, players, passOneScales, 1, softCap),
     benchGoalies,
   );
   const reference = passOne.drafted.map((v) => v.player);
@@ -892,14 +1016,27 @@ export function applyCategoryVor(
   const scales = computeCategoryScales(profile, reference);
   const unweighted = fillLeague(
     profile,
-    valuePool(profile, players, scales, 1),
+    valuePool(profile, players, scales, 1, softCap),
     benchGoalies,
   );
-  const derived = deriveGoalieWeight(profile, scales, unweighted.starters, options.r2);
+  // The exchange rate reads the goalie z units of the same drafted pool
+  // before the SV% shrink (see `deriveGoalieWeight`).
+  const drafted = new Set(reference.map((p) => p.id));
+  const rawGoalieScales = computeCategoryScales(
+    profile,
+    rawPlayers.filter((p) => drafted.has(p.id)),
+  ).goalie;
+  const derived = deriveGoalieWeight(profile, scales, unweighted.starters, options.r2, {
+    overdispersion: options.overdispersion ?? CATEGORY_OVERDISPERSION,
+    goalieSd: options.goalieLeverageOnShrunk
+      ? undefined
+      : Object.fromEntries(Object.entries(rawGoalieScales).map(([c, v]) => [c, v.sd])),
+    calibration: options.goalieWeightCalibration,
+  });
   const goalieWeight: GoalieWeightBreakdown =
     options.goalieWeight != null ? { ...derived, weight: options.goalieWeight } : derived;
 
-  const valued = valuePool(profile, players, scales, goalieWeight.weight);
+  const valued = valuePool(profile, players, scales, goalieWeight.weight, softCap);
   const league = fillLeague(profile, valued, benchGoalies);
   const replacement = replacementLevels(profile, league.undrafted, league.drafted, league.starters);
 

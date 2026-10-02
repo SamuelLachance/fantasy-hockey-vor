@@ -6,28 +6,24 @@ import type { GoalieProjection, PlayerProjection } from "../types";
  * them before it values anybody.
  *
  * A projection of next season's SV% is an estimate of a goalie's *skill*, so
- * its spread can never exceed the spread of the best estimate of that skill —
- * the rest is noise presented as signal. Both are measurable from the repo's
- * own history (`src/data/moneypuck-goalies.json`, 608 consecutive-season
- * pairs with ≥ 25 GP and ≥ 400 shots against in both years, 2007-08 →
- * 2024-25): year-over-year SV% r = 0.311 with SD 0.01215. Reading r as a
- * one-season reliability,
- * - unlimited history: SD(skill) = √r × SD = 0.0068 — the hard ceiling,
- * - three seasons (what `player-profiles.json` holds): reliability
- *   3r/(1+2r) = 0.575 on a mean whose SD is 0.01215·√((1+2r)/3) = 0.00893,
- *   so the best predictor spreads 0.575 × 0.00893 ≈ 0.0051,
- * - one season: r × SD ≈ 0.0038.
- * 0.0051 is the relevant figure, and it is generous: goalies with two
- * seasons of history justify 0.0047.
- *
- * `players.json` spreads SV% over 0.0096 among workhorse goalies — about 1.9×
- * that — and the dataset agrees that the models are not informative
+ * its spread should not exceed the spread of the best estimate of that skill.
+ * `players.json` spreads SV% over ~0.0096 among workhorse goalies, and the
+ * dataset agrees the goalie models are not informative
  * (`categoryWeights.goalie`: savePct R² −0.70, saves −0.98, wins −0.19,
- * shutouts −0.11: all worse than predicting the pool mean). Left alone, the
- * fake spread is what the engine's leverage machinery converts into a goalie
- * weight, and the whole goalie tier lands ~7 picks too early (first goalie
- * overall 21 instead of 28; a full shrink to the one-season figure would say
- * 35).
+ * shutouts −0.11: all worse than predicting the pool mean).
+ *
+ * How far to shrink. The repo's own history (`src/data/moneypuck-goalies.json`,
+ * 608 consecutive-season pairs with ≥ 25 GP and ≥ 400 shots against in both
+ * years) gives, read through Spearman-Brown for three seasons of history:
+ * - year-over-year r on RAW SV% = 0.311 → ceiling 0.0051. This is NOT skill
+ *   persistence: league SV% drifts (0.9149 in 2015-16, 0.8955 in 2025-26),
+ *   and a drifting league mean correlates every goalie with himself;
+ * - r on SV% centred on each season's mean = 0.141 → ceiling 0.0023, the
+ *   actual skill figure (`scripts/test-goalie-shrink.ts` recomputes both).
+ * The constant stays at 0.0051 as a backtested setting, not as that
+ * derivation: shrinking to 0.0023 orders goalies worse on real seasons
+ * (`scripts/backtest-category-vor.ts`: goalie Spearman 0.257 vs 0.271, and
+ * a weaker simulated draft in every field).
  *
  * The shrink holds each goalie's projected shots against and games fixed and
  * pulls SV% toward the reference pool's shots-weighted mean, then rebuilds
@@ -36,14 +32,19 @@ import type { GoalieProjection, PlayerProjection } from "../types";
  * `category-vor.ts`). It is mean-preserving on the reference pool, so the
  * league-average SV% baseline does not move.
  *
+ * It only composes SV% and GAA. It used to set the goalie weight as well (the
+ * leverage was read off the shrunk spread: 0.51 / 0.59 / 0.81 for 0.0023 /
+ * 0.0051 / no shrink); the exchange rate now reads the unshrunk spread and is
+ * calibrated on its own (`GOALIE_WEIGHT_CALIBRATION` in `category-vor.ts`).
+ *
  * This lives in the category-league path only: `players.json` is shared with
  * the points league and is not rewritten.
  */
 
 /**
- * Widest SV% spread a projection built on three seasons of history can
- * justify (see the derivation above). `scripts/test-goalie-shrink.ts`
- * recomputes it from `moneypuck-goalies.json`.
+ * SV% spread the shrink brings the projections down to: a backtested setting
+ * (see above). It equals the three-season ceiling of the RAW year-over-year
+ * correlation; the season-centred skill ceiling is tighter (0.0023).
  */
 export const GOALIE_SAVE_PCT_SKILL_SD = 0.0051;
 
