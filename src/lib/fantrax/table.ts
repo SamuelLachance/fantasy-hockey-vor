@@ -261,32 +261,32 @@ export function buildFantraxRows(input: FantraxRowsInput): FantraxRow[] {
  * share of the league's rostered players his dynasty value beats.
  */
 export function withAssetScores(rows: FantraxRow[]): FantraxRow[] {
+  // Every player gets one: his dynasty value (0 when the model has none or
+  // values him at 0), ties split by season points — so among the many free
+  // agents worth 0 in dynasty terms, the one who helps now ranks higher.
+  const key = (r: FantraxRow, m: DynastyMode): [number, number] => [rowDynastyValue(r, m) ?? 0, r.fp ?? -1];
+  const less = (a: [number, number], b: [number, number]) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
   const scales = Object.fromEntries(
     DYNASTY_MODES.map((m) => [
       m,
       rows
         .filter((r) => r.owner)
-        .map((r) => rowDynastyValue(r, m))
-        .filter((v): v is number => v !== null)
-        .sort((a, b) => a - b),
+        .map((r) => key(r, m))
+        .sort((a, b) => a[0] - b[0] || a[1] - b[1]),
     ]),
-  ) as Record<DynastyMode, number[]>;
-  const pct = (sorted: number[], v: number) => {
+  ) as Record<DynastyMode, Array<[number, number]>>;
+  const pct = (sorted: Array<[number, number]>, v: [number, number]) => {
     let lo = 0;
     let hi = sorted.length;
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (sorted[mid]! < v) lo = mid + 1;
+      if (less(sorted[mid]!, v)) lo = mid + 1;
       else hi = mid;
     }
     return sorted.length ? Math.max(0, Math.min(100, Math.round((lo / sorted.length) * 100))) : 0;
   };
   for (const r of rows) {
-    if (!r.dynasty && !r.dynZero) {
-      r.asset = null;
-      continue;
-    }
-    r.asset = Object.fromEntries(DYNASTY_MODES.map((m) => [m, pct(scales[m], rowDynastyValue(r, m) ?? 0)])) as Record<DynastyMode, number>;
+    r.asset = Object.fromEntries(DYNASTY_MODES.map((m) => [m, pct(scales[m], key(r, m))])) as Record<DynastyMode, number>;
   }
   return rows;
 }
@@ -1047,11 +1047,12 @@ function autoHide(f: FantraxFilters): ColumnKey[] {
 export type PresetId = "tous" | "repechage" | "dynastie" | "espoirs" | "autonomes" | "ballottage-ww" | "equipe";
 
 /** Season points (VONA, odds) first, the dynasty value right beside them. */
-const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "age", "ros", "adp"];
+const REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "actif", "age", "ros", "adp"];
 const DYNASTIE_COLUMNS: readonly ColumnKey[] = [
   "verdict",
   "dispo",
   "dyn",
+  "actif",
   "age",
   "ros",
   "adp",
@@ -1064,6 +1065,7 @@ const DYNASTIE_COLUMNS: readonly ColumnKey[] = [
 ];
 const ESPOIRS_COLUMNS: readonly ColumnKey[] = [
   "dyn",
+  "actif",
   "age",
   "ros",
   "adp",
@@ -1079,6 +1081,7 @@ const EQUIPE_COLUMNS: readonly ColumnKey[] = [
   "statut",
   "valeur",
   "dyn",
+  "actif",
   "fpm",
   "age",
   "phase",
@@ -1094,7 +1097,7 @@ const EQUIPE_COLUMNS: readonly ColumnKey[] = [
  * replacement, salary this season and next, contract end. Only there: every
  * other league's views keep their own columns (`cols` is a function of caps).
  */
-const SLAP_REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "fp", "sal", "sal2", "contrat", "adp", "phase"];
+const SLAP_REPECHAGE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "vona", "dispo", "dyn", "actif", "fp", "sal", "sal2", "contrat", "adp", "phase"];
 const SLAP_DEFAULT_COLUMNS: readonly ColumnKey[] = ["statut", "verdict", "valeur", "dyn", "actif", "fp", "sal", "sal2", "contrat", "adp", "phase"];
 const SLAP_DYNASTIE_COLUMNS: readonly ColumnKey[] = ["verdict", "valeur", "dispo", "dyn", "actif", "fp", "sal", "sal2", "contrat", "adp", "phase", "pnhl", "eta"];
 const SLAP_ESPOIRS_COLUMNS: readonly ColumnKey[] = ["dyn", "actif", "sal", "contrat", "adp", "lnh", "phase", "pnhl", "eta", "fourchette", "verdict"];
@@ -1196,6 +1199,15 @@ export const FANTRAX_PRESETS: readonly PresetDef<FantraxFilters, FantraxCaps>[] 
     filters: prospectFilters,
     sort: dynastyOr(prospectSort),
     cols: withSalary(ESPOIRS_COLUMNS, SLAP_ESPOIRS_COLUMNS),
+  },
+  {
+    id: "actifs-dispo",
+    needs: keeperLeague,
+    label: "Meilleurs actifs disponibles",
+    description: "Joueurs et espoirs que personne n’a, par score d’actif (dans le mode choisi) : les meilleures pièces à ajouter pour l’avenir.",
+    filters: { status: "dispo" },
+    sort: { key: "actif", dir: "desc" },
+    cols: withSalary(DYNASTIE_COLUMNS, SLAP_DYNASTIE_COLUMNS),
   },
   {
     id: "autonomes",

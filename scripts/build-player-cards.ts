@@ -13,7 +13,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { join } from "path";
 import { salarySchedule } from "../src/lib/dynasty/league-contracts";
-import { CARD_SHARDS, cardShard, percentileOf, type CardFile, type FantraxCardPart, type PlayerCardData } from "../src/lib/player-card";
+import { CARD_SHARDS, cardShard, type CardFile, type FantraxCardPart, type PlayerCardData } from "../src/lib/player-card";
 
 const root = process.cwd();
 const read = <T>(p: string): T => JSON.parse(readFileSync(join(root, p), "utf8")) as T;
@@ -163,11 +163,10 @@ const trio = (x: { winNow: number; balanced: number; longTerm: number }): Trio =
 const fxIndex: Record<string, Record<string, [number, string]>> = {};
 
 function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: string) {
-  const pool = existsSync(join(root, dir, "pool.json")) ? read<{ players: Array<{ id: string; n: string; nhl?: number }> }>(join(dir, "pool.json")).players : [];
+  const pool = existsSync(join(root, dir, "pool.json")) ? read<{ players: Array<{ id: string; n: string; nhl?: number; fp?: number }> }>(join(dir, "pool.json")).players : [];
+  const fpOf = new Map(pool.map((r) => [r.id, r.fp ?? -1]));
   const dynFile = existsSync(join(root, dir, "dynasty-table.json")) ? read<{ players: Record<string, DynRec>; zero?: string[] }>(join(dir, "dynasty-table.json")) : null;
   const dyn = dynFile?.players ?? {};
-  /** Modeled, but worth less than 0.5 in every horizon (below replacement here). */
-  const zero = new Set(dynFile?.zero ?? []);
   const state = existsSync(join(root, dir, "state.json")) ? read<{ rosters: Record<string, Array<{ id: string; status: string }>> }>(join(dir, "state.json")).rosters : {};
   const teams = new Map(read<{ teams: Array<{ id: string; name: string }> }>(leagueFile).teams.map((t) => [t.id, t.name]));
   const plan =
@@ -178,15 +177,29 @@ function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: s
       : null;
   const owner = new Map<string, { team: string; status: string }>();
   for (const [team, list] of Object.entries(state)) for (const e of list) owner.set(e.id, { team, status: e.status });
-  // asset score: percentile of the dynasty value among rostered players, per horizon
-  const scales = { W: [] as number[], B: [] as number[], L: [] as number[] };
-  for (const id of owner.keys()) {
+  // asset score (the player table's): percentile among rostered players of
+  // (dynasty value, then season points to split ties), per horizon
+  type Key = [number, number];
+  const keyOf = (id: string, h: "W" | "B" | "L"): Key => {
     const d = dyn[id];
-    scales.W.push(d ? d.dv.winNow : 0);
-    scales.B.push(d ? d.dv.balanced : 0);
-    scales.L.push(d ? d.dv.longTerm : 0);
-  }
-  for (const k of ["W", "B", "L"] as const) scales[k].sort((a, b) => a - b);
+    const v = d ? (h === "W" ? d.dv.winNow : h === "B" ? d.dv.balanced : d.dv.longTerm) : 0;
+    return [v, fpOf.get(id) ?? -1];
+  };
+  const less = (a: Key, b: Key) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
+  const scales = { W: [] as Key[], B: [] as Key[], L: [] as Key[] };
+  for (const id of owner.keys()) for (const h of ["W", "B", "L"] as const) scales[h].push(keyOf(id, h));
+  for (const k of ["W", "B", "L"] as const) scales[k].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const pctKey = (sorted: Key[], v: Key) => {
+    let lo = 0;
+    let hi = sorted.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (less(sorted[mid]!, v)) lo = mid + 1;
+      else hi = mid;
+    }
+    return sorted.length ? Math.max(0, Math.min(100, Math.round((lo / sorted.length) * 100))) : 0;
+  };
+  const scoreOf = (id: string) => ({ W: pctKey(scales.W, keyOf(id, "W")), B: pctKey(scales.B, keyOf(id, "B")), L: pctKey(scales.L, keyOf(id, "L")) });
   const idx: Record<string, [number, string]> = {};
   for (const r of pool) {
     idx[r.id] = [r.nhl ?? 0, r.n];
@@ -200,14 +213,10 @@ function fantraxLeague(slug: "captains" | "slapshot", dir: string, leagueFile: s
       own: o?.team ?? null,
       ownName: o ? (teams.get(o.team) ?? null) : null,
       st: o?.status ?? null,
-      dv: d ? trio(d.dv) : zero.has(r.id) ? { W: 0, B: 0, L: 0 } : null,
+      dv: d ? trio(d.dv) : { W: 0, B: 0, L: 0 },
       rk: d ? { W: d.rank.winNow, B: d.rank.balanced, L: d.rank.longTerm } : null,
-      sc: d
-        ? { W: percentileOf(scales.W, d.dv.winNow), B: percentileOf(scales.B, d.dv.balanced), L: percentileOf(scales.L, d.dv.longTerm) }
-        : zero.has(r.id)
-          ? { W: percentileOf(scales.W, 0), B: percentileOf(scales.B, 0), L: percentileOf(scales.L, 0) }
-          : null,
-      ...(zero.has(r.id) && !d ? { zero: true } : {}),
+      sc: scoreOf(r.id),
+      ...(!d ? { zero: true } : {}),
       ph: d?.phase ?? null,
       eG: d ? d.eG.slice(0, 6).map(r1) : null,
     };
