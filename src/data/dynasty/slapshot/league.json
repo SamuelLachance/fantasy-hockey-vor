@@ -1,5 +1,5 @@
 {
- "version": "slap-v3-2026-10-02",
+ "version": "slap-v4-2026-10-02",
  "source": "Slapshot Fantasy League (Fantrax glxjunc7mtxdqi8x): rules summary pasted by the user and the public fxea getLeagueInfo (2026-09-27); owner answers: every player carries over (no cutdown), any player may sit in the minors, salary cap 105 M$ in 2026-27 on the 20 active + 3 reserve (minors and IR free), real NHL cap hits, growth unknown -> NHL trajectory. Rulebook (SFHL, pasted 2026-10-02) and owner answers: league contracts 1-7 seasons on the real NHL cap hit of the signing season, raises relative to that base, one extension, then UFA whatever the age (no RFA); cap 105 M$ and floor 70 M$ fixed.",
  "league": {
   "id": "glxjunc7mtxdqi8x",
@@ -108,15 +108,15 @@
   "oldMaxPct": 0.12
  },
  "leagueContracts": {
-  "source": "SFHL rulebook §2.4 (pasted 2026-10-02) and owner answers: each player signs a league contract of 1 to 7 seasons; year 1 = his real NHL cap hit of the signing season; years 2-3 = base +10 %, years 4-6 = base +15 %, year 7 = base +20 % (each relative to the base, not compounded); ONE extension of any length under the same rules (base = his real NHL cap hit when it starts: assumption, « exactly like the NHL »); when control ends he is an unrestricted free agent whatever his age (no RFA). A prospect without an NHL contract starts his league contract when he signs his NHL one (assumption: he sits in the minors, cap-free, before). Lengths are planned by discounted surplus at the balanced δ (src/lib/dynasty/league-contracts.ts); confirmed contracts come from src/data/fantrax/slapshot/league-contracts.json.",
+  "source": "SFHL rulebook §2.4 (pasted 2026-10-02) and owner answers: each player signs a league contract of 1 to 7 seasons; year 1 = his real NHL cap hit of the signing season; each year raises the previous year's salary: +10 % in years 2-3, +15 % in years 4-6, +20 % in year 7 (compounded, owner 2026-10-02; multipliers on the base 1, 1.10, 1.21, 1.3915, 1.6002, 1.8403, 2.2083); ONE extension of any length under the same rules (base = his real NHL cap hit when it starts: assumption, « exactly like the NHL »); when control ends he is an unrestricted free agent whatever his age (no RFA). A prospect without an NHL contract starts his league contract when he signs his NHL one (assumption: he sits in the minors, cap-free, before). Lengths are planned by discounted surplus at the balanced δ (src/lib/dynasty/league-contracts.ts); confirmed contracts come from src/data/fantrax/slapshot/league-contracts.json.",
   "mult": [
    1,
    1.1,
-   1.1,
-   1.15,
-   1.15,
-   1.15,
-   1.2
+   1.21,
+   1.3915,
+   1.600225,
+   1.84025875,
+   2.2083105
   ],
   "maxYears": 7,
   "extensions": 1

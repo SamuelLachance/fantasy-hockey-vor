@@ -425,11 +425,7 @@ export function SlapshotCapTab() {
         <div className="space-y-2 text-sm text-slate-300">
           <p>
             <strong className="text-white">Règles de la ligue.</strong> Chaque joueur reçoit un contrat de 1 à {file.rules.maxYears} ans. Le salaire de
-            l’an 1 est son vrai salaire LNH de la saison où le contrat commence; ensuite {file.rules.mult
-              .slice(1)
-              .map((m, j) => `an ${j + 2} : +${Math.round((m - 1) * 100)} %`)
-              .join(", ")}{" "}
-            (par rapport à la base). Une seule prolongation est permise, aux mêmes règles; à la fin, le joueur devient agent libre, peu importe son âge.
+            l’an 1 est son vrai salaire LNH de la saison où le contrat commence; chaque année suivante augmente celle d’avant de 10 % (ans 2-3), 15 % (ans 4-6) et 20 % (an 7), hausses cumulées : sur 7 ans, l’an 7 vaut {fmt1(file.rules.mult[6] ?? 0)} fois la base. Une seule prolongation est permise, aux mêmes règles; à la fin, le joueur devient agent libre, peu importe son âge.
             Plafond {fmtMoney(file.cap)}, plancher {fmtMoney(file.floor)}, sur les {config.salaryCap.countedSpots} Actifs + Réserve.
           </p>
           <p>
@@ -443,10 +439,10 @@ export function SlapshotCapTab() {
             donne le plus gros surplus. Le risque compte donc : un long contrat pour un joueur qui peut décliner ou se blesser coûte des saisons perdues.
           </p>
           <p>
-            <strong className="text-white">Ce que ça donne.</strong> Espoirs et jeunes en progression ou qui entrent dans leur prime : le plus long
-            possible (7 ans à un salaire d’entrée minime). Joueurs dans leur prime payés au prix du marché : souvent 5 ans puis une prolongation, qui
-            repart de leur salaire LNH du moment et évite les hausses de 15 à 20 % des années 6 et 7. Plateau : plus court. Déclin et fin de carrière :
-            1 à 3 ans.
+            <strong className="text-white">Ce que ça donne.</strong> Les hausses étant cumulées, l’an 5 coûte 1,6 fois la base et l’an 7, 2,2 fois. Un
+            espoir ou un jeune sur contrat d’entrée se signe souvent au plus long (même doublé, un salaire d’entrée reste minime). Un joueur payé au prix
+            du marché se signe plutôt 3 à 5 ans puis se prolonge : la prolongation repart de son salaire LNH du moment. Déclin et fin de carrière : 1 à 2
+            ans.
           </p>
           <p className="text-xs text-slate-400">
             Hypothèses à confirmer : la prolongation repart du salaire LNH de la saison où elle commence; un espoir sans contrat LNH ne signe son contrat de

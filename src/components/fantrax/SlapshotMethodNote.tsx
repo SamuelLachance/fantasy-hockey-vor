@@ -62,7 +62,7 @@ export function SlapshotMethodNote({ id = "methode" }: { id?: string }) {
         </li>
         <li>
           <strong className="text-slate-100">Salaire</strong>
-          {`${NBSP}: son contrat de ligue de 1 à 7 ans. Base (an 1)${NBSP}: son salaire LNH réel de la saison de signature (source${NBSP}: capwages; un salaire LNH futur non signé est projeté d’après les contrats récents de joueurs semblables); ans 2-3 +10${NBSP}%, ans 4-6 +15${NBSP}%, an 7 +20${NBSP}% (par rapport à la base); une seule prolongation, aux mêmes règles, puis joueur autonome. Tant qu’un contrat n’est pas confirmé, le modèle utilise la durée conseillée (onglet Plafond), affichée en italique. Un espoir sans contrat LNH ne compte rien avant son arrivée prévue.`}
+          {`${NBSP}: son contrat de ligue de 1 à 7 ans. Base (an 1)${NBSP}: son salaire LNH réel de la saison de signature (source${NBSP}: capwages; un salaire LNH futur non signé est projeté d’après les contrats récents de joueurs semblables); chaque année augmente celle d’avant de 10${NBSP}% (ans 2-3), 15${NBSP}% (ans 4-6) et 20${NBSP}% (an 7), hausses cumulées; une seule prolongation, aux mêmes règles, puis joueur autonome. Tant qu’un contrat n’est pas confirmé, le modèle utilise la durée conseillée (onglet Plafond), affichée en italique. Un espoir sans contrat LNH ne compte rien avant son arrivée prévue.`}
         </li>
         <li>
           <strong className="text-slate-100">Espoirs sans contrat LNH</strong>

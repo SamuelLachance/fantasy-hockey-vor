@@ -574,6 +574,9 @@ export function simulatePlayer(pl: SimPlayer, ctx: SimContext): SimResult {
       gamesSum[t] += games * seasonScale;
       if (gamesPath) gamesPath[t]![n] = games * seasonScale;
 
+      // A league contract and its extension are over: he is a free agent,
+      // gone from the roster (no value, and no roster spot to pay for).
+      if (alive && lg && (lg.capCost[t] ?? 0) >= 1e5) alive = false;
       // ---- keeper gate
       const gated = alive && t > 0 && !eligible && ctx.keepGate;
       const recKi = !!ki1 && t === 1 && !eligible;

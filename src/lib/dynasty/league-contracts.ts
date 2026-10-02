@@ -1,8 +1,8 @@
 /**
  * Slapshot league contracts (SFHL rulebook §2.3-2.4, owner answers of
  * 2026-10-02). Every player signs a league contract of 1 to 7 seasons whose
- * base (year 1) is his real NHL cap hit of the signing season; later years
- * rise relative to that base (year 2-3 +10 %, years 4-6 +15 %, year 7 +20 %).
+ * base (year 1) is his real NHL cap hit of the signing season; each later year
+ * raises the previous year (years 2-3 +10 %, years 4-6 +15 %, year 7 +20 %, compounded).
  * A contract may be extended ONCE, for any length, under the same rules (the
  * base is then his real NHL cap hit of the extension's first season). When
  * the contract (and its one extension) ends, the player is an unrestricted
@@ -20,7 +20,7 @@
  */
 
 export interface LeagueContractRules {
-  /** Salary multiplier of contract year 1..maxYears, relative to the base. */
+  /** Salary multiplier of contract year 1..maxYears on the base (the raises compounded). */
   mult: readonly number[];
   maxYears: number;
   /** Extensions a contract may get (1). */
@@ -31,7 +31,7 @@ export interface LeagueContractRules {
 }
 
 export const SLAPSHOT_CONTRACT_RULES: LeagueContractRules = {
-  mult: [1, 1.1, 1.1, 1.15, 1.15, 1.15, 1.2],
+  mult: [1, 1.1, 1.21, 1.3915, 1.600225, 1.84025875, 2.2083105],
   maxYears: 7,
   extensions: 1,
   cap: 105,

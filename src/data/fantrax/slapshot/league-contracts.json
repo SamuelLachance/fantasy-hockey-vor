@@ -2,12 +2,117 @@
  "source": "Confirmed league contracts of the user's team (Vegas Golden Knights), as the user reported them. years = first contract length from startYear; base = year-1 salary (his real NHL cap hit of 2026-27) when given; extended = the one extension is used.",
  "updatedAt": "2026-10-02",
  "contracts": {
+  "04yg5": {
+   "name": "Jesper Wallstedt",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 7,
+   "base": 2.2
+  },
+  "05rjd": {
+   "name": "Cutter Gauthier",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 7,
+   "base": 13.5
+  },
+  "03as7": {
+   "name": "Thatcher Demko",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 3,
+   "base": 8.5
+  },
   "03jvu": {
    "name": "Mitch Marner",
    "team": "lz1ka65mmuh16mtf",
    "startYear": 2026,
    "years": 5,
    "base": 12
+  },
+  "05ylt": {
+   "name": "Zach Benson",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 7,
+   "base": 7.5
+  },
+  "04ymn": {
+   "name": "Luke Hughes",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 7,
+   "base": 9
+  },
+  "059e5": {
+   "name": "Jake Neighbours",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 7,
+   "base": 3.75
+  },
+  "050rc": {
+   "name": "Dmitry Voronkov",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 6,
+   "base": 4.18
+  },
+  "04f17": {
+   "name": "Fabian Zetterlund",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 5,
+   "base": 4.28
+  },
+  "03ofm": {
+   "name": "Pius Suter",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 4.13
+  },
+  "05y37": {
+   "name": "Ethen Frank",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 2.2
+  },
+  "04nwz": {
+   "name": "Eric Robinson",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 1.7
+  },
+  "02azm": {
+   "name": "Connor Murphy",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 4.1
+  },
+  "03rfj": {
+   "name": "Keegan Kolesar",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 2.5
+  },
+  "04f26": {
+   "name": "Alexei Toropchenko",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 2.5
+  },
+  "015j6": {
+   "name": "Tyler Myers",
+   "team": "lz1ka65mmuh16mtf",
+   "startYear": 2026,
+   "years": 1,
+   "base": 3
   }
  }
 }

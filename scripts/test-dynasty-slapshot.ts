@@ -78,21 +78,21 @@ const T = params.T;
 {
   const R = contractRules(prof)!;
   assert(!!R && R.maxYears === 7 && R.extensions === 1, "league contracts: 1-7 seasons, one extension");
-  // raises relative to the base, not compounded (owner 2026-10-02): Marner 5 years at 12
+  // raises compounded year on year (owner 2026-10-02): Marner 5 years at 12
   const m = contractSalaries(12, 5, R);
-  assert(JSON.stringify(m) === JSON.stringify([12, 13.2, 13.2, 13.8, 13.8]), `Marner 5 years: ${m}`);
-  assert(JSON.stringify(contractSalaries(1, 7, R)) === JSON.stringify([1, 1.1, 1.1, 1.15, 1.15, 1.15, 1.2]), "7-year raises on the base");
+  assert(JSON.stringify(m) === JSON.stringify([12, 13.2, 14.52, 16.7, 19.2]), `Marner 5 years: ${m}`);
+  assert(JSON.stringify(contractSalaries(1, 7, R)) === JSON.stringify([1, 1.1, 1.21, 1.39, 1.6, 1.84, 2.21]), "7-year raises compounded");
   const flat = (x: number) => new Array<number>(12).fill(x);
   // a cheap young player with steady value: the longest first contract
   const young = planContract({ start: 0, nhl: [1, ...new Array<number>(11).fill(9)], value: flat(60), lambda: flat(1.4), min: flat(0.85), delta: 0.75 }, R);
-  assert(young.years === 7 && young.salary[0] === 1 && young.salary[6] === 1.2, `entry-level base locked 7 years (got ${young.years})`);
+  assert(young.years === 7 && young.salary[0] === 1 && young.salary[6] === 2.21, `entry-level base locked 7 years (got ${young.years})`);
   // the extension restarts from the NHL cap hit of its first season, then he is a free agent
   assert(young.ext > 0 && young.extBase === 9 && young.end === young.years + young.ext, "one extension at the then NHL cap hit");
   const noExt = planContract({ start: 0, nhl: flat(5), value: flat(40), lambda: flat(1.4), min: flat(0.85), delta: 0.75, extended: true }, R);
   assert(noExt.ext === 0 && noExt.salary[noExt.end] === 0, "after control: 0 salary (gone as a free agent)");
   // a confirmed contract keeps its length
   const fixed = planContract({ start: 0, nhl: flat(12), value: flat(100), lambda: flat(1.4), min: flat(0.85), delta: 0.75, fixed: { years: 5, base: 12 } }, R);
-  assert(fixed.years === 5 && fixed.fixed && fixed.salary[4] === 13.8, "confirmed 5-year contract kept");
+  assert(fixed.years === 5 && fixed.fixed && fixed.salary[4] === 19.2, "confirmed 5-year contract kept");
   // a season where he costs more than he brings is stashed in the minors (0, never negative)
   assert(seasonGain(5, 20, 1.4, 0.85) === 0 && seasonGain(50, 10, 1, 1) === 41, "season gain = max(0, value - charge)");
   // a prospect without an NHL contract starts his league contract at arrival
