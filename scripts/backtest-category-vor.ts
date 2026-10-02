@@ -632,6 +632,15 @@ async function main() {
         agree += dm === 0 || dr === 0 ? 0.5 : Math.sign(dm) === Math.sign(dr) ? 1 : 0;
         pairs++;
       }
+      // Goalie bias: realized VOR of the method's top-216 goalies against what
+      // the skaters' own score -> realized slope (method top 300) predicts.
+      const top300 = order.slice(0, 300);
+      const skTop = top300.filter((id) => !projById.get(id)!.isGoalie);
+      const xs = skTop.map((id) => sc.get(id)!), ys = skTop.map((id) => realVor.get(id)!);
+      const mxs = mean(xs), mys = mean(ys);
+      const slope = xs.reduce((a, x, i) => a + (x - mxs) * (ys[i]! - mys), 0) / xs.reduce((a, x) => a + (x - mxs) ** 2, 0);
+      const gTop216 = order.slice(0, 216).filter((id) => projById.get(id)!.isGoalie);
+      const biasG216 = mean(gTop216.map((id) => realVor.get(id)! - (mys + slope * (sc.get(id)! - mxs))));
       const row = {
         rho: spearman(ids.map((id) => sc.get(id)!), ids.map((id) => realVor.get(id)!)),
         rhoG: spearman(gs.map((id) => sc.get(id)!), gs.map((id) => realVor.get(id)!)),
@@ -640,6 +649,7 @@ async function main() {
         prec216: order.slice(0, 216).filter((id) => top216.has(id)).length / 216,
         concGS: pairs ? agree / pairs : NaN,
         gTop72: order.slice(0, 72).filter((id) => projById.get(id)!.isGoalie).length,
+        biasG216,
       };
       for (const [k, v] of Object.entries(row)) add(m.name, k, v);
       console.log(`${m.name.padEnd(15)} ${Object.entries(row).map(([k, v]) => `${k}=${Number.isInteger(v) ? v : v.toFixed(3)}`).join(" ")}`);
