@@ -87,7 +87,7 @@ interface InSeason {
   /** Games his team has left, and his expected remaining games. */
   teamLeft: number;
   rosGames: number;
-  injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null } | null;
+  injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null; since: string | null } | null;
 }
 
 async function main() {
@@ -160,11 +160,11 @@ async function main() {
   for (const list of upcoming.values()) list.sort((x, y) => x - y);
 
   // ---- injuries (ESPN public report), matched by name (+ team)
-  type Inj = { status: string; returnDate: string | null; note: string | null; team: string };
+  type Inj = { status: string; returnDate: string | null; note: string | null; team: string; since: string | null };
   const injByName = new Map<string, Inj[]>();
   try {
     const espn = await getJson<{
-      injuries: Array<{ injuries: Array<{ status: string; shortComment?: string; details?: { returnDate?: string; type?: string }; athlete: { displayName: string; team?: { abbreviation?: string } } }> }>;
+      injuries: Array<{ injuries: Array<{ status: string; date?: string; shortComment?: string; details?: { returnDate?: string; type?: string }; athlete: { displayName: string; team?: { abbreviation?: string } } }> }>;
     }>("https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/injuries");
     const ESPN_TEAM: Record<string, string> = { TB: "TBL", NJ: "NJD", SJ: "SJS", LA: "LAK", UTAH: "UTA", NAS: "NSH", MON: "MTL", WAS: "WSH" };
     for (const t of espn.injuries) {
@@ -177,6 +177,7 @@ async function main() {
           returnDate: i.details?.returnDate ?? null,
           note: i.details?.type ?? null,
           team: ESPN_TEAM[abbr] ?? abbr,
+          since: i.date ? i.date.slice(0, 10) : null,
         });
         injByName.set(key, list);
       }
@@ -276,7 +277,7 @@ async function main() {
         stats: live?.stats ?? {},
         teamLeft: left,
         rosGames: r1(rosGames),
-        injury: inj ? { status: inj.status, returnDate: inj.returnDate, gamesOut, note: inj.note } : null,
+        injury: inj ? { status: inj.status, returnDate: inj.returnDate, gamesOut, note: inj.note, since: inj.since } : null,
       },
     };
   });

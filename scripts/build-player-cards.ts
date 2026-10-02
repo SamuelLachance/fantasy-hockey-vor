@@ -43,7 +43,7 @@ interface Profile {
 }
 
 const profiles = read<{ profiles: Profile[] }>("src/data/player-profiles.json").profiles;
-const players = read<{ generatedAt: string; players: Array<{ id: number; name: string; team: string; positions?: string[]; isGoalie: boolean; gamesPlayed: number; projection: Record<string, number>; inSeason?: { gp: number; stats: Record<string, number>; injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null } | null } }> }>(
+const players = read<{ generatedAt: string; players: Array<{ id: number; name: string; team: string; positions?: string[]; isGoalie: boolean; gamesPlayed: number; projection: Record<string, number>; inSeason?: { gp: number; stats: Record<string, number>; injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null; since?: string | null } | null } }> }>(
   "src/data/players.json",
 );
 const projById = new Map(players.players.map((p) => [p.id, p]));
@@ -100,7 +100,13 @@ for (const pr of profiles) {
     hist,
     cur: proj?.inSeason && proj.inSeason.gp > 0 ? { gp: proj.inSeason.gp, s: proj.inSeason.stats } : null,
     injNow: proj?.inSeason?.injury
-      ? { st: proj.inSeason.injury.status, ret: proj.inSeason.injury.returnDate, out: proj.inSeason.injury.gamesOut, note: proj.inSeason.injury.note }
+      ? {
+          st: proj.inSeason.injury.status,
+          ret: proj.inSeason.injury.returnDate,
+          out: proj.inSeason.injury.gamesOut,
+          note: proj.inSeason.injury.note,
+          since: proj.inSeason.injury.since ?? null,
+        }
       : null,
     proj: p
       ? pr.isGoalie

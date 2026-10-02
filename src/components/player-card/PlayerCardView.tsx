@@ -243,6 +243,55 @@ function LtlCard({ part, league }: { part: LtlCardPart; league: LeagueInfo; nhl:
   );
 }
 
+const DAY = 24 * 3600 * 1000;
+const dayCount = (n: number) => `${n}${NBSP}jour${n > 1 ? "s" : ""}`;
+const gameCount = (n: number) => `${n}${NBSP}match${n > 1 ? "s" : ""}`;
+
+/** Injured or suspended now: status, type, since when, estimated return and what is left (days, games). */
+function AbsenceBanner({ inj, nowMs }: { inj: NonNullable<PlayerCardData["injNow"]>; nowMs: number }) {
+  const suspended = inj.st === "Suspension";
+  const ret = inj.ret ? Date.parse(`${inj.ret}T12:00:00Z`) : NaN;
+  const since = inj.since ? Date.parse(`${inj.since}T12:00:00Z`) : NaN;
+  const daysLeft = Number.isFinite(ret) ? Math.max(0, Math.ceil((ret - nowMs) / DAY)) : null;
+  const daysOut = Number.isFinite(since) ? Math.max(0, Math.floor((nowMs - since) / DAY)) : null;
+  const total = Number.isFinite(ret) && Number.isFinite(since) ? Math.max(1, Math.round((ret - since) / DAY)) : null;
+  const type = inj.note && inj.note !== inj.st ? (INJ_TYPE_FR[inj.note] ?? inj.note) : null;
+  const tone = suspended ? "border-amber-400/40 bg-amber-500/10 text-amber-50" : "border-rose-400/40 bg-rose-500/10 text-rose-50";
+  return (
+    <section aria-label={suspended ? "Suspension" : "Blessure"} className={`rounded-2xl border p-4 sm:p-5 ${tone}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Activity className="h-5 w-5" aria-hidden="true" />
+          {suspended ? "Suspendu" : (INJ_FR[inj.st] ?? inj.st)}
+          {type && !suspended ? <span className="font-normal">· {type}</span> : null}
+        </h2>
+        {inj.since ? <span className="text-xs opacity-80">signalé le {dateFr(inj.since)}{daysOut ? ` (il y a ${dayCount(daysOut)})` : ""}</span> : null}
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="rounded-xl bg-black/20 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-wider opacity-75">Retour estimé</div>
+          <div className="font-semibold">{inj.ret ? dateFr(inj.ret) : "non précisé"}</div>
+        </div>
+        <div className="rounded-xl bg-black/20 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-wider opacity-75">Encore</div>
+          <div className="font-semibold">{daysLeft == null ? "inconnu" : daysLeft === 0 ? "retour imminent" : dayCount(daysLeft)}</div>
+        </div>
+        <div className="rounded-xl bg-black/20 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-wider opacity-75">Matchs manqués d’ici là</div>
+          <div className="font-semibold">{gameCount(inj.out)}{inj.ret ? "" : " (estimation)"}</div>
+        </div>
+        <div className="rounded-xl bg-black/20 px-3 py-2">
+          <div className="text-[11px] uppercase tracking-wider opacity-75">Durée totale</div>
+          <div className="font-semibold">{total ? `≈ ${total >= 14 ? `${Math.round(total / 7)}${NBSP}semaines` : dayCount(total)}` : "inconnue"}</div>
+        </div>
+      </div>
+      <p className="mt-2 text-xs opacity-80">
+        Source : rapport public des blessures d’ESPN, relu chaque jour. Les matchs manqués sont retirés de sa projection{inj.ret ? "" : " (sans date, une absence typique pour ce statut)"}.
+      </p>
+    </section>
+  );
+}
+
 /**
  * A player's card (/joueur?id=<NHL id>, or ?fx=<Fantrax id>&ligue=<slug>):
  * identity, NHL contract, this season's projection, career, Snake, and his
@@ -365,15 +414,6 @@ export function PlayerCardView({ leagues }: { leagues: LeagueInfo[] }) {
               {card.k ? ` · Contrat LNH : ${fmtMoney(card.k.cap)}${card.k.yrs != null ? `, ${card.k.yrs} an${card.k.yrs > 1 ? "s" : ""}` : ""}${card.k.st ? ` (${card.k.st === "RFA" ? "JAC" : "JAS"})` : ""}` : ""}
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              {card.injNow ? (
-                <span className="rounded-full bg-rose-500/15 px-2 py-0.5 text-rose-100 ring-1 ring-rose-500/40">
-                  <Activity className="mr-1 inline h-3 w-3" aria-hidden="true" />
-                  {INJ_FR[card.injNow.st] ?? card.injNow.st}
-                  {card.injNow.note && card.injNow.note !== card.injNow.st ? ` (${INJ_TYPE_FR[card.injNow.note] ?? card.injNow.note})` : ""}
-                  {card.injNow.ret ? ` · retour estimé le ${dateFr(card.injNow.ret)}` : " · retour non précisé"}
-                  {card.injNow.out > 0 ? ` · ${card.injNow.out} match${card.injNow.out > 1 ? "s" : ""} manqué${card.injNow.out > 1 ? "s" : ""}` : ""}
-                </span>
-              ) : null}
               {card.inj?.tr ? (
                 <span className={`rounded-full px-2 py-0.5 ring-1 ${card.inj.tr === "healthy" ? "bg-emerald-500/10 text-emerald-200 ring-emerald-500/30" : "bg-amber-500/10 text-amber-200 ring-amber-500/30"}`}>
                   <ShieldCheck className="mr-1 inline h-3 w-3" aria-hidden="true" />
@@ -400,6 +440,9 @@ export function PlayerCardView({ leagues }: { leagues: LeagueInfo[] }) {
           </div>
         </div>
       </header>
+
+      {/* ---- injury / suspension */}
+      {card.injNow ? <AbsenceBanner inj={card.injNow} nowMs={nowMs} /> : null}
 
       {/* ---- leagues */}
       <section aria-label="Dans vos ligues" className="grid gap-4 lg:grid-cols-3">
