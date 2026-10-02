@@ -725,6 +725,8 @@ export interface SlapPlayerData {
   known: KnownContract;
   /** A confirmed league contract (src/data/fantrax/slapshot/league-contracts.json). */
   league?: { years: number; base?: number; extended?: boolean } | null;
+  /** The league's salary this season as Fantrax lists it (rostered players), M$. */
+  fxSalary?: number | null;
 }
 
 export interface SlapPrepared {
@@ -920,6 +922,7 @@ export function prepareSlapshot(
         min: cs.min,
         fixed: fixed ? { years: fixed.years, ...(fixed.base != null ? { base: fixed.base } : {}) } : null,
         extended: !!fixed?.extended,
+        base0: data.get(id)?.fxSalary ?? null,
         ...(gainAt ? { gainAt } : {}),
       };
       const plan = planContract({ ...base, delta }, rules);

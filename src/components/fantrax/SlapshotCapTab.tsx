@@ -161,12 +161,20 @@ export function SlapshotCapTab() {
   // ---- the team's counted salaries per season (the 23 best counted today)
   const team = (() => {
     if (!file || !config.salaryCap) return null;
-    const counted = rows.filter((r) => config.salaryCap!.countedStatuses.includes(r.status)).slice(0, config.salaryCap.countedSpots);
-    const used = Array.from({ length: SHOWN }, (_, t) => counted.reduce((s, r) => s + (r.chosen.salary[t] ?? 0), 0));
+    const spots = config.salaryCap.countedSpots;
+    const now = new Set(config.salaryCap.countedStatuses);
+    // this season: Active + Reserve (IR and minors are free); from next season
+    // the injured are back, so the best 23 of Active + Reserve + IR count
+    const countedAt = (t: number) =>
+      rows.filter((r) => now.has(r.status) || (t > 0 && r.status === "INJURED_RESERVE")).slice(0, spots);
+    const used = Array.from({ length: SHOWN }, (_, t) => countedAt(t).reduce((s, r) => s + (r.chosen.salary[t] ?? 0), 0));
     const confirmed = Array.from({ length: SHOWN }, (_, t) =>
-      counted.filter((r) => r.p.f).reduce((s, r) => s + (r.chosen.salary[t] ?? 0), 0),
+      countedAt(t)
+        .filter((r) => r.p.f)
+        .reduce((s, r) => s + (r.chosen.salary[t] ?? 0), 0),
     );
-    return { counted: counted.length, used, confirmed };
+    const outNow = rows.filter((r) => !now.has(r.status));
+    return { counted: countedAt(0).length, used, confirmed, outNow };
   })();
 
   if (!config.salaryCap) return null;
@@ -235,9 +243,25 @@ export function SlapshotCapTab() {
           </div>
         ) : null}
         <p className="mt-2 text-xs text-slate-400">
-          {team?.counted ?? 0} joueurs comptés aujourd’hui. Les saisons suivantes gardent ces mêmes joueurs; un joueur dont le contrat (et sa prolongation)
-          finit devient agent libre et ne compte plus. Sous le plancher ou au-dessus du plafond, la ligue donne 24 h pour se conformer, sinon défaite
+          {team?.counted ?? 0} joueurs comptés aujourd’hui (Actifs + Réserve). À partir de la saison prochaine, les blessés (IR) reviennent et comptent
+          aussi : les {config.salaryCap.countedSpots} meilleurs des Actifs, Réserve et IR. Un joueur dont le contrat (et sa prolongation) finit devient agent
+          libre et ne compte plus. Sous le plancher ou au-dessus du plafond, la ligue donne 24 h pour se conformer, sinon défaite
           automatique.
+          {team?.outNow.length
+            ? ` Hors plafond cette saison : ${[
+                team.outNow.filter((r) => r.status === "INJURED_RESERVE").length
+                  ? `blessés ${team.outNow
+                      .filter((r) => r.status === "INJURED_RESERVE")
+                      .map((r) => r.p.nm)
+                      .join(", ")} (comptés dès la saison prochaine)`
+                  : "",
+                team.outNow.filter((r) => r.status === "MINORS").length
+                  ? `${team.outNow.filter((r) => r.status === "MINORS").length} joueurs aux mineures`
+                  : "",
+              ]
+                .filter(Boolean)
+                .join("; ")}.`
+            : ""}
           {missing ? ` ${missing} joueur${missing > 1 ? "s" : ""} de l’effectif sans données de contrat (non comptés).` : ""}
         </p>
       </LeagueCard>

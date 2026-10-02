@@ -78,6 +78,8 @@ export interface FxeaRosterItem {
   /** Lineup slot for ACTIVE players (C / W / F / D / Skt / G). */
   position: string;
   status: FxeaRosterStatus | string;
+  /** The league's salary for the player in dollars (a salary-cap league; Fantrax's own number, ELC bonuses included). */
+  salary?: number;
 }
 
 export interface FxeaTeamRosters {

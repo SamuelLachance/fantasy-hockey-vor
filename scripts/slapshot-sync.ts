@@ -25,6 +25,8 @@ export interface SlapshotPool {
   teamNames: Record<string, string>;
   /** Draft picks made so far: [pick, team id, player id]. */
   picks: Array<[number, string, string]>;
+  /** Fantrax id → the league's salary this season (M$, ELC bonuses included), rostered players. */
+  salaries?: Record<string, number>;
 }
 
 interface LeagueInfo {
@@ -32,7 +34,7 @@ interface LeagueInfo {
   teamInfo?: Record<string, { name?: string; id?: string }>;
 }
 interface Rosters {
-  rosters: Record<string, { teamName?: string; rosterItems?: Array<{ id: string }> }>;
+  rosters: Record<string, { teamName?: string; rosterItems?: Array<{ id: string; salary?: number }> }>;
 }
 interface Draft {
   draftPicks?: Array<{ pick: number; teamId: string; playerId?: string }>;
@@ -78,6 +80,13 @@ export function slapshotPoolFrom(info: LeagueInfo, rosters: Rosters, draft: Draf
       .filter((p) => p.playerId)
       .sort((a, b) => a.pick - b.pick)
       .map((p) => [p.pick, p.teamId, p.playerId!]),
+    salaries: Object.fromEntries(
+      Object.values(rosters.rosters)
+        .flatMap((r) => r.rosterItems ?? [])
+        .filter((x) => (x.salary ?? 0) > 0)
+        .map((x) => [x.id, Math.round(x.salary! / 1e4) / 100] as [string, number])
+        .sort((a, b) => a[0].localeCompare(b[0])),
+    ),
   };
 }
 

@@ -63,6 +63,8 @@ export interface ContractPlanInput {
   fixed?: { years: number; base?: number } | null;
   /** The extension is already used (no further control after the first contract). */
   extended?: boolean;
+  /** The league's own first-season salary (Fantrax, ELC bonuses included): the base of a contract starting now. */
+  base0?: number | null;
   /**
    * Expected season gain at a salary, from the dynasty simulation's career
    * paths (phase, aging, retirement, role, injuries); replaces
@@ -110,7 +112,8 @@ export function breakEvenSalary(value: number, lambda: number, min: number): num
   return lambda > 0 ? min + value / lambda : Infinity;
 }
 
-function baseAt(inp: ContractPlanInput, t: number): number {
+function baseAt(inp: Pick<ContractPlanInput, "nhl" | "min" | "base0">, t: number): number {
+  if (t === 0 && inp.base0 && inp.base0 > 0) return r2(inp.base0);
   return r2(Math.max(inp.nhl[t] ?? 0, inp.min[t] ?? 0));
 }
 
@@ -243,11 +246,11 @@ export function salarySchedule(
  * choices, 0 included: what the simulation averages its season gains at.
  */
 export function contractLevels(
-  inp: Pick<ContractPlanInput, "start" | "nhl" | "min" | "fixed" | "extended">,
+  inp: Pick<ContractPlanInput, "start" | "nhl" | "min" | "fixed" | "extended" | "base0">,
   T: number,
   rules: LeagueContractRules = SLAPSHOT_CONTRACT_RULES,
 ): number[][] {
-  const base = inp.fixed?.base != null ? r2(inp.fixed.base) : r2(Math.max(inp.nhl[Math.min(inp.start, T - 1)] ?? 0, inp.min[Math.min(inp.start, T - 1)] ?? 0));
+  const base = inp.fixed?.base != null ? r2(inp.fixed.base) : baseAt(inp, Math.min(inp.start, T - 1));
   const sets = Array.from({ length: T }, () => new Set<number>([0]));
   const lengths = inp.fixed ? [Math.floor(inp.fixed.years)] : Array.from({ length: rules.maxYears }, (_, j) => j + 1);
   const exts = inp.extended || rules.extensions < 1 ? [0] : Array.from({ length: rules.maxYears + 1 }, (_, j) => j);

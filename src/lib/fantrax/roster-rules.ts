@@ -34,6 +34,8 @@ export interface RosterEntry {
   /** Lineup slot for ACTIVE players; ignored for other statuses. */
   slot: string;
   status: string;
+  /** League salary in M$ as Fantrax lists it (salary-cap leagues; absent when 0). */
+  sal?: number;
 }
 
 export interface PlayerFlags {

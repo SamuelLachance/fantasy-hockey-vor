@@ -46,7 +46,12 @@ export function rostersFromFxea(r: FxeaTeamRosters): StateSnapshot["rosters"] {
   return Object.fromEntries(
     Object.entries(r.rosters ?? {}).map(([teamId, t]) => [
       teamId,
-      (t.rosterItems ?? []).map((it) => ({ id: it.id, slot: it.position, status: it.status })),
+      (t.rosterItems ?? []).map((it) => ({
+        id: it.id,
+        slot: it.position,
+        status: it.status,
+        ...(it.salary && it.salary > 0 ? { sal: Math.round(it.salary / 1e4) / 100 } : {}),
+      })),
     ]),
   );
 }

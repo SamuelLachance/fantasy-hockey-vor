@@ -282,6 +282,9 @@ export function runSlapshotBuild(
   const profile = parseSlapshotProfile(readJson(SP.league));
   const pool = readJson<SlapshotPool>(SP.pool);
   const cw = existsSync(SP.contracts) ? readJson<ContractSeasonsFile>(SP.contracts) : null;
+  // Fantrax's own salaries (rostered players): the league's numbers, ELC bonuses included
+  const fxSalary = new Map<string, number>();
+  for (const [id, m] of Object.entries(pool.salaries ?? {})) if (m > 0) fxSalary.set(id, m);
   const confirmed = existsSync(SP.leagueContracts)
     ? readJson<{ contracts: Record<string, { years: number; base?: number; startYear?: number; extended?: boolean }> }>(SP.leagueContracts).contracts
     : {};
@@ -368,6 +371,7 @@ export function runSlapshotBuild(
       pos,
       known,
       ...(lc ? { league: { years: lc.years, ...(lc.base != null ? { base: lc.base } : {}), ...(lc.extended ? { extended: true } : {}) } } : {}),
+      ...(fxSalary.has(inp.id) ? { fxSalary: fxSalary.get(inp.id)! } : {}),
     });
   }
 
