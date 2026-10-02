@@ -179,8 +179,14 @@ export function normalizeProfile(profile: PlayerProfile): PlayerProfile {
     age: ageFromBirthDate(birthDate),
     ageAtSeasonStart: ageFromBirthDate(birthDate, seasonStart),
   };
+  // A dossier collected before its club's first game has no points
+  // percentage (the standings give none): league average, never NaN.
+  const teamContext = Number.isFinite(profile.teamContext?.pointsPct)
+    ? profile.teamContext
+    : { ...profile.teamContext, pointsPct: 0.5 };
   const partial = {
     ...profile,
+    teamContext,
     bio,
     teamHistory,
     ...(otherLeagues ? { otherLeagues } : {}),

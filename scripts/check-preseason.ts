@@ -129,6 +129,10 @@ if (existsSync(rostersPath)) {
   const sv = board.players
     .filter((p) => p.isGoalie && p.gamesPlayed >= GOALIE_SHRINK_MIN_GP)
     .map((p) => (p.projection as { savePct: number }).savePct);
+  const empty = board.players.filter(
+    (p) => p.isGoalie && p.gamesPlayed > 0 && !((p.projection as { saves: number }).saves > 0),
+  );
+  if (empty.length > 0) errors.push(`${empty.length} goalie(s) with games but no saves: ${empty.map((p) => p.name).join(", ")}`);
   if (sv.length >= 20) {
     const m = sv.reduce((s, x) => s + x, 0) / sv.length;
     const sd = Math.sqrt(sv.reduce((s, x) => s + (x - m) ** 2, 0) / (sv.length - 1));

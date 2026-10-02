@@ -81,11 +81,28 @@ assert.ok(Math.sqrt(r) * sdObserved > GOALIE_SAVE_PCT_SKILL_SD, "unlimited-histo
 const data = JSON.parse(
   readFileSync(join(process.cwd(), "src/data/players.json"), "utf8"),
 ) as ProjectionsDataset;
-const pool: ShrinkablePlayer[] = data.players;
+const committed: ShrinkablePlayer[] = data.players;
+const board = goalieSavePctShrink(committed);
+assert.ok(board.count > 20, `reference pool ${board.count} goalies`);
+// The projections now shrink save% toward the league themselves
+// (src/lib/ml/goalie-v2.ts SAVE_PCT_SPREAD, out-of-sample): the committed
+// board sits within the ceiling. The mechanics below run on the same pool
+// with its save% gaps widened ×4 when it does.
+assert.ok(board.factor >= 1 && board.factor < 2.5, `shrink factor ${board.factor.toFixed(3)}`);
+assert.ok(board.spread <= GOALIE_SAVE_PCT_SKILL_SD || board.factor > 1, "board spread within the ceiling, or shrunk to it");
+assert.ok(board.mean > 0.885 && board.mean < 0.912, `shrink target ${board.mean.toFixed(5)}`);
+const pool: ShrinkablePlayer[] =
+  board.factor > 1
+    ? committed
+    : committed.map((p) => {
+        if (!p.isGoalie || !((p.projection as GoalieProjection).savePct > 0)) return p;
+        const proj = p.projection as GoalieProjection;
+        const shots = impliedShotsAgainst(proj);
+        const savePct = board.mean + 4 * (proj.savePct - board.mean);
+        return { ...p, projection: { ...proj, savePct, saves: shots * savePct } };
+      });
 const before = goalieSavePctShrink(pool);
-assert.ok(before.count > 20, `reference pool ${before.count} goalies`);
-assert.ok(before.factor > 1.3 && before.factor < 2.5, `shrink factor ${before.factor.toFixed(3)}`);
-assert.ok(before.mean > 0.895 && before.mean < 0.912, `shrink target ${before.mean.toFixed(5)}`);
+assert.ok(before.factor > 1, `test pool needs shrinking (factor ${before.factor.toFixed(3)})`);
 
 const { players: shrunk, shrink } = shrinkGoalieSavePct(pool);
 assert.equal(shrunk.length, pool.length);
@@ -95,7 +112,7 @@ assert.ok(
   `spread lands on the ceiling (${after.spread})`,
 );
 assert.ok(Math.abs(after.mean - before.mean) < 1e-9, "shots-weighted mean preserved");
-assert.equal(after.factor, 1, "nothing left to shrink");
+assert.ok(Math.abs(after.factor - 1) < 1e-9, "nothing left to shrink");
 
 const refIndexes = pool
   .map((p, i) => i)

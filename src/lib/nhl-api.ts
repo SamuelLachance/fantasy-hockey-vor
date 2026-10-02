@@ -283,7 +283,8 @@ export async function fetchTeamStandings(): Promise<TeamStanding[]> {
     return data.standings.map((t) => ({
       teamAbbrev: t.teamAbbrev.default,
       leagueRank: t.leagueSequence,
-      pointPctg: t.pointPctg,
+      // A club without a game yet has no points percentage: league average.
+      pointPctg: Number.isFinite(t.pointPctg) ? t.pointPctg : 0.5,
       goalsForPerGame: t.gamesPlayed > 0 ? t.goalFor / t.gamesPlayed : 2.8,
       goalsAgainstPerGame: t.gamesPlayed > 0 ? t.goalAgainst / t.gamesPlayed : 2.8,
       goalDifferential: t.goalDifferential,
