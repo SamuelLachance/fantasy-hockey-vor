@@ -682,7 +682,7 @@
   "absentYear0": 0.3,
   "retireIfOutAge": 30,
   "roleAbsent": {
-   "source": "Audit 2026-10-02 (ROLE-ABSENT), refit on the NHL history 2008-09 .. 2024-25 (MoneyPuck season totals in the audit's cache; seasons y = 2008..2023, next season y + 1): P(0 NHL games next | not a regular next) by this season's games share (< 0.25, 0.25-0.5, >= 0.5) and age on Oct 1 (< 23, 23-29, 30-33, 34+), as an odds multiplier on retention.ts pAbsentIfNotRegular (the age-only availability table), fitted by bisection to each cell's observed rate. Observed / old model: < 0.25 at 23-29 0.552 / 0.277 (n 1615), < 23 0.352 / 0.188, 30-33 0.706 / 0.452; 0.25-0.5 at 23-29 0.380 / 0.277. Walk-forward check: fitted on 2008-2013 only, < 0.25 23-29 3.56, < 23 2.74, 0.25-0.5 23-29 1.82. After a season with 0 NHL games (having played the one before), under the retirement age: P(regular next) and P(any game next) observed < 23 0.171 / 0.502 (n 205; old model 0.068 / 0.814), 23-29 0.033 / 0.165 (n 1314; old 0.052 / 0.727).",
+   "source": "Audit 2026-10-02 (ROLE-ABSENT), refit on the NHL history 2008-09 .. 2024-25 (MoneyPuck season totals in the audit's cache; seasons y = 2008..2023, next season y + 1): P(0 NHL games next | not a regular next) by this season's games share (< 0.25, 0.25-0.5, >= 0.5) and age on Oct 1 (< 23, 23-29, 30-33, 34+), as an odds multiplier on retention.ts pAbsentIfNotRegular (the age-only availability table), fitted by bisection to each cell's observed rate. Observed / old model: < 0.25 at 23-29 0.552 / 0.277 (n 1615), < 23 0.352 / 0.188, 30-33 0.706 / 0.452; 0.25-0.5 at 23-29 0.380 / 0.277. Shares >= 0.5 keep the age table (multiplier 1): their cells, 0.80-1.00 fitted (< 23 0.85, 30-33 0.82, 34+ 0.80), are within 1-2 se of 1 (not significant): only the part-timers' bands move. Walk-forward check: fitted on 2008-2013 only, < 0.25 23-29 3.56, < 23 2.74, 0.25-0.5 23-29 1.82. After a season with 0 NHL games (having played the one before), under the retirement age: P(regular next) and P(any game next) observed < 23 0.171 / 0.502 (n 205; old model 0.068 / 0.814), 23-29 0.033 / 0.165 (n 1314; old 0.052 / 0.727).",
    "shareCuts": [
     0.25,
     0.5
@@ -706,10 +706,10 @@
      1.27
     ],
     [
-     0.85,
      1,
-     0.82,
-     0.8
+     1,
+     1,
+     1
     ]
    ],
    "afterZero": {

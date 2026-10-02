@@ -38,9 +38,13 @@ export const GATES = {
    * replacement level moves with them) he lands on #142. 130 since
    * 2026-09-28: his injury flag, which trimmed his 2026-27, is gone in the
    * season-opening sync and a healthy season puts him on #135 (value 81.6,
-   * +3); a two-season rental still stays out of the long-term top 130.
+   * +3); a two-season rental still stays out of the long-term top 130. 120
+   * since 2026-10-02: the role refit on history (part-timers leave the NHL
+   * far more often, params games.roleAbsent) took 5-17 long-term points off
+   * the young part-timers around him (Fraser Minten #122 → #147, Josh Doan
+   * #137 → #146), so his own value (84.7 → 87.3) lands on #129-130.
    */
-  longTerm: { youngerBy: 1, shortLivedMaxRank: 130 },
+  longTerm: { youngerBy: 1, shortLivedMaxRank: 120 },
   spearmanAdp: 0.75,
   spearmanKeep: 0.78,
   spearmanRos: 0.55,
