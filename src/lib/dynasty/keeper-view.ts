@@ -61,12 +61,12 @@ export function keeperView(r: Pick<DynastyRecord, "keeper">): { status: KeeperSt
     : { status: r.keeper.status, p: r.keeper.pKept27, team: false, rank: null };
 }
 
-/** Share of the balanced value (δ 0.75) that comes from the first two seasons. */
+/** Share of the balanced value (δ 0.75) that comes from the first two seasons (seasons of negative gain, a keeper slot costing more than he returns, count 0, as in asset-score.ts nowShare). */
 export function nearShare(r: Pick<DynastyRecord, "eG">, delta = 0.75): number {
   let tot = 0;
   let near = 0;
   r.eG.forEach((x, t) => {
-    const w = Math.pow(delta, t) * x;
+    const w = Math.pow(delta, t) * Math.max(0, x);
     tot += w;
     if (t <= 1) near += w;
   });
