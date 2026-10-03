@@ -6,6 +6,7 @@
  */
 import { fmtMoney } from "./money";
 import type { ContractsFile, SalaryUsage } from "./salary-cap";
+import type { DailyPlan } from "./daily-plan";
 
 export { fmtMoney };
 
@@ -26,6 +27,27 @@ export function salaryLine(u: SalaryUsage): string {
   return room < 0
     ? `${head}, dépassement de ${fmtMoney(-room)} (Actifs + Réserve seulement${extra}${unknown}).`
     : `${head}, marge ${fmtMoney(room)} (Actifs + Réserve seulement, ${u.counted} joueurs sur ${u.spots}${extra}${unknown}).`;
+}
+
+const list = (names: string[]) => (names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} et ${names.at(-1)}`);
+
+/**
+ * The salary-cap fit (`plan.capFit`, cap-fit.ts) in words: « Ajustement au
+ * plafond : envoyer A et B aux mineures, rappeler C. Masse 108,1 M$ → 103,4
+ * M$, +26 points projetés d’ici la fin de la saison. »
+ */
+export function capFitLine(fit: NonNullable<DailyPlan["capFit"]>, name: (id: string) => string): string {
+  const down = fit.moves.filter((m) => m.to === "MINORS").map((m) => name(m.id));
+  const up = fit.moves.filter((m) => m.to === "RESERVE").map((m) => name(m.id));
+  const acts = [down.length ? `envoyer ${list(down)} aux mineures` : "", up.length ? `rappeler ${list(up)} (Réserve)` : ""].filter(Boolean).join(", ");
+  const money = `masse ${fmtMoney(fit.usedBefore)} → ${fmtMoney(fit.usedAfter)}`;
+  const gain =
+    fit.gain !== null
+      ? `, +${Math.round(fit.gain)} point${Math.round(fit.gain) >= 2 ? "s" : ""} projeté${Math.round(fit.gain) >= 2 ? "s" : ""} d’ici la fin de la saison régulière de la ligue`
+      : fit.legal
+        ? ", ce qui rend l’effectif conforme"
+        : "; l’effectif reste non conforme (il faudra aussi libérer ou ajouter un joueur)";
+  return `Ajustement au plafond : ${acts} (${money}${gain}).`;
 }
 
 /** The growth assumption in words, for the method note. */

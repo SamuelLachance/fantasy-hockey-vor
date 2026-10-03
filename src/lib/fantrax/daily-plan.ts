@@ -70,6 +70,7 @@ import type {
 } from "./snapshot-types";
 import { periodTotal, waiverTargets, type DropOption, type WaiverCap, type WaiverDay, type WaiverTarget } from "./waivers";
 import type { ContractsFile, SalaryUsage, salaryUsage } from "./salary-cap";
+import type { capFit, CapFitMove } from "./cap-fit";
 
 // Shared with the browser's player table (see draft-inputs.ts).
 export {
@@ -132,6 +133,8 @@ export interface PlanInputs {
    * = every seat filled until the cap (bd259b2; the replay's reference).
    */
   waiverCapModel?: "planned" | "capped";
+  /** Salary-cap fit: lineup days its search solves on (default `CAP_FIT_SEARCH_DAYS`, cap-fit.ts). */
+  capFitSearchDays?: number;
 }
 
 /** A league's own planner rules, kept out of this module (`plan-kit.ts`, `PLAN_KIT`). */
@@ -146,6 +149,8 @@ export interface PlanKit {
     nowMs: number;
     minutesBefore: number;
   }): { lockedIds: Set<string>; locks: NonNullable<DailyPlan["locks"]> };
+  /** Salary-cap roster fit (cap-fit.ts); absent = no advice. */
+  capFit?: typeof capFit;
 }
 
 /** The league has a rule only `plan-kit.ts` knows: a salary cap, or a lock on each player's own game. */
@@ -312,6 +317,15 @@ export interface DailyPlan {
    * when the contracts file was not available.
    */
   salary?: SalaryUsage | null;
+  /**
+   * Salary-cap leagues (absent elsewhere): who to stash in the Minors and who
+   * to call up so the counted roster stays within the cap and floor and its
+   * lineup scores the most (cap-fit.ts). `gain`: expected points over the
+   * rest of the fantasy season against the roster as it is (null when the
+   * roster as it is breaks the cap or floor: no fair « before »). Null when
+   * no move helps.
+   */
+  capFit?: { moves: CapFitMove[]; usedBefore: number; usedAfter: number; gain: number | null; legal: boolean } | null;
   players: Record<string, PlanPlayer>;
 }
 
@@ -477,6 +491,34 @@ function toPlanLineup(res: LineupResult, ctx: Ctx, period: number | null): PlanL
 }
 
 const round = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
+
+/**
+ * A lineup candidate's odds on a season-long choice (the salary-cap fit): a
+ * skater who is not a regular dresses his projected share of the season
+ * (gp / 82), not the nightly floor the lineup uses when he is in it tonight
+ * (the league prior's 60 % for a prospect, 30 % for a fringe player). A
+ * prospect projected for no NHL game is worth nothing — without this the fit
+ * called 0-game prospects up for real NHL players. Goalies already play
+ * their projected start share.
+ */
+function seasonCandidate(ctx: Pick<Ctx, "values" | "state" | "config">, c: LineupCandidate | null): LineupCandidate | null {
+  if (!c) return null;
+  const rec = ctx.values.players[c.id];
+  if (!rec || isGoalieRecord(rec)) return c;
+  const icons = ctx.state.icons[c.id] ?? [];
+  const nightly = skaterPlayProbability({ gp: rec.gp, fpg: bestFpg(rec), src: rec.src, team: rec.t, icons }, true, ctx.config.priors);
+  const dtd = dayToDayFactor(icons);
+  if (nightly <= 0 || nightly >= dtd - 1e-9) return c;
+  const k = Math.min(1, (Math.max(0, rec.gp) / NHL_SEASON_GAMES) * dtd / nightly);
+  if (k >= 1) return c;
+  const values: Partial<Record<SlotId, number>> = {};
+  for (const [slot, v] of Object.entries(c.values) as Array<[SlotId, number | undefined]>) values[slot] = (v ?? 0) * k;
+  return { ...c, values, games: (c.games ?? 0) * k };
+}
+const NHL_SEASON_GAMES = 82;
+
+/** Smallest gain (points over the rest of the season) worth a cap-fit move on a legal roster. */
+export const CAP_FIT_MIN_GAIN = 5;
 
 const WAIVER_TARGETS_PER_GROUP = 3;
 /**
@@ -1103,6 +1145,46 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           values.players[id] ? seasonFp(values.players[id]!, config) : 0,
         )
       : null;
+  // ---- salary-cap fit: which players to stash / call up (Slapshot).
+  let capFitPart: DailyPlan["capFit"] = null;
+  const fitKit = config.salaryCap && input.contracts ? requireKit(input.kit, config).capFit : undefined;
+  if (fitKit && config.salaryCap && input.contracts && target) {
+    const contracts = input.contracts;
+    const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
+    const lastRegular = league.scoringPeriods.filter((p) => p.number < firstPlayoff).at(-1);
+    const regularEnd = lastRegular ? Date.parse(lastRegular.end) : Number.POSITIVE_INFINITY;
+    const ahead = league.rosterPeriods.filter((p) => p.number >= target.number && Date.parse(p.start) <= regularEnd);
+    const movable = roster.filter((r) => r.status === "ACTIVE" || r.status === "RESERVE" || r.status === "MINORS");
+    // Every lineup day left (cap-fit.ts searches on a sample, then re-scores on all of them).
+    const days = ahead.map((p) =>
+      movable
+        .map((r) => seasonCandidate(ctx, candidateFor(ctx, r.id, "RESERVE", undefined, p.number)))
+        .filter((c): c is LineupCandidate => !!c && Object.values(c.values).some((v) => (v ?? 0) > 0)),
+    );
+    const res = fitKit(
+      movable.map((r) => ({ id: r.id, status: r.status, hit: contracts.players[r.id]?.c[0] ?? contracts.min[0] ?? 0 })),
+      { cap: contracts.cap[0] ?? config.salaryCap.base, floor: config.salaryCap.floor ?? 0, spots: config.salaryCap.countedSpots, maxMinors: league.limits.maxMinors },
+      days,
+      days.map(() => 1),
+      slotCounts,
+      slotOrder,
+      input.capFitSearchDays !== undefined ? { searchDays: input.capFitSearchDays } : {},
+    );
+    const countedBefore = movable.filter((r) => r.status !== "MINORS").length;
+    const legalBefore =
+      res.usedBefore <= (contracts.cap[0] ?? config.salaryCap.base) + 1e-9 &&
+      res.usedBefore >= (config.salaryCap.floor ?? 0) - 1e-9 &&
+      countedBefore <= config.salaryCap.countedSpots;
+    if (res.moves.length && (res.after - res.before >= CAP_FIT_MIN_GAIN || !legalBefore)) {
+      capFitPart = {
+        moves: res.moves,
+        usedBefore: round(res.usedBefore),
+        usedAfter: round(res.usedAfter),
+        gain: legalBefore ? round(res.after - res.before, 1) : null,
+        legal: res.legal,
+      };
+    }
+  }
   if (salaryPart?.over) {
     alerts.push({
       level: "warn",
@@ -1118,6 +1200,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     // Minors prospects who can't dress would only pad the page payload.
     ...roster.filter((r) => r.status !== "MINORS" || !deadReason(flags[r.id])).map((r) => r.id),
     ...reserveFills,
+    ...(capFitPart?.moves.map((m) => m.id) ?? []),
     ...targets.flatMap((t) => [t.id, ...(t.drop ? [t.drop.id] : [])]),
     ...(draft?.board.map((b) => b.id) ?? []),
     ...(draft
@@ -1145,7 +1228,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   const teamName = league.teams.find((t) => t.id === teamId)?.name ?? teamId;
   return {
-    ...(config.salaryCap ? { salary: salaryPart } : {}),
+    ...(config.salaryCap ? { salary: salaryPart, capFit: capFitPart } : {}),
     generatedAt: new Date(nowMs).toISOString(),
     dataAsOf: state.fetchedAt,
     teamId,
