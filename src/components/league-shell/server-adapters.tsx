@@ -8,7 +8,6 @@
  * `src/lib/leagues/home-data.ts`).
  */
 import type { ReactNode } from "react";
-import { CategoryDuelTab } from "@/components/draft/CategoryDuelTab";
 import { CategoryLeagueHeader } from "@/components/draft/CategoryLeagueHeader";
 import { CategoryPlayersTab } from "@/components/draft/CategoryPlayersTab";
 import { fantraxLeague } from "@/lib/fantrax/config";
@@ -22,6 +21,7 @@ import { categoryBoard, categoryPoolCounts, categorySnakeSeed } from "./category
 import { needsLeaguePack } from "@/lib/fantrax/league-pack";
 import {
   CapLeagueShellPart,
+  CategoryDuelPart,
   CategoryDraftPart,
   CategoryPlayersPart,
   CategoryTeamPart,
@@ -32,6 +32,7 @@ import {
   FantraxTeamPart,
   FantraxCapPart,
   FantraxAssetsPart,
+  FantraxTradePart,
   FantraxTodayPart,
   FantraxWaiversPart,
 } from "./client-parts";
@@ -106,6 +107,8 @@ function FantraxTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
       return <FantraxCapPart />;
     case "actifs":
       return <FantraxAssetsPart />;
+    case "echanges":
+      return <FantraxTradePart />;
     default:
       return null;
   }
@@ -136,6 +139,9 @@ function fantraxLead(entry: LeagueEntry, tab: LeagueTab): string {
   if (tab === "repechage" && cfg.salaryCap) {
     const s = Math.round((cfg.cadence.draftPollMs ?? 90_000) / 1000);
     return `Le repêchage en direct (relu toutes les ${s} secondes) : au tour de qui, vos choix, votre masse salariale et vos besoins par position, meilleurs disponibles en valeur dynastie.`;
+  }
+  if (tab === "echanges" && cfg.salaryCap) {
+    return "Évaluez un échange pour les deux équipes (valeur dynastie, points de la saison, besoins, masse salariale saison par saison), contre-offres équitables et meilleures offres à faire.";
   }
   if (tab === "mon-equipe" && cfg.salaryCap) {
     return "Votre effectif par statut, sa masse salariale saison par saison et qui envoyer aux mineures pour libérer de l’espace.";
@@ -184,7 +190,7 @@ function CategoryTab({ entry, tab }: { entry: LeagueEntry; tab: LeagueTab }) {
     case "mon-equipe":
       return <CategoryTeamPart board={categoryBoard(entry)} slug={entry.slug} seed={categorySnakeSeed(entry)} />;
     case "duel":
-      return <CategoryDuelTab slug={entry.slug} />;
+      return <CategoryDuelPart slug={entry.slug} />;
     default:
       return null;
   }

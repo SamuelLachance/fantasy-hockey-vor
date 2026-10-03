@@ -30,10 +30,12 @@ export const FantraxWaiversPart = dynamic(() =>
 export const FantraxTeamPart = dynamic(() => import("@/components/fantrax/FantraxTeamTab").then((m) => m.FantraxTeamTab));
 export const FantraxCapPart = dynamic(() => import("@/components/fantrax/SlapshotCapTab").then((m) => m.SlapshotCapTab));
 export const FantraxAssetsPart = dynamic(() => import("@/components/fantrax/AssetsTab").then((m) => m.AssetsTab));
+export const FantraxTradePart = dynamic(() => import("@/components/trade/TradeTab").then((m) => m.TradeTab));
 
 // ---- yahoo-categories
 export const CategoryDraftPart = dynamic(() => import("@/components/draft/CategoryDraftTab").then((m) => m.CategoryDraftTab));
 export const CategoryPlayersPart = dynamic(() =>
   import("@/components/draft/category-table").then((m) => m.CategoryPlayersTable),
 );
+export const CategoryDuelPart = dynamic(() => import("@/components/matchup/DuelTab").then((m) => m.DuelTab));
 export const CategoryTeamPart = dynamic(() => import("@/components/draft/CategoryTeamTab").then((m) => m.CategoryTeamTab));
