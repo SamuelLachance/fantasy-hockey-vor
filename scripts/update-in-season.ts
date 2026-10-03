@@ -19,9 +19,17 @@
  *   pre-season one (src/lib/inseason/skater.ts, scripts/backtest-in-season.ts);
  * - his share of his team's games: the pre-season share updated by the team
  *   games he dressed for, recent ones weighing more, completed long
- *   absences left out (he came back), × (ice-time ratio)^0.25 (a role cut
- *   foretells scratches); goalies keep src/lib/in-season.ts (no goalie
- *   variant beat it, scripts/backtest-in-season-goalies.ts);
+ *   absences left out (he came back), × a power of his ice-time ratio (a
+ *   role cut foretells scratches), × a decay over the games he has missed in
+ *   a row without being on the injury report (sent down, unsigned,
+ *   scratched for good), so his share falls toward 0 instead of stalling.
+ *   Goalies keep src/lib/in-season.ts (no goalie variant beat it,
+ *   scripts/backtest-in-season-goalies.ts);
+ * - when the game-by-game ice-time report is unavailable: every role ratio
+ *   is 1 and the games share falls back to the season totals
+ *   (src/lib/in-season.ts, K 30), but the skater rates still come from
+ *   src/lib/inseason/skater.ts (its per-stat K and goals = shots × regressed
+ *   shooting %), so the update does NOT match the box-stat one of bd259b2;
  * - the remaining schedule (public/fantrax/schedule-20262027.json): his
  *   team's games beyond those it has played according to the same stats
  *   REST, so a game under way, or not in the stats yet, still counts as left;
@@ -38,8 +46,15 @@
  *
  * Writes src/data/players.json (same shape; `gamesPlayed` and `projection`
  * are the full-season totals, actual + rest of season; `inSeason` holds the
- * to-date line, the injury and the date). Public unauthenticated GETs only,
- * ≥ 1.1 s apart, descriptive User-Agent.
+ * to-date line, the injury, his role and the date). Public unauthenticated
+ * GETs only, ≥ 1.1 s apart, descriptive User-Agent.
+ *
+ * Offline replay (scripts/test-in-season.ts runs it on a frozen sample):
+ * IN_SEASON_ROOT=<dir> reads and writes <dir>/src/data/… and
+ * <dir>/public/fantrax/…, IN_SEASON_NOW=<ISO date> sets the day, and
+ * IN_SEASON_REPLAY=<file> answers each request from
+ * `{ responses: [{ match, body }] }` (first `match` contained in the decoded
+ * URL; none: the request fails), with no network and no wait.
  */
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
@@ -64,7 +79,7 @@ import { gamesFromRows, priorUsageOf, playedFlags, trimCurrentAbsence } from "..
 
 const UA = "fantasy-hockey-vor (personal read-only helper; github.com/SamuelLachance/fantasy-hockey-vor)";
 const SEASON_ID = "20262027";
-const root = process.cwd();
+const root = process.env.IN_SEASON_ROOT ?? process.cwd();
 const PLAYERS = join(root, "src", "data", "players.json");
 const BASELINE = join(root, "src", "data", "players-preseason.json");
 const SCHEDULE = join(root, "public", "fantrax", "schedule-20262027.json");
@@ -76,7 +91,16 @@ const MAX_NEWCOMER_LOOKUPS = 40;
 const PRIOR_SEASON_IDS = ["20252026", "20242025"];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const REPLAY = process.env.IN_SEASON_REPLAY
+  ? (JSON.parse(readFileSync(process.env.IN_SEASON_REPLAY, "utf8")) as { responses: Array<{ match: string; body: unknown }> }).responses
+  : null;
 async function getJson<T>(url: string): Promise<T> {
+  if (REPLAY) {
+    const u = decodeURIComponent(url);
+    const hit = REPLAY.find((r) => u.includes(r.match));
+    if (!hit) throw new Error(`${url}: not in the replay`);
+    return structuredClone(hit.body) as T;
+  }
   const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "application/json" } });
   if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
   const out = (await res.json()) as T;
@@ -126,7 +150,7 @@ interface Live {
 }
 
 async function main() {
-  const now = new Date();
+  const now = process.env.IN_SEASON_NOW ? new Date(process.env.IN_SEASON_NOW) : new Date();
   const nowMs = now.getTime();
   if (!existsSync(BASELINE)) {
     writeFileSync(BASELINE, readFileSync(PLAYERS, "utf8"));
@@ -191,7 +215,8 @@ async function main() {
   // this season (time-on-ice report, isGame, month windows halved while one
   // holds 10,000 rows), and of the two seasons before (aggregates). Without
   // them (report down) every role ratio is 1 and the games share falls back
-  // to the season totals: the update then matches the box-stat one.
+  // to the season totals (K 30); the rates keep the per-stat K and the
+  // regressed shooting % of src/lib/inseason/skater.ts.
   const schedIso = (JSON.parse(readFileSync(SCHEDULE, "utf8")) as { games: Array<[string, string, string]> }).games.map((g) => g[0]).sort();
   const isoDay = (d: Date) => d.toISOString().slice(0, 10);
   async function gameRows(from: Date, to: Date): Promise<Row[]> {
@@ -400,8 +425,9 @@ async function main() {
       : Math.max(gp, played(team) - (gamesOut > 0 ? (missedSoFar ?? 0) : 0));
     // A skater's share: the team games he dressed for (recent ones weigh
     // more, completed long absences left out, the current reported one
-    // too), × his ice-time ratio^η. Goalies, and everyone when the
-    // game-by-game report is missing: the season totals.
+    // too), × his ice-time ratio^η, × a decay over the games he has missed
+    // in a row since (not reported hurt: sent down, scratched). Goalies, and
+    // everyone when the game-by-game report is missing: the season totals.
     const teamIds = statsTeamGames.get(team);
     const share = isNew
       ? b.isGoalie

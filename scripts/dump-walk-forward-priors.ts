@@ -11,9 +11,10 @@
  * it is scored.
  *
  * Run: npx tsx scripts/dump-walk-forward-priors.ts [--data=src/data/ml/dataset.json] [--seasons=20212022,...] --out=<file>
- * (about 10 minutes; the dataset comes from npm run ml:dataset).
+ * (about 10 minutes). The dataset is gitignored: `npm run ml:dataset` builds
+ * it first (`npm run inseason:backtest` chains it).
  */
-import { readFileSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { writeFileAtomic } from "../src/lib/atomic-write";
 import { actualRate, eligibleHistory, gp82 } from "../src/lib/ml/dataset-view";
@@ -27,6 +28,10 @@ const DATA = arg("data") ?? join(process.cwd(), "src", "data", "ml", "dataset.js
 const OUT = arg("out");
 if (!OUT) {
   console.error("--out=<file> required");
+  process.exit(1);
+}
+if (!existsSync(DATA)) {
+  console.error(`${DATA} missing: npm run ml:dataset first (gitignored, built from the public NHL stats REST)`);
   process.exit(1);
 }
 const TEST = (arg("seasons") ?? "20212022,20222023,20232024,20242025,20252026").split(",").map(Number);
