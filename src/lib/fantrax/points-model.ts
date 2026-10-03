@@ -73,8 +73,13 @@ export const REGULAR_MIN_FPG = 2.5;
 export const REGULAR_FPG_MIN_GP = 45;
 /** Nobody starts every night; cap a lone healthy goalie's share. */
 export const MAX_START_SHARE = 0.85;
-/** Second night of a back-to-back: the starter keeps this fraction of his share. */
-export const BACK_TO_BACK_STARTER_FACTOR = 0.35;
+/**
+ * Second night of a back-to-back: the starter keeps this fraction of his
+ * share. 0.6 by scripts/backtest-goalie-starts.ts (every back-to-back of
+ * 2021-22..2025-26, 4,389 nights): Brier 0.243 [0.238, 0.248] against 0.263
+ * [0.255, 0.271] at 0.35; fit on 2021-24, it holds on 2024-26 (0.241 vs 0.259).
+ */
+export const BACK_TO_BACK_STARTER_FACTOR = 0.6;
 /** Unprojected NHL goalies (prospects on an NHL club) count as a deep backup. */
 export const PRIOR_GOALIE_GP = 10;
 

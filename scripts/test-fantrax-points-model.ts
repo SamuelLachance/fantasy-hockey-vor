@@ -122,7 +122,7 @@ assert(shares.get("c") === 0, "injured starter gets 0");
 assert(shares.get("d") === MAX_START_SHARE, "healthy backup inherits, capped");
 assert(shares.get("e") === 0, "clubless goalie 0");
 const b2b = backToBackShares(new Map([["a", 0.75], ["b", 0.25]]));
-assert(near(b2b.get("a")!, 0.75 * BACK_TO_BACK_STARTER_FACTOR, 1e-9), "b2b starter keeps 35%");
+assert(near(b2b.get("a")!, 0.75 * BACK_TO_BACK_STARTER_FACTOR, 1e-9), "b2b starter keeps 60%");
 assert(near(b2b.get("a")! + b2b.get("b")!, 1, 1e-9), "b2b share moves to the partner");
 
 // ---- bestFpg: which slot a skater is really valued in.
