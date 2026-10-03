@@ -284,8 +284,8 @@ const near = (a: number, b: number, tol = 1e-9) => Math.abs(a - b) <= tol;
   eq(CAPTAINS_DYNASTY.dynastyProfile, "captains", "Captains keeps its profile");
   eq(
     SLAPSHOT.salaryCap,
-    { base: 105, firstSeason: 2026, countedStatuses: ["ACTIVE", "RESERVE"], countedSpots: 23 },
-    "Slapshot salary cap: 105 M$ in 2026-27 over the 23 Active + Reserve players",
+    { base: 105, firstSeason: 2026, countedStatuses: ["ACTIVE", "RESERVE"], countedSpots: 23, floor: 70 },
+    "Slapshot salary cap: 105 M$ in 2026-27 over the 23 Active + Reserve players, 70 M$ floor",
   );
   eq(CAPTAINS_DYNASTY.salaryCap, null, "Captains has no salary cap");
   eq([...SLAPSHOT.eligibility.groups], ["C", "LW", "RW", "D", "G"], "Slapshot ranks the two wings apart");

@@ -74,7 +74,7 @@ export function RosterAlerts({ plan, player, minors, limits, lockNote, extraAler
       >
         {legalitySummary(L, minors, limits)}
       </p>
-      {plan.salary ? <SalaryLineNote salary={plan.salary} /> : null}
+      {plan.salary ? <SalaryLineNote salary={plan.salary} capFit={plan.capFit} name={name} /> : null}
       {lockNote ? <p className="mt-2 text-xs text-slate-400">{lockNote}</p> : null}
 
       {L.fixes.length + L.reserveFills.length > 0 ? (

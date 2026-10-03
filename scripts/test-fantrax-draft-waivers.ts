@@ -5,7 +5,7 @@
 import type { SlotId } from "../src/lib/fantrax/config";
 import { draftOutlook, draftValue, type DraftPickInfo, type DraftPoolPlayer } from "../src/lib/fantrax/draft";
 import { eligibleSlots, type LineupCandidate } from "../src/lib/fantrax/lineup";
-import { cappedTotal, dayParts, periodTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
+import { cappedTotal, dayParts, periodTotal, plannedGroupTotal, waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
 import { capBenchPolicy, withCapBench } from "../src/lib/fantrax/daily-plan";
 
 let failed = 0;
@@ -187,12 +187,38 @@ assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(fu
   const capped = (f: (d: WaiverDay) => LineupCandidate[]) => periodTotal(capDays, f, slotCounts, undefined, tightCap);
   const fa = games(cand("fa", "D", 3, "FA"));
   assert(near(capped((d) => d.candidates), 14) && near(capped((d) => [...d.candidates, fa]), 10), "the day the cap is reached counts in full, nothing after it");
-  const tight = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: tightCap });
-  assert(tight.length === 0, "an add that makes the team hit its cap a day earlier costs points (-4): not shown");
-  const loose = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 0, gsMax: null, gsUsed: 0 } });
+  // Every seat filled until the cap (bd259b2's model): the add only brings the cap a day closer.
+  const filled = { ...opts, capModel: "capped" as const };
+  const tight = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...filled, cap: tightCap });
+  assert(tight.length === 0, "seats filled: an add that makes the team hit its cap a day earlier costs points (-4): not shown");
+  const loose = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...filled, cap: { gpMax: 8, gpUsed: 0, gsMax: null, gsUsed: 0 } });
   assert(near(loose[0]!.delta, 6), "a cap that is not reached changes nothing");
-  const used = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 5, gsMax: null, gsUsed: 0 } });
-  assert(near(used[0]!.delta, 3), "games already played count toward the cap: only day 1 is left (+3)");
+  const used = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...filled, cap: { gpMax: 8, gpUsed: 5, gsMax: null, gsUsed: 0 } });
+  assert(near(used[0]!.delta, 3), "seats filled: games already played count toward the cap, only day 1 is left (+3)");
+  // The plan's own model (the games-cap planner benches): with the add, day 1
+  // keeps 3 games (f1, fa, one D: 8) under the 4-game cap and day 2 crosses
+  // it in full (10): 18 against 14 without him.
+  const planned = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: tightCap });
+  assert(planned.length === 1 && near(planned[0]!.delta, 4), `planned: the add is worth +4 once the plan benches for him (${planned[0]?.delta})`);
+  assert(near(periodTotal(capDays, (d) => [...d.candidates, fa], slotCounts, undefined, tightCap, "planned"), 18), "planned period total 8 + 10");
+  // 3 games left: base keeps 2 games of day 1 (5) then crosses on day 2 (7);
+  // with him 2 games of day 1 (6) then 10.
+  const usedPlanned = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 5, gsMax: null, gsUsed: 0 } });
+  assert(near(usedPlanned[0]!.delta, 4), `planned: 3 games left, +4 (${usedPlanned[0]?.delta})`);
+  const loosePlanned = waiverTargets(capDays, [{ id: "fa", status: "FA", fpg: 3 }], { ...opts, cap: { gpMax: 8, gpUsed: 0, gsMax: null, gsUsed: 0 } });
+  assert(near(loosePlanned[0]!.delta, 6), "planned: a cap that is not reached changes nothing");
+}
+
+// ---- plannedGroupTotal: the best games under the cap, crossed on the best night.
+{
+  const a = (value: number, games = 1) => ({ value, games, goalie: false });
+  assert(plannedGroupTotal([[a(3), a(3)], [a(1)]], 3) === 7, "the cap is only crossed on the last day: everything counts");
+  // Room 2: cross on day 2 after the best game of day 1 (5 + 4 + 4), or on day 1 (5 + 1).
+  assert(plannedGroupTotal([[a(5), a(1)], [a(4), a(4)]], 2) === 13, "keep day 1's best game, cross on day 2");
+  assert(plannedGroupTotal([[a(5), a(1)], [a(4), a(4)]], null) === 14, "no cap: all");
+  assert(plannedGroupTotal([[a(5)]], 0) === 0, "cap already reached: nothing counts");
+  // Half a game (a 50 % goalie) uses half the room.
+  assert(near(plannedGroupTotal([[a(2, 0.5), a(4, 1)], [a(10, 1)]], 1.5), 2 + 10), "fractional games: the 50 % start fits in 0.5 of room - 1");
 }
 
 // ---- the rest of season under each later period's caps (FX-2 / FX-3
@@ -220,8 +246,12 @@ assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(fu
   const blind = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], base);
   assert(near(blind[0]!.ros, 6), `cap-blind: +3 on each later day 2 (${blind[0]?.ros})`);
   const rosCaps = new Map([9, 10].map((n) => [n, { gpMax: 4, gsMax: null }] as const));
-  const capped = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps });
-  assert(capped.length === 1 && near(capped[0]!.ros, 0), `capped: day 2 of each period is past the 4-game cap, the add is worth nothing later (${capped[0]?.ros})`);
+  const capped = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps, capModel: "capped" });
+  assert(capped.length === 1 && near(capped[0]!.ros, 0), `seats filled: day 2 of each period is past the 4-game cap, the add is worth nothing later (${capped[0]?.ros})`);
+  // The planner benches a 2-point D on day 1 (3 games, 7) and crosses the
+  // cap on day 2 with the add (5 + 3): +3 a period over its 12 without him.
+  const planned = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps });
+  assert(planned.length === 1 && near(planned[0]!.ros, 6), `planned: +3 in each later period (${planned[0]?.ros})`);
   // The counter restarts with each period, and a cap not reached costs nothing.
   const loose = waiverTargets(now, [{ id: "fa", status: "FA", fpg: 3 }], { ...base, rosCaps: new Map([9, 10].map((n) => [n, { gpMax: 6, gsMax: null }] as const)) });
   assert(near(loose[0]!.ros, 6), `a 6-game cap is not reached before day 2: +3 twice (${loose[0]?.ros})`);

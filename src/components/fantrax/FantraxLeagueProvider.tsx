@@ -247,11 +247,57 @@ export function FantraxLeagueProvider({
   );
 
   // ---- plan (browser re-run once the snapshot is in; baked plan until then)
+  // A salary-cap league's roster fit is left out of it (`deferCapFit`): it
+  // costs about the plan again and depends on the roster, not the clock.
+  const deferFit = !!config.salaryCap;
   const computed = useMemo(() => {
     if (!bundle || !state || planNowMs === null || !modelReady) return null;
-    return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs, config, vor, contracts: bundle.contracts, kit });
-  }, [bundle, state, teamId, planNowMs, config, vor, modelReady, kit]);
-  const plan = computed ?? (teamId === initialPlan.teamId ? initialPlan : null);
+    return buildDailyPlan({ ...bundle, state, teamId, nowMs: planNowMs, config, vor, contracts: bundle.contracts, kit, deferCapFit: deferFit });
+  }, [bundle, state, teamId, planNowMs, config, vor, modelReady, kit, deferFit]);
+
+  // ---- salary-cap fit: once per team, roster (statuses, icons) and lineup
+  // period, just after the plan is on screen; the per-game lock re-plans and
+  // the live reads that change nothing it reads reuse it. Until it is in, the
+  // baked one for the same team and period (no flash of the line).
+  const fitFrom = computed?.target?.rosterPeriod;
+  const fitKey =
+    deferFit && state && fitFrom !== undefined
+      ? JSON.stringify([teamId, fitFrom, (state.rosters[teamId] ?? []).map((r) => [r.id, r.status, state.icons[r.id]])])
+      : null;
+  const [fit, setFit] = useState<{ key: string; b: unknown; v: DailyPlan["capFit"] }>();
+  const fitState = useRef(state);
+  useEffect(() => {
+    fitState.current = state;
+  });
+  useEffect(() => {
+    const st = fitState.current;
+    const fitNow = kit?.planCapFit;
+    if (!fitKey || !bundle || !fitNow || !st || fitFrom === undefined) return;
+    const h = window.setTimeout(
+      () => setFit({ key: fitKey, b: bundle, v: fitNow({ ...bundle, state: st, teamId, nowMs: 0, config, contracts: bundle.contracts, kit }, fitFrom) }),
+      50,
+    );
+    return () => window.clearTimeout(h);
+  }, [fitKey, bundle, kit, config, teamId, fitFrom]);
+  const plan = useMemo(
+    () =>
+      !computed
+        ? teamId === initialPlan.teamId
+          ? initialPlan
+          : null
+        : deferFit
+          ? {
+              ...computed,
+              capFit:
+                fit?.key === fitKey && fit.b === bundle
+                  ? fit.v
+                  : teamId === initialPlan.teamId && initialPlan.target?.rosterPeriod === fitFrom
+                    ? initialPlan.capFit
+                    : undefined,
+            }
+          : computed,
+    [computed, teamId, initialPlan, deferFit, fit, fitKey, bundle, fitFrom],
+  );
   // A game-lock league re-plans at each of its players' locks (locked players
   // then stay put); a period-lock league when the whole lineup locks.
   const lockAt = plan?.locks ? plan.locks.next : plan?.target?.start;

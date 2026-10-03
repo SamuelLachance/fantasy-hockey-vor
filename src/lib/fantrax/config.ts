@@ -360,6 +360,8 @@ export interface SalaryCapConfig {
   countedStatuses: readonly string[];
   /** Spots that count (Active + Reserve): the cap is spread over them. */
   countedSpots: number;
+  /** League salary floor over the counted players, M$ (Slapshot: 70, the commissioner's rule). */
+  floor?: number;
 }
 
 /** Fantrax spells its slots the same way it spells `eligiblePos` tokens. */
@@ -609,6 +611,7 @@ export const SLAPSHOT: FantraxLeagueConfig = {
     firstSeason: 2026,
     countedStatuses: ["ACTIVE", "RESERVE"],
     countedSpots: 23,
+    floor: 70,
   },
   paths: {
     data: "src/data/fantrax/slapshot",

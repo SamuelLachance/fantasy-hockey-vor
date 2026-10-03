@@ -52,6 +52,7 @@ import {
   type LineupMove,
   type LineupResult,
 } from "./lineup";
+import { capDayPlan, perGameValue } from "./cap-planner";
 import { backToBackShares, dayToDayFactor, isRuledOut, skaterPlayProbability } from "./points-model";
 import {
   deadReason,
@@ -69,6 +70,7 @@ import type {
 } from "./snapshot-types";
 import { periodTotal, waiverTargets, type DropOption, type WaiverCap, type WaiverDay, type WaiverTarget } from "./waivers";
 import type { ContractsFile, SalaryUsage, salaryUsage } from "./salary-cap";
+import type { capFitAdvice, CapFitMove } from "./cap-fit";
 
 // Shared with the browser's player table (see draft-inputs.ts).
 export {
@@ -125,6 +127,20 @@ export interface PlanInputs {
    * behavior before 2026-10-02): the waiver replay's reference only.
    */
   waiverRosCapBlind?: boolean;
+  /**
+   * How the waiver gains add up a capped period (`WaiverOptions.capModel`):
+   * "planned" by default (what the games-cap planner can count), "capped"
+   * = every seat filled until the cap (bd259b2; the replay's reference).
+   */
+  waiverCapModel?: "planned" | "capped";
+  /** Salary-cap fit: lineup days its search solves on (default `CAP_FIT_SEARCH_DAYS`, cap-fit.ts). */
+  capFitSearchDays?: number;
+  /**
+   * Leave the salary-cap fit out (`capFit` undefined): the browser runs it
+   * apart (`planCapFit`), once per roster and lineup period, after the plan
+   * is on screen, not at every per-game lock re-plan.
+   */
+  deferCapFit?: boolean;
 }
 
 /** A league's own planner rules, kept out of this module (`plan-kit.ts`, `PLAN_KIT`). */
@@ -139,6 +155,10 @@ export interface PlanKit {
     nowMs: number;
     minutesBefore: number;
   }): { lockedIds: Set<string>; locks: NonNullable<DailyPlan["locks"]> };
+  /** Salary-cap roster fit (cap-fit.ts); absent = no advice. */
+  capFit?: typeof capFitAdvice;
+  /** `planCapFit`, for the browser's deferred fit: in the kit's chunk, not the shared planner's caller. */
+  planCapFit?: (input: PlanInputs, from: number) => DailyPlan["capFit"];
 }
 
 /** The league has a rule only `plan-kit.ts` knows: a salary cap, or a lock on each player's own game. */
@@ -278,10 +298,11 @@ export interface DailyPlan {
     gsBinds: boolean;
     known: boolean;
     /**
-     * When a cap binds: bench the starters below these per-game values for
-     * the rest of the period (null = no bench for that group), so the games
-     * left under the cap go to the better players; `gain` = points the
-     * policy adds to the period's counted total. Absent when nothing gains.
+     * Games-cap plan (`capDayPlan`): bench tonight's starters below these
+     * per-game values (null = no bench for that group), so the games left
+     * under the cap go to the better players and nights; `gain` = expected
+     * points the plan adds to the period's counted total over starting
+     * everyone. Re-planned every day; absent when tonight benches nobody.
      */
     bench?: { skater: number | null; goalie: number | null; gain: number };
   } | null;
@@ -304,6 +325,25 @@ export interface DailyPlan {
    * when the contracts file was not available.
    */
   salary?: SalaryUsage | null;
+  /**
+   * Salary-cap leagues (absent elsewhere): who to stash in the Minors and who
+   * to call up so the counted roster stays within the cap and floor and its
+   * lineup scores the most (cap-fit.ts). `gain`: expected points over the
+   * rest of the fantasy season against the roster as it is (null when the
+   * roster as it is breaks the cap or floor: no fair « before »). Null when
+   * no move helps.
+   */
+  capFit?: {
+    moves: CapFitMove[];
+    /** Counted payroll before (the `salary` line's: the best counted spots by season points) and after the moves, M$. */
+    usedBefore: number;
+    usedAfter: number;
+    /** Projected points the moves add (null: the roster was not legal before). */
+    gain: number | null;
+    legal: boolean;
+    /** What made the roster illegal before (null: it was legal; the moves only score more). */
+    fix: "cap" | "floor" | "spots" | null;
+  } | null;
   players: Record<string, PlanPlayer>;
 }
 
@@ -470,6 +510,8 @@ function toPlanLineup(res: LineupResult, ctx: Ctx, period: number | null): PlanL
 
 const round = (x: number, d = 2) => Math.round(x * 10 ** d) / 10 ** d;
 
+
+
 const WAIVER_TARGETS_PER_GROUP = 3;
 /**
  * Later lineup days a waiver target's rest-of-season gain is solved on: all
@@ -481,7 +523,11 @@ const WAIVER_TARGETS_PER_GROUP = 3;
  */
 export const WAIVER_ROS_SAMPLE_DAYS = Number.POSITIVE_INFINITY;
 
-/** Smallest gain (points over the period) worth a bench policy. */
+/**
+ * Smallest gain (points over the period) worth a bench policy. The plan
+ * itself uses `capDayPlan` (cap-planner.ts); `capBenchPolicy` (one bar per
+ * group for the whole period, bd259b2) stays as the backtest's reference.
+ */
 export const CAP_BENCH_MIN_GAIN = 0.5;
 
 interface CapBench {
@@ -492,24 +538,15 @@ interface CapBench {
 
 const isGoalieCand = (c: LineupCandidate) => c.values.G !== undefined;
 
-/** Per-game value of a candidate (his best seat's value ÷ his expected games that day). */
-function perGameValue(c: LineupCandidate): number {
-  const g = c.games ?? 0;
-  if (!(g > 0)) return 0;
-  const goalie = isGoalieCand(c);
-  let best = 0;
-  for (const [slot, v] of Object.entries(c.values)) if ((slot === "G") === goalie) best = Math.max(best, v ?? 0);
-  return best / g;
-}
-
 /** The day's candidates with everyone below the policy's per-game bar benched (locked players stay). */
 export function withCapBench(cands: LineupCandidate[], policy: Pick<CapBench, "skater" | "goalie">): LineupCandidate[] {
   return cands.map((c) => {
     if (c.locked) return c;
     const bar = isGoalieCand(c) ? policy.goalie : policy.skater;
-    // Benched: no points and no games toward the caps, even if the optimizer
-    // seats him at 0.
-    return bar !== null && perGameValue(c) < bar ? { ...c, values: {}, games: 0 } : c;
+    // Benched: no points, no games toward the caps, and out of every seat (to Reserve): with zeroed values alone the optimizer
+    // still seated him at 0 on a free seat (bd259b2), where he plays and
+    // spends a game.
+    return bar !== null && perGameValue(c) < bar ? { ...c, eligible: [], values: {}, games: 0 } : c;
   });
 }
 
@@ -577,16 +614,53 @@ function waiverGroup(eligiblePos: string): string {
 
 // ------------------------------------------------------------ plan
 
+function planCtx(input: PlanInputs, config: FantraxLeagueConfig, index: ScheduleIndex): Ctx {
+  const teamGoalies = new Map<string, string[]>();
+  for (const [id, r] of Object.entries(input.values.players)) {
+    if (!isGoalieRecord(r, config)) continue;
+    teamGoalies.set(r.t, [...(teamGoalies.get(r.t) ?? []), id]);
+  }
+  return { league: input.league, state: input.state, values: input.values, index, teamGoalies, config };
+}
+
+/** The salary-cap fit from lineup period `from` (null: no cap, no contracts or nothing worth saying). */
+function runCapFit(ctx: Ctx, input: PlanInputs, from: number): DailyPlan["capFit"] {
+  const { config } = ctx;
+  const fit = config.salaryCap && input.contracts ? requireKit(input.kit, config).capFit : undefined;
+  if (!fit) return null;
+  return fit({
+    league: ctx.league,
+    from,
+    roster: ctx.state.rosters[input.teamId] ?? [],
+    contracts: input.contracts!,
+    config,
+    candidate: (id, period) => candidateFor(ctx, id, "RESERVE", undefined, period),
+    slots: ctx.league.slotCounts,
+    order: config.slots.order,
+    values: ctx.values.players,
+    icons: ctx.state.icons,
+    searchDays: input.capFitSearchDays,
+  }).advice;
+}
+
+/**
+ * The plan's salary-cap fit alone (`DailyPlan.capFit`) for lineup period
+ * `from`: what `buildDailyPlan` leaves out under `deferCapFit`. It reads the
+ * roster, the contracts and the snapshot, never the clock, so the browser
+ * runs it once per roster and period, not at every lock.
+ */
+export function planCapFit(input: PlanInputs, from: number): DailyPlan["capFit"] {
+  const config = input.config ?? CAPTAINS_DYNASTY;
+  if (!config.salaryCap || !input.contracts) return null;
+  const ctx = planCtx(input, config, indexSchedule(input.schedule, input.league.rosterPeriods));
+  return runCapFit(ctx, input, from);
+}
+
 export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const { league, state, values, schedule, teamId, nowMs } = input;
   const config = input.config ?? CAPTAINS_DYNASTY;
   const index = indexSchedule(schedule, league.rosterPeriods);
-  const teamGoalies = new Map<string, string[]>();
-  for (const [id, r] of Object.entries(values.players)) {
-    if (!isGoalieRecord(r, config)) continue;
-    teamGoalies.set(r.t, [...(teamGoalies.get(r.t) ?? []), id]);
-  }
-  const ctx: Ctx = { league, state, values, index, teamGoalies, config };
+  const ctx = planCtx(input, config, index);
   const roster = state.rosters[teamId] ?? [];
   const onRoster = new Map(roster.map((r) => [r.id, r]));
   const slotCounts = league.slotCounts;
@@ -937,17 +1011,24 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     cap && (gpMax !== null || gsMax !== null)
       ? { gpMax, gsMax, gpUsed: usedGp + before(gpByDay), gsUsed: usedGs + before(gsByDay) }
       : null;
-  // ---- games-cap bench policy (FX-8): the optimizer fills every seat every
-  // day, so a binding cap is reached early and the last days count nothing.
-  // Benching the weakest per-game starters keeps the games for the best ones.
-  if (cap && waiverCap && target && (cap.gpBinds || cap.gsBinds)) {
+  // ---- games-cap plan (FX-8): the optimizer fills every seat every day, so
+  // a binding cap is reached early and the last days count nothing. Tonight's
+  // bench bars come from a dynamic program over the period's days left
+  // (`capDayPlan`): which games to spend, and on which night to cross the
+  // cap (that day counts in full). Replayed game by game over five NHL
+  // seasons (scripts/backtest-mgmt.ts, 80 simulated team-seasons), points a
+  // team-season, mean [95% CI]: +45.9 [37.4, 54.4] over bd259b2 (whose
+  // benched players still took free seats), +11.8 [7.7, 15.9] over its
+  // single per-period bar once fixed, +56.4 [46.6, 66.1] over starting the
+  // best projected lineup every day.
+  if (cap && waiverCap && target) {
     // On the counted roster only (Active + Reserve): Minors / IR players the
     // per-day lineups may borrow cannot all come up at once (the counted
     // maximum), and bars read off that deeper roster bench players the
     // real one needs (-284 points over the season's binding periods).
     const counted = dayCands.map((cands) => cands.filter((c) => c.status === "ACTIVE" || c.status === "RESERVE"));
-    const policy = capBenchPolicy(counted, slotCounts, slotOrder, waiverCap, { gp: cap.gpBinds, gs: cap.gsBinds });
-    if (policy) {
+    const policy = capDayPlan(counted, slotCounts, slotOrder, waiverCap);
+    if (policy && (policy.skater !== null || policy.goalie !== null)) {
       cap.bench = { skater: policy.skater, goalie: policy.goalie, gain: round(policy.gain, 1) };
       const benched = withCapBench(tonightCands, policy);
       const res = optimizeLineup(benched, slotCounts, slotOrder);
@@ -972,6 +1053,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           rosDays,
           cap: waiverCap,
           rosCaps,
+          capModel: input.waiverCapModel ?? "planned",
         },
       )
     : [];
@@ -1092,6 +1174,9 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           values.players[id] ? seasonFp(values.players[id]!, config) : 0,
         )
       : null;
+  // ---- salary-cap fit: which players to stash / call up (Slapshot; cap-fit.ts).
+  const capFitPart: DailyPlan["capFit"] =
+    input.deferCapFit ? undefined : target ? runCapFit(ctx, input, target.number) : null;
   if (salaryPart?.over) {
     alerts.push({
       level: "warn",
@@ -1107,6 +1192,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     // Minors prospects who can't dress would only pad the page payload.
     ...roster.filter((r) => r.status !== "MINORS" || !deadReason(flags[r.id])).map((r) => r.id),
     ...reserveFills,
+    ...(capFitPart?.moves.map((m) => m.id) ?? []),
     ...targets.flatMap((t) => [t.id, ...(t.drop ? [t.drop.id] : [])]),
     ...(draft?.board.map((b) => b.id) ?? []),
     ...(draft
@@ -1134,7 +1220,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
 
   const teamName = league.teams.find((t) => t.id === teamId)?.name ?? teamId;
   return {
-    ...(config.salaryCap ? { salary: salaryPart } : {}),
+    ...(config.salaryCap ? { salary: salaryPart, capFit: capFitPart } : {}),
     generatedAt: new Date(nowMs).toISOString(),
     dataAsOf: state.fetchedAt,
     teamId,

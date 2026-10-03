@@ -8,8 +8,10 @@
  *    points count until the period's GP (GS) cap is reached (that day in
  *    full), and only the lineup's ACTIVE games accrue;
  *  - audit: the audit's replay (caps {} on every day, plan.lineup.total).
- * Targets come from the plan as shipped (later caps) and from the cap-blind
- * rest of season (waiverRosCapBlind). Prints false losers (shown > 0,
+ * Targets come from the plan as shipped (the planned cap model: what the
+ * games-cap planner can count), from bd259b2's model (every seat filled until
+ * the cap, waiverCapModel "capped") and from the cap-blind rest of season
+ * (waiverRosCapBlind). The replayed plans bench by the cap planner. Prints false losers (shown > 0,
  * replay < 0) and the error of delta + ros.
  * Run: npx tsx scripts/replay-waivers.ts [teams 0-16] [periods 2,8,14] [both|capped|audit] [out.json]
  * (16 teams x 3 periods: about 10 minutes; split the teams across processes.)
@@ -70,7 +72,8 @@ for (const team of league.teams.slice(teamsArg[0], teamsArg[1])) for (const spn 
   const nowMs = Date.parse(sp.start) - 3600_000;
   const st = { ...state0, fetchedAt: new Date(nowMs).toISOString(), scoringPeriod: sp.number, caps: {}, draft: null };
   const fixed = buildDailyPlan({ league, state: st, values, schedule, teamId: team.id, nowMs, config: cfg });
-  const blind = buildDailyPlan({ league, state: st, values, schedule, teamId: team.id, nowMs, config: cfg, waiverRosCapBlind: true });
+  const filled = buildDailyPlan({ league, state: st, values, schedule, teamId: team.id, nowMs, config: cfg, waiverCapModel: "capped" });
+  const blind = buildDailyPlan({ league, state: st, values, schedule, teamId: team.id, nowMs, config: cfg, waiverRosCapBlind: true, waiverCapModel: "capped" });
   const roster0 = state0.rosters[team.id];
   if (!fixed.target) continue;
   const fromMs = Date.parse(fixed.target.start);
@@ -86,7 +89,7 @@ for (const team of league.teams.slice(teamsArg[0], teamsArg[1])) for (const spn 
   };
   const baseCache = new Map<boolean, number>();
   const base = (capped: boolean) => { if (!baseCache.has(capped)) baseCache.set(capped, seasonTotal(team.id, roster0, fromMs, capped)); return baseCache.get(capped)!; };
-  for (const [label, plan] of [["fixed", fixed], ["blind", blind]] as const) {
+  for (const [label, plan] of [["fixed", fixed], ["filled", filled], ["blind", blind]] as const) {
     plan.waivers.targets.slice(0, TOP).forEach((t: any, i: number) => {
       const row: any = { team: team.name, sp: spn, label, rank: i + 1, id: t.id, name: values.players[t.id]?.n, drop: t.drop?.id ?? null, dropName: t.drop ? values.players[t.drop.id]?.n : null, delta: t.delta, ros: t.ros, shown: t.delta + t.ros };
       if (MODE !== "audit") row.capped = truth(t, true);
@@ -98,12 +101,12 @@ for (const team of league.teams.slice(teamsArg[0], teamsArg[1])) for (const spn 
 }
 if (process.argv[5]) writeFileSync(process.argv[5], JSON.stringify(rows));
 const med = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1] ?? 0;
-for (const label of ["blind", "fixed"]) {
+for (const label of ["blind", "filled", "fixed"]) {
   for (const truthKey of MODE === "both" ? ["capped", "audit"] : [MODE]) {
     const s = rows.filter((r) => r.label === label);
     const firsts = s.filter((r) => r.rank === 1);
     console.log(
-      `${label === "fixed" ? "shipped" : "cap-blind ros"} vs ${truthKey} replay: ${s.length} shown, ${s.filter((r) => r[truthKey] < 0).length} false losers (${firsts.filter((r) => r[truthKey] < 0).length} of ${firsts.length} first picks), median |error| ${med(s.map((r) => Math.abs(r.shown - r[truthKey]))).toFixed(2)}`,
+      `${label === "fixed" ? "shipped (planned caps)" : label === "filled" ? "bd259b2 (seats filled until the cap)" : "cap-blind ros"} vs ${truthKey} replay: ${s.length} shown, ${s.filter((r) => r[truthKey] < 0).length} false losers (${firsts.filter((r) => r[truthKey] < 0).length} of ${firsts.length} first picks), median |error| ${med(s.map((r) => Math.abs(r.shown - r[truthKey]))).toFixed(2)}`,
     );
   }
 }

@@ -108,6 +108,14 @@ export interface WaiverOptions {
    * (nothing used when each opens); absent = the rest of season is cap-blind.
    */
   rosCaps?: ReadonlyMap<number, Pick<WaiverCap, "gpMax" | "gsMax">> | null;
+  /**
+   * How a capped period adds up. "planned" (default): what the plan's
+   * games-cap planner can count — the best games by points per game under
+   * the cap, crossing it on the best night (`plannedTotal`). "capped": every
+   * seat filled every day, counting until the cap (bd259b2; the period's
+   * later days read as lost when the plan would have benched for them).
+   */
+  capModel?: "planned" | "capped";
 }
 
 /** One lineup day split for the games caps: points and games of the lineup (ACTIVE slots only). */
@@ -118,6 +126,14 @@ export interface DayParts {
   gp: number;
   /** Expected starts of the goalies in the lineup. */
   gs: number;
+  /** Each seated player's points and expected games (the planned cap model). */
+  apps?: Appearance[];
+}
+
+export interface Appearance {
+  value: number;
+  games: number;
+  goalie: boolean;
 }
 
 /** The optimal lineup of a day, split into capped parts. */
@@ -128,13 +144,14 @@ export function dayParts(
 ): DayParts {
   const res = optimizeLineup(cands, slots, slotOrder ?? SLOT_ORDER);
   const byId = new Map(cands.map((c) => [c.id, c]));
-  const out: DayParts = { skaterPoints: 0, goaliePoints: 0, gp: 0, gs: 0 };
+  const out: DayParts = { skaterPoints: 0, goaliePoints: 0, gp: 0, gs: 0, apps: [] };
   for (const a of res.assignments) {
     if (!a.playerId) continue;
     // A dressed player uses games even when projected at 0 points; without a
     // `games` estimate, only a scoring assignment counts one.
     const games = Math.max(0, byId.get(a.playerId)?.games ?? (a.value > 0 ? 1 : 0));
     const points = Math.max(0, a.value);
+    out.apps!.push({ value: points, games, goalie: a.slot === "G" });
     if (a.slot === "G") {
       out.goaliePoints += points;
       out.gs += games;
@@ -182,6 +199,69 @@ export function cappedTotal(
 }
 
 /**
+ * What the games-cap planner can count of one group over one period: every
+ * seat filled every day when that never reaches the cap before the last day;
+ * otherwise the best crossing night c — its lineup in full, after the best
+ * games of the nights before it by points per game (fractional knapsack)
+ * within `room - 1` games, so the cap is still open when c starts — and
+ * nothing after c. `room` = games left under the cap (null = no cap).
+ * It values an add the way the plan will use him: an add whose games would
+ * only push weak games past the cap adds little; one who displaces them adds
+ * his per-game edge on those games.
+ */
+export function plannedGroupTotal(days: readonly Appearance[][], room: number | null): number {
+  const value = (xs: readonly Appearance[]) => xs.reduce((s, a) => s + a.value, 0);
+  const games = (xs: readonly Appearance[]) => xs.reduce((s, a) => s + a.games, 0);
+  const all = days.reduce((s, d) => s + value(d), 0);
+  if (room === null) return all;
+  if (!(room > 0)) return 0;
+  let before = 0;
+  for (let i = 0; i < days.length - 1; i++) before += games(days[i]!);
+  if (before < room) return all;
+  let best = 0;
+  const pool: Appearance[] = [];
+  for (let c = 0; c < days.length; c++) {
+    // Nights before c: the best games within room - 1 (strictly under the cap).
+    const ranked = [...pool].sort((a, b) => b.value * a.games - a.value * b.games);
+    let budget = Math.max(0, room - 1);
+    let kept = 0;
+    for (const a of ranked) {
+      if (a.games <= 0) {
+        kept += a.value;
+        continue;
+      }
+      if (budget <= 0) continue;
+      const f = Math.min(1, budget / a.games);
+      kept += f * a.value;
+      budget -= f * a.games;
+    }
+    best = Math.max(best, kept + value(days[c]!));
+    pool.push(...days[c]!);
+  }
+  return best;
+}
+
+/** `plannedGroupTotal` of both groups over consecutive days sharing a cap key. */
+export function plannedTotal(parts: readonly DayParts[], capOf: (i: number) => { key: number; cap: WaiverCap | null }): number {
+  let total = 0;
+  let i = 0;
+  while (i < parts.length) {
+    const { key, cap } = capOf(i);
+    let j = i;
+    while (j < parts.length && capOf(j).key === key) j++;
+    const seg = parts.slice(i, j);
+    for (const goalie of [false, true]) {
+      const max = goalie ? (cap?.gsMax ?? null) : (cap?.gpMax ?? null);
+      const used = goalie ? (cap?.gsUsed ?? 0) : (cap?.gpUsed ?? 0);
+      const days = seg.map((d) => (d.apps ?? []).filter((a) => a.goalie === goalie));
+      total += plannedGroupTotal(days, max === null ? null : max - used);
+    }
+    i = j;
+  }
+  return total;
+}
+
+/**
  * Lineup points over `days`, each day weighted. With a cap, skater (goalie)
  * points stop counting after the day the expected games played (starts)
  * reach it; that day counts in full. A candidate's `games` is the games he
@@ -193,7 +273,14 @@ export function periodTotal(
   slots: SlotCounts,
   slotOrder: readonly SlotId[] | undefined,
   cap?: WaiverCap | null,
+  capModel: "planned" | "capped" = "capped",
 ): number {
+  if (cap && capModel === "planned" && days.every((d) => (d.weight ?? 1) === 1)) {
+    return plannedTotal(
+      days.map((d) => dayParts(transform(d), slots, slotOrder)),
+      () => ({ key: 0, cap }),
+    );
+  }
   if (!cap) {
     let total = 0;
     for (const d of days) total += (d.weight ?? 1) * optimizeLineup(transform(d), slots, slotOrder ?? SLOT_ORDER).total;
@@ -213,8 +300,11 @@ export function waiverTargets(
 ): WaiverTarget[] {
   const slots = opts.slotCounts;
   const rosDays = opts.rosDays ?? [];
+  // Sampled later days (weight != 1) cannot be planned night by night.
+  const capModel = opts.capModel ?? "planned";
+  const planned = capModel === "planned" && rosDays.every((d) => (d.weight ?? 1) === 1);
   const total = (ds: WaiverDay[], f: (d: WaiverDay) => LineupCandidate[], cap?: WaiverCap | null) =>
-    periodTotal(ds, f, slots, opts.slotOrder, cap);
+    periodTotal(ds, f, slots, opts.slotOrder, cap, capModel);
   const base = total(days, (d) => d.candidates, opts.cap);
   const without = (d: WaiverDay, id: string) => d.candidates.filter((c) => c.id !== id);
   // Later days, solved once per day for the roster and for each drop: a
@@ -227,7 +317,7 @@ export function waiverTargets(
     const c = rosCaps?.get(key);
     return { key, cap: c ? { gpMax: c.gpMax, gsMax: c.gsMax, gpUsed: 0, gsUsed: 0 } : null };
   };
-  const rosTotal = (parts: DayParts[]) => cappedTotal(parts, rosWeights, rosCapOf);
+  const rosTotal = (parts: DayParts[]) => (planned ? plannedTotal(parts, rosCapOf) : cappedTotal(parts, rosWeights, rosCapOf));
   const solveDay = (cands: LineupCandidate[]) => dayParts(cands, slots, opts.slotOrder);
   const rosBaseByDay = rosDays.map((d) => solveDay(d.candidates));
   const baseRos = rosTotal(rosBaseByDay);

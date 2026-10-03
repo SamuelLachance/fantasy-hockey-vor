@@ -8,9 +8,10 @@
  * throw when a league needs it and it is missing (never a silent plan without
  * its locks or its cap).
  */
-import type { DailyPlan, PlanKit, ScheduleIndex } from "./daily-plan";
+import { planCapFit, type DailyPlan, type PlanKit, type ScheduleIndex } from "./daily-plan";
 import { targetLineupPeriod, type IsoPeriod } from "./dates";
 import type { RosterEntry } from "./roster-rules";
+import { capFitAdvice } from "./cap-fit";
 import { salaryUsage } from "./salary-cap";
 import type { ValuesSnapshot } from "./snapshot-types";
 
@@ -72,4 +73,4 @@ export function gameLocks(a: {
   };
 }
 
-export const PLAN_KIT: PlanKit = { salaryUsage, gameLockTarget, gameLocks };
+export const PLAN_KIT: PlanKit = { salaryUsage, gameLockTarget, gameLocks, capFit: capFitAdvice, planCapFit };

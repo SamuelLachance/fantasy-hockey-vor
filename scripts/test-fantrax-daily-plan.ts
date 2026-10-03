@@ -297,9 +297,10 @@ assert(degraded.cap?.known === false, "cap usage unknown");
 // what re-solving the whole plan each later lineup period, with and without
 // the swap, adds up to under each later period's games caps (FX-3: the
 // lineup's ACTIVE games count, a period's points stop after the day its cap
-// is reached). The replayed lineups leave out the bench policy (the `ros`
-// fills every seat), so the plans run with the caps feature off and the
-// counter is kept here.
+// is reached). This checks the seats-filled bookkeeping (waiverCapModel
+// "capped"): the replayed lineups leave out the bench, so the plans run with
+// the caps feature off and the counter is kept here. The shipped "planned"
+// model is measured against plans that do bench by scripts/replay-waivers.ts.
 {
   const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
   const regular = league.scoringPeriods.filter((p) => p.number < firstPlayoff);
@@ -318,7 +319,7 @@ assert(degraded.cap?.known === false, "cap usage unknown");
   let checked = 0;
   for (const team of league.teams) {
     if (checked >= 2) break;
-    const p = buildDailyPlan({ ...input, state: lateState, teamId: team.id, nowMs });
+    const p = buildDailyPlan({ ...input, state: lateState, teamId: team.id, nowMs, waiverCapModel: "capped" });
     const t = p.waivers.targets.find((x) => x.drop);
     if (!t) continue;
     const roster0 = state.rosters[team.id] ?? [];

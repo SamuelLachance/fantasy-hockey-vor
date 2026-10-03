@@ -50,9 +50,8 @@ function Meter({ label, used, max, projected, binds }: MeterProps) {
 }
 
 /**
- * Games-cap monitor for the current scoring period. Monitor only: the
- * day-by-day cap planner lands later (in period 1 the caps cannot bind
- * without streaming).
+ * Games-cap monitor for the current scoring period, with tonight's bench
+ * plan when the cap planner (cap-planner.ts) finds one.
  */
 export function CapMeter({ plan }: { plan: DailyPlan }) {
   const sp = plan.scoringPeriod;
@@ -91,17 +90,6 @@ export function CapMeter({ plan }: { plan: DailyPlan }) {
                 {
                   "Un plafond sera atteint avant le dernier jour à ce rythme. Dès qu'il l'est au début d'une journée, toute l'équipe cesse de marquer jusqu'à la fin de la période : gardez des joueurs sur le banc les derniers jours."
                 }
-                {cap.bench ? (
-                  <>
-                    {" "}
-                    {`Conseil : d'ici la fin de la période, laissez sur le banc ${[
-                      cap.bench.skater !== null ? `les patineurs sous ${fmtNum(cap.bench.skater)} pts par match` : null,
-                      cap.bench.goalie !== null ? `les gardiens sous ${fmtNum(cap.bench.goalie)} pts par départ` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" et ")} (environ ${fmtSigned(cap.bench.gain, 1)} pts sur la période). L'alignement de ce soir en tient compte.`}
-                  </>
-                ) : null}
               </span>
             </p>
           ) : (
@@ -115,6 +103,16 @@ export function CapMeter({ plan }: { plan: DailyPlan }) {
               </span>
             </p>
           )}
+          {cap.bench ? (
+            <p className="rounded-lg bg-cyan-500/10 px-3 py-2 text-sm text-cyan-50">
+              {`Plan de banc pour ce soir : laissez sur le banc ${[
+                cap.bench.skater !== null ? `les patineurs sous ${fmtNum(cap.bench.skater)} pts par match` : null,
+                cap.bench.goalie !== null ? `les gardiens sous ${fmtNum(cap.bench.goalie)} pts par départ` : null,
+              ]
+                .filter(Boolean)
+                .join(" et ")}. Le plan choisit, jour par jour jusqu'à la fin de la période, quels matchs utiliser et quel soir franchir le plafond (cette journée compte au complet) : environ ${fmtSigned(cap.bench.gain, 1)} pts sur la période. Il est refait chaque jour; l'alignement de ce soir en tient compte.`}
+            </p>
+          ) : null}
           {!cap.known ? (
             <p className="text-xs text-amber-200/80">
               Utilisation actuelle inconnue (données fxpa indisponibles) : la projection part de zéro.
