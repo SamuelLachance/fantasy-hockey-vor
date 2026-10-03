@@ -219,7 +219,9 @@ const byName = (name: string) => everyone.find((p) => p.name === name);
   // The players the league was missing (brief, 2026-09-27).
   for (const name of ["Max Domi", "Brett Howden", "Mavrik Bourque", "Oliver Kapanen", "Sean Couturier", "Taylor Hall", "Mikael Backlund"]) {
     const p = byName(name);
-    assert(!!p && !p.noProj && p.rank > 400 && p.proj.length === board.categories.skater.length, `${name} is listed with his projection`);
+    // On the board or in the pool beyond it, whichever his projection earns
+    // (Mavrik Bourque reached the board, #384, on the 2026-10-02 projections).
+    assert(!!p && !p.noProj && p.proj.length === board.categories.skater.length, `${name} is listed with his projection`);
   }
   // Thin NHL prospect lists (DET, UTA, VAN empty in September 2026): the search index fills them.
   for (const name of ["Carter Bear", "Trey Augustine", "Tij Iginla", "Caleb Desnoyers", "Ben Danford", "Cole Eiserman", "Kashawn Aitcheson"]) {
