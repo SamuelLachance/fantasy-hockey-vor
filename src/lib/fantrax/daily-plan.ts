@@ -126,6 +126,12 @@ export interface PlanInputs {
    * behavior before 2026-10-02): the waiver replay's reference only.
    */
   waiverRosCapBlind?: boolean;
+  /**
+   * How the waiver gains add up a capped period (`WaiverOptions.capModel`):
+   * "planned" by default (what the games-cap planner can count), "capped"
+   * = every seat filled until the cap (bd259b2; the replay's reference).
+   */
+  waiverCapModel?: "planned" | "capped";
 }
 
 /** A league's own planner rules, kept out of this module (`plan-kit.ts`, `PLAN_KIT`). */
@@ -976,6 +982,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           rosDays,
           cap: waiverCap,
           rosCaps,
+          capModel: input.waiverCapModel ?? "planned",
         },
       )
     : [];
