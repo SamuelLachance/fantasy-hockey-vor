@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "fittedAt": "2026-10-03T00:54:32.418Z",
-  "bundleTrainedAt": "2026-10-03T00:40:46.174Z",
+  "fittedAt": "2026-10-03T03:19:52.912Z",
+  "bundleTrainedAt": "2026-10-03T03:10:49.639Z",
   "datasetSha1": "aa447b5356f7d37a3dfe192f6807a363e74c83a0",
   "source": "walk-forward v2 out-of-sample, 20182019-20252026: 6077 skater-seasons (721 under 10 games, 0 included; 1133 retirements / departures left out)",
   "curves": {

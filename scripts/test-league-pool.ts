@@ -214,7 +214,14 @@ const byName = (name: string) => everyone.find((p) => p.name === name);
   assert(everyone.slice(0, firstNoProj).every((p, i) => p.rank === i + 1), "projected ranks 1..N");
   eq(everyone.slice(0, board.players.length).length, board.players.length, "board rows kept");
   const landeskog = byName("Gabriel Landeskog");
-  assert(!!landeskog?.adjusted && landeskog.rank > landeskog.adjusted.fromRank, "hand moves survive the merge");
+  // The move pushes him down to its insertAt, or is a no-op once the engine
+  // itself ranks him there (2026-10-02 board: engine 189 = insertAt 189).
+  assert(
+    !!landeskog?.adjusted &&
+      landeskog.rank === board.players.find((p) => p.id === landeskog.id)?.rank &&
+      landeskog.rank >= landeskog.adjusted.fromRank,
+    "hand moves survive the merge",
+  );
 
   // The players the league was missing (brief, 2026-09-27).
   for (const name of ["Max Domi", "Brett Howden", "Mavrik Bourque", "Oliver Kapanen", "Sean Couturier", "Taylor Hall", "Mikael Backlund"]) {
