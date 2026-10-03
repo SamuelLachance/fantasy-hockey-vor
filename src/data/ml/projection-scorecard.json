@@ -1,0 +1,6070 @@
+{
+ "builtAt": "2026-10-03T03:11:27.180Z",
+ "testSeasons": [
+  20192020,
+  20202021,
+  20212022,
+  20222023,
+  20232024,
+  20242025,
+  20252026
+ ],
+ "signalSeasons": [
+  20162017,
+  20172018,
+  20182019,
+  20192020,
+  20202021,
+  20212022,
+  20222023,
+  20232024,
+  20242025,
+  20252026
+ ],
+ "config": {
+  "metaWeighting": {
+   "weighting": "reliability",
+   "recencyDecay": 0.05
+  },
+  "marketBlend": true,
+  "marketFileSha1": "853cb1c63b24f5aa04da5f4fea4e419246b79956",
+  "datasetSha1": "aa447b5356f7d37a3dfe192f6807a363e74c83a0",
+  "codeSha1": {
+   "src/lib/ml/stack.ts": "82744f4f9e0ba3ff31768d0c4c412210d5109e26",
+   "src/lib/ml/market-blend.ts": "3fc3abc83b629c9351054b57d1be1fd5b729772f"
+  },
+  "bundle": {
+   "trainedAt": "2026-10-03T03:10:49.639Z",
+   "datasetSha1": "aa447b5356f7d37a3dfe192f6807a363e74c83a0",
+   "marketBlend": {
+    "source": "ESPN public fantasy hockey JSON (kona_player_info), pre-season projections statSourceId 1",
+    "fittedSeasons": [
+     20172018,
+     20182019,
+     20192020,
+     20202021,
+     20212022,
+     20222023,
+     20232024,
+     20242025,
+     20252026
+    ],
+    "pairs": 2629,
+    "betas": {
+     "goals": 0.006200848781012244,
+     "assists": 0.09172216484534282,
+     "shots": 0.010147611461353501,
+     "blocks": 0.2203776025722167,
+     "hits": 0.272484066962606,
+     "powerplayPoints": 0.14791172479118975,
+     "penaltyMinutes": 0.16395261598760708
+    },
+    "gpBeta": 0.3254938422282309
+   }
+  }
+ },
+ "projectionBlend": {
+  "source": "ESPN public fantasy hockey JSON (kona_player_info), pre-season projections statSourceId 1",
+  "fittedSeasons": [
+   20172018,
+   20182019,
+   20192020,
+   20202021,
+   20212022,
+   20222023,
+   20232024,
+   20242025,
+   20252026
+  ],
+  "pairs": 2629,
+  "betas": {
+   "goals": 0.006200921529845676,
+   "assists": 0.09172199148274544,
+   "shots": 0.010147604742110839,
+   "blocks": 0.22037767376890163,
+   "hits": 0.27248415973959406,
+   "powerplayPoints": 0.14791171059118144,
+   "penaltyMinutes": 0.1639526008756401
+  },
+  "gpBeta": 0.32549384160704337
+ },
+ "population": {
+  "examples": 4703,
+  "espnProjected": 2076
+ },
+ "blends": [
+  "20192020: gp 0.308 goals 0.000 assists 0.010 shots 0.000 blocks 0.000 hits 0.000 powerplayPoints 0.030 penaltyMinutes 0.093",
+  "20202021: gp 0.308 goals 0.000 assists 0.010 shots 0.000 blocks 0.000 hits 0.316 powerplayPoints 0.063 penaltyMinutes 0.090",
+  "20212022: gp 0.322 goals 0.000 assists 0.019 shots 0.000 blocks 0.016 hits 0.248 powerplayPoints 0.070 penaltyMinutes 0.074",
+  "20222023: gp 0.355 goals 0.000 assists 0.054 shots 0.000 blocks 0.043 hits 0.173 powerplayPoints 0.080 penaltyMinutes 0.061",
+  "20232024: gp 0.352 goals 0.000 assists 0.071 shots 0.001 blocks 0.087 hits 0.312 powerplayPoints 0.103 penaltyMinutes 0.089",
+  "20242025: gp 0.335 goals 0.000 assists 0.069 shots 0.002 blocks 0.121 hits 0.342 powerplayPoints 0.131 penaltyMinutes 0.087",
+  "20252026: gp 0.340 goals 0.000 assists 0.069 shots 0.000 blocks 0.253 hits 0.255 powerplayPoints 0.112 penaltyMinutes 0.092"
+ ],
+ "rows": [
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 4.3197430803952,
+   "valueB": 4.350372974795075,
+   "diff": -0.030629894399876057,
+   "lo": -0.04445873822010192,
+   "hi": -0.01615395347515654,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 6.321766931760871,
+   "valueB": 6.412037392786891,
+   "diff": -0.0902704610260193,
+   "lo": -0.14939968927246186,
+   "hi": -0.02750515730525606,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 5.062707741156908,
+   "valueB": 5.079383659686086,
+   "diff": -0.01667591852917776,
+   "lo": -0.04968521454333663,
+   "hi": 0.016696143311041266,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 4.056465332045405,
+   "valueB": 4.088143489530921,
+   "diff": -0.0316781574855164,
+   "lo": -0.057891684837909574,
+   "hi": -0.00590791199996206,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 4.227610359308723,
+   "valueB": 4.245766506544058,
+   "diff": -0.01815614723533519,
+   "lo": -0.0476240435158968,
+   "hi": 0.013819087868777438,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 6.219422179664485,
+   "valueB": 6.262973763115668,
+   "diff": -0.04355158345118301,
+   "lo": -0.06508069417452851,
+   "hi": -0.021155206220924757,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 8.452311955204607,
+   "valueB": 8.512585545787177,
+   "diff": -0.060273590582570036,
+   "lo": -0.1419694548971819,
+   "hi": 0.03112389801438423,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 7.25195240746783,
+   "valueB": 7.3347913117086,
+   "diff": -0.08283890424076985,
+   "lo": -0.14012291434273408,
+   "hi": -0.027666319356105973,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 6.155946767697698,
+   "valueB": 6.180490469308242,
+   "diff": -0.024543701610543735,
+   "lo": -0.06325509071196848,
+   "hi": 0.012741675616048918,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 6.2025472782932285,
+   "valueB": 6.344999228062194,
+   "diff": -0.14245194976896536,
+   "lo": -0.21877179467237493,
+   "hi": -0.0700228138898559,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 21.698008506098617,
+   "valueB": 21.72766641887549,
+   "diff": -0.029657912776871513,
+   "lo": -0.08098878289898656,
+   "hi": 0.027981050307522817,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 12.795741761825393,
+   "valueB": 12.89883652341595,
+   "diff": -0.10309476159055742,
+   "lo": -0.16205935834123184,
+   "hi": -0.041733405267654795,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 23.556583656541378,
+   "valueB": 23.658497862209202,
+   "diff": -0.10191420566782408,
+   "lo": -0.22087346573602432,
+   "hi": 0.0033389987343841474,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 3.5153115452577,
+   "valueB": 3.5788256901789977,
+   "diff": -0.06351414492129759,
+   "lo": -0.08601399958747757,
+   "hi": -0.041144313649318184,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 penaltyMinutes",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 12.58951113756829,
+   "valueB": 12.773584559475287,
+   "diff": -0.1840734219069964,
+   "lo": -0.2704386615619653,
+   "hi": -0.09795659141025546,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 faceoffWins",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 36.71238456719344,
+   "valueB": 36.77408563825992,
+   "diff": -0.06170107106648347,
+   "lo": -0.2262026696562845,
+   "hi": 0.10348370653012276,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 4.096584469810351,
+   "valueB": 4.129119684027614,
+   "diff": -0.03253521421726308,
+   "lo": -0.04681363786824801,
+   "hi": -0.018936608337760157,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 6.178273959762324,
+   "valueB": 6.224403513772266,
+   "diff": -0.046129554009942064,
+   "lo": -0.07080686278479215,
+   "hi": -0.02043215620122528,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 3.0538979752368562,
+   "valueB": 3.0976745501131493,
+   "diff": -0.04377657487629278,
+   "lo": -0.0658982835784573,
+   "hi": -0.02293404701844928,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 27.34316170048574,
+   "valueB": 27.582482758310448,
+   "diff": -0.23932105782470633,
+   "lo": -0.3458760841224914,
+   "hi": -0.13514021518966327,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 24.948553363868573,
+   "valueB": 24.824445369937262,
+   "diff": 0.1241079939313091,
+   "lo": 0.013230697142736421,
+   "hi": 0.22297163337273987,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 15.070936476571353,
+   "valueB": 15.168478672017974,
+   "diff": -0.09754219544662171,
+   "lo": -0.1670138081374286,
+   "hi": -0.0331085081887315,
+   "n": 4703
+  },
+  {
+   "metric": "GP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 12.295940369886713,
+   "valueB": 12.56248162675912,
+   "diff": -0.26654125687240676,
+   "lo": -0.31364253820050486,
+   "hi": -0.21917381439649125,
+   "n": 4703
+  },
+  {
+   "metric": "GP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 265.2847641890919,
+   "valueB": 267.84788877847467,
+   "diff": -2.5631245893828036,
+   "lo": -3.9981927601779064,
+   "hi": -1.1572452205686947,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 38.41973184277097,
+   "valueB": 38.77893683892438,
+   "diff": -0.3592049961534093,
+   "lo": -0.49502832460308954,
+   "hi": -0.21550335224459746,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 46.36044847555404,
+   "valueB": 47.43518596870951,
+   "diff": -1.0747374931554683,
+   "lo": -1.851446688689378,
+   "hi": -0.3554774511839648,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 41.03693494251637,
+   "valueB": 41.72374730706612,
+   "diff": -0.6868123645497517,
+   "lo": -1.1335201588934838,
+   "hi": -0.23783992020048544,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 37.770455166776195,
+   "valueB": 38.05344006739205,
+   "diff": -0.28298490061585785,
+   "lo": -0.5705216703205138,
+   "hi": -0.006838162846856097,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 40.15149771247567,
+   "valueB": 40.38521723658944,
+   "diff": -0.23371952411377794,
+   "lo": -0.5166805404116311,
+   "hi": 0.03657667571838005,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 37.88802148896955,
+   "valueB": 38.23900358920686,
+   "diff": -0.35098210023730947,
+   "lo": -0.4978311661422814,
+   "hi": -0.21079250523242507,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 49.1118355490649,
+   "valueB": 49.93915328922864,
+   "diff": -0.827317740163744,
+   "lo": -1.6266592096022747,
+   "hi": -0.06501954162539812,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 42.942308148504736,
+   "valueB": 43.6153021037836,
+   "diff": -0.6729939552788675,
+   "lo": -1.0966206927230833,
+   "hi": -0.2236414037146827,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 37.4810804490698,
+   "valueB": 37.77471694351875,
+   "diff": -0.2936364944489469,
+   "lo": -0.5848217869282206,
+   "hi": -0.012898616850238256,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 38.42644759841355,
+   "valueB": 38.71769570276362,
+   "diff": -0.29124810435006887,
+   "lo": -0.564019558084397,
+   "hi": -0.022098520207985785,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 28.93933332708847,
+   "valueB": 29.055441315687016,
+   "diff": -0.11610798859854485,
+   "lo": -0.20052431921191413,
+   "hi": -0.031330353752032435,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 30.93386366749761,
+   "valueB": 31.11149556294654,
+   "diff": -0.1776318954489274,
+   "lo": -0.2686890788175144,
+   "hi": -0.08720708027455008,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 1.8506728599753426,
+   "valueB": 1.8646470042474057,
+   "diff": -0.013974144272063088,
+   "lo": -0.02137149080034178,
+   "hi": -0.006806797094032249,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2.1905703886094887,
+   "valueB": 2.2371228358932536,
+   "diff": -0.04655244728376499,
+   "lo": -0.08544668856038166,
+   "hi": -0.00930760579609699,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2.0345582196046443,
+   "valueB": 2.0560288705667116,
+   "diff": -0.021470650962067156,
+   "lo": -0.04576414564823556,
+   "hi": 0.0026150120723793615,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 1.8194219237008744,
+   "valueB": 1.8275247924864098,
+   "diff": -0.008102868785535325,
+   "lo": -0.023412663462152383,
+   "hi": 0.006773296754550854,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 1.9199422051122224,
+   "valueB": 1.9305515761198337,
+   "diff": -0.010609371007611298,
+   "lo": -0.02447981743853617,
+   "hi": 0.003189564394738261,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2473.6219298114443,
+   "valueB": 2509.096820783012,
+   "diff": -35.47489097156779,
+   "lo": -52.291081454486495,
+   "hi": -19.628179955373074,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 3834.911806375193,
+   "valueB": 3899.8047943790143,
+   "diff": -64.89298800382143,
+   "lo": -159.99091481836567,
+   "hi": 22.933091121446555,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2955.842830584231,
+   "valueB": 3032.6106991347806,
+   "diff": -76.76786855054975,
+   "lo": -141.43438641138928,
+   "hi": -17.594662073618284,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2359.799518051983,
+   "valueB": 2393.7210653612183,
+   "diff": -33.92154730923533,
+   "lo": -72.70817012095424,
+   "hi": 0.07453895304036087,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2514.9555854239165,
+   "valueB": 2554.7267955214593,
+   "diff": -39.77121009754241,
+   "lo": -71.0928592574912,
+   "hi": -9.339099996878167,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2454.507358755253,
+   "valueB": 2497.271240591845,
+   "diff": -42.763881836592276,
+   "lo": -60.47529896370109,
+   "hi": -25.54476509851345,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 4216.079999138014,
+   "valueB": 4301.281724632373,
+   "diff": -85.20172549435935,
+   "lo": -183.78215477859865,
+   "hi": 11.150489149111031,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 3207.0247181274185,
+   "valueB": 3295.8555890541115,
+   "diff": -88.83087092669281,
+   "lo": -158.38221852588532,
+   "hi": -25.087538945341297,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2342.002344954744,
+   "valueB": 2385.0542814010096,
+   "diff": -43.051936446265906,
+   "lo": -84.89255198044381,
+   "hi": -8.704131178741164,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 2351.9386699585016,
+   "valueB": 2400.0804849218653,
+   "diff": -48.141814963364034,
+   "lo": -80.19629759143724,
+   "hi": -16.46994182584864,
+   "n": 1067
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 5.711834473708151,
+   "valueB": 5.788693018337198,
+   "diff": -0.07685854462904769,
+   "lo": -0.11534125955535039,
+   "hi": -0.03691955116088847,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 8.67937613417815,
+   "valueB": 8.820860534078617,
+   "diff": -0.14148439990046774,
+   "lo": -0.36772006790460654,
+   "hi": 0.08670958689231979,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 7.0764950752203735,
+   "valueB": 7.252597661001935,
+   "diff": -0.17610258578156174,
+   "lo": -0.3312499537341706,
+   "hi": -0.02970753184838134,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 5.519877314254991,
+   "valueB": 5.579008444174275,
+   "diff": -0.05913112991928366,
+   "lo": -0.15162208717182657,
+   "hi": 0.020859361756037493,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "engine",
+   "valueA": 5.720337538736631,
+   "valueB": 5.823463028059819,
+   "diff": -0.1031254893231875,
+   "lo": -0.1830031088277655,
+   "hi": -0.02834470706263043,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 4.3197430803952,
+   "valueB": 4.7445560703415355,
+   "diff": -0.424812989946336,
+   "lo": -0.4948814644912493,
+   "hi": -0.36088807983694665,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 6.321766931760871,
+   "valueB": 6.354088446306089,
+   "diff": -0.03232151454521818,
+   "lo": -0.29253927538996466,
+   "hi": 0.24612545753263756,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 5.062707741156908,
+   "valueB": 5.316250560047478,
+   "diff": -0.25354281889056957,
+   "lo": -0.39853169920862513,
+   "hi": -0.1146516199458882,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 4.056465332045405,
+   "valueB": 4.3758023136010396,
+   "diff": -0.3193369815556347,
+   "lo": -0.4122419855999505,
+   "hi": -0.22369996384648266,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 4.227610359308723,
+   "valueB": 4.905133450843391,
+   "diff": -0.6775230915346689,
+   "lo": -0.8548762692872358,
+   "hi": -0.5049523001193167,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 6.219422179664485,
+   "valueB": 6.932393128274546,
+   "diff": -0.712970948610061,
+   "lo": -0.8222118795707076,
+   "hi": -0.610763257773107,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 8.452311955204607,
+   "valueB": 9.13666079651251,
+   "diff": -0.6843488413079031,
+   "lo": -1.240978622850993,
+   "hi": -0.13778526437134628,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 7.25195240746783,
+   "valueB": 7.709727008145407,
+   "diff": -0.45777460067757614,
+   "lo": -0.7275501019464576,
+   "hi": -0.2251441346569047,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 6.155946767697698,
+   "valueB": 6.606735626599145,
+   "diff": -0.45078885890144677,
+   "lo": -0.6387430669758039,
+   "hi": -0.2886040972195427,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 6.2025472782932285,
+   "valueB": 7.429693361254441,
+   "diff": -1.2271460829612124,
+   "lo": -1.4716763180428374,
+   "hi": -0.9949731515250061,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 21.698008506098617,
+   "valueB": 26.43216336394903,
+   "diff": -4.734154857850415,
+   "lo": -5.217475039140241,
+   "hi": -4.2943568585141625,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 12.795741761825393,
+   "valueB": 13.416065578141414,
+   "diff": -0.6203238163160206,
+   "lo": -0.842064295795099,
+   "hi": -0.4060089106488873,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 23.556583656541378,
+   "valueB": 26.15545693885571,
+   "diff": -2.598873282314333,
+   "lo": -3.1637877553705134,
+   "hi": -2.096384502987406,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 3.5153115452577,
+   "valueB": 4.306289926072935,
+   "diff": -0.7909783808152356,
+   "lo": -0.8802325413970329,
+   "hi": -0.7087208885161372,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 penaltyMinutes",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 12.58951113756829,
+   "valueB": 12.697950359779925,
+   "diff": -0.10843922221163443,
+   "lo": -0.2861922662184556,
+   "hi": 0.07292583705575853,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 faceoffWins",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 36.71238456719344,
+   "valueB": 53.78070216311228,
+   "diff": -17.06831759591885,
+   "lo": -18.89533605166159,
+   "hi": -15.38336441246588,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 4.096584469810351,
+   "valueB": 4.484447631975176,
+   "diff": -0.3878631621648243,
+   "lo": -0.45576170357215845,
+   "hi": -0.3253256044004898,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 6.178273959762324,
+   "valueB": 6.8939737097652545,
+   "diff": -0.7156997500029301,
+   "lo": -0.8397138731436079,
+   "hi": -0.6034078750132544,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 3.0538979752368562,
+   "valueB": 3.6669788635101455,
+   "diff": -0.6130808882732892,
+   "lo": -0.6903166144294677,
+   "hi": -0.5389098511467509,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 27.34316170048574,
+   "valueB": 31.234151568629816,
+   "diff": -3.890989868144076,
+   "lo": -4.3869111643085175,
+   "hi": -3.4036090905618526,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 24.948553363868573,
+   "valueB": 26.532211892856267,
+   "diff": -1.5836585289876959,
+   "lo": -2.015882833690106,
+   "hi": -1.147073102594958,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 15.070936476571353,
+   "valueB": 15.85196771473037,
+   "diff": -0.7810312381590165,
+   "lo": -1.0251206874688092,
+   "hi": -0.5420918006795157,
+   "n": 4703
+  },
+  {
+   "metric": "GP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 12.295940369886713,
+   "valueB": 13.870856899851109,
+   "diff": -1.5749165299643966,
+   "lo": -1.780584250661618,
+   "hi": -1.3772595629194282,
+   "n": 4703
+  },
+  {
+   "metric": "GP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 265.2847641890919,
+   "valueB": 316.58670236279926,
+   "diff": -51.30193817370737,
+   "lo": -58.90989452795572,
+   "hi": -43.55671078865212,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 38.41973184277097,
+   "valueB": 42.984638559890364,
+   "diff": -4.564906717119394,
+   "lo": -5.247768372935944,
+   "hi": -3.933517587387441,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 46.36044847555404,
+   "valueB": 55.95493498630086,
+   "diff": -9.594486510746824,
+   "lo": -13.215369491844552,
+   "hi": -5.9013152524078425,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 41.03693494251637,
+   "valueB": 46.63711060401831,
+   "diff": -5.600175661501947,
+   "lo": -7.354299207573363,
+   "hi": -3.986906948505887,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 37.770455166776195,
+   "valueB": 41.37877782977433,
+   "diff": -3.6083226629981326,
+   "lo": -4.854946787380726,
+   "hi": -2.357673146017233,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 40.15149771247567,
+   "valueB": 43.37161758367965,
+   "diff": -3.2201198712039862,
+   "lo": -4.566391098366877,
+   "hi": -1.9053042878926985,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 37.88802148896955,
+   "valueB": 42.53328376023313,
+   "diff": -4.6452622712635865,
+   "lo": -5.351796450910787,
+   "hi": -3.980373930952715,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 49.1118355490649,
+   "valueB": 59.04534848453702,
+   "diff": -9.933512935472121,
+   "lo": -13.875118916435367,
+   "hi": -6.090636012656177,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 42.942308148504736,
+   "valueB": 48.474101417978765,
+   "diff": -5.531793269474032,
+   "lo": -7.351609225746884,
+   "hi": -3.839938048489066,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 37.4810804490698,
+   "valueB": 41.145597884014364,
+   "diff": -3.664517434944569,
+   "lo": -4.872178087144417,
+   "hi": -2.4405401204176806,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 38.42644759841355,
+   "valueB": 41.59679033180202,
+   "diff": -3.1703427333884644,
+   "lo": -4.577127581487835,
+   "hi": -1.9322496560561677,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 28.93933332708847,
+   "valueB": 33.346667129921606,
+   "diff": -4.4073338028331355,
+   "lo": -4.993989673446878,
+   "hi": -3.8798305013010026,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 30.93386366749761,
+   "valueB": 35.57849239477795,
+   "diff": -4.644628727280343,
+   "lo": -5.2530659498234495,
+   "hi": -4.072401940770963,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 1.8506728599753426,
+   "valueB": 2.0623614488454756,
+   "diff": -0.21168858887013317,
+   "lo": -0.24617147538771939,
+   "hi": -0.18036068767254027,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2.1905703886094887,
+   "valueB": 2.682668933325268,
+   "diff": -0.49209854471577913,
+   "lo": -0.6592073546470909,
+   "hi": -0.31860511450726886,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2.0345582196046443,
+   "valueB": 2.299789063141865,
+   "diff": -0.2652308435372209,
+   "lo": -0.3524297087796103,
+   "hi": -0.18164018768182158,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 1.8194219237008744,
+   "valueB": 1.9839733280660181,
+   "diff": -0.1645514043651438,
+   "lo": -0.22105003979821788,
+   "hi": -0.10905720854144609,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 1.9199422051122224,
+   "valueB": 2.071785424593114,
+   "diff": -0.15184321948089172,
+   "lo": -0.22044231859206562,
+   "hi": -0.08534042489617787,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2473.6219298114443,
+   "valueB": 3018.6268370284697,
+   "diff": -545.0049072170257,
+   "lo": -637.0051777109105,
+   "hi": -463.34082180190353,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 3834.911806375193,
+   "valueB": 5079.6739521227455,
+   "diff": -1244.7621457475525,
+   "lo": -1937.841075631341,
+   "hi": -606.0853977696626,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2955.842830584231,
+   "valueB": 3663.509805533903,
+   "diff": -707.6669749496721,
+   "lo": -952.3590235726473,
+   "hi": -451.37469121419923,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2359.799518051983,
+   "valueB": 2807.748626885451,
+   "diff": -447.9491088334678,
+   "lo": -592.4627176306822,
+   "hi": -305.1193102077787,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2514.9555854239165,
+   "valueB": 2957.742679532063,
+   "diff": -442.78709410814633,
+   "lo": -634.9868667458925,
+   "hi": -259.60606731367045,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2454.507358755253,
+   "valueB": 3027.897763799461,
+   "diff": -573.3904050442079,
+   "lo": -676.3943426679308,
+   "hi": -482.2791482138705,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 4216.079999138014,
+   "valueB": 5680.274264130753,
+   "diff": -1464.19426499274,
+   "lo": -2262.363945745808,
+   "hi": -748.8019294027143,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 3207.0247181274185,
+   "valueB": 4001.8172369628073,
+   "diff": -794.7925188353889,
+   "lo": -1074.4133827707533,
+   "hi": -503.00032926724293,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2342.002344954744,
+   "valueB": 2795.717976700798,
+   "diff": -453.71563174605427,
+   "lo": -592.8107284458696,
+   "hi": -312.5744158412382,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 2351.9386699585016,
+   "valueB": 2810.4399754069823,
+   "diff": -458.50130544848093,
+   "lo": -655.6770620265434,
+   "hi": -282.41502032654495,
+   "n": 1067
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 5.711834473708151,
+   "valueB": 6.974173277564514,
+   "diff": -1.2623388038563639,
+   "lo": -1.4814621672664097,
+   "hi": -1.0619119690445,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 8.67937613417815,
+   "valueB": 11.699766661704176,
+   "diff": -3.020390527526025,
+   "lo": -4.584236874417332,
+   "hi": -1.5485664136126125,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 7.0764950752203735,
+   "valueB": 8.810561503090195,
+   "diff": -1.7340664278698221,
+   "lo": -2.3172102787976416,
+   "hi": -1.1222199824282477,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 5.519877314254991,
+   "valueB": 6.487883563939629,
+   "diff": -0.9680062496846382,
+   "lo": -1.2944603349538595,
+   "hi": -0.6361340797035236,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "marcel543",
+   "valueA": 5.720337538736631,
+   "valueB": 6.828706830390743,
+   "diff": -1.1083692916541126,
+   "lo": -1.5606690714509153,
+   "hi": -0.6673312561057992,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 4.3197430803952,
+   "valueB": 5.3111329820602355,
+   "diff": -0.9913899016650362,
+   "lo": -1.0913108153848814,
+   "hi": -0.9023180237815155,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 6.321766931760871,
+   "valueB": 7.550836633836536,
+   "diff": -1.229069702075664,
+   "lo": -1.6422983154721364,
+   "hi": -0.8345213566341256,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 5.062707741156908,
+   "valueB": 6.0025721071775155,
+   "diff": -0.9398643660206079,
+   "lo": -1.1771818467656199,
+   "hi": -0.6800459755088414,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 4.056465332045405,
+   "valueB": 4.957723436762708,
+   "diff": -0.9012581047173033,
+   "lo": -1.0602879190918708,
+   "hi": -0.7287568082256369,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 4.227610359308723,
+   "valueB": 5.286738058675897,
+   "diff": -1.0591276993671743,
+   "lo": -1.2681894575866333,
+   "hi": -0.8472594301209114,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 6.219422179664485,
+   "valueB": 7.551399780971141,
+   "diff": -1.331977601306656,
+   "lo": -1.4516380007259324,
+   "hi": -1.2021379187226382,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 8.452311955204607,
+   "valueB": 9.795129551385068,
+   "diff": -1.342817596180462,
+   "lo": -1.893845742903481,
+   "hi": -0.8532025588024434,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 7.25195240746783,
+   "valueB": 8.582902256700384,
+   "diff": -1.3309498492325542,
+   "lo": -1.6559755850430584,
+   "hi": -0.9931593549671154,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 6.155946767697698,
+   "valueB": 7.355113144886018,
+   "diff": -1.1991663771883205,
+   "lo": -1.437484237030821,
+   "hi": -0.9835610653679471,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 6.2025472782932285,
+   "valueB": 7.721541305250932,
+   "diff": -1.518994026957704,
+   "lo": -1.815498724193926,
+   "hi": -1.221640182200588,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 21.698008506098617,
+   "valueB": 24.541469459640254,
+   "diff": -2.8434609535416384,
+   "lo": -3.233520918632896,
+   "hi": -2.4182553393341384,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 12.795741761825393,
+   "valueB": 14.89576353211432,
+   "diff": -2.1000217702889254,
+   "lo": -2.3593059372841094,
+   "hi": -1.8599512398122198,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 23.556583656541378,
+   "valueB": 24.564226235668077,
+   "diff": -1.007642579126698,
+   "lo": -1.3629728184245269,
+   "hi": -0.6601961652521755,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 3.5153115452577,
+   "valueB": 3.9146721905644455,
+   "diff": -0.3993606453067453,
+   "lo": -0.4842053956393186,
+   "hi": -0.31114141649969634,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 penaltyMinutes",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 12.58951113756829,
+   "valueB": 14.90725227639065,
+   "diff": -2.3177411388223597,
+   "lo": -2.619131266525339,
+   "hi": -2.0003984677372073,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 faceoffWins",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 36.71238456719344,
+   "valueB": 37.16730265110614,
+   "diff": -0.45491808391270727,
+   "lo": -1.073665188307431,
+   "hi": 0.19991636519702968,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 4.096584469810351,
+   "valueB": 4.911231705517411,
+   "diff": -0.8146472357070598,
+   "lo": -0.9003562442995949,
+   "hi": -0.7272408590125635,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 6.178273959762324,
+   "valueB": 7.352784779797676,
+   "diff": -1.1745108200353522,
+   "lo": -1.2916105539489353,
+   "hi": -1.0531764067872365,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 3.0538979752368562,
+   "valueB": 3.4024910759666493,
+   "diff": -0.3485931007297929,
+   "lo": -0.4205217996817235,
+   "hi": -0.27675227370925215,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 27.34316170048574,
+   "valueB": 32.43525203543057,
+   "diff": -5.092090334944832,
+   "lo": -5.66481049127867,
+   "hi": -4.5701558863665115,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 24.948553363868573,
+   "valueB": 27.75124637475044,
+   "diff": -2.802693010881868,
+   "lo": -3.2838449355580845,
+   "hi": -2.2555991689108543,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 15.070936476571353,
+   "valueB": 17.654984720692692,
+   "diff": -2.5840482441213406,
+   "lo": -2.9237443334942066,
+   "hi": -2.215233507625708,
+   "n": 4703
+  },
+  {
+   "metric": "GP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 12.295940369886713,
+   "valueB": 14.739020685884384,
+   "diff": -2.443080315997671,
+   "lo": -2.756406416584122,
+   "hi": -2.135169884211785,
+   "n": 4703
+  },
+  {
+   "metric": "GP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 265.2847641890919,
+   "valueB": 429.2256087950809,
+   "diff": -163.940844605989,
+   "lo": -179.15213753453097,
+   "hi": -148.03724396972095,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 38.41973184277097,
+   "valueB": 45.399340135274706,
+   "diff": -6.979608292503736,
+   "lo": -7.737816939900551,
+   "hi": -6.268886663301618,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 46.36044847555404,
+   "valueB": 56.143701304458325,
+   "diff": -9.783252828904283,
+   "lo": -12.945540101688026,
+   "hi": -7.148144346686437,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 41.03693494251637,
+   "valueB": 48.66964548685181,
+   "diff": -7.6327105443354455,
+   "lo": -9.275903572059615,
+   "hi": -5.933755449308916,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 37.770455166776195,
+   "valueB": 44.50084530969521,
+   "diff": -6.73039014291901,
+   "lo": -7.94343220396313,
+   "hi": -5.409379611390442,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 40.15149771247567,
+   "valueB": 45.717096310401196,
+   "diff": -5.565598597925529,
+   "lo": -7.3465122330291335,
+   "hi": -3.7067063249760395,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 37.88802148896955,
+   "valueB": 44.495613919009315,
+   "diff": -6.607592430039766,
+   "lo": -7.309045018062476,
+   "hi": -5.9270496456525885,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 49.1118355490649,
+   "valueB": 59.53496648965804,
+   "diff": -10.42313094059314,
+   "lo": -13.789209798860623,
+   "hi": -7.5625966482912474,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 42.942308148504736,
+   "valueB": 50.30308794365647,
+   "diff": -7.360779795151739,
+   "lo": -9.122503434101315,
+   "hi": -5.716250626374062,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 37.4810804490698,
+   "valueB": 43.99898213923154,
+   "diff": -6.517901690161746,
+   "lo": -7.710430504753472,
+   "hi": -5.205093546275001,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 38.42644759841355,
+   "valueB": 43.30852391475245,
+   "diff": -4.882076316338893,
+   "lo": -6.536639268071992,
+   "hi": -3.1840498173348473,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 28.93933332708847,
+   "valueB": 33.06459208150947,
+   "diff": -4.125258754421,
+   "lo": -4.607682036779883,
+   "hi": -3.604233657460865,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 30.93386366749761,
+   "valueB": 35.424029273200816,
+   "diff": -4.490165605703203,
+   "lo": -5.039738359828734,
+   "hi": -3.944984106394728,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 1.8506728599753426,
+   "valueB": 2.181900218144646,
+   "diff": -0.3312273581693033,
+   "lo": -0.3671944449025897,
+   "hi": -0.2971779512320962,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2.1905703886094887,
+   "valueB": 2.6396347788967853,
+   "diff": -0.4490643902872968,
+   "lo": -0.5926626593461792,
+   "hi": -0.3308751909457506,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2.0345582196046443,
+   "valueB": 2.398232232138784,
+   "diff": -0.3636740125341397,
+   "lo": -0.44180462704047824,
+   "hi": -0.2842693404690938,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 1.8194219237008744,
+   "valueB": 2.152417847946138,
+   "diff": -0.3329959242452636,
+   "lo": -0.3979751748834503,
+   "hi": -0.267918303926182,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 1.9199422051122224,
+   "valueB": 2.187545756697222,
+   "diff": -0.2676035515849992,
+   "lo": -0.3542680324338172,
+   "hi": -0.17900323753386269,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2473.6219298114443,
+   "valueB": 3519.364927949722,
+   "diff": -1045.742998138278,
+   "lo": -1154.3090921727949,
+   "hi": -944.1140158216349,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 3834.911806375193,
+   "valueB": 5398.092501449667,
+   "diff": -1563.180695074474,
+   "lo": -2040.6951787408561,
+   "hi": -1169.2567742595515,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2955.842830584231,
+   "valueB": 4086.1467718241133,
+   "diff": -1130.3039412398823,
+   "lo": -1393.2224983121162,
+   "hi": -887.1690737729276,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2359.799518051983,
+   "valueB": 3238.6017553796746,
+   "diff": -878.8022373276918,
+   "lo": -1055.7888491098822,
+   "hi": -692.2778622194584,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2514.9555854239165,
+   "valueB": 3585.5445006157765,
+   "diff": -1070.5889151918595,
+   "lo": -1292.8339124290874,
+   "hi": -839.4934359541815,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2454.507358755253,
+   "valueB": 3453.1339533686587,
+   "diff": -998.6265946134058,
+   "lo": -1107.8833613796553,
+   "hi": -890.8593173193724,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 4216.079999138014,
+   "valueB": 5996.167035789577,
+   "diff": -1780.0870366515637,
+   "lo": -2307.560671400242,
+   "hi": -1337.0492778092964,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 3207.0247181274185,
+   "valueB": 4360.41987888297,
+   "diff": -1153.3951607555516,
+   "lo": -1423.9582269133296,
+   "hi": -896.4708469118482,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2342.002344954744,
+   "valueB": 3168.1580888411213,
+   "diff": -826.1557438863778,
+   "lo": -1011.9176948182742,
+   "hi": -629.8561418112207,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 2351.9386699585016,
+   "valueB": 3287.9238819093903,
+   "diff": -935.9852119508887,
+   "lo": -1152.2045903954643,
+   "hi": -725.1414353180319,
+   "n": 1067
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 5.711834473708151,
+   "valueB": 8.145621328973391,
+   "diff": -2.433786855265241,
+   "lo": -2.6933200886891715,
+   "hi": -2.187821569321387,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 8.67937613417815,
+   "valueB": 12.222728493508999,
+   "diff": -3.5433523593308487,
+   "lo": -4.614253992936719,
+   "hi": -2.637622269220862,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 7.0764950752203735,
+   "valueB": 9.744519475888628,
+   "diff": -2.6680244006682554,
+   "lo": -3.2855414163483947,
+   "hi": -2.0433399109999733,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 5.519877314254991,
+   "valueB": 7.625965236429136,
+   "diff": -2.106087922174144,
+   "lo": -2.537170196523732,
+   "hi": -1.6431630002963793,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "lag1",
+   "valueA": 5.720337538736631,
+   "valueB": 8.258380116063272,
+   "diff": -2.5380425773266406,
+   "lo": -3.044968360930124,
+   "hi": -2.0051838140393965,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 4.3197430803952,
+   "valueB": 4.557344982199126,
+   "diff": -0.23760190180392698,
+   "lo": -0.2905133191876434,
+   "hi": -0.18767157640722995,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 6.321766931760871,
+   "valueB": 6.375810810316234,
+   "diff": -0.05404387855536249,
+   "lo": -0.2722721211690685,
+   "hi": 0.16547809036752983,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 5.062707741156908,
+   "valueB": 5.286681612171502,
+   "diff": -0.22397387101459404,
+   "lo": -0.3380822515037884,
+   "hi": -0.1176207552233117,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 4.056465332045405,
+   "valueB": 4.293588425526713,
+   "diff": -0.23712309348130828,
+   "lo": -0.3194863114355992,
+   "hi": -0.1539195144938866,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 4.227610359308723,
+   "valueB": 4.680173956033058,
+   "diff": -0.4525635967243359,
+   "lo": -0.5982700596271753,
+   "hi": -0.32635994159023224,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 6.219422179664485,
+   "valueB": 6.567254523285744,
+   "diff": -0.3478323436212587,
+   "lo": -0.4277179171359541,
+   "hi": -0.2692936930110275,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 8.452311955204607,
+   "valueB": 8.873023563312511,
+   "diff": -0.42071160810790503,
+   "lo": -0.7631442891751022,
+   "hi": -0.06100826038554496,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 7.25195240746783,
+   "valueB": 7.473349280588522,
+   "diff": -0.22139687312069137,
+   "lo": -0.41304942707036135,
+   "hi": -0.038348887712218636,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 6.155946767697698,
+   "valueB": 6.50247872653504,
+   "diff": -0.3465319588373424,
+   "lo": -0.4801654397999203,
+   "hi": -0.2215446214656498,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 6.2025472782932285,
+   "valueB": 6.888007763721481,
+   "diff": -0.685460485428252,
+   "lo": -0.9050801875920631,
+   "hi": -0.4595871197037563,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 21.698008506098617,
+   "valueB": 22.309761474980025,
+   "diff": -0.6117529688814068,
+   "lo": -0.8180644829706528,
+   "hi": -0.3961867284014549,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 12.795741761825393,
+   "valueB": 13.305246790820258,
+   "diff": -0.5095050289948652,
+   "lo": -0.6511816905014168,
+   "hi": -0.3652287572783864,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 23.556583656541378,
+   "valueB": 23.290878583431542,
+   "diff": 0.26570507310983454,
+   "lo": 0.104410435185727,
+   "hi": 0.43161875678949185,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 3.5153115452577,
+   "valueB": 3.8328020824430373,
+   "diff": -0.3174905371853374,
+   "lo": -0.38697196096600406,
+   "hi": -0.24869282517261998,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 penaltyMinutes",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 12.58951113756829,
+   "valueB": 12.649769237582841,
+   "diff": -0.06025810001455096,
+   "lo": -0.17902550925989355,
+   "hi": 0.05256264929341331,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 faceoffWins",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 36.71238456719344,
+   "valueB": 45.57958565757942,
+   "diff": -8.867201090385985,
+   "lo": -12.267144174078823,
+   "hi": -5.789228397431652,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 4.096584469810351,
+   "valueB": 4.368462297868719,
+   "diff": -0.27187782805836835,
+   "lo": -0.33025079498884197,
+   "hi": -0.21530152350460044,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 6.178273959762324,
+   "valueB": 6.588398450356657,
+   "diff": -0.41012449059433287,
+   "lo": -0.48834580771321995,
+   "hi": -0.3324080072540244,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 3.0538979752368562,
+   "valueB": 3.281413738224385,
+   "diff": -0.2275157629875287,
+   "lo": -0.2914478844624146,
+   "hi": -0.16750722723677905,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 27.34316170048574,
+   "valueB": 29.683919682517775,
+   "diff": -2.3407579820320343,
+   "lo": -2.749138827268952,
+   "hi": -1.9329843527935342,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 24.948553363868573,
+   "valueB": 26.300002336186584,
+   "diff": -1.351448972318011,
+   "lo": -1.7151728933663748,
+   "hi": -0.9736595908091655,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 15.070936476571353,
+   "valueB": 16.126177199725614,
+   "diff": -1.0552407231542622,
+   "lo": -1.296795663429034,
+   "hi": -0.7879950970826131,
+   "n": 4703
+  },
+  {
+   "metric": "GP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 12.295940369886713,
+   "valueB": 13.988597840600736,
+   "diff": -1.6926574707140227,
+   "lo": -1.9612798173970691,
+   "hi": -1.4104940264832049,
+   "n": 4703
+  },
+  {
+   "metric": "GP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 265.2847641890919,
+   "valueB": 375.4774731389533,
+   "diff": -110.19270894986141,
+   "lo": -122.38223606436954,
+   "hi": -97.43802589127749,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 38.41973184277097,
+   "valueB": 41.831378800784144,
+   "diff": -3.411646958013168,
+   "lo": -3.9616580654514224,
+   "hi": -2.869123675113156,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 46.36044847555404,
+   "valueB": 48.08318631475402,
+   "diff": -1.7227378391999861,
+   "lo": -3.3522185909024995,
+   "hi": -0.0750388006012205,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 41.03693494251637,
+   "valueB": 43.75685020471862,
+   "diff": -2.719915262202249,
+   "lo": -3.7934979757810963,
+   "hi": -1.639756181579378,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 37.770455166776195,
+   "valueB": 41.047035776401415,
+   "diff": -3.276580609625215,
+   "lo": -4.374262866701219,
+   "hi": -2.241708290020929,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 40.15149771247567,
+   "valueB": 44.616836475067615,
+   "diff": -4.465338762591951,
+   "lo": -6.086431128616179,
+   "hi": -2.82786278746516,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 37.88802148896955,
+   "valueB": 41.01037692074084,
+   "diff": -3.1223554317712954,
+   "lo": -3.65774272121694,
+   "hi": -2.5929547292888557,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 49.1118355490649,
+   "valueB": 50.819935828018885,
+   "diff": -1.7081002789539828,
+   "lo": -3.6152478693722547,
+   "hi": 0.22327583225661346,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 42.942308148504736,
+   "valueB": 45.46011199991339,
+   "diff": -2.5178038514086527,
+   "lo": -3.610951348957581,
+   "hi": -1.3581749359366722,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 37.4810804490698,
+   "valueB": 40.82870734075505,
+   "diff": -3.347626891685257,
+   "lo": -4.410459660022822,
+   "hi": -2.325933574499712,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 38.42644759841355,
+   "valueB": 42.070171306888284,
+   "diff": -3.6437237084747314,
+   "lo": -5.1176314247823305,
+   "hi": -2.1367532859965617,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 28.93933332708847,
+   "valueB": 29.914883326615605,
+   "diff": -0.9755499995271368,
+   "lo": -1.2883934862387092,
+   "hi": -0.6887281453871501,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 30.93386366749761,
+   "valueB": 32.131785867786185,
+   "diff": -1.1979222002885732,
+   "lo": -1.5789064234108934,
+   "hi": -0.8475960136839085,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 1.8506728599753426,
+   "valueB": 2.0199888884463197,
+   "diff": -0.169316028470977,
+   "lo": -0.1963222183184968,
+   "hi": -0.1431208626280483,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2.1905703886094887,
+   "valueB": 2.280213612243008,
+   "diff": -0.08964322363351937,
+   "lo": -0.17131018475703313,
+   "hi": -0.01079866130410725,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2.0345582196046443,
+   "valueB": 2.1824499671227255,
+   "diff": -0.14789174751808137,
+   "lo": -0.2037928799411632,
+   "hi": -0.08993844729934283,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 1.8194219237008744,
+   "valueB": 1.9834159799499236,
+   "diff": -0.16399405624904917,
+   "lo": -0.22070063702847667,
+   "hi": -0.11375624710189547,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 1.9199422051122224,
+   "valueB": 2.1408067677314753,
+   "diff": -0.2208645626192529,
+   "lo": -0.2989630883381065,
+   "hi": -0.14317391388216727,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2473.6219298114443,
+   "valueB": 2962.7551527239402,
+   "diff": -489.13322291249625,
+   "lo": -562.302029888062,
+   "hi": -422.6326481784102,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 3834.911806375193,
+   "valueB": 3925.6761878869856,
+   "diff": -90.76438151179269,
+   "lo": -331.88610234377944,
+   "hi": 134.19398333441333,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2955.842830584231,
+   "valueB": 3338.006191929291,
+   "diff": -382.16336134506025,
+   "lo": -549.5615789679857,
+   "hi": -221.12169513086343,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2359.799518051983,
+   "valueB": 2778.989716664349,
+   "diff": -419.19019861236615,
+   "lo": -550.5336143949173,
+   "hi": -300.16311078203523,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2514.9555854239165,
+   "valueB": 3414.0596504038617,
+   "diff": -899.1040649799448,
+   "lo": -1111.0061096441627,
+   "hi": -698.4030633962053,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2454.507358755253,
+   "valueB": 2896.7839055402806,
+   "diff": -442.27654678502773,
+   "lo": -515.2257190110272,
+   "hi": -375.8493604858677,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 4216.079999138014,
+   "valueB": 4342.246605719255,
+   "diff": -126.16660658124158,
+   "lo": -419.5933792508949,
+   "hi": 150.26501493829656,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 3207.0247181274185,
+   "valueB": 3587.5685538170137,
+   "diff": -380.5438356895953,
+   "lo": -560.8308731135752,
+   "hi": -206.18294052561492,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2342.002344954744,
+   "valueB": 2743.0882415194824,
+   "diff": -401.08589656473885,
+   "lo": -527.8860023437079,
+   "hi": -277.6608376100357,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 2351.9386699585016,
+   "valueB": 3102.6989053299158,
+   "diff": -750.7602353714142,
+   "lo": -940.1024972946793,
+   "hi": -564.7018402999786,
+   "n": 1067
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 5.711834473708151,
+   "valueB": 6.904552481777033,
+   "diff": -1.192718008068883,
+   "lo": -1.3691037776836577,
+   "hi": -1.0320536938972338,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 8.67937613417815,
+   "valueB": 9.030127785048933,
+   "diff": -0.35075165087078164,
+   "lo": -0.9564454306050975,
+   "hi": 0.20708232463762477,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 7.0764950752203735,
+   "valueB": 8.047931346499624,
+   "diff": -0.9714362712792504,
+   "lo": -1.3709190101072173,
+   "hi": -0.5818977303462934,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 5.519877314254991,
+   "valueB": 6.548263161505257,
+   "diff": -1.028385847250265,
+   "lo": -1.3450807962669928,
+   "hi": -0.7452600802404529,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "ageCurve",
+   "valueA": 5.720337538736631,
+   "valueB": 7.85260129798459,
+   "diff": -2.132263759247959,
+   "lo": -2.6244407749590954,
+   "hi": -1.6544569144386265,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 4.3197430803952,
+   "valueB": 4.654732234559293,
+   "diff": -0.3349891541640933,
+   "lo": -0.39367291332152,
+   "hi": -0.28142629569945726,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 6.321766931760871,
+   "valueB": 6.402907732855266,
+   "diff": -0.0811408010943951,
+   "lo": -0.29934530464920556,
+   "hi": 0.1305027727349415,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 5.062707741156908,
+   "valueB": 5.339032101489868,
+   "diff": -0.27632436033295965,
+   "lo": -0.4209866453657625,
+   "hi": -0.143951741398,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 4.056465332045405,
+   "valueB": 4.396244314290997,
+   "diff": -0.3397789822455924,
+   "lo": -0.4365297167085682,
+   "hi": -0.24038564574628618,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 4.227610359308723,
+   "valueB": 4.834594406149591,
+   "diff": -0.6069840468408687,
+   "lo": -0.7684459638621891,
+   "hi": -0.4513999371223936,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 6.219422179664485,
+   "valueB": 6.684755840133696,
+   "diff": -0.46533366046921076,
+   "lo": -0.5439523809426896,
+   "hi": -0.3819543903156278,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 8.452311955204607,
+   "valueB": 8.69428992460311,
+   "diff": -0.2419779693985036,
+   "lo": -0.5409452083484366,
+   "hi": 0.051355396412944614,
+   "n": 420
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 7.25195240746783,
+   "valueB": 7.62737525698827,
+   "diff": -0.3754228495204392,
+   "lo": -0.5778962306004052,
+   "hi": -0.17628267522794322,
+   "n": 840
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 6.155946767697698,
+   "valueB": 6.652614448018378,
+   "diff": -0.4966676803206796,
+   "lo": -0.6479488818042313,
+   "hi": -0.36246177088879195,
+   "n": 1260
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 6.2025472782932285,
+   "valueB": 7.019797608948158,
+   "diff": -0.81725033065493,
+   "lo": -1.048614424408268,
+   "hi": -0.5787581795684565,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 21.698008506098617,
+   "valueB": 22.529772710535013,
+   "diff": -0.8317642044363949,
+   "lo": -1.0753852525348706,
+   "hi": -0.5781976353066415,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 12.795741761825393,
+   "valueB": 13.467235854995764,
+   "diff": -0.6714940931703698,
+   "lo": -0.8245568704043377,
+   "hi": -0.517368800646968,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 23.556583656541378,
+   "valueB": 23.295248053768642,
+   "diff": 0.2613356027727364,
+   "lo": 0.07847258893359778,
+   "hi": 0.45091240650934655,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 3.5153115452577,
+   "valueB": 3.7272299471686585,
+   "diff": -0.2119184019109583,
+   "lo": -0.26855427145899496,
+   "hi": -0.15446425826898896,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 penaltyMinutes",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 12.58951113756829,
+   "valueB": 13.03547654340793,
+   "diff": -0.44596540583963923,
+   "lo": -0.6017478105262993,
+   "hi": -0.2955311519122554,
+   "n": 4703
+  },
+  {
+   "metric": "rate MAE/82 faceoffWins",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 36.71238456719344,
+   "valueB": 38.558665155271655,
+   "diff": -1.8462805880782205,
+   "lo": -3.2471943275693986,
+   "hi": -0.48316806008851104,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 4.096584469810351,
+   "valueB": 4.432425919374009,
+   "diff": -0.33584144956365847,
+   "lo": -0.3910317596915467,
+   "hi": -0.2826661495628262,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 6.178273959762324,
+   "valueB": 6.700800422212798,
+   "diff": -0.5225264624504743,
+   "lo": -0.5983070021998831,
+   "hi": -0.44200105440088877,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 3.0538979752368562,
+   "valueB": 3.227771758727658,
+   "diff": -0.1738737834908018,
+   "lo": -0.22671003603988968,
+   "hi": -0.12342691965758278,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 27.34316170048574,
+   "valueB": 30.048490820325096,
+   "diff": -2.7053291198393565,
+   "lo": -3.1335886364900634,
+   "hi": -2.2691025128802016,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 24.948553363868573,
+   "valueB": 26.332705201740232,
+   "diff": -1.3841518378716597,
+   "lo": -1.7454361938933027,
+   "hi": -0.9917802351214383,
+   "n": 4703
+  },
+  {
+   "metric": "total MAE blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 15.070936476571353,
+   "valueB": 16.230063372943146,
+   "diff": -1.1591268963717947,
+   "lo": -1.4054976011687899,
+   "hi": -0.8821357362105545,
+   "n": 4703
+  },
+  {
+   "metric": "GP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 12.295940369886713,
+   "valueB": 13.988597840600736,
+   "diff": -1.6926574707140227,
+   "lo": -1.9612798173970691,
+   "hi": -1.4104940264832049,
+   "n": 4703
+  },
+  {
+   "metric": "GP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 265.2847641890919,
+   "valueB": 375.4774731389533,
+   "diff": -110.19270894986141,
+   "lo": -122.38223606436954,
+   "hi": -97.43802589127749,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 38.41973184277097,
+   "valueB": 42.24457517286012,
+   "diff": -3.8248433300891453,
+   "lo": -4.364433710251009,
+   "hi": -3.264820877424488,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 46.36044847555404,
+   "valueB": 48.39118758090432,
+   "diff": -2.0307391053502823,
+   "lo": -3.6444616375696266,
+   "hi": -0.4604420292692318,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 41.03693494251637,
+   "valueB": 44.56070664656384,
+   "diff": -3.523771704047474,
+   "lo": -4.612044811306887,
+   "hi": -2.3375419732022364,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 37.770455166776195,
+   "valueB": 41.319422371836076,
+   "diff": -3.548967205059879,
+   "lo": -4.663685250018355,
+   "hi": -2.454390704828201,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 40.15149771247567,
+   "valueB": 45.39914586833618,
+   "diff": -5.247648155860512,
+   "lo": -6.9853671347026065,
+   "hi": -3.5369468475491392,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 37.88802148896955,
+   "valueB": 41.40234370045329,
+   "diff": -3.5143222114837407,
+   "lo": -4.030263568636215,
+   "hi": -2.980072498475429,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 49.1118355490649,
+   "valueB": 51.143616286042274,
+   "diff": -2.0317807369773746,
+   "lo": -3.8050648849101054,
+   "hi": -0.2630616582910745,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 42.942308148504736,
+   "valueB": 46.31212993910441,
+   "diff": -3.369821790599677,
+   "lo": -4.528534061656664,
+   "hi": -2.1981073386226204,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 37.4810804490698,
+   "valueB": 41.046215022964645,
+   "diff": -3.565134573894847,
+   "lo": -4.648858466272383,
+   "hi": -2.494795612683053,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 38.42644759841355,
+   "valueB": 42.82606939773269,
+   "diff": -4.399621799319136,
+   "lo": -5.973007677072826,
+   "hi": -2.8054833609753627,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 28.93933332708847,
+   "valueB": 30.16542498940904,
+   "diff": -1.2260916623205713,
+   "lo": -1.5231486880854819,
+   "hi": -0.9143117001093124,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 30.93386366749761,
+   "valueB": 32.26941899705011,
+   "diff": -1.3355553295524978,
+   "lo": -1.6857379274076534,
+   "hi": -0.9946789467826672,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 1.8506728599753426,
+   "valueB": 2.037476968111031,
+   "diff": -0.18680410813568848,
+   "lo": -0.21377163827916668,
+   "hi": -0.16015280240228377,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2.1905703886094887,
+   "valueB": 2.28544738971761,
+   "diff": -0.0948770011081216,
+   "lo": -0.16946649224074867,
+   "hi": -0.01647985860482065,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2.0345582196046443,
+   "valueB": 2.212129917440654,
+   "diff": -0.17757169783600998,
+   "lo": -0.2361936355737029,
+   "hi": -0.11932707782623324,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 1.8194219237008744,
+   "valueB": 1.998365300614721,
+   "diff": -0.1789433769138466,
+   "lo": -0.2348260065448094,
+   "hi": -0.12957570154337328,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 1.9199422051122224,
+   "valueB": 2.1789626151500725,
+   "diff": -0.2590204100378502,
+   "lo": -0.34243855624052544,
+   "hi": -0.1766014196653994,
+   "n": 1067
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2473.6219298114443,
+   "valueB": 3035.6767421855825,
+   "diff": -562.0548123741385,
+   "lo": -636.2573547073482,
+   "hi": -497.4463489846236,
+   "n": 4703
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 3834.911806375193,
+   "valueB": 4104.076584433098,
+   "diff": -269.1647780579055,
+   "lo": -501.3431582147057,
+   "hi": -55.11273333149141,
+   "n": 420
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2955.842830584231,
+   "valueB": 3439.5267323223175,
+   "diff": -483.6839017380866,
+   "lo": -658.1876719543022,
+   "hi": -318.0207968053162,
+   "n": 840
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2359.799518051983,
+   "valueB": 2810.098778169063,
+   "diff": -450.29926011707994,
+   "lo": -581.0118828822144,
+   "hi": -325.43034525967636,
+   "n": 1260
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2514.9555854239165,
+   "valueB": 3527.4778256821714,
+   "diff": -1012.5222402582544,
+   "lo": -1228.2706715684387,
+   "hi": -794.6937878964831,
+   "n": 1067
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2454.507358755253,
+   "valueB": 2963.3221549881787,
+   "diff": -508.8147962329255,
+   "lo": -583.7068093282624,
+   "hi": -444.84451321239857,
+   "n": 4703
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 4216.079999138014,
+   "valueB": 4501.755433644312,
+   "diff": -285.6754345062987,
+   "lo": -544.7309194789195,
+   "hi": -46.36648128853899,
+   "n": 420
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 3207.0247181274185,
+   "valueB": 3681.203937155106,
+   "diff": -474.17921902768734,
+   "lo": -649.5629629904698,
+   "hi": -299.2137320856172,
+   "n": 840
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2342.002344954744,
+   "valueB": 2764.8512310895712,
+   "diff": -422.8488861348273,
+   "lo": -556.0714696513238,
+   "hi": -296.1510092789988,
+   "n": 1260
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 2351.9386699585016,
+   "valueB": 3213.9403602705634,
+   "diff": -862.0016903120618,
+   "lo": -1063.9677293000063,
+   "hi": -668.4469304868186,
+   "n": 1067
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 5.711834473708151,
+   "valueB": 7.054763462985411,
+   "diff": -1.342928989277261,
+   "lo": -1.5150042126248613,
+   "hi": -1.1893375872932768,
+   "n": 4703
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 8.67937613417815,
+   "valueB": 9.360084066116036,
+   "diff": -0.6807079319378848,
+   "lo": -1.16764408094041,
+   "hi": -0.22245128618509175,
+   "n": 420
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 7.0764950752203735,
+   "valueB": 8.258507373133732,
+   "diff": -1.1820122979133592,
+   "lo": -1.5917630114044903,
+   "hi": -0.7804360391699783,
+   "n": 840
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 5.519877314254991,
+   "valueB": 6.605265564906845,
+   "diff": -1.085388250651854,
+   "lo": -1.4034780729341079,
+   "hi": -0.7894398366079272,
+   "n": 1260
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "synth",
+   "valueA": 5.720337538736631,
+   "valueB": 8.125898603626787,
+   "diff": -2.4055610648901564,
+   "lo": -2.9125621987130903,
+   "hi": -1.8806358008635444,
+   "n": 1067
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 5.0489225538355935,
+   "valueB": 5.750624032557027,
+   "diff": -0.7017014787214327,
+   "lo": -0.8575761864894244,
+   "hi": -0.5521738693340702,
+   "n": 2076
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 6.330549528257351,
+   "valueB": 6.899918066300453,
+   "diff": -0.5693685380431007,
+   "lo": -0.9034855084205189,
+   "hi": -0.19215740854960847,
+   "n": 415
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 5.084676090341292,
+   "valueB": 5.79940903101227,
+   "diff": -0.7147329406709786,
+   "lo": -0.9530486643299393,
+   "hi": -0.4923485827525807,
+   "n": 793
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 4.3327147683074925,
+   "valueB": 5.06469826355128,
+   "diff": -0.7319834952437884,
+   "lo": -0.9669111100624156,
+   "hi": -0.506581742830337,
+   "n": 668
+  },
+  {
+   "metric": "rate MAE/82 goals",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 5.3767742080746155,
+   "valueB": 6.269238454651678,
+   "diff": -0.8924642465770627,
+   "lo": -1.4226819889667641,
+   "hi": -0.3480115247339668,
+   "n": 219
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 7.380757304850461,
+   "valueB": 8.348288189067935,
+   "diff": -0.9675308842174728,
+   "lo": -1.1666982788959903,
+   "hi": -0.7669468322499606,
+   "n": 2076
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 8.483101164281267,
+   "valueB": 9.132708365480738,
+   "diff": -0.6496072011994712,
+   "lo": -1.1603971119826064,
+   "hi": -0.16847111620613633,
+   "n": 415
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 7.32994713855477,
+   "valueB": 8.303773892474847,
+   "diff": -0.9738267539200769,
+   "lo": -1.2863760138253861,
+   "hi": -0.7099939787936431,
+   "n": 793
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 6.871111229497832,
+   "valueB": 8.076374890587513,
+   "diff": -1.2052636610896803,
+   "lo": -1.5264791147275845,
+   "hi": -0.8777888513981047,
+   "n": 668
+  },
+  {
+   "metric": "rate MAE/82 assists",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 7.823130421087563,
+   "valueB": 8.711171132476748,
+   "diff": -0.8880407113891843,
+   "lo": -1.528765041812919,
+   "hi": -0.2063416490377343,
+   "n": 219
+  },
+  {
+   "metric": "rate MAE/82 shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 23.34548969628233,
+   "valueB": 28.983890622225584,
+   "diff": -5.638400925943253,
+   "lo": -6.524769341259163,
+   "hi": -4.771011862302214,
+   "n": 2076
+  },
+  {
+   "metric": "rate MAE/82 blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 11.763700106095927,
+   "valueB": 13.63148510323656,
+   "diff": -1.8677849971406337,
+   "lo": -2.2454095322827476,
+   "hi": -1.4701989348402185,
+   "n": 1836
+  },
+  {
+   "metric": "rate MAE/82 hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 20.46006339603898,
+   "valueB": 21.386165286729707,
+   "diff": -0.9261018906907267,
+   "lo": -1.343418701215445,
+   "hi": -0.4722038519360361,
+   "n": 2076
+  },
+  {
+   "metric": "rate MAE/82 powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 5.036308655335597,
+   "valueB": 5.565083574298586,
+   "diff": -0.5287749189629887,
+   "lo": -0.6710636468302629,
+   "hi": -0.38495940060702566,
+   "n": 2076
+  },
+  {
+   "metric": "rate MAE/82 penaltyMinutes",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 11.08854260513397,
+   "valueB": 11.977389621807507,
+   "diff": -0.8888470166735389,
+   "lo": -1.2061105424492642,
+   "hi": -0.586274518683185,
+   "n": 2076
+  },
+  {
+   "metric": "total MAE goals",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 5.160462246540145,
+   "valueB": 5.9937377278106565,
+   "diff": -0.8332754812705119,
+   "lo": -0.9872027006835798,
+   "hi": -0.6872842438526418,
+   "n": 2076
+  },
+  {
+   "metric": "total MAE assists",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 7.854149823806948,
+   "valueB": 9.01081534290308,
+   "diff": -1.156665519096131,
+   "lo": -1.3425101293214137,
+   "hi": -0.9677703220823476,
+   "n": 2076
+  },
+  {
+   "metric": "total MAE powerplayPoints",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 4.907462657973938,
+   "valueB": 5.534037786230283,
+   "diff": -0.6265751282563448,
+   "lo": -0.7696321335693691,
+   "hi": -0.4775076266181499,
+   "n": 2076
+  },
+  {
+   "metric": "total MAE shots",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 30.142964451527348,
+   "valueB": 36.99828845693965,
+   "diff": -6.855324005412297,
+   "lo": -7.763787521407537,
+   "hi": -5.9000646747141525,
+   "n": 2076
+  },
+  {
+   "metric": "total MAE hits",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 21.212451809736674,
+   "valueB": 23.23369510221731,
+   "diff": -2.021243292480639,
+   "lo": -2.4626361733544417,
+   "hi": -1.5856807792860341,
+   "n": 2076
+  },
+  {
+   "metric": "total MAE blocks",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 13.775644867734874,
+   "valueB": 15.745281518781226,
+   "diff": -1.969636651046352,
+   "lo": -2.3544557101245096,
+   "hi": -1.5447876442267223,
+   "n": 1836
+  },
+  {
+   "metric": "GP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 9.128469325283138,
+   "valueB": 8.945740434902286,
+   "diff": 0.18272889038085177,
+   "lo": 0.0004031545948988017,
+   "hi": 0.36342355344659577,
+   "n": 2076
+  },
+  {
+   "metric": "GP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 179.0530507210474,
+   "valueB": 202.74858956588417,
+   "diff": -23.695538844836754,
+   "lo": -29.674632526931827,
+   "hi": -18.295039794644694,
+   "n": 2076
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 41.925116513143365,
+   "valueB": 49.181948250423176,
+   "diff": -7.256831737279815,
+   "lo": -8.497939735112624,
+   "hi": -6.1958258385316896,
+   "n": 2008
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 46.69009782404013,
+   "valueB": 53.99359525139981,
+   "diff": -7.303497427359684,
+   "lo": -10.01800111967531,
+   "hi": -4.495500942077342,
+   "n": 403
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 41.41039175043787,
+   "valueB": 48.81817564130371,
+   "diff": -7.407783890865844,
+   "lo": -9.306567707396274,
+   "hi": -5.615143619223009,
+   "n": 759
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 39.38491533998085,
+   "valueB": 46.86542228782068,
+   "diff": -7.480506947839824,
+   "lo": -9.367348605402942,
+   "hi": -5.560875973789742,
+   "n": 649
+  },
+  {
+   "metric": "Captains FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 43.466758847259094,
+   "valueB": 48.37255423610077,
+   "diff": -4.905795388841672,
+   "lo": -9.136647512424279,
+   "hi": -0.6680110874807131,
+   "n": 209
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 43.5275528107951,
+   "valueB": 50.61117146014272,
+   "diff": -7.083618649347616,
+   "lo": -8.3684267164203,
+   "hi": -5.776771927697405,
+   "n": 1836
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 49.14959331263714,
+   "valueB": 56.17529305344254,
+   "diff": -7.0256997408054,
+   "lo": -10.468729888505285,
+   "hi": -3.9037046692120403,
+   "n": 355
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 43.53511560179924,
+   "valueB": 50.66912328247106,
+   "diff": -7.1340076806718224,
+   "lo": -9.180167599463235,
+   "hi": -5.095685988744295,
+   "n": 685
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 40.28492937349243,
+   "valueB": 48.17580714095728,
+   "diff": -7.890877767464848,
+   "lo": -9.878466692162904,
+   "hi": -5.970322104544841,
+   "n": 608
+  },
+  {
+   "metric": "Slapshot FP MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 45.869652645992936,
+   "valueB": 51.31849866077253,
+   "diff": -5.448846014779592,
+   "lo": -10.071772773690837,
+   "hi": -0.9114210981680634,
+   "n": 187
+  },
+  {
+   "metric": "Captains FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 32.26200791624392,
+   "valueB": 37.66249334514237,
+   "diff": -5.400485428898451,
+   "lo": -6.470254458330136,
+   "hi": -4.4237883604411365,
+   "n": 2008
+  },
+  {
+   "metric": "Slapshot FP/82 MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 35.39080498458342,
+   "valueB": 40.461935217691504,
+   "diff": -5.071130233108083,
+   "lo": -6.220289457930683,
+   "hi": -3.984026550656458,
+   "n": 1836
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2.0108602678466205,
+   "valueB": 2.361467260943591,
+   "diff": -0.35060699309697047,
+   "lo": -0.40844250176670094,
+   "hi": -0.29119971347735085,
+   "n": 1836
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2.1794561968015738,
+   "valueB": 2.5450984931791374,
+   "diff": -0.36564229637756335,
+   "lo": -0.5186821027424131,
+   "hi": -0.22891825973172145,
+   "n": 355
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2.041534092790211,
+   "valueB": 2.3982305923577156,
+   "diff": -0.35669649956750427,
+   "lo": -0.4523487665787428,
+   "hi": -0.25756031395346424,
+   "n": 685
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 1.8711929961043328,
+   "valueB": 2.2423010845289184,
+   "diff": -0.37110808842458565,
+   "lo": -0.46567070191024884,
+   "hi": -0.27643059879479936,
+   "n": 608
+  },
+  {
+   "metric": "LTL value MAE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2.085318768191519,
+   "valueB": 2.3285515764641347,
+   "diff": -0.24323280827261556,
+   "lo": -0.44007847834104,
+   "hi": -0.04362279389055908,
+   "n": 187
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 3056.985606422788,
+   "valueB": 4019.827768690707,
+   "diff": -962.8421622679195,
+   "lo": -1109.224801927641,
+   "hi": -819.2340658881745,
+   "n": 2008
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 3904.5701867845505,
+   "valueB": 5066.313188232365,
+   "diff": -1161.743001447815,
+   "lo": -1555.866114929233,
+   "hi": -786.1890274290763,
+   "n": 403
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 3010.9838123077366,
+   "valueB": 3938.4454784541244,
+   "diff": -927.4616661463878,
+   "lo": -1193.6592748742294,
+   "hi": -684.3393344904534,
+   "n": 759
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2640.447449465461,
+   "valueB": 3542.090225225774,
+   "diff": -901.6427757603128,
+   "lo": -1158.2472143043562,
+   "hi": -673.3538178232864,
+   "n": 649
+  },
+  {
+   "metric": "Captains FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2960.205928619154,
+   "valueB": 3745.6056737038602,
+   "diff": -785.3997450847063,
+   "lo": -1303.5358377824443,
+   "hi": -237.52559840729222,
+   "n": 209
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 3247.8766819420216,
+   "valueB": 4203.66494128412,
+   "diff": -955.7882593420983,
+   "lo": -1143.5673297927337,
+   "hi": -789.0675075725401,
+   "n": 1836
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 4199.557680947131,
+   "valueB": 5352.645837314489,
+   "diff": -1153.088156367357,
+   "lo": -1659.922378348136,
+   "hi": -714.624250420204,
+   "n": 355
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 3261.4598755635634,
+   "valueB": 4212.796500132474,
+   "diff": -951.3366245689102,
+   "lo": -1224.6046143264018,
+   "hi": -672.6440399754593,
+   "n": 685
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 2763.245971074053,
+   "valueB": 3687.9490756436326,
+   "diff": -924.7031045695794,
+   "lo": -1190.6819841942581,
+   "hi": -666.3882777998327,
+   "n": 608
+  },
+  {
+   "metric": "Slapshot FP MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 3305.848806179662,
+   "valueB": 4165.9734578463585,
+   "diff": -860.1246516666964,
+   "lo": -1476.0980143669701,
+   "hi": -298.94000172256114,
+   "n": 187
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "all",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 6.956546857825362,
+   "valueB": 9.235539341162594,
+   "diff": -2.2789924833372335,
+   "lo": -2.66424480649199,
+   "hi": -1.8870063578138911,
+   "n": 1836
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 1-60",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 8.645610731698453,
+   "valueB": 11.496950368882551,
+   "diff": -2.851339637184098,
+   "lo": -3.8027201756749607,
+   "hi": -1.9932491898058422,
+   "n": 355
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 61-180",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 7.049592146359402,
+   "valueB": 9.277920491316115,
+   "diff": -2.2283283449567137,
+   "lo": -2.8853951472044184,
+   "hi": -1.5641266026243195,
+   "n": 685
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "tier 181-360",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 6.007821781463844,
+   "valueB": 8.148608722900509,
+   "diff": -2.1407869414366645,
+   "lo": -2.745833852044408,
+   "hi": -1.6093941820227624,
+   "n": 608
+  },
+  {
+   "metric": "LTL value MSE",
+   "subset": "young (<=2 seasons)",
+   "a": "candidate",
+   "b": "espn",
+   "valueA": 6.72927216948417,
+   "valueB": 8.52435957418175,
+   "diff": -1.7950874046975798,
+   "lo": -3.048892894068923,
+   "hi": -0.613290625507357,
+   "n": 187
+  }
+ ],
+ "spearman": [
+  {
+   "ranking": "Captains FP",
+   "method": "candidate",
+   "all": 0.788534858317777,
+   "espnSet": 0.685644639344667
+  },
+  {
+   "ranking": "Captains FP",
+   "method": "engine",
+   "all": 0.786446351949572,
+   "espnSet": 0.6786872130581371
+  },
+  {
+   "ranking": "Captains FP",
+   "method": "marcel543",
+   "all": 0.7450340190841106,
+   "espnSet": 0.6193893270479826
+  },
+  {
+   "ranking": "Captains FP",
+   "method": "lag1",
+   "all": 0.7322138115166741,
+   "espnSet": 0.596442517395872
+  },
+  {
+   "ranking": "Captains FP",
+   "method": "ageCurve",
+   "all": 0.7475917799211037,
+   "espnSet": 0.6331530040257033
+  },
+  {
+   "ranking": "Captains FP",
+   "method": "synth",
+   "all": 0.7460741456087681,
+   "espnSet": 0.6279500071915256
+  },
+  {
+   "ranking": "Captains FP",
+   "method": "espn",
+   "all": null,
+   "espnSet": 0.5882958105562731
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "candidate",
+   "all": 0.8036813491998258,
+   "espnSet": 0.7044191259813805
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "engine",
+   "all": 0.8016419127941159,
+   "espnSet": 0.697526160669866
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "marcel543",
+   "all": 0.7631832043579896,
+   "espnSet": 0.6449531335138314
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "lag1",
+   "all": 0.7506838493016948,
+   "espnSet": 0.6234796253917821
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "ageCurve",
+   "all": 0.765571745184867,
+   "espnSet": 0.6563273989435595
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "synth",
+   "all": 0.7642816535382149,
+   "espnSet": 0.6527744398882349
+  },
+  {
+   "ranking": "Slapshot FP",
+   "method": "espn",
+   "all": null,
+   "espnSet": 0.580470715309376
+  },
+  {
+   "ranking": "LTL value",
+   "method": "candidate",
+   "all": 0.7858338175744521,
+   "espnSet": 0.686473678312883
+  },
+  {
+   "ranking": "LTL value",
+   "method": "engine",
+   "all": 0.7836246433920716,
+   "espnSet": 0.6794884227393769
+  },
+  {
+   "ranking": "LTL value",
+   "method": "marcel543",
+   "all": 0.7420432481511389,
+   "espnSet": 0.623575143126134
+  },
+  {
+   "ranking": "LTL value",
+   "method": "lag1",
+   "all": 0.7301987112497559,
+   "espnSet": 0.6055524144219557
+  },
+  {
+   "ranking": "LTL value",
+   "method": "ageCurve",
+   "all": 0.743060021559747,
+   "espnSet": 0.6367703589051417
+  },
+  {
+   "ranking": "LTL value",
+   "method": "synth",
+   "all": 0.742434120141657,
+   "espnSet": 0.6340458967998934
+  },
+  {
+   "ranking": "LTL value",
+   "method": "espn",
+   "all": null,
+   "espnSet": 0.5621002928618327
+  }
+ ],
+ "adp": [
+  {
+   "ranking": "Captains FP",
+   "metric": "spearman",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.6338261380843258,
+   "valueB": 0.6305108586811193,
+   "diff": 0.003315279403206417,
+   "lo": -0.021905599530523512,
+   "hi": 0.028663148470661353,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.6259941186694664,
+     "b": 0.600760007508738
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5552138424014104,
+     "b": 0.5944444763161472
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.612055844923945,
+     "b": 0.616136876942638
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5744987278168057,
+     "b": 0.6212683931002007
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7197232868042615,
+     "b": 0.6372297356262183
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7154710078900656,
+     "b": 0.7132256625927746
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "top60",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.6055555555555555,
+   "valueB": 0.6027777777777777,
+   "diff": 0.002777777777777768,
+   "lo": -0.04137199135141434,
+   "hi": 0.053247747769188024,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.5666666666666667,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.6333333333333333,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6166666666666667,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.4666666666666667,
+     "b": 0.5
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6333333333333333,
+     "b": 0.6166666666666667
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7166666666666667,
+     "b": 0.6666666666666666
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "top120",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.7527777777777778,
+   "valueB": 0.7388888888888889,
+   "diff": 0.01388888888888884,
+   "lo": -0.01350663459500634,
+   "hi": 0.043634837155121474,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.775,
+     "b": 0.7416666666666667
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.7083333333333334,
+     "b": 0.7333333333333333
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7333333333333333,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7666666666666667,
+     "b": 0.775
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.775,
+     "b": 0.725
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7583333333333333,
+     "b": 0.7416666666666667
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "spearman",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.6242260191641701,
+   "valueB": 0.6305108586811193,
+   "diff": -0.006284839516949248,
+   "lo": -0.034113269689564,
+   "hi": 0.021206602893269737,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.6314996453350996,
+     "b": 0.600760007508738
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.545922384022797,
+     "b": 0.5944444763161472
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.596283891769872,
+     "b": 0.616136876942638
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5541517978588917,
+     "b": 0.6212683931002007
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7124714320874793,
+     "b": 0.6372297356262183
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7050269639108807,
+     "b": 0.7132256625927746
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "top60",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.6083333333333334,
+   "valueB": 0.6027777777777777,
+   "diff": 0.005555555555555647,
+   "lo": -0.03602008557566938,
+   "hi": 0.055616291716337786,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.5833333333333334,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.6166666666666667,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6333333333333333,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.48333333333333334,
+     "b": 0.5
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6,
+     "b": 0.6166666666666667
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7333333333333333,
+     "b": 0.6666666666666666
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "top120",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.751388888888889,
+   "valueB": 0.7388888888888889,
+   "diff": 0.012500000000000067,
+   "lo": -0.017887237283562413,
+   "hi": 0.04329015919630278,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.775,
+     "b": 0.7416666666666667
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.7166666666666667,
+     "b": 0.7333333333333333
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.725,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7583333333333333,
+     "b": 0.775
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7666666666666667,
+     "b": 0.725
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7666666666666667,
+     "b": 0.7416666666666667
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "spearman",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.6113397683139139,
+   "valueB": 0.6345419413152708,
+   "diff": -0.02320217300135685,
+   "lo": -0.04351568208027371,
+   "hi": -0.001949196613943031,
+   "n": 1319,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 154,
+     "a": 0.6283890682372656,
+     "b": 0.6249465033136463
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5419522326064382,
+     "b": 0.5944444763161472
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.5855745095025869,
+     "b": 0.616136876942638
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5854883103166856,
+     "b": 0.6212683931002007
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6271940156815864,
+     "b": 0.6372297356262183
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.6994404735389205,
+     "b": 0.7132256625927746
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "top60",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.6305555555555555,
+   "valueB": 0.625,
+   "diff": 0.005555555555555536,
+   "lo": -0.03455079222967209,
+   "hi": 0.04530026391971923,
+   "n": 1319,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 154,
+     "a": 0.6833333333333333,
+     "b": 0.7
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.6333333333333333,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6166666666666667,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.55,
+     "b": 0.5
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6166666666666667,
+     "b": 0.6166666666666667
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.6833333333333333,
+     "b": 0.6666666666666666
+    }
+   ]
+  },
+  {
+   "ranking": "Captains FP",
+   "metric": "top120",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.7611111111111112,
+   "valueB": 0.7527777777777778,
+   "diff": 0.008333333333333415,
+   "lo": -0.016898604966179082,
+   "hi": 0.03305749929318624,
+   "n": 1319,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 154,
+     "a": 0.8666666666666667,
+     "b": 0.825
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.7166666666666667,
+     "b": 0.7333333333333333
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7166666666666667,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.775,
+     "b": 0.775
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.725,
+     "b": 0.725
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7666666666666667,
+     "b": 0.7416666666666667
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "spearman",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.6588463382078542,
+   "valueB": 0.6199774800697794,
+   "diff": 0.038868858138074835,
+   "lo": 0.013720938935497825,
+   "hi": 0.06430419944919204,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.6488864461637471,
+     "b": 0.6389471109867125
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5668715034387418,
+     "b": 0.572266083705118
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6456691479953143,
+     "b": 0.602329968745292
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.6024080800968673,
+     "b": 0.5879156343789703
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7520542526634084,
+     "b": 0.6299984375936839
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7371885988890464,
+     "b": 0.6884076450088995
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "top60",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.6694444444444444,
+   "valueB": 0.6138888888888888,
+   "diff": 0.05555555555555558,
+   "lo": 0.004662297760830825,
+   "hi": 0.10438817668051015,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.65,
+     "b": 0.6
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.6333333333333333,
+     "b": 0.6166666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5833333333333334,
+     "b": 0.5333333333333333
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.75,
+     "b": 0.6666666666666666
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "top120",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.7541666666666668,
+   "valueB": 0.7333333333333334,
+   "diff": 0.02083333333333337,
+   "lo": -0.015970509804116222,
+   "hi": 0.0587876341066238,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.775,
+     "b": 0.775
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.725,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.75,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.725,
+     "b": 0.75
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7833333333333333,
+     "b": 0.725
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7666666666666667,
+     "b": 0.7166666666666667
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "spearman",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.649424661682353,
+   "valueB": 0.6199774800697794,
+   "diff": 0.029447181612573647,
+   "lo": 0.0006084436746357132,
+   "hi": 0.05895313824203585,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.651209383822583,
+     "b": 0.6389471109867125
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5630414170353975,
+     "b": 0.572266083705118
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.632724410795579,
+     "b": 0.602329968745292
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5684805278626789,
+     "b": 0.5879156343789703
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7507691361063253,
+     "b": 0.6299984375936839
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7303230944715546,
+     "b": 0.6884076450088995
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "top60",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.6666666666666666,
+   "valueB": 0.6138888888888888,
+   "diff": 0.05277777777777781,
+   "lo": 0.00031877795251422647,
+   "hi": 0.10388258885965536,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.65,
+     "b": 0.6
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.6333333333333333,
+     "b": 0.6166666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6666666666666666,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5833333333333334,
+     "b": 0.5333333333333333
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7166666666666667,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.75,
+     "b": 0.6666666666666666
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "top120",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.7486111111111112,
+   "valueB": 0.7333333333333334,
+   "diff": 0.015277777777777835,
+   "lo": -0.020151720718509864,
+   "hi": 0.052424870052579564,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.775,
+     "b": 0.775
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.75,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7416666666666667,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7,
+     "b": 0.75
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.775,
+     "b": 0.725
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.75,
+     "b": 0.7166666666666667
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "spearman",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.6295422266977642,
+   "valueB": 0.6161835538863928,
+   "diff": 0.013358672811371375,
+   "lo": -0.013211843890467723,
+   "hi": 0.03881033443866118,
+   "n": 1165,
+   "seasons": [
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5539919510155216,
+     "b": 0.572266083705118
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6184274532067817,
+     "b": 0.602329968745292
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.6148165335808357,
+     "b": 0.5879156343789703
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6504685137653388,
+     "b": 0.6299984375936839
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7100066819203434,
+     "b": 0.6884076450088995
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "top60",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.6533333333333333,
+   "valueB": 0.6166666666666666,
+   "diff": 0.036666666666666736,
+   "lo": -0.012944492065478475,
+   "hi": 0.08379148300929087,
+   "n": 1165,
+   "seasons": [
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.65,
+     "b": 0.6166666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6666666666666666,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.6166666666666667,
+     "b": 0.5333333333333333
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6333333333333333,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7,
+     "b": 0.6666666666666666
+    }
+   ]
+  },
+  {
+   "ranking": "Slapshot FP",
+   "metric": "top120",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.735,
+   "valueB": 0.7250000000000001,
+   "diff": 0.009999999999999898,
+   "lo": -0.023409927720338432,
+   "hi": 0.04175580045104388,
+   "n": 1165,
+   "seasons": [
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.75,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7333333333333333,
+     "b": 0.75
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7166666666666667,
+     "b": 0.725
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.775,
+     "b": 0.7166666666666667
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "spearman",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.6361910735129176,
+   "valueB": 0.6407501038171314,
+   "diff": -0.004559030304213785,
+   "lo": -0.027518686449666374,
+   "hi": 0.018354241091959933,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.6350357248551981,
+     "b": 0.6030535942444717
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5453391774734961,
+     "b": 0.599438585356474
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6129093440799716,
+     "b": 0.6335928021200196
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5896622446965697,
+     "b": 0.6410596124753344
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7183300516859463,
+     "b": 0.6457206762869204
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7158698982863236,
+     "b": 0.7216353524195683
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "top60",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.6444444444444445,
+   "valueB": 0.6305555555555555,
+   "diff": 0.01388888888888895,
+   "lo": -0.026422763794224036,
+   "hi": 0.05885990519633625,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.6,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.65,
+     "b": 0.6666666666666666
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6333333333333333,
+     "b": 0.6666666666666666
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5666666666666667,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6833333333333333,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7333333333333333,
+     "b": 0.6833333333333333
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "top120",
+   "a": "candidate",
+   "b": "adp",
+   "valueA": 0.7527777777777777,
+   "valueB": 0.7402777777777777,
+   "diff": 0.012499999999999956,
+   "lo": -0.016281933211906924,
+   "hi": 0.04091746444251173,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.7583333333333333,
+     "b": 0.725
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.7333333333333333,
+     "b": 0.7416666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7833333333333333,
+     "b": 0.775
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7833333333333333,
+     "b": 0.7333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7583333333333333,
+     "b": 0.75
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "spearman",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.6275844291687278,
+   "valueB": 0.6407501038171314,
+   "diff": -0.01316567464840357,
+   "lo": -0.03836724331926944,
+   "hi": 0.011876667743654293,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.639227112370054,
+     "b": 0.6030535942444717
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5390760462701345,
+     "b": 0.599438585356474
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.5971983551513289,
+     "b": 0.6335928021200196
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5644826188304449,
+     "b": 0.6410596124753344
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7166564115185823,
+     "b": 0.6457206762869204
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7088660308718219,
+     "b": 0.7216353524195683
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "top60",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.6444444444444444,
+   "valueB": 0.6305555555555555,
+   "diff": 0.01388888888888884,
+   "lo": -0.02571433567911911,
+   "hi": 0.05936060298746485,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.6166666666666667,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.6333333333333333,
+     "b": 0.6666666666666666
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6666666666666666,
+     "b": 0.6666666666666666
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5166666666666667,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7333333333333333,
+     "b": 0.6833333333333333
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "top120",
+   "a": "engine",
+   "b": "adp",
+   "valueA": 0.7444444444444445,
+   "valueB": 0.7402777777777777,
+   "diff": 0.004166666666666763,
+   "lo": -0.025164732769892506,
+   "hi": 0.033665298778374986,
+   "n": 1382,
+   "seasons": [
+    20192020,
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20192020,
+     "n": 217,
+     "a": 0.7666666666666667,
+     "b": 0.725
+    },
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.725,
+     "b": 0.7416666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7083333333333334,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7583333333333333,
+     "b": 0.775
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.7666666666666667,
+     "b": 0.7333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7416666666666667,
+     "b": 0.75
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "spearman",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.6116461859772555,
+   "valueB": 0.6482894057316633,
+   "diff": -0.03664321975440776,
+   "lo": -0.056331845486587984,
+   "hi": -0.019640662998835445,
+   "n": 1165,
+   "seasons": [
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.5391219300152141,
+     "b": 0.599438585356474
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.5773942958653131,
+     "b": 0.6335928021200196
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.6182476943346509,
+     "b": 0.6410596124753344
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.625263703807883,
+     "b": 0.6457206762869204
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.6982033058632163,
+     "b": 0.7216353524195683
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "top60",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.63,
+   "valueB": 0.6433333333333333,
+   "diff": -0.013333333333333308,
+   "lo": -0.04532492470051306,
+   "hi": 0.018038577254263544,
+   "n": 1165,
+   "seasons": [
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.65,
+     "b": 0.6666666666666666
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.6333333333333333,
+     "b": 0.6666666666666666
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.5833333333333334,
+     "b": 0.5666666666666667
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.6166666666666667,
+     "b": 0.6333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.6666666666666666,
+     "b": 0.6833333333333333
+    }
+   ]
+  },
+  {
+   "ranking": "LTL value",
+   "metric": "top120",
+   "a": "espn",
+   "b": "adp",
+   "valueA": 0.7433333333333334,
+   "valueB": 0.7433333333333334,
+   "diff": 0,
+   "lo": -0.027537093784219913,
+   "hi": 0.02825370208908007,
+   "n": 1165,
+   "seasons": [
+    20202021,
+    20212022,
+    20222023,
+    20232024,
+    20242025
+   ],
+   "perSeason": [
+    {
+     "T": 20202021,
+     "n": 215,
+     "a": 0.7083333333333334,
+     "b": 0.7416666666666667
+    },
+    {
+     "T": 20212022,
+     "n": 242,
+     "a": 0.7166666666666667,
+     "b": 0.7166666666666667
+    },
+    {
+     "T": 20222023,
+     "n": 208,
+     "a": 0.7833333333333333,
+     "b": 0.775
+    },
+    {
+     "T": 20232024,
+     "n": 239,
+     "a": 0.75,
+     "b": 0.7333333333333333
+    },
+    {
+     "T": 20242025,
+     "n": 261,
+     "a": 0.7583333333333333,
+     "b": 0.75
+    }
+   ]
+  }
+ ],
+ "bias": [
+  {
+   "subset": "tier 1-60",
+   "method": "candidate",
+   "n": 420,
+   "goals": -0.6107956261875084,
+   "assists": -0.5001321215809421,
+   "captainsFp": -3.2597931652722454
+  },
+  {
+   "subset": "tier 1-60",
+   "method": "engine",
+   "n": 420,
+   "goals": -0.3092778501667644,
+   "assists": -0.6218405947692546,
+   "captainsFp": -3.071888565138294
+  },
+  {
+   "subset": "tier 1-60",
+   "method": "marcel543",
+   "n": 420,
+   "goals": -1.978131239564432,
+   "assists": -4.734543332067797,
+   "captainsFp": -20.155601152479928
+  },
+  {
+   "subset": "tier 1-60",
+   "method": "lag1",
+   "n": 420,
+   "goals": 1.6137632478058517,
+   "assists": 1.632088670154582,
+   "captainsFp": 11.993771279486067
+  },
+  {
+   "subset": "tier 1-60",
+   "method": "ageCurve",
+   "n": 420,
+   "goals": -1.8113969208097789,
+   "assists": -3.1005791544492936,
+   "captainsFp": -13.197423169553888
+  },
+  {
+   "subset": "tier 1-60",
+   "method": "synth",
+   "n": 420,
+   "goals": -0.17300238357926417,
+   "assists": -1.0439287028738395,
+   "captainsFp": -2.3181830187544348
+  },
+  {
+   "subset": "tier 61-180",
+   "method": "candidate",
+   "n": 840,
+   "goals": -0.41647756038358513,
+   "assists": -0.22372518132248845,
+   "captainsFp": -0.732069374370775
+  },
+  {
+   "subset": "tier 61-180",
+   "method": "engine",
+   "n": 840,
+   "goals": -0.32704702308281036,
+   "assists": -0.28745089315830946,
+   "captainsFp": -1.1302614396903359
+  },
+  {
+   "subset": "tier 61-180",
+   "method": "marcel543",
+   "n": 840,
+   "goals": -0.4720589904990158,
+   "assists": -1.618797648667588,
+   "captainsFp": -3.740236454095989
+  },
+  {
+   "subset": "tier 61-180",
+   "method": "lag1",
+   "n": 840,
+   "goals": 0.9247717983202771,
+   "assists": 0.7139560052224727,
+   "captainsFp": 8.28667089197043
+  },
+  {
+   "subset": "tier 61-180",
+   "method": "ageCurve",
+   "n": 840,
+   "goals": -0.9865285159122834,
+   "assists": -1.3994127788928425,
+   "captainsFp": -4.477074297763377
+  },
+  {
+   "subset": "tier 61-180",
+   "method": "synth",
+   "n": 840,
+   "goals": -0.012517953391245756,
+   "assists": -0.3480047751483134,
+   "captainsFp": 1.5675202434174995
+  },
+  {
+   "subset": "tier 181-360",
+   "method": "candidate",
+   "n": 1260,
+   "goals": -0.1873864252074612,
+   "assists": 0.036392783430400415,
+   "captainsFp": 0.6580559339159052
+  },
+  {
+   "subset": "tier 181-360",
+   "method": "engine",
+   "n": 1260,
+   "goals": -0.0982202523352561,
+   "assists": -0.049532298973982584,
+   "captainsFp": 0.16859264658278678
+  },
+  {
+   "subset": "tier 181-360",
+   "method": "marcel543",
+   "n": 1260,
+   "goals": 0.38675301975031545,
+   "assists": 0.8187170841947061,
+   "captainsFp": 6.421775334329825
+  },
+  {
+   "subset": "tier 181-360",
+   "method": "lag1",
+   "n": 1260,
+   "goals": 0.0927640197626263,
+   "assists": 0.47509332911611724,
+   "captainsFp": 3.849197126319383
+  },
+  {
+   "subset": "tier 181-360",
+   "method": "ageCurve",
+   "n": 1260,
+   "goals": -0.4387509383606657,
+   "assists": 0.04716053785019313,
+   "captainsFp": 0.8963290186722033
+  },
+  {
+   "subset": "tier 181-360",
+   "method": "synth",
+   "n": 1260,
+   "goals": -0.08462803163120235,
+   "assists": 0.3398880443947337,
+   "captainsFp": 2.7176972181789
+  },
+  {
+   "subset": "last P/GP >= 0.9",
+   "method": "candidate",
+   "n": 361,
+   "goals": -0.3937766803145155,
+   "assists": 0.20552466724232396,
+   "captainsFp": -0.8152755330615955
+  },
+  {
+   "subset": "last P/GP >= 0.9",
+   "method": "engine",
+   "n": 361,
+   "goals": -0.16858822490801573,
+   "assists": 0.11879933620741373,
+   "captainsFp": -0.6190728153288881
+  },
+  {
+   "subset": "last P/GP >= 0.9",
+   "method": "marcel543",
+   "n": 361,
+   "goals": -1.7565829684574399,
+   "assists": -4.706564651604696,
+   "captainsFp": -18.77322794993893
+  },
+  {
+   "subset": "last P/GP >= 0.9",
+   "method": "lag1",
+   "n": 361,
+   "goals": 3.295938831459433,
+   "assists": 4.393983406629881,
+   "captainsFp": 22.586946030930886
+  },
+  {
+   "subset": "last P/GP >= 0.9",
+   "method": "ageCurve",
+   "n": 361,
+   "goals": -1.3818106572239552,
+   "assists": -2.5465255808834266,
+   "captainsFp": -11.400486487266518
+  },
+  {
+   "subset": "last P/GP >= 0.9",
+   "method": "synth",
+   "n": 361,
+   "goals": 0.6160920595931958,
+   "assists": 0.11424041438478644,
+   "captainsFp": 1.8767403378658498
+  },
+  {
+   "subset": "last P/GP 0.6-0.9",
+   "method": "candidate",
+   "n": 759,
+   "goals": -0.4690791808701392,
+   "assists": -0.1375239132134763,
+   "captainsFp": -1.1651446489668371
+  },
+  {
+   "subset": "last P/GP 0.6-0.9",
+   "method": "engine",
+   "n": 759,
+   "goals": -0.34916646748754043,
+   "assists": -0.23858325553422974,
+   "captainsFp": -1.3328860931843207
+  },
+  {
+   "subset": "last P/GP 0.6-0.9",
+   "method": "marcel543",
+   "n": 759,
+   "goals": -0.7177630864506828,
+   "assists": -1.9692516213997953,
+   "captainsFp": -5.767630459303481
+  },
+  {
+   "subset": "last P/GP 0.6-0.9",
+   "method": "lag1",
+   "n": 759,
+   "goals": 1.3019414155955038,
+   "assists": 1.496855896375765,
+   "captainsFp": 10.292126377593704
+  },
+  {
+   "subset": "last P/GP 0.6-0.9",
+   "method": "ageCurve",
+   "n": 759,
+   "goals": -1.108577547273089,
+   "assists": -1.451860896071942,
+   "captainsFp": -5.9175039538935
+  },
+  {
+   "subset": "last P/GP 0.6-0.9",
+   "method": "synth",
+   "n": 759,
+   "goals": -0.0004228731215556492,
+   "assists": -0.16784125142416664,
+   "captainsFp": 0.9554466140688285
+  },
+  {
+   "subset": "last P/GP < 0.35",
+   "method": "candidate",
+   "n": 2218,
+   "goals": 0.020806374563376036,
+   "assists": -0.3127430188850691,
+   "captainsFp": 1.2342120135329424
+  },
+  {
+   "subset": "last P/GP < 0.35",
+   "method": "engine",
+   "n": 2218,
+   "goals": 0.0857450808086665,
+   "assists": -0.3982164118591136,
+   "captainsFp": 0.3986981594523622
+  },
+  {
+   "subset": "last P/GP < 0.35",
+   "method": "marcel543",
+   "n": 2218,
+   "goals": 1.6113439109463576,
+   "assists": 2.8207824572380327,
+   "captainsFp": 17.470107991955345
+  },
+  {
+   "subset": "last P/GP < 0.35",
+   "method": "lag1",
+   "n": 2218,
+   "goals": -0.9718171435328753,
+   "assists": -1.7249426699692654,
+   "captainsFp": -5.881329024381611
+  },
+  {
+   "subset": "last P/GP < 0.35",
+   "method": "ageCurve",
+   "n": 2218,
+   "goals": 0.06856211532882896,
+   "assists": 0.43448544028969954,
+   "captainsFp": 3.9016367764824107
+  },
+  {
+   "subset": "last P/GP < 0.35",
+   "method": "synth",
+   "n": 2218,
+   "goals": -0.2655329707225833,
+   "assists": -0.3419146483891627,
+   "captainsFp": 0.3570061340355077
+  }
+ ]
+}

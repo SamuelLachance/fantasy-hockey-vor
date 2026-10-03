@@ -67,7 +67,12 @@ assert.equal(startingSeatCount(board), 14);
   const withD = teamCategoryStrength(board, buildLineup(board, [blocker]));
   const blk = withD.find((s) => s.cat === "blocks")!;
   assert.ok(blk.diff > 0, "a big blocker lifts BLK");
-  const g = board.players.find((p) => p.pos.includes("G"))!;
+  // The best goalie on both rate categories (the board's first goalie can
+  // lead on wins and shutouts with a below-average GAA: Swayman, 2026-10-02).
+  const gi = (c: string) => board.categories.goalie.indexOf(c as never);
+  const g = board.players.find(
+    (p) => p.pos.includes("G") && p.z[gi("goalsAgainstAverage")]! > 0 && p.z[gi("savePct")]! > 0,
+  )!;
   const withG = teamCategoryStrength(board, buildLineup(board, [g]));
   const sv = withG.find((s) => s.cat === "savePct")!;
   assert.ok(sv.mineTotal > sv.averageTotal, "elite goalie raises team SV%");

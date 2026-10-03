@@ -37,8 +37,16 @@ import {
 import { sanitizeTargetSeasonRow } from "../src/lib/ml/features";
 import { attachDurability } from "../src/lib/ml/gamelog-durability";
 import {
+  applyMarketBlend,
+  fitMarketBlendOnSeasons,
+  loadMarketFile,
+  marketLinesFor,
+  type StackLines,
+} from "../src/lib/ml/market-blend";
+import {
   computeBaseSignals,
   fitStackedMetas,
+  stackLinesOutOfSample,
   metaGpPrediction,
   metaRatePrediction,
   trainBoundary,
@@ -168,11 +176,18 @@ function main() {
   }
 
   const out: unknown[] = [];
+  const marketFile = loadMarketFile();
+  const stackLines: StackLines = new Map(stackLinesOutOfSample(seasons).map((x) => [x.seasonId, x.lines]));
   for (const T of TEST) {
     const sp = seasons.find((s) => s.seasonId === T);
     if (!sp) continue;
     const pool = seasons.filter((s) => s.seasonId < T);
     const { rateMetas, gpMeta } = fitStackedMetas(pool, T);
+    // The shipped model GP: the market blend (src/lib/ml/market-blend.ts)
+    // fitted on the seasons before T, applied to the players ESPN projected.
+    const blend = fitMarketBlendOnSeasons(pool, stackLines, marketFile);
+    const market = marketLinesFor(marketFile, T);
+    const modelGp = (id: number, gp: number) => applyMarketBlend(blend, market.get(id), {}, gp).gp;
     const lastLine = (h: PlayerSeasonRow[]) => {
       const l = eligibleHistory(h).at(-1);
       return l
@@ -198,7 +213,7 @@ function main() {
       out.push({
         T, id: ex.playerId, name: ex.actualRow.name, pos: ex.targetRow.position, age: ex.targetRow.age ?? null,
         young, surv: true, active: true, gpAct: ex.actualRow.gamesPlayed, act82: Math.min(82, gp82(ex.actualRow)),
-        gpModel: metaGpPrediction(gpMeta, sp.signals.gp, k, young), last: lastLine(ex.history), r,
+        gpModel: modelGp(ex.playerId, metaGpPrediction(gpMeta, sp.signals.gp, k, young)), last: lastLine(ex.history), r,
       });
     }
     const extra = extraSeasons.get(T);
@@ -208,7 +223,7 @@ function main() {
         out.push({
           T, id: ex.playerId, name: ex.actualRow.name, pos: ex.targetRow.position, age: ex.targetRow.age ?? null,
           young, surv: false, active, gpAct: ex.actualRow.gamesPlayed, act82: Math.min(82, gp82(ex.actualRow)),
-          gpModel: metaGpPrediction(gpMeta, extra.sig.gp, k, young), last: lastLine(ex.history),
+          gpModel: modelGp(ex.playerId, metaGpPrediction(gpMeta, extra.sig.gp, k, young)), last: lastLine(ex.history),
         });
       });
     }

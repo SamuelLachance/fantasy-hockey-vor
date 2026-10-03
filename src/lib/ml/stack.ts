@@ -454,6 +454,17 @@ const GBDT_GP_OPTS: GbdtOptions = {
 
 const RIDGE_LAMBDA = 150;
 
+/**
+ * Backtest-only override of the GBDT options (JSON merged over the shipped
+ * ones, e.g. ML_GBDT_RATE_OPTS='{"maxDepth":4}'): the walk-forward scorecard
+ * (scripts/backtest-projections.ts) compares variants without editing code.
+ * Unset in production.
+ */
+function gbdtOpts(envName: string, base: GbdtOptions): GbdtOptions {
+  const raw = process.env[envName];
+  return raw ? { ...base, ...(JSON.parse(raw) as Partial<GbdtOptions>) } : base;
+}
+
 function recencyWeight(seasonId: number, boundarySeason: number): number {
   const yearsBack = (boundarySeason - seasonId) / 10001;
   return Math.exp(-0.12 * Math.max(0, yearsBack));
@@ -520,7 +531,7 @@ export function trainBoundary(
     marcel[target] = fitMarcelParams(trainRows, target);
   }
 
-  const rateOpts: GbdtOptions = { ...GBDT_RATE_OPTS, adversarial: advOpts };
+  const rateOpts: GbdtOptions = { ...gbdtOpts("ML_GBDT_RATE_OPTS", GBDT_RATE_OPTS), adversarial: advOpts };
 
   for (const target of V2_SKATER_TARGETS) {
     const yTrain = new Float64Array(trainIdx.length);
@@ -594,7 +605,7 @@ export function trainBoundary(
       ? residualGp(ex)
       : Math.min(82, gp82(ex.actualRow));
   }
-  const gpOpts: GbdtOptions = { ...GBDT_GP_OPTS, adversarial: advOpts };
+  const gpOpts: GbdtOptions = { ...gbdtOpts("ML_GBDT_GP_OPTS", GBDT_GP_OPTS), adversarial: advOpts };
   const gbdtGp = fitGbdt(
     trainCols,
     yGpTrain,
@@ -859,13 +870,35 @@ export function metaSegmentOf(young: boolean, isDefense: boolean): MetaSegment {
   return isDefense ? "vetD" : "vetF";
 }
 
+/**
+ * How the rate meta-learners weigh the pooled out-of-sample examples.
+ *
+ * - "reliability" (shipped): games-based reliability min(60, GP) / 60 times
+ *   a slow recency decay (0.05 per season). Walk-forward 2019-20 → 2025-26
+ *   it beats the Kelly weights on every rate (goals −0.03, assists −0.04,
+ *   PIM −0.16 per 82, Captains points MSE −7.5 [−14.1, −1.5]):
+ *   scripts/backtest-projections.ts.
+ * - "kelly" (bd259b2): the same times the disagreement and Kelly draft-capital
+ *   weights of src/lib/ml/market-training.ts, recency decay 0.15. Up-weighting
+ *   the examples where the residual models disagree with the synthetic market
+ *   makes the fit chase the noisiest residuals.
+ */
+export interface MetaWeighting {
+  weighting: "reliability" | "kelly";
+  recencyDecay: number;
+}
+export const SHIPPED_META_WEIGHTING: MetaWeighting = { weighting: "reliability", recencyDecay: 0.05 };
+export const LEGACY_META_WEIGHTING: MetaWeighting = { weighting: "kelly", recencyDecay: 0.15 };
+
 export function fitStackedMetas(
   pool: SeasonPredictions[],
   testSeason: number,
   disagreementSigma = DISAGREEMENT_SIGMA,
+  metaWeighting: MetaWeighting = SHIPPED_META_WEIGHTING,
 ): { rateMetas: Record<string, StackedMeta>; gpMeta: GpMeta } {
   const rateMetas: Record<string, StackedMeta> = {};
   const useMarket = marketTrainingEnabled();
+  const kelly = useMarket && metaWeighting.weighting === "kelly";
 
   for (const target of V2_SKATER_TARGETS) {
     const X: Record<MetaSegment, number[][]> = { vetF: [], vetD: [], youngF: [], youngD: [] };
@@ -885,7 +918,7 @@ export function fitStackedMetas(
     const seasonBuckets: RawRow[][] = [];
 
     for (const season of pool) {
-      const recency = Math.exp(-0.15 * ((testSeason - season.seasonId) / 10001));
+      const recency = Math.exp(-metaWeighting.recencyDecay * ((testSeason - season.seasonId) / 10001));
       const sig = season.signals.rates[target];
       const bucket: RawRow[] = [];
       for (let k = 0; k < season.examples.length; k++) {
@@ -942,7 +975,7 @@ export function fitStackedMetas(
       for (let i = 0; i < bucket.length; i++) {
         const r = bucket[i];
         let w = r.relW;
-        if (useMarket) {
+        if (kelly) {
           const wD = disagreementWeight(
             r.market,
             r.opportunist,
@@ -958,7 +991,7 @@ export function fitStackedMetas(
       }
     }
 
-    const fitSeg = useMarket ? fitMetaKelly : fitMetaNnls;
+    const fitSeg = kelly ? fitMetaKelly : fitMetaNnls;
     rateMetas[target] = {
       target,
       segments: {
@@ -1179,6 +1212,38 @@ export function fitRateCalibrators(
   const out: Record<string, RateCalibrator> = {};
   for (const t of V2_SKATER_TARGETS) {
     out[t] = fitAffineCalibrator(acc[t].p, acc[t].a, acc[t].w);
+  }
+  return out;
+}
+
+/**
+ * The stack's own out-of-sample lines on walk-forward seasons: for each
+ * season s after the first, metas fitted on the seasons before s only, then
+ * applied to s (rates per game, 82-game GP). What a post-stack step (the
+ * market blend, src/lib/ml/market-blend.ts) is fitted on.
+ */
+export function stackLinesOutOfSample(
+  pool: SeasonPredictions[],
+  metaWeighting: MetaWeighting = SHIPPED_META_WEIGHTING,
+): Array<{ seasonId: number; lines: Array<{ rates: Record<string, number>; gp: number }> }> {
+  const ordered = [...pool].sort((x, y) => x.seasonId - y.seasonId);
+  const residual = marketTrainingEnabled();
+  const out: Array<{ seasonId: number; lines: Array<{ rates: Record<string, number>; gp: number }> }> = [];
+  for (let si = 1; si < ordered.length; si++) {
+    const cur = ordered[si];
+    const { rateMetas, gpMeta } = fitStackedMetas(ordered.slice(0, si), cur.seasonId, DISAGREEMENT_SIGMA, metaWeighting);
+    out.push({
+      seasonId: cur.seasonId,
+      lines: cur.examples.map((ex, k) => {
+        const young = eligibleHistory(ex.history).length <= 2;
+        const isD = ex.targetRow.position === "D";
+        const rates: Record<string, number> = {};
+        for (const t of V2_SKATER_TARGETS) {
+          rates[t] = metaRatePrediction(rateMetas[t], cur.signals.rates[t], k, young, isD, residual);
+        }
+        return { rates, gp: metaGpPrediction(gpMeta, cur.signals.gp, k, young) };
+      }),
+    });
   }
   return out;
 }

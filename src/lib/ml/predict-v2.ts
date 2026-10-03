@@ -55,6 +55,7 @@ import {
 } from "./stack";
 import type { MlDataset, PlayerSeasonRow } from "./types";
 import type { V2Bundle } from "./v2-bundle";
+import { applyMarketBlend, loadMarketFile, marketLinesFor, type MarketLine } from "./market-blend";
 import {
   loadMoneyPuckRegistrySync,
   type MoneyPuckGoalieRegistry,
@@ -75,6 +76,8 @@ interface V2Runtime {
   goalieLevels: GoalieLevels;
   /** Cross-sectional σ of each stat's per-game rate (40+ GP82 skaters). */
   statStdev: Record<string, number>;
+  /** Market consensus lines of the projection season (src/data/ml/market-espn.json). */
+  market: Map<number, MarketLine>;
 }
 
 let runtimeCache: V2Runtime | null | undefined;
@@ -124,6 +127,9 @@ export function getV2Runtime(): V2Runtime | null {
       skaterLevels: buildTargetLevels(rows, V2_SKATER_TARGETS, false),
       goalieLevels: buildGoalieLevels(rows),
       statStdev,
+      market: bundle.skater.marketBlend
+        ? marketLinesFor(loadMarketFile(), bundle.projectionSeasonId)
+        : new Map(),
     };
   } catch (e) {
     console.warn(`v2 runtime unavailable: ${e instanceof Error ? e.message : e}`);
@@ -199,6 +205,9 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
   );
 
   const young = eligible.length <= 2;
+  // Market consensus of this player, stacked after the metas when the bundle
+  // carries the blend weights (src/lib/ml/market-blend.ts).
+  const marketLine = rt.bundle.skater.marketBlend ? rt.market.get(profile.id) : undefined;
   const gpSignals = {
     gbdt: Float64Array.of(gp.gbdt),
     ridge: Float64Array.of(gp.ridge),
@@ -207,7 +216,12 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
     durability: Float64Array.of(gp.durability),
   };
   const gamesPlayed = Math.round(
-    metaGpPrediction(rt.bundle.skater.gpMeta, gpSignals, 0, young),
+    applyMarketBlend(
+      rt.bundle.skater.marketBlend,
+      marketLine,
+      {},
+      metaGpPrediction(rt.bundle.skater.gpMeta, gpSignals, 0, young),
+    ).gp,
   );
   // GP uncertainty (games) — signal dispersion plus the irreducible injury
   // floor. Feeds Var(total) = GP²·σ_rate² + rate²·σ_GP².
@@ -237,7 +251,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
       component: Float64Array.of(sig.component),
       market: Float64Array.of(sig.market ?? sig.marcel),
     };
-    perGame[t] = applyRateCalibrator(
+    const stacked = applyRateCalibrator(
       rt.bundle.skater.rateCalibrators?.[t],
       metaRatePrediction(
         rt.bundle.skater.rateMetas[t],
@@ -248,6 +262,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
         Boolean(rt.bundle.marketTraining),
       ),
     );
+    perGame[t] = applyMarketBlend(rt.bundle.skater.marketBlend, marketLine, { [t]: stacked }, 0).rates[t];
     marketEdge[t] = perGame[t] - (sig.market ?? sig.marcel);
 
     if (relevantStat(t)) {
@@ -300,7 +315,7 @@ export function projectSkaterV2(profile: PlayerProfile): V2SkaterResult | null {
     perGame,
     segment: young ? "young" : "vet",
     uncertainty,
-    reasoning: `v2 stacked ensemble (GBDT+ridge+Marcel+EB${rt.bundle.marketTraining ? "+market-residual" : ""}, ${eligible.length} NHL seasons${young ? ", young segment" : ""}). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
+    reasoning: `v2 stacked ensemble (GBDT+ridge+Marcel+EB${rt.bundle.marketTraining ? "+market-residual" : ""}${marketLine ? "+ESPN consensus" : ""}, ${eligible.length} NHL seasons${young ? ", young segment" : ""}). Trained ${rt.bundle.trainedAt.slice(0, 10)}.`,
   };
 }
 

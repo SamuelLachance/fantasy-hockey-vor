@@ -26,9 +26,18 @@ import {
   fitStackedMetas,
   marketTrainingEnabled,
   runWalkForward,
+  SHIPPED_META_WEIGHTING,
+  stackLinesOutOfSample,
   trainBoundary,
   V2_SKATER_TARGETS,
 } from "../src/lib/ml/stack";
+import {
+  fitMarketBlendOnSeasons,
+  loadMarketFile,
+  marketLinesFor,
+  MARKET_BLEND_STATS,
+  type MarketBlend,
+} from "../src/lib/ml/market-blend";
 import { defaultMarketTrainingConfig } from "../src/lib/ml/market-training";
 import {
   buildFeatureMatrix,
@@ -53,9 +62,16 @@ import { datasetManifestOf } from "../src/lib/ml/dataset-manifest";
 const DATA_PATH = join(process.cwd(), "src", "data", "ml", "dataset.json");
 const BUNDLE_PATH = join(process.cwd(), "src", "data", "ml", "v2-bundle.json");
 
-/** Seasons whose OOS predictions feed the meta-learner pool. */
+/** Seasons whose OOS predictions feed the goalie meta-learner pool. */
 const META_POOL_SEASONS = [
   20192020, 20202021, 20212022, 20222023, 20232024, 20242025, 20252026,
+];
+/**
+ * Skater meta pool: every walk-forward season from 2016-17, as the
+ * projection backtest (scripts/backtest-projections.ts) fits them.
+ */
+const SKATER_META_POOL_SEASONS = [
+  20162017, 20172018, 20182019, 20192020, 20202021, 20212022, 20222023, 20232024, 20242025, 20252026,
 ];
 
 async function main() {
@@ -86,8 +102,31 @@ async function main() {
 
   // ---------------- Skaters ----------------
   console.log("skater walk-forward for meta pool...");
-  const wf = runWalkForward(rows, META_POOL_SEASONS, (m) => console.log(m));
+  const wf = runWalkForward(rows, SKATER_META_POOL_SEASONS, (m) => console.log(m));
   const { rateMetas, gpMeta } = fitStackedMetas(wf.seasons, PROJECTION_SEASON_ID);
+  console.log(
+    `meta weighting: ${SHIPPED_META_WEIGHTING.weighting}, recency decay ${SHIPPED_META_WEIGHTING.recencyDecay}`,
+  );
+
+  // Market consensus stacked after the metas: the weight of the market's gap
+  // per stat and for games, fitted on the stack's own out-of-sample lines
+  // (metas of the seasons before each one) against what happened.
+  const marketFile = loadMarketFile();
+  let marketBlend: MarketBlend | undefined;
+  if (marketFile && marketLinesFor(marketFile, PROJECTION_SEASON_ID).size > 0) {
+    const lines = new Map(stackLinesOutOfSample(wf.seasons).map((x) => [x.seasonId, x.lines]));
+    marketBlend = fitMarketBlendOnSeasons(wf.seasons, lines, marketFile);
+    if (marketBlend) {
+      console.log(
+        `market blend (${marketBlend.pairs} player-seasons, ${marketBlend.fittedSeasons.join(",")}): gp ${marketBlend.gpBeta.toFixed(3)} ` +
+          MARKET_BLEND_STATS.map((t) => `${t} ${marketBlend!.betas[t].toFixed(3)}`).join(" "),
+      );
+    }
+  } else {
+    console.warn(
+      `WARN: no market projections for ${PROJECTION_SEASON_ID} (src/data/ml/market-espn.json, npm run market:espn): no market blend`,
+    );
+  }
   for (const t of V2_SKATER_TARGETS) {
     const w = rateMetas[t].segments.vetF;
     console.log(
@@ -175,6 +214,9 @@ async function main() {
       rateMetas,
       gpMeta,
       rateCalibrators,
+      metaWeighting: SHIPPED_META_WEIGHTING,
+      metaPoolSeasons: SKATER_META_POOL_SEASONS,
+      ...(marketBlend ? { marketBlend } : {}),
     },
     goalie: {
       gbdt: finalGoalie.gbdt,
