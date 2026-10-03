@@ -56,3 +56,6 @@ src/data/ml/gamelog-cache/
 /public/fantrax/*/contracts.json
 /public/fantrax/*/cap-plan.json
 /public/joueurs/
+
+# NHL box scores cached by scripts/fetch-nhl-game-logs.ts (backtests)
+.cache/
