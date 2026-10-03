@@ -27,7 +27,30 @@
  *   lag1       last eligible season's rates and games
  *   ageCurve   the fitted Marcel x aging curve rate (signal "marcel"), market GP
  *   synth      the repo's synthetic market (0.5 Marcel + 0.3 EWMA + 0.2 lag-1)
- *   espn       ESPN's pre-season projection (rates = projected / projected GP)
+ *   espn       ESPN's pre-season projection (rates = projected / projected GP);
+ *              a stat ESPN did not publish that season (hits and blocks
+ *              before 2019-20, blocks in 2019-20) is not scored
+ *   ADP        ESPN's average draft position, as a ranking only (Spearman
+ *              and top-N hit rate on the players drafted, ADP < 229, per
+ *              season; ESPN serves no 2025-26 ADP, that season is left out)
+ *
+ * What is scored, and what is not
+ *   - The scorecard scores the stack + market blend output (per-game rates
+ *     and 82-game GP), the part this backtest refits walk-forward. The
+ *     published board then applies, in scripts/generate-projections.ts:
+ *     (1) the GP isotonic calibration (src/data/ml/gp-calibration.json,
+ *     backtested walk-forward on its own by npm run gp:fit on the
+ *     unconditional population, non-survivors at 0 GP included: it trades
+ *     some error on the players who did play for the seasons that are
+ *     lost); (2) the club games budget (normalizeTeamSkaterGp); (3) the rate
+ *     level reference (src/data/ml/rate-reference.json, a level shift of a
+ *     few % at most). "GP MAE" here is the pre-isotonic games, on players
+ *     who played 10+ games at T. check-projection-scorecard.ts caps the rate
+ *     reference's shift so (3) cannot undo the rate gains.
+ *   - "engine" is a reconstruction of bd259b2's stack: its Kelly metas on
+ *     this cache's pool (base signals from 2016-17), not bd259b2's
+ *     2019-20-start pool. A pool at least as long is a fair or stronger
+ *     baseline, not literally the bd259b2 board.
  *
  * Usage:
  *   npx tsx scripts/backtest-projections.ts --signals=<cache dir>
@@ -45,6 +68,7 @@ import {
   type SkaterExample,
 } from "../src/lib/ml/dataset-view";
 import { marketGp } from "../src/lib/ml/market-training";
+import { readDatasetManifest } from "../src/lib/ml/dataset-manifest";
 import {
   BASE_SIGNALS,
   fitStackedMetas,
@@ -311,10 +335,25 @@ export interface Scored {
   tier: string;
   lastPpg: number;
   young: boolean;
+  /** ESPN ADP when he was drafted (< 229) in a season with ADP data, else null. */
+  adp: number | null;
+}
+
+/** ESPN ADP of the drafted players (< 229) per season; a season with < 50 is missing (2025-26: all 230). */
+export const ADP_DRAFTED = 229;
+export function adpBySeason(market: MarketFile | null): Map<number, Map<number, number>> {
+  const out = new Map<number, Map<number, number>>();
+  for (const [season, v] of Object.entries(market?.seasons ?? {})) {
+    const m = new Map<number, number>();
+    for (const r of v.skaters) if (r.adp != null && r.adp < ADP_DRAFTED) m.set(r.id, r.adp);
+    if (m.size >= 50) out.set(Number(season), m);
+  }
+  return out;
 }
 
 export function scoreSeasons(bt: Backtest, methods: Record<string, MethodFn>, testSeasons: number[]): Scored[] {
   const out: Scored[] = [];
+  const adps = adpBySeason(bt.market);
   for (const T of testSeasons) {
     const season = bt.seasons.find((s) => s.seasonId === T);
     if (!season) throw new Error(`no cached signals for ${T}`);
@@ -346,6 +385,7 @@ export function scoreSeasons(bt: Backtest, methods: Record<string, MethodFn>, te
         tier: rank[k] <= 60 ? "1-60" : rank[k] <= 180 ? "61-180" : rank[k] <= 360 ? "181-360" : "361+",
         lastPpg: (last.goals + last.assists) / Math.max(1, last.gamesPlayed),
         young: eligibleHistory(ex.history).length <= 2,
+        adp: adps.get(T)?.get(ex.playerId) ?? null,
       });
     });
   }
@@ -537,6 +577,196 @@ export function ltlValueFn(data: Scored[]): (s: Scored, rates: Record<Stat, numb
 }
 
 // ---------------------------------------------------------------------------
+// Rankings against ADP
+
+/** A season value per example (higher = ranked earlier); null = not ranked. */
+export type ValueFn = (s: Scored) => number | null;
+
+export interface RankingRow {
+  ranking: string;
+  metric: string;
+  a: string;
+  b: string;
+  /** Mean over the seasons of the per-season statistic. */
+  valueA: number;
+  valueB: number;
+  /** a - b (> 0: a ranks better) with a 95% player-clustered bootstrap interval. */
+  diff: number;
+  lo: number;
+  hi: number;
+  n: number;
+  seasons: number[];
+  perSeason: Array<{ T: number; n: number; a: number; b: number }>;
+}
+
+/** For each example: is it among the N best by `x` AND among the N best by `y`? */
+function topNHits(x: number[], y: number[], N: number): boolean[] {
+  const n = Math.min(N, x.length);
+  const topX = x.map((v, i) => ({ v, i })).sort((p, q) => q.v - p.v).slice(0, n);
+  const topY = new Set(y.map((v, i) => ({ v, i })).sort((p, q) => q.v - p.v).slice(0, n).map((o) => o.i));
+  const hit = new Array<boolean>(x.length).fill(false);
+  for (const o of topX) hit[o.i] = topY.has(o.i);
+  return hit;
+}
+
+/**
+ * Season ranking of `a` against `b` on the examples both rank: Spearman with
+ * the realized value (metric "spearman") or the top-N hit rate ("top60":
+ * share of a method's 60 best who finish among the realized 60 best), per
+ * season then averaged; the interval from resampling PLAYERS (all their
+ * seasons together). For top-N the sets are fixed on the full sample and the
+ * resampling weighs the players' hits.
+ */
+export function compareRanking(
+  data: Scored[],
+  ranking: string,
+  metric: "spearman" | `top${number}`,
+  a: [string, ValueFn],
+  b: [string, ValueFn],
+  actual: (s: Scored) => number,
+  boot = 1000,
+  seed = 13,
+): RankingRow | null {
+  const seasons = [...new Set(data.map((d) => d.T))].sort();
+  const per: Array<{ T: number; ids: number[]; xa: number[]; xb: number[]; y: number[] }> = [];
+  for (const T of seasons) {
+    const ids: number[] = [];
+    const xa: number[] = [];
+    const xb: number[] = [];
+    const y: number[] = [];
+    for (const d of data) {
+      if (d.T !== T) continue;
+      const va = a[1](d);
+      const vb = b[1](d);
+      if (va == null || vb == null || !Number.isFinite(va) || !Number.isFinite(vb)) continue;
+      ids.push(d.id);
+      xa.push(va);
+      xb.push(vb);
+      y.push(actual(d));
+    }
+    if (ids.length >= 30) per.push({ T, ids, xa, xb, y });
+  }
+  if (per.length === 0) return null;
+  const N = metric === "spearman" ? 0 : Number(metric.slice(3));
+  const hitsA = N > 0 ? per.map((p) => topNHits(p.xa, p.y, N)) : [];
+  const hitsB = N > 0 ? per.map((p) => topNHits(p.xb, p.y, N)) : [];
+  const perSeason = per.map((p, k) => {
+    if (N === 0) return { T: p.T, n: p.ids.length, a: spearman(p.xa, p.y), b: spearman(p.xb, p.y) };
+    const size = Math.min(N, p.ids.length);
+    return {
+      T: p.T,
+      n: p.ids.length,
+      a: hitsA[k].filter(Boolean).length / size,
+      b: hitsB[k].filter(Boolean).length / size,
+    };
+  });
+  const mean = (v: number[]) => v.reduce((x, z) => x + z, 0) / v.length;
+  const valueA = mean(perSeason.map((p) => p.a));
+  const valueB = mean(perSeason.map((p) => p.b));
+  // Bootstrap: one multiplicity per player for each replicate, applied to every season.
+  const players = [...new Set(per.flatMap((p) => p.ids))];
+  const index = new Map(players.map((id, i) => [id, i]));
+  const rng = seededRng(seed);
+  const diffs: number[] = [];
+  const mult = new Int32Array(players.length);
+  for (let r = 0; r < boot; r++) {
+    mult.fill(0);
+    for (let j = 0; j < players.length; j++) mult[Math.floor(rng() * players.length)]++;
+    let sa = 0;
+    let sb = 0;
+    let cnt = 0;
+    per.forEach((p, k) => {
+      if (N > 0) {
+        let ha = 0;
+        let hb = 0;
+        let wt = 0;
+        p.ids.forEach((id, i) => {
+          const m = mult[index.get(id)!];
+          if (m === 0) return;
+          wt += m;
+          if (hitsA[k][i]) ha += m;
+          if (hitsB[k][i]) hb += m;
+        });
+        if (wt === 0) return;
+        const size = Math.min(N, p.ids.length) * (wt / p.ids.length);
+        sa += ha / size;
+        sb += hb / size;
+        cnt++;
+        return;
+      }
+      const xa: number[] = [];
+      const xb: number[] = [];
+      const y: number[] = [];
+      p.ids.forEach((id, i) => {
+        for (let m = mult[index.get(id)!]; m > 0; m--) {
+          xa.push(p.xa[i]);
+          xb.push(p.xb[i]);
+          y.push(p.y[i]);
+        }
+      });
+      if (y.length < 10) return;
+      sa += spearman(xa, y);
+      sb += spearman(xb, y);
+      cnt++;
+    });
+    if (cnt > 0) diffs.push((sa - sb) / cnt);
+  }
+  diffs.sort((x, y) => x - y);
+  return {
+    ranking,
+    metric,
+    a: a[0],
+    b: b[0],
+    valueA,
+    valueB,
+    diff: valueA - valueB,
+    lo: diffs[Math.floor(0.025 * diffs.length)] ?? NaN,
+    hi: diffs[Math.ceil(0.975 * diffs.length) - 1] ?? NaN,
+    n: per.reduce((x, p) => x + p.ids.length, 0),
+    seasons: per.map((p) => p.T),
+    perSeason,
+  };
+}
+
+/** Each method's season ranking against ESPN ADP, on the players drafted (ADP < 229). */
+export function adpRankings(data: Scored[], methods: string[], boot: number): RankingRow[] {
+  const ltl = ltlValueFn(data);
+  const rankings: Array<[string, (s: Scored, p: Projection) => number, (s: Scored) => number]> = [
+    ["Captains FP", (s, p) => pointsPerGame(CAPTAINS, p.rates, s.isD) * p.gp, (s) => pointsPerGame(CAPTAINS, s.act, s.isD) * s.gpAct],
+    ["Slapshot FP", (s, p) => pointsPerGame(SLAPSHOT, p.rates, s.isD) * p.gp, (s) => pointsPerGame(SLAPSHOT, s.act, s.isD) * s.gpAct],
+    ["LTL value", (s, p) => ltl(s, p.rates, p.gp), (s) => ltl(s, s.act, s.gpAct)],
+  ];
+  const adp: [string, ValueFn] = ["adp", (s) => (s.adp == null ? null : -s.adp)];
+  const out: RankingRow[] = [];
+  for (const [ranking, value, actual] of rankings) {
+    for (const m of methods) {
+      const fn: ValueFn = (s) => {
+        const p = s.pred[m];
+        if (!p || s.adp == null) return null;
+        const v = value(s, p);
+        return Number.isFinite(v) ? v : null;
+      };
+      for (const metric of ["spearman", "top60", "top120"] as const) {
+        const r = compareRanking(data, ranking, metric, [m, fn], adp, actual, boot);
+        if (r) out.push(r);
+      }
+    }
+  }
+  return out;
+}
+
+export function printRankings(rows: RankingRow[]): void {
+  console.log("\n== season ranking vs ESPN ADP on the drafted players (diff > 0: method better; 95% player-bootstrap CI)");
+  for (const r of rows) {
+    const sig = r.lo > 0 ? " **" : r.hi < 0 ? " !!" : "";
+    console.log(
+      `${(r.ranking + " " + r.metric).padEnd(22)} ${r.a.padEnd(10)} ${r.valueA.toFixed(4)} vs adp ${r.valueB.toFixed(4)}  diff ${r.diff.toFixed(4)} [${r.lo.toFixed(4)}, ${r.hi.toFixed(4)}] n=${r.n}${sig}  ` +
+        r.perSeason.map((p) => `${String(p.T).slice(4)} ${p.a.toFixed(3)}/${p.b.toFixed(3)}`).join(" "),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Scorecard
 
 export interface ScorecardRow {
@@ -609,8 +839,18 @@ export function printScorecard(rows: ScorecardRow[]): void {
   }
 }
 
+export interface BiasRow {
+  subset: string;
+  method: string;
+  n: number;
+  goals: number;
+  assists: number;
+  captainsFp: number;
+}
+
 /** Signed bias per tier, for the elite under-projection check. */
-export function printBiasTable(data: Scored[], methods: string[]): void {
+export function printBiasTable(data: Scored[], methods: string[]): BiasRow[] {
+  const rows: BiasRow[] = [];
   const tiers: Array<[string, (s: Scored) => boolean]> = [
     ["tier 1-60", (s) => s.tier === "1-60"],
     ["tier 61-180", (s) => s.tier === "61-180"],
@@ -626,10 +866,12 @@ export function printBiasTable(data: Scored[], methods: string[]): void {
       const g = compare(sub, rateBias("goals"), m, m, 0);
       const a = compare(sub, rateBias("assists"), m, m, 0);
       const fp = compare(sub, fpRateBias(CAPTAINS), m, m, 0);
+      rows.push({ subset: name, method: m, n: g.n, goals: g.a, assists: a.a, captainsFp: fp.a });
       return `${m} G${g.a >= 0 ? "+" : ""}${g.a.toFixed(2)} A${a.a >= 0 ? "+" : ""}${a.a.toFixed(2)} CapFP${fp.a >= 0 ? "+" : ""}${fp.a.toFixed(1)}`;
     });
     console.log(`${name.padEnd(20)} n=${String(sub.length).padStart(5)}  ${parts.join(" | ")}`);
   }
+  return rows;
 }
 
 // ---------------------------------------------------------------------------
@@ -666,7 +908,19 @@ async function main() {
   const comparators = Object.keys(methods).filter((m) => m !== lead);
   const rows = scorecard(data, lead, comparators, boot);
   printScorecard(rows);
-  printBiasTable(data, Object.keys(methods).filter((m) => m !== "espn"));
+  const bias = printBiasTable(data, Object.keys(methods).filter((m) => m !== "espn"));
+  const adpRows = adpRankings(data, ["candidate", "engine", "espn"], boot);
+  printRankings(adpRows);
+  // The projection season's blend as this cache fits it (every cached season),
+  // next to the bundle's (scripts/train-v2.ts fits the same pool).
+  const allLines = new Map(stackLinesOutOfSample(bt.seasons, SHIPPED_META_WEIGHTING).map((x) => [x.seasonId, x.lines]));
+  const projectionBlend = fitMarketBlendOnSeasons(bt.seasons, allLines, bt.market as MarketFileShape | null);
+  if (projectionBlend) {
+    console.log(
+      `\nprojection-season blend from this cache: gp ${projectionBlend.gpBeta.toFixed(3)} ` +
+        MARKET_BLEND_STATS.map((t) => `${t} ${projectionBlend.betas[t].toFixed(3)}`).join(" "),
+    );
+  }
   const ltl = ltlValueFn(data);
   const rankings: Array<[string, (s: Scored, p: Projection) => number, (s: Scored) => number]> = [
     ["Captains FP", (s, p) => pointsPerGame(CAPTAINS, p.rates, s.isD) * p.gp, (s) => pointsPerGame(CAPTAINS, s.act, s.isD) * s.gpAct],
@@ -687,6 +941,11 @@ async function main() {
   const out = arg("out");
   if (out) {
     const marketPath = join(process.cwd(), "src", "data", "ml", "market-espn.json");
+    const bundle = JSON.parse(readFileSync(join(process.cwd(), "src", "data", "ml", "v2-bundle.json"), "utf8")) as {
+      trainedAt?: string;
+      datasetSha1?: string;
+      skater?: { marketBlend?: MarketBlend };
+    };
     writeFileSync(
       out,
       JSON.stringify(
@@ -698,7 +957,18 @@ async function main() {
             metaWeighting: SHIPPED_META_WEIGHTING,
             marketBlend: true,
             marketFileSha1: existsSync(marketPath) ? sha1(readFileSync(marketPath)) : null,
+            // What the scorecard measured: the training dataset, the stack and
+            // blend code, and the bundle it stands for (check:scorecard ties
+            // each to what ships).
+            datasetSha1: readDatasetManifest()?.sha1 ?? null,
+            codeSha1: scorecardCodeSha1(),
+            bundle: {
+              trainedAt: bundle.trainedAt ?? null,
+              datasetSha1: bundle.datasetSha1 ?? null,
+              marketBlend: bundle.skater?.marketBlend ?? null,
+            },
           },
+          projectionBlend: projectionBlend ?? null,
           population: {
             examples: data.length,
             espnProjected: data.filter(espnSet).length,
@@ -706,6 +976,8 @@ async function main() {
           blends,
           rows,
           spearman: spearmanRows,
+          adp: adpRows,
+          bias,
         },
         null,
         1,
@@ -717,6 +989,14 @@ async function main() {
 
 export function sha1(buf: Buffer): string {
   return createHash("sha1").update(buf).digest("hex");
+}
+
+/** Source files whose behavior the scorecard measures (sha1 of the LF-normalized text). */
+export const SCORECARD_CODE = ["src/lib/ml/stack.ts", "src/lib/ml/market-blend.ts"];
+export function scorecardCodeSha1(root = process.cwd()): Record<string, string> {
+  return Object.fromEntries(
+    SCORECARD_CODE.map((f) => [f, sha1(Buffer.from(readFileSync(join(root, f), "utf8").replace(/\r\n/g, "\n"), "utf8"))]),
+  );
 }
 
 if (process.argv[1]?.endsWith("backtest-projections.ts")) {

@@ -5,11 +5,20 @@
  * shipped skater projection (scripts/backtest-projections.ts --out=…). This
  * check fails when
  *   - the scorecard was produced under another configuration than the one
- *     shipped (meta weighting, market blend, market file bytes): a change to
+ *     shipped: meta weighting, market blend, market file bytes, the training
+ *     dataset (the bundle's datasetSha1), the bundle's blend weights, or the
+ *     stack / blend code (src/lib/ml/stack.ts, market-blend.ts): a change to
  *     any of them must come with a re-run of the backtest;
  *   - the re-run shows the shipped projection losing: on the league
  *     headline metrics it must beat bd259b2's engine, the ESPN market and the
- *     simple baselines with a 95% bootstrap interval entirely below 0.
+ *     simple baselines with a 95% bootstrap interval entirely below 0;
+ *   - a Light the Lamp category's season totals, a rate, the top-60 bias or
+ *     a season ranking gets worse than bd259b2's engine beyond a tolerance;
+ *   - the season ranking loses to ESPN's ADP (drafted players) with a 95%
+ *     interval below 0, or by more than 0.01 of Spearman;
+ *   - the published pre-season board's rate level calibration shifts a
+ *     typical rate by more than 5% (post-processing the scorecard does not
+ *     replay; the ESPN file's unpublished stats are checked by check:bundle).
  *
  * Re-run: npx tsx scripts/backtest-projections-signals.ts --cache=<dir>
  *         npx tsx scripts/backtest-projections.ts --signals=<dir> --out=src/data/ml/projection-scorecard.json
@@ -18,6 +27,7 @@
 import { createHash } from "crypto";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import { MARKET_BLEND_STATS, type MarketBlend } from "../src/lib/ml/market-blend";
 import { SHIPPED_META_WEIGHTING } from "../src/lib/ml/stack";
 
 interface Row {
@@ -32,13 +42,35 @@ interface Row {
   hi: number;
   n: number;
 }
+interface RankingRow {
+  ranking: string;
+  metric: string;
+  a: string;
+  b: string;
+  valueA: number;
+  valueB: number;
+  diff: number;
+  lo: number;
+  hi: number;
+  n: number;
+  seasons: number[];
+}
 interface Scorecard {
   builtAt: string;
   testSeasons: number[];
-  config: { metaWeighting: { weighting: string; recencyDecay: number }; marketBlend: boolean; marketFileSha1: string | null };
+  config: {
+    metaWeighting: { weighting: string; recencyDecay: number };
+    marketBlend: boolean;
+    marketFileSha1: string | null;
+    datasetSha1?: string | null;
+    codeSha1?: Record<string, string>;
+    bundle?: { trainedAt: string | null; datasetSha1: string | null; marketBlend: MarketBlend | null };
+  };
   population: { examples: number; espnProjected: number };
   rows: Row[];
   spearman: Array<{ ranking: string; method: string; all: number; espnSet: number }>;
+  adp?: RankingRow[];
+  bias?: Array<{ subset: string; method: string; n: number; goals: number; assists: number; captainsFp: number }>;
 }
 
 const root = process.cwd();
@@ -56,7 +88,9 @@ if (mw?.weighting !== SHIPPED_META_WEIGHTING.weighting || mw?.recencyDecay !== S
   errors.push(`scorecard meta weighting ${JSON.stringify(mw)} != shipped ${JSON.stringify(SHIPPED_META_WEIGHTING)}: re-run the backtest`);
 }
 const bundle = JSON.parse(readFileSync(join(root, "src", "data", "ml", "v2-bundle.json"), "utf8")) as {
-  skater?: { marketBlend?: unknown };
+  trainedAt?: string;
+  datasetSha1?: string;
+  skater?: { marketBlend?: MarketBlend };
 };
 if (Boolean(sc.config?.marketBlend) !== Boolean(bundle.skater?.marketBlend)) {
   errors.push(`scorecard market blend ${sc.config?.marketBlend} but the bundle ${bundle.skater?.marketBlend ? "has" : "has no"} blend`);
@@ -65,6 +99,31 @@ const marketPath = join(root, "src", "data", "ml", "market-espn.json");
 const marketSha1 = existsSync(marketPath) ? createHash("sha1").update(readFileSync(marketPath)).digest("hex") : null;
 if (sc.config?.marketFileSha1 !== marketSha1) {
   errors.push(`market-espn.json changed since the scorecard (${sc.config?.marketFileSha1?.slice(0, 12)} -> ${marketSha1?.slice(0, 12)}): re-run the backtest`);
+}
+
+// The dataset, the bundle's blend and the stack / blend code it measured.
+if (!sc.config?.datasetSha1 || sc.config.datasetSha1 !== bundle.datasetSha1) {
+  errors.push(
+    `scorecard dataset ${sc.config?.datasetSha1?.slice(0, 12) ?? "?"} != bundle dataset ${bundle.datasetSha1?.slice(0, 12) ?? "?"}: re-run the backtest on the bundle's dataset`,
+  );
+}
+const scBlend = sc.config?.bundle?.marketBlend;
+const shipBlend = bundle.skater?.marketBlend;
+if (!scBlend || !shipBlend) {
+  if (Boolean(scBlend) !== Boolean(shipBlend)) errors.push("scorecard and bundle disagree on the market blend weights");
+} else {
+  const pairs: Array<[string, number, number]> = [
+    ["gp", scBlend.gpBeta, shipBlend.gpBeta],
+    ...MARKET_BLEND_STATS.map((t): [string, number, number] => [t, scBlend.betas[t], shipBlend.betas[t]]),
+  ];
+  for (const [t, a, b] of pairs) {
+    if (!(Math.abs(a - b) < 1e-9)) errors.push(`bundle blend weight ${t} ${b} != the scorecard's ${a}: re-run the backtest`);
+  }
+}
+const lf = (f: string) => createHash("sha1").update(Buffer.from(readFileSync(join(root, f), "utf8").replace(/\r\n/g, "\n"), "utf8")).digest("hex");
+const code = sc.config?.codeSha1 ?? {};
+for (const f of ["src/lib/ml/stack.ts", "src/lib/ml/market-blend.ts"]) {
+  if (code[f] !== lf(f)) errors.push(`${f} changed since the scorecard (${code[f]?.slice(0, 12) ?? "none"} -> ${lf(f).slice(0, 12)}): re-run the backtest`);
 }
 
 // 2. Coverage of the protocol.
@@ -113,6 +172,47 @@ for (const r of sc.rows.filter((x) => x.a === "candidate" && x.b === "engine" &&
   checked++;
   if (r.lo > 0) errors.push(`${r.metric} worse than bd259b2: diff ${r.diff.toFixed(3)} [${r.lo.toFixed(3)}, ${r.hi.toFixed(3)}]`);
 }
+// Light the Lamp season totals per category: within 1% of bd259b2's engine
+// (the games blend cost hits totals +0.5% before the market's unpublished
+// hits were skipped; any larger loss must be a decision, not drift).
+for (const cat of ["goals", "assists", "powerplayPoints", "shots", "hits", "blocks"]) {
+  const r = find(`total MAE ${cat}`, "engine");
+  checked++;
+  if (!r) errors.push(`no scorecard row total MAE ${cat} candidate vs engine`);
+  else if (r.diff > 0.01 * r.valueB) {
+    errors.push(`total MAE ${cat} vs bd259b2: ${r.valueA.toFixed(2)} vs ${r.valueB.toFixed(2)} (+${((100 * r.diff) / r.valueB).toFixed(2)}% > 1%)`);
+  }
+}
+// Elite under-projection: the top-60 Captains bias may not grow more than 1
+// point per 82 games beyond bd259b2's engine.
+{
+  const c = sc.bias?.find((b) => b.subset === "tier 1-60" && b.method === "candidate");
+  const e = sc.bias?.find((b) => b.subset === "tier 1-60" && b.method === "engine");
+  checked++;
+  if (!c || !e) errors.push("scorecard has no top-60 bias rows (candidate, engine)");
+  else if (Math.abs(c.captainsFp) > Math.abs(e.captainsFp) + 1) {
+    errors.push(`top-60 Captains bias per 82: candidate ${c.captainsFp.toFixed(1)} vs bd259b2 ${e.captainsFp.toFixed(1)}`);
+  }
+}
+// ESPN ADP (the drafted players): the shipped board's season ranking may tie
+// it but not lose, neither with a 95% interval below 0 nor by more than 0.01
+// of Spearman (top-N: 0.02 of hit rate).
+for (const ranking of ["Captains FP", "Slapshot FP", "LTL value"]) {
+  for (const metric of ["spearman", "top60", "top120"]) {
+    const r = sc.adp?.find((x) => x.a === "candidate" && x.b === "adp" && x.ranking === ranking && x.metric === metric);
+    checked++;
+    if (!r) {
+      errors.push(`no ADP ranking row ${ranking} ${metric}`);
+      continue;
+    }
+    if ((r.seasons?.length ?? 0) < 5) errors.push(`ADP ${ranking} ${metric}: ${r.seasons?.length} seasons (< 5)`);
+    const floor = metric === "spearman" ? 0.01 : 0.02;
+    if (r.hi < 0 || r.diff < -floor) {
+      errors.push(`${ranking} ${metric} vs ESPN ADP: ${r.valueA.toFixed(4)} vs ${r.valueB.toFixed(4)}, diff ${r.diff.toFixed(4)} [${r.lo.toFixed(4)}, ${r.hi.toFixed(4)}]`);
+    }
+  }
+}
+
 // Ranking: the shipped board orders the season at least as well as every comparator.
 for (const ranking of ["Captains FP", "Slapshot FP", "LTL value"]) {
   const cand = sc.spearman.find((x) => x.ranking === ranking && x.method === "candidate");
@@ -122,6 +222,31 @@ for (const ranking of ["Captains FP", "Slapshot FP", "LTL value"]) {
     checked++;
     if (cand.espnSet < other.espnSet - 1e-9) {
       errors.push(`${ranking} Spearman on ESPN's players: candidate ${cand.espnSet.toFixed(4)} < ${b} ${other.espnSet.toFixed(4)}`);
+    }
+  }
+}
+
+// Post-processing the scorecard does not replay: the published board's rate
+// level calibration (src/lib/rate-calibration.ts: rate' = rate - shift, with
+// shift(market) = (a_raw - a_ref) + (b_raw - b_ref) x market against the
+// reference board, src/data/ml/rate-reference.json) may not move a typical
+// rate by more than 5%, or it could undo the rate gains measured here.
+{
+  type Lines = Record<string, Record<string, { a: number; b: number }>>;
+  const board = JSON.parse(readFileSync(join(root, "src", "data", "players-preseason.json"), "utf8")) as {
+    rateCalibration?: { raw?: Lines; target?: Lines };
+  };
+  const raw = board.rateCalibration?.raw ?? {};
+  const target = board.rateCalibration?.target ?? {};
+  const typical: Record<string, number> = { goals: 0.25, assists: 0.35, shots: 2.2, blocks: 0.8, hits: 1.2, powerplayPoints: 0.15, penaltyMinutes: 0.4 };
+  for (const seg of ["vetF", "youngF", "vetD", "youngD"]) {
+    for (const [t, x] of Object.entries(typical)) {
+      const r = raw[seg]?.[t];
+      const g = target[seg]?.[t];
+      if (!r || !g) continue;
+      checked++;
+      const shift = Math.abs(r.a - g.a + (r.b - g.b) * x) / x;
+      if (shift > 0.05) errors.push(`pre-season rate calibration ${seg} ${t}: shifts a typical rate by ${(100 * shift).toFixed(1)}% (> 5%)`);
     }
   }
 }
