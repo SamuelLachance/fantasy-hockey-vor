@@ -11,7 +11,10 @@
  * two sides' projected points within ±25 %: the trades where judgment
  * matters). For the receiving team « a », each trade is predicted by:
  *
- *   naive   Σ projected points received − Σ sent (what a human adds up);
+ *   naive   Σ projected points received − Σ sent − the points of the player
+ *           the team must let go to stay at the roster limit (what a human
+ *           adds up; the baseline the tool is held to);
+ *   plain   Σ received − Σ sent, ignoring the roster limit (second line);
  *   tool    the change in the best lineup's projected points (`lineupPoints`:
  *           seats, every other active player at the bench share, the roster
  *           limit);
@@ -26,8 +29,10 @@
  * the scored seasons never see it). Error bars: 95 % bootstrap over trades,
  * paired for tool - naive.
  *
- * Writes src/data/trade/backtest-summary.json (committed; checked by
- * scripts/test-trade.ts).
+ * Writes src/data/trade/backtest-summary.json and the re-scorable sample
+ * scripts/fixtures/trade-backtest-sample.json (every trade of the first
+ * league of each test season; scripts/backtest-fixtures.ts), both committed
+ * and checked by scripts/test-trade.ts.
  *
  * Usage: npx tsx scripts/backtest-trade.ts [--cache <dir>] [--leagues 2] [--trades 1500]
  */
@@ -35,9 +40,20 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import { parseArgs } from "util";
 import { hashStr, mulberry32 } from "../src/lib/dynasty/rng";
-import { fillSlots, type SlotSpec } from "../src/lib/leagues/slot-fill";
-import { lineupPoints, type LineupRules, type TeamPlayer } from "../src/lib/trade/team-value";
+import { fillSlots } from "../src/lib/leagues/slot-fill";
 import { TRADE_BENCH } from "../src/lib/trade/params";
+import {
+  TRADE_ROSTER as ROSTER,
+  TRADE_SEATS as SEATS,
+  keptAfter,
+  packTradeSeason,
+  scoreTradeFixture,
+  spearman,
+  toolSeason,
+  tradeBaselines,
+  type TradeFixture,
+  type TradeFixtureSeason,
+} from "./backtest-fixtures";
 
 const { values: args } = parseArgs({
   options: {
@@ -45,6 +61,7 @@ const { values: args } = parseArgs({
     leagues: { type: "string", default: "2" },
     trades: { type: "string", default: "1500" },
     out: { type: "string", default: join(process.cwd(), "src", "data", "trade", "backtest-summary.json") },
+    fixture: { type: "string", default: join(process.cwd(), "scripts", "fixtures", "trade-backtest-sample.json") },
   },
 });
 const CACHE = args.cache ?? process.env.NHL_STATS_CACHE ?? join(process.cwd(), ".cache", "nhl-stats");
@@ -70,15 +87,6 @@ const POS: Record<string, string> = { C: "C", L: "LW", R: "RW", D: "D" };
 /** Slapshot points of a skater line (G A PPP SOG HIT BLK) and of a goalie start (W GA SA SHO). */
 const skFp = (g: number, a: number, ppp: number, sog: number, hit: number, blk: number) => 3.5 * g + 2.5 * a + 0.5 * ppp + 0.25 * sog + 0.15 * hit + 0.3 * blk;
 const gkFp = (w: number, ga: number, sa: number, sho: number) => 3 * w - ga + 0.25 * (sa - ga) + 5 * sho;
-
-const SEATS: SlotSpec<string>[] = [
-  { slot: "C", capacity: 4, accepts: ["C"] },
-  { slot: "LW", capacity: 4, accepts: ["LW"] },
-  { slot: "RW", capacity: 4, accepts: ["RW"] },
-  { slot: "D", capacity: 6, accepts: ["D"] },
-  { slot: "G", capacity: 2, accepts: ["G"] },
-];
-const ROSTER = 23;
 
 interface Proj {
   id: number;
@@ -215,27 +223,6 @@ function draft(proj: Map<number, Proj>, seed: string): number[][] {
   return teams;
 }
 
-const rules = (bench: number, goalieBench: number): LineupRules => ({
-  seats: SEATS,
-  benchShare: bench,
-  goalieBenchShare: goalieBench,
-  rosterSize: ROSTER,
-  captainBonus: 0,
-});
-const toTP = (p: Proj): TeamPlayer => ({
-  id: String(p.id),
-  name: String(p.id),
-  pos: [p.pos],
-  goalie: p.goalie,
-  dv: { winNow: p.fp, balanced: p.fp, longTerm: p.fp },
-  fp: p.fp,
-  minorsOk: false,
-});
-/** The tool's prediction of a roster's season: its best projected lineup (the roster limit applied inside `lineupPoints`). */
-function toolSeason(ids: readonly number[], proj: Map<number, Proj>, bench: number, goalieBench: number): number {
-  return lineupPoints(ids.map((id) => toTP(proj.get(id)!)), rules(bench, goalieBench)).points;
-}
-
 /** The bench shares tried by the fit (skaters x goalies). */
 const GRID: Array<[number, number]> = [];
 for (const b of [0.5, 0.6, 0.7, 0.85, 1]) for (const g of [0.25, 0.5, 0.7, 0.9]) GRID.push([b, g]);
@@ -243,6 +230,7 @@ const key = ([b, g]: readonly [number, number]) => `${b}|${g}`;
 
 interface TradeRow {
   naive: number;
+  plain: number;
   tool: Record<string, number>;
   truth: number;
   kind: string;
@@ -253,15 +241,22 @@ interface TradeRow {
  * 2-for-1, 1-for-2 and 2-for-2 trades kept when balanced on paper; for each,
  * the naive sum, the tool under every bench rule of `grid`, and the truth.
  */
-function seasonTrades(season: number, nLeagues: number, nTrades: number, grid: ReadonlyArray<readonly [number, number]>): TradeRow[] {
+function seasonTrades(
+  season: number,
+  nLeagues: number,
+  nTrades: number,
+  grid: ReadonlyArray<readonly [number, number]>,
+): { rows: TradeRow[]; sample: TradeFixtureSeason } {
   const proj = marcel(season);
   const days = seasonDays(season);
   const out: TradeRow[] = [];
+  let sample: TradeFixtureSeason | null = null;
   for (let li = 0; li < nLeagues; li++) {
     const teams = draft(proj, `trade|${season}|${li}`);
     const truthBase = teams.map((t) => realSeason(t, proj, days));
     const toolBase = new Map(grid.map((r) => [key(r), teams.map((t) => toolSeason(t, proj, r[0], r[1]))]));
     const rng = mulberry32(hashStr(`trades|${season}|${li}`));
+    const sampled: Array<{ ai: number; give: number[]; get: number[]; truth: number }> = [];
     let made = 0;
     let tries = 0;
     while (made < nTrades && tries < nTrades * 50) {
@@ -284,40 +279,23 @@ function seasonTrades(season: number, nLeagues: number, nTrades: number, grid: R
       const g = fp(give);
       const r = fp(get);
       if (g <= 0 || r <= 0 || Math.abs(g - r) / Math.max(g, r) > 0.25) continue;
-      const after = [...A.filter((id) => !give.includes(id)), ...get];
-      // the roster limit: a team over it lets its lowest projected go, in the truth as in the tool
-      const kept = [...after].sort((x, y) => proj.get(y)!.fp - proj.get(x)!.fp).slice(0, ROSTER);
+      // the roster limit: a team over it lets its lowest projected go, in the truth as in the tool and the baseline
+      const { after, kept } = keptAfter(A, give, get, proj);
       const tool: Record<string, number> = {};
       for (const rr of grid) tool[key(rr)] = toolSeason(after, proj, rr[0], rr[1]) - toolBase.get(key(rr))![ai]!;
-      out.push({ naive: r - g, tool, truth: realSeason(kept, proj, days) - truthBase[ai]!, kind: `${na}x${nb}` });
+      const truth = realSeason(kept, proj, days) - truthBase[ai]!;
+      out.push({ ...tradeBaselines(A, give, get, proj), tool, truth, kind: `${na}x${nb}` });
+      if (li === 0) sampled.push({ ai, give, get, truth });
       made++;
     }
+    if (li === 0) sample = packTradeSeason(season, teams, proj, sampled);
   }
-  return out;
-}
-
-function spearman(x: number[], y: number[]): number {
-  const rank = (a: number[]) => {
-    const idx = a.map((v, i) => [v, i] as const).sort((p, q) => p[0] - q[0]);
-    const r = new Array<number>(a.length);
-    idx.forEach(([, i], k) => (r[i] = k));
-    return r;
-  };
-  const rx = rank(x);
-  const ry = rank(y);
-  const n = x.length;
-  const mx = (n - 1) / 2;
-  let num = 0, dx = 0, dy = 0;
-  for (let i = 0; i < n; i++) {
-    num += (rx[i]! - mx) * (ry[i]! - mx);
-    dx += (rx[i]! - mx) ** 2;
-    dy += (ry[i]! - mx) ** 2;
-  }
-  return num / Math.sqrt(dx * dy);
+  return { rows: out, sample: sample! };
 }
 
 interface Row {
   naive: number;
+  plain: number;
   tool: number;
   truth: number;
   kind: string;
@@ -327,9 +305,9 @@ function metrics(rows: Row[]) {
   const disagree = rows.filter((r) => Math.sign(r.naive) !== Math.sign(r.tool));
   return {
     n: rows.length,
-    spearman: { naive: rho(rows, "naive"), tool: rho(rows, "tool") },
-    signAccuracy: { naive: hit(rows, "naive"), tool: hit(rows, "tool") },
-    mae: { naive: absErr(rows, "naive"), tool: absErr(rows, "tool") },
+    spearman: { naive: rho(rows, "naive"), plain: rho(rows, "plain"), tool: rho(rows, "tool") },
+    signAccuracy: { naive: hit(rows, "naive"), plain: hit(rows, "plain"), tool: hit(rows, "tool") },
+    mae: { naive: absErr(rows, "naive"), plain: absErr(rows, "plain"), tool: absErr(rows, "tool") },
     disagreements: { n: disagree.length, toolRight: disagree.filter((r) => Math.sign(r.tool) === Math.sign(r.truth)).length },
   };
 }
@@ -345,21 +323,21 @@ function bootstrapCI(rows: Row[], f: (r: Row[]) => number, B = 500): [number, nu
   return [xs[Math.floor(0.025 * (B - 1))]!, xs[Math.floor(0.975 * (B - 1))]!];
 }
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
-function rho(rows: Row[], k: "naive" | "tool"): number {
+function rho(rows: Row[], k: "naive" | "plain" | "tool"): number {
   return spearman(rows.map((x) => x[k]), rows.map((x) => x.truth));
 }
-function hit(rows: Row[], k: "naive" | "tool"): number {
+function hit(rows: Row[], k: "naive" | "plain" | "tool"): number {
   return rows.filter((x) => Math.sign(x[k]) === Math.sign(x.truth)).length / rows.length;
 }
-function absErr(rows: Row[], k: "naive" | "tool"): number {
+function absErr(rows: Row[], k: "naive" | "plain" | "tool"): number {
   return sum(rows.map((x) => Math.abs(x[k] - x.truth))) / rows.length;
 }
-/** Paired 95 % bootstrap CIs of tool - naive (the same resampled trades for both). */
-function pairedCIs(rows: Row[]) {
+/** Paired 95 % bootstrap CIs of tool - baseline (the same resampled trades for both). */
+function pairedCIs(rows: Row[], base: "naive" | "plain" = "naive") {
   return {
-    spearman: bootstrapCI(rows, (r) => rho(r, "tool") - rho(r, "naive")).map(r3),
-    signAccuracy: bootstrapCI(rows, (r) => hit(r, "tool") - hit(r, "naive")).map(r3),
-    mae: bootstrapCI(rows, (r) => absErr(r, "tool") - absErr(r, "naive")).map((x) => Math.round(x * 10) / 10),
+    spearman: bootstrapCI(rows, (r) => rho(r, "tool") - rho(r, base)).map(r3),
+    signAccuracy: bootstrapCI(rows, (r) => hit(r, "tool") - hit(r, base)).map(r3),
+    mae: bootstrapCI(rows, (r) => absErr(r, "tool") - absErr(r, base)).map((x) => Math.round(x * 10) / 10),
   };
 }
 
@@ -367,7 +345,7 @@ function main() {
   const nLeagues = Number(args.leagues);
   const nTrades = Number(args.trades);
   // ---- fit the bench shares on the first season's trades: the grid point whose predictions rank the real outcomes best
-  const fitRows = seasonTrades(FIT_SEASON, nLeagues, nTrades, GRID);
+  const fitRows = seasonTrades(FIT_SEASON, nLeagues, nTrades, GRID).rows;
   const fitScores = GRID.map((g) => ({
     bench: g[0],
     goalieBench: g[1],
@@ -379,9 +357,13 @@ function main() {
 
   const all: Row[] = [];
   const bySeason: Record<string, ReturnType<typeof metrics>> = {};
+  const samples: TradeFixtureSeason[] = [];
   for (const season of SEASONS.slice(1)) {
-    const rows: Row[] = seasonTrades(season, nLeagues, nTrades, [committed]).map((r) => ({
+    const st = seasonTrades(season, nLeagues, nTrades, [committed]);
+    samples.push(st.sample);
+    const rows: Row[] = st.rows.map((r) => ({
       naive: r.naive,
+      plain: r.plain,
       tool: r.tool[key(committed)]!,
       truth: r.truth,
       kind: r.kind,
@@ -391,14 +373,26 @@ function main() {
     all.push(...rows);
   }
   const m = metrics(all);
-  const byKind: Record<string, ReturnType<typeof metrics> & { toolMinusNaiveCI: ReturnType<typeof pairedCIs> }> = {};
+  const byKind: Record<string, ReturnType<typeof metrics> & { toolMinusNaiveCI: ReturnType<typeof pairedCIs>; toolMinusPlainCI: ReturnType<typeof pairedCIs> }> = {};
   for (const k of ["1x1", "2x1", "1x2", "2x2"]) {
     const rk = all.filter((r) => r.kind === k);
-    byKind[k] = { ...metrics(rk), toolMinusNaiveCI: pairedCIs(rk) };
+    byKind[k] = { ...metrics(rk), toolMinusNaiveCI: pairedCIs(rk), toolMinusPlainCI: pairedCIs(rk, "plain") };
   }
+  const builtAt = new Date().toISOString();
+  const fixture: TradeFixture = {
+    builtAt,
+    benchShare: committed[0],
+    goalieBenchShare: committed[1],
+    seasons: samples,
+    score: scoreTradeFixture(samples, committed[0], committed[1]),
+  };
   const summary = {
-    builtAt: new Date().toISOString(),
+    builtAt,
     script: "scripts/backtest-trade.ts",
+    baselines: {
+      naive: "points projetés reçus − envoyés − les points du joueur libéré pour rester à la limite d’effectif",
+      plain: "points projetés reçus − envoyés, sans la limite d’effectif",
+    },
     league: "Slapshot-shaped: 32 teams, C4 LW4 RW4 D6 G2 + 3 reserves, Slapshot scoring",
     fitSeason: FIT_SEASON,
     testSeasons: SEASONS.slice(1),
@@ -411,21 +405,28 @@ function main() {
       ...m,
       spearmanCI: {
         naive: bootstrapCI(all, (r) => rho(r, "naive")).map(r3),
+        plain: bootstrapCI(all, (r) => rho(r, "plain")).map(r3),
         tool: bootstrapCI(all, (r) => rho(r, "tool")).map(r3),
       },
       signCI: {
         naive: bootstrapCI(all, (r) => hit(r, "naive")).map(r3),
+        plain: bootstrapCI(all, (r) => hit(r, "plain")).map(r3),
         tool: bootstrapCI(all, (r) => hit(r, "tool")).map(r3),
       },
       toolMinusNaiveCI: pairedCIs(all),
+      toolMinusPlainCI: pairedCIs(all, "plain"),
     },
     bySeason,
     byKind,
+    fixture: { file: "scripts/fixtures/trade-backtest-sample.json", ...fixture.score },
   };
   console.log(JSON.stringify(summary, null, 2));
   mkdirSync(join(args.out!, ".."), { recursive: true });
   writeFileSync(args.out!, JSON.stringify(summary, null, 2) + "\n");
   console.log(`wrote ${args.out}`);
+  mkdirSync(join(args.fixture!, ".."), { recursive: true });
+  writeFileSync(args.fixture!, JSON.stringify(fixture) + "\n");
+  console.log(`wrote ${args.fixture} (${fixture.score.n} trades: Spearman ${JSON.stringify(fixture.score.spearman)})`);
 }
 
 main();

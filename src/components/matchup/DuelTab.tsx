@@ -344,8 +344,9 @@ export function DuelTab({ slug }: { slug: string }) {
               </table>
             </div>
             <p className="mt-2 text-xs text-slate-400">
-              Fiabilité : sur 1 272 duels rejoués de 2024-25 et 2025-26, les catégories annoncées autour de 75 % ont été gagnées 74 % du temps, et
-              celles annoncées autour de 25 %, 29 % du temps.
+              Fiabilité : sur 1 272 duels rejoués de 2024-25 et 2025-26 (ligues fictives de 12 équipes repêchées à partir des projections Marcel, pas
+              les données de Light the Lamp), les catégories annoncées autour de 75 % ont été gagnées 73 % du temps, et celles annoncées
+              autour de 25 %, 29 % du temps.
             </p>
           </>
         )}
@@ -361,6 +362,11 @@ export function DuelTab({ slug }: { slug: string }) {
             {plan.cap === Infinity
               ? "Alignez tous vos gardiens qui commencent : arrêter plus tôt pour protéger la moyenne et le % d’arrêts ne rapporte rien de plus cette semaine."
               : `Arrêtez d’aligner vos gardiens après ${plan.cap} apparitions : vous protégez la moyenne et le % d’arrêts (${signedCats(plan.expCats - current.plans.find((p) => p.cap === Infinity)!.expCats)} catégorie en moyenne).`}
+          </p>
+          <p className="mb-2 text-xs text-slate-400">
+            Validation : sur 318 semaines rejouées, arrêter plus tôt n’a pas battu « toujours aligner » de façon significative (au
+            mieux +0,003 catégorie par semaine, sans marge de prudence), et l’outil ne l’a
+            jamais conseillé. Un conseil d’arrêter tôt n’a donc aucun test derrière lui.
           </p>
           <ul className="grid gap-1 text-xs text-slate-400 sm:grid-cols-2">
             {current.plans.map((p) => (
@@ -381,8 +387,8 @@ export function DuelTab({ slug }: { slug: string }) {
           <p className="mb-3 text-xs text-slate-400">
             Les joueurs que personne n’a repêchés (d’après l’onglet Repêchage), ajoutés à la place de votre joueur le moins utile de la même sorte, chaque semaine
             re-simulée avec les mêmes tirages : le gain en catégories gagnées tient compte des matchs qu’il lui reste, de la place qu’il aurait dans
-            l’alignement et des catégories serrées. Sur deux saisons rejouées, ce choix a rapporté 0,14 catégorie de plus par semaine que le meilleur
-            autonome au classement.
+            l’alignement et des catégories serrées. Sur deux saisons rejouées (mêmes ligues fictives), ce choix a rapporté 0,17 catégorie de plus
+            par semaine que le meilleur autonome au classement, mais pas mieux, de façon significative, que de prendre l’autonome qui a le plus de matchs parmi les 10 meilleurs (+0,07 catégorie, intervalle de −0,01 à +0,14).
           </p>
           {stream?.sig === sig ? (
             <>

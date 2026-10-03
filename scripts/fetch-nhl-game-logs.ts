@@ -25,7 +25,7 @@ const GAP_MS = 1200;
 const { values: args } = parseArgs({
   options: {
     cache: { type: "string" },
-    games: { type: "string", default: "20222023,20232024,20242025,20252026" },
+    games: { type: "string", default: "20212022,20222023,20232024,20242025,20252026" },
     totals: { type: "string", default: "20182019,20192020,20202021,20212022,20222023,20232024,20242025,20252026" },
   },
 });

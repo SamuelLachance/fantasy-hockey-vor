@@ -2,8 +2,10 @@
  * The weekly categories simulator (src/lib/matchup): its arithmetic, its
  * invariants, and the guard on its backtest (scripts/backtest-matchup.ts):
  * the committed parameters are the ones the committed backtest scored, and
- * that backtest still beats its baselines. Re-run the backtest after any
- * change to the simulator or its parameters, or this fails.
+ * that backtest still beats its baselines, and the committed sample of its
+ * matchups (scripts/fixtures/matchup-backtest-sample.json) re-simulated with
+ * the CURRENT engine gives the backtest's score. Re-run the backtest after
+ * any change to the simulator or its parameters, or this fails.
  */
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -25,6 +27,7 @@ import {
 import { goaliePlans, recommendGoaliePlan, scoreCandidate, withSwap } from "../src/lib/matchup/stream";
 import { mulberry32 } from "../src/lib/dynasty/rng";
 import type { DraftBoard } from "../src/lib/draft/board-types";
+import { scoreMatchupFixture, type MatchupFixture } from "./backtest-fixtures";
 
 let failures = 0;
 function assert(cond: unknown, msg: string) {
@@ -203,6 +206,30 @@ const week: SimDay[] = Array.from({ length: 7 }, (_, d) => ({
   assert(tab.includes(`autour de 75 % ont été gagnées ${Math.round(near75.observed * 100)} %`) && tab.includes(`autour de 25 %, ${Math.round(near25.observed * 100)} %`), "DuelTab quotes the calibration of the committed backtest");
   assert(summary.streamingToolMinusBest.ci[0] > 0, "streaming: the simulator's pick beats the best-value free agent (95 % CI)");
   assert(summary.streaming.outil.mean > summary.streaming.plusDeMatchs.mean, "streaming: the simulator's pick beats « most games » on average");
+  // the tab states the comparison with « most games » too, significant or not, and what the test leagues were
+  const g = summary.streamingToolMinusGames as { mean: number; ci: [number, number] };
+  const signedFr = (x: number) => `${x >= 0 ? "+" : "−"}${fr2(Math.abs(x))}`;
+  const gamesQuote =
+    g.ci[0] > 0
+      ? `et ${fr2(g.mean)} catégorie de plus que l’autonome qui a le plus de matchs`
+      : `mais pas mieux, de façon significative, que de prendre l’autonome qui a le plus de matchs parmi les 10 meilleurs (${signedFr(g.mean)} catégorie, intervalle de ${signedFr(g.ci[0])} à ${signedFr(g.ci[1])})`;
+  assert(tab.includes(gamesQuote), `DuelTab quotes the streaming gain against « most games »: « ${gamesQuote} »`);
+  assert(tab.includes("ligues fictives") && tab.includes("Marcel") && tab.includes("pas les données de Light the Lamp"), "DuelTab says the backtest leagues were synthetic, drafted from Marcel");
+  // the goalie plan: the backtest never validated stopping early; the tab says so
+  const gp = summary.goaliePlan as { gainVsAlwaysStart: { ci: [number, number]; n: number }; noMargin: { gainVsAlwaysStart: { mean: number; ci: [number, number] } } };
+  if (gp.gainVsAlwaysStart.ci[0] <= 0 && gp.noMargin.gainVsAlwaysStart.ci[0] <= 0) {
+    const q = `sur ${nfr(gp.gainVsAlwaysStart.n)} semaines rejouées, arrêter plus tôt n’a pas battu « toujours aligner » de façon significative`;
+    assert(tab.includes(q), `DuelTab says the stop-early advice is not validated: « ${q} »`);
+  }
+
+  // the committed sample, re-simulated with the current engine and parameters
+  const fx = JSON.parse(readFileSync(join(process.cwd(), "scripts", "fixtures", "matchup-backtest-sample.json"), "utf8")) as MatchupFixture;
+  assert(fx.builtAt === summary.builtAt, "the matchup sample comes from the committed backtest run (re-run scripts/backtest-matchup.ts)");
+  const now = scoreMatchupFixture(fx.matchups, MATCHUP_PARAMS, fx.score.sims);
+  assert(now.n === fx.score.n && now.n >= 120, `the matchup sample holds the backtest's matchups (${now.n})`);
+  near(now.brier.simulateur, fx.score.brier.simulateur, 1e-7, "matchup sample re-simulated with the current engine: category Brier (engine changed? re-run scripts/backtest-matchup.ts)");
+  near(now.brier.forceSansCalendrier, fx.score.brier.forceSansCalendrier, 1e-7, "matchup sample: the baseline's Brier");
+  assert(now.brier.simulateur < now.brier.forceSansCalendrier && now.brier.simulateur < now.brier.pileOuFace, `matchup sample: the simulator beats « force sans calendrier » and the coin (${JSON.stringify(now.brier)})`);
 }
 
 if (failures) {

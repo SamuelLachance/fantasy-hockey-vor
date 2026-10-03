@@ -3,8 +3,12 @@
  * best lineup, a trade read from both sides, counter-offers, best offers,
  * the cap, the context built from a real league's committed data, and the
  * guard on its backtest (scripts/backtest-trade.ts): the committed bench
- * share is the one the backtest fitted and scored, and the evaluator still
- * ranks trades better than adding up projected points.
+ * share is the one the backtest fitted and scored, the evaluator still
+ * ranks trades better than adding up projected points minus the player the
+ * roster limit sends away, and the committed sample of the backtest's trades
+ * (scripts/fixtures/trade-backtest-sample.json) re-scored with the CURRENT
+ * `lineupPoints` gives the backtest's score (a change to the engine without a
+ * re-run of the backtest fails here).
  */
 import { readFileSync } from "fs";
 import { join } from "path";
@@ -15,6 +19,7 @@ import { buildTradeContext, remainingShares, windowHorizon } from "../src/lib/tr
 import { acceptable, baseStates, bestOffers, counterOffers, evaluateTrade, type TradeContext } from "../src/lib/trade/evaluate";
 import { TRADE_BENCH } from "../src/lib/trade/params";
 import { lineupPoints, rosterValue, type Horizon, type LineupRules, type TeamPlayer } from "../src/lib/trade/team-value";
+import { scoreTradeFixture, type TradeFixture } from "./backtest-fixtures";
 
 let failures = 0;
 function assert(cond: unknown, msg: string) {
@@ -208,14 +213,37 @@ for (const slug of ["captains-dynasty", "slapshot"]) {
   // paired error bars: better ranking overall, and no kind of trade (1-for-1 … 2-for-2) where it ranks worse
   assert(s.overall.toolMinusNaiveCI.spearman[0] > 0 && s.overall.toolMinusNaiveCI.signAccuracy[0] > 0, "tool − naive: Spearman and sign accuracy above 0 (paired 95 % CI)");
   assert(s.overall.mae.tool < s.overall.mae.naive, "the evaluator's point gains are closer to the real ones");
+  // the baseline is the drop-aware sum (what a human adds up), the plain sum a second line below it
+  assert(s.overall.spearman.plain <= s.overall.spearman.naive, "the plain sum (no roster limit) is the weaker baseline");
+  assert(s.overall.toolMinusPlainCI.spearman[0] > 0, "tool − plain sum: Spearman above 0 (paired 95 % CI)");
   // the tab's « Validation » paragraph quotes the committed backtest
   const tab = readFileSync(join(process.cwd(), "src", "components", "trade", "TradeTab.tsx"), "utf8").replace(/\s+/g, " ");
   const fr = (x: number, d: number) => x.toFixed(d).replace(".", ",");
   for (const quote of [
-    `corrélation de rang ${fr(s.overall.spearman.tool, 2)} contre ${fr(s.overall.spearman.naive, 2)}`,
+    `corrélation de rang ${fr(s.overall.spearman.tool, 2)} contre ${fr(s.overall.spearman.naive, 2)}; bon sens`,
     `bon sens du gain ${fr(100 * s.overall.signAccuracy.tool, 1)} % contre ${fr(100 * s.overall.signAccuracy.naive, 1)} %`,
     `écart moyen aux points réels ${fr(s.overall.mae.tool, 1)} contre ${fr(s.overall.mae.naive, 1)}`,
+    `fait pire encore (corrélation ${fr(s.overall.spearman.plain, 2)})`,
+    `corrélation de rang ${fr(s.overall.spearman.tool, 2)} contre ${fr(s.overall.spearman.naive, 2)} pour l’addition des points moins le joueur à libérer`,
   ]) assert(tab.includes(quote), `TradeTab quotes the backtest: « ${quote} »`);
+  assert(tab.includes("moins ceux du joueur à libérer"), "TradeTab names the drop-aware baseline");
+  assert(!tab.includes("surtout pour les 1 pour 2"), "TradeTab makes no claim the drop-aware baseline does not support");
+  // games caps (Captains): the backtested league had none, the tab says the season is not validated there
+  assert(/config\.features\.gamesCaps \? \( <p> <strong className="text-white">Validation\.<\/strong> Le calcul de la saison a été testé dans une ligue à la Slapshot, sans plafonds de matchs/.test(tab), "TradeTab: a league with games caps gets its own « non validé » sentence");
+  assert(tab.includes("Il n’est pas validé pour cette ligue"), "TradeTab: games-caps leagues are told the season is not validated");
+
+  // the committed sample, re-scored with the current engine
+  const fx = JSON.parse(readFileSync(join(process.cwd(), "scripts", "fixtures", "trade-backtest-sample.json"), "utf8")) as TradeFixture;
+  assert(fx.builtAt === s.builtAt, "the trade sample comes from the committed backtest run (re-run scripts/backtest-trade.ts)");
+  assert(fx.benchShare === TRADE_BENCH.benchShare && fx.goalieBenchShare === TRADE_BENCH.goalieBenchShare, "the sample was scored with the committed bench shares");
+  const t0 = Date.now();
+  const now = scoreTradeFixture(fx.seasons, TRADE_BENCH.benchShare, TRADE_BENCH.goalieBenchShare);
+  assert(now.n === fx.score.n && now.n >= 3000, `the trade sample holds the backtest's trades (${now.n})`);
+  for (const k of ["tool", "naive", "plain"] as const) {
+    near(now.spearman[k], fx.score.spearman[k], 1e-7, `trade sample re-scored with the current engine, Spearman ${k} (engine changed? re-run scripts/backtest-trade.ts)`);
+  }
+  assert(now.spearman.tool > now.spearman.naive && now.spearman.naive >= now.spearman.plain, `trade sample: the evaluator ranks better than the drop-aware sum (${now.spearman.tool} vs ${now.spearman.naive})`);
+  if (process.env.TRADE_VERBOSE) console.log(`trade sample re-scored in ${Date.now() - t0} ms`, now);
   for (const [kind, m] of Object.entries(s.byKind) as Array<[string, { spearman: { tool: number; naive: number } }]>) {
     assert(m.spearman.tool > m.spearman.naive, `${kind}: the evaluator ranks better`);
   }

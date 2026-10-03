@@ -32,8 +32,16 @@
  * the goalie plan (stop at 4/5/6 appearances vs always start). Scored on the
  * REAL categories won, against standing pat.
  *
- * Writes src/data/matchup/backtest-summary.json (committed; the CI guard
- * scripts/test-matchup.ts checks it against params.ts).
+ * Writes src/data/matchup/backtest-summary.json and the re-scorable sample
+ * scripts/fixtures/matchup-backtest-sample.json (one matchup in eight, with
+ * its real outcome; scripts/backtest-fixtures.ts), both committed: the CI
+ * guard scripts/test-matchup.ts checks them against params.ts and re-simulates
+ * the sample with the current engine.
+ *
+ * What was known the Monday before: rates from Marcel and the season to
+ * date; a player's club from his last game this season, else his last game
+ * of the previous season (never from the week predicted: a player who will
+ * not dress stays on the roster). Needs games-<previous season>.json too.
  *
  * Usage: npx tsx scripts/backtest-matchup.ts [--fit] [--cache <dir>] [--leagues 4] [--sims 1000] [--quick]
  */
@@ -56,6 +64,7 @@ import {
   type SimTeam,
 } from "../src/lib/matchup/simulate";
 import { goaliePlans, recommendGoaliePlan, scoreCandidate } from "../src/lib/matchup/stream";
+import { packMatchup, scoreMatchupFixture, type FxMatchup, type MatchupFixture } from "./backtest-fixtures";
 
 const { values: args } = parseArgs({
   options: {
@@ -67,6 +76,7 @@ const { values: args } = parseArgs({
     sims: { type: "string", default: "1000" },
     quick: { type: "boolean", default: false },
     out: { type: "string", default: join(process.cwd(), "src", "data", "matchup", "backtest-summary.json") },
+    fixture: { type: "string", default: join(process.cwd(), "scripts", "fixtures", "matchup-backtest-sample.json") },
   },
 });
 const CACHE = args.cache ?? process.env.NHL_STATS_CACHE ?? join(process.cwd(), ".cache", "nhl-stats");
@@ -491,14 +501,36 @@ class InSeason {
   }
 }
 
-function clubForWeek(data: SeasonData, inS: InSeason, id: number, goalie: boolean, monday: string): string | null {
+/** Each player's club at his last game of `season` ("s<id>" skaters, "g<id>" goalies). */
+const LAST_CLUB = new Map<number, Map<string, string>>();
+function lastClubs(season: number): Map<string, string> {
+  let m = LAST_CLUB.get(season);
+  if (m) return m;
+  const g = load<GamesFile>(`games-${season}.json`);
+  const at = new Map<string, string>();
+  m = new Map<string, string>();
+  for (const [kind, rows] of [["s", g.skaters], ["g", g.goalies]] as const) {
+    for (const r of rows) {
+      const k = kind + r[0];
+      if ((at.get(k) ?? "") <= r[1]) {
+        at.set(k, r[1]);
+        m.set(k, r[2]);
+      }
+    }
+  }
+  LAST_CLUB.set(season, m);
+  return m;
+}
+
+/**
+ * A player's club as known the Monday before: his last game of this season,
+ * else his last game of the previous season. Never the week being predicted
+ * (a player who will not dress stays on the roster, simulated like any other).
+ */
+function clubForWeek(data: SeasonData, inS: InSeason, id: number, goalie: boolean): string | null {
   const known = goalie ? inS.gk.get(id)?.club : inS.sk.get(id)?.club;
   if (known) return known;
-  for (let d = monday; d <= addDays(monday, 6); d = addDays(d, 1)) {
-    const r = goalie ? data.gkDay.get(d)?.get(id) : data.skDay.get(d)?.get(id);
-    if (r) return r[2];
-  }
-  return null;
+  return lastClubs(prevSeason(data.season)).get((goalie ? "g" : "s") + id) ?? null;
 }
 
 // =============================================================== realized week
@@ -714,7 +746,7 @@ function* matchups(seasons: readonly number[]): Generator<MatchupCtx> {
       const skRate = (id: number): SimSkater | null => {
         const p = proj.sk.get(id);
         if (!p) return null;
-        const club = clubForWeek(data, inS, id, false, monday);
+        const club = clubForWeek(data, inS, id, false);
         if (!club) return null;
         const s = inS.sk.get(id);
         const K = 20;
@@ -724,7 +756,7 @@ function* matchups(seasons: readonly number[]): Generator<MatchupCtx> {
       const gkRate = (id: number): SimGoalie | null => {
         const p = proj.gk.get(id);
         if (!p) return null;
-        const club = clubForWeek(data, inS, id, true, monday);
+        const club = clubForWeek(data, inS, id, true);
         if (!club) return null;
         const s = inS.gk.get(id);
         const K = 10;
@@ -810,6 +842,9 @@ function main() {
   const goalieChosen0: Record<string, number> = {};
   // reliability: predicted P(win category) by tenth, and how often it happened
   const calib: Record<string, Array<{ p: number; y: number; n: number }>> = {};
+  // the committed sample the CI re-simulates: one matchup in eight
+  const sample: FxMatchup[] = [];
+  let mi = 0;
   for (const { season, monday, li, ai, A, B, days, data, proj, inS, skRate, rostered } of matchups(TEST_SEASONS)) {
     const seed = `${season}|${monday}|${li}|${ai}`;
     const sim = simulateWeek(A, B, days, { sims: SIMS, seed, params });
@@ -819,6 +854,7 @@ function main() {
     realized(data, A, monday, real, 0);
     realized(data, B, monday, real, T_LEN);
     const out = catOutcomes(real, 0, LTL_LEAGUE);
+    if (mi++ % 8 === 0) sample.push(packMatchup(seed, A, B, days, out, naive));
     const wk = `${season}|${monday}`;
     const preds: Record<string, number[]> = {
       simulateur: sim.cats.map((c) => c.win + 0.5 * c.tie),
@@ -924,8 +960,10 @@ function main() {
   const byCat = Object.fromEntries(
     Object.entries(perCat).map(([c, v]) => [c, Object.fromEntries(Object.entries(v.se).map(([m, se]) => [m, r4(se / v.n)]))]),
   );
+  const builtAt = new Date().toISOString();
+  const fixture: MatchupFixture = { builtAt, matchups: sample, score: scoreMatchupFixture(sample, params) };
   const summary = {
-    builtAt: new Date().toISOString(),
+    builtAt,
     script: "scripts/backtest-matchup.ts",
     fitSeasons: FIT_SEASONS,
     testSeasons: TEST_SEASONS,
@@ -950,12 +988,16 @@ function main() {
         .filter(([m]) => m === "simulateur" || m === "forceSansCalendrier")
         .map(([m, bins]) => [m, bins.filter((b) => b.n).map((b) => ({ predicted: r4(b.p / b.n), observed: r4(b.y / b.n), n: b.n }))]),
     ),
+    fixture: { file: "scripts/fixtures/matchup-backtest-sample.json", ...fixture.score },
   };
   console.log(JSON.stringify(summary, null, 2));
   if (!args.quick) {
     mkdirSync(join(args.out!, ".."), { recursive: true });
     writeFileSync(args.out!, JSON.stringify(summary, null, 2) + "\n");
     console.log(`wrote ${args.out}`);
+    mkdirSync(join(args.fixture!, ".."), { recursive: true });
+    writeFileSync(args.fixture!, JSON.stringify(fixture) + "\n");
+    console.log(`wrote ${args.fixture} (${fixture.score.n} matchups: ${JSON.stringify(fixture.score.brier)})`);
   }
 }
 

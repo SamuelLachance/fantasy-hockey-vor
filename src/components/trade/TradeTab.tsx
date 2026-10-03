@@ -10,6 +10,7 @@ import { capSeasonLabel } from "@/lib/fantrax/salary-copy";
 import { fetchSnapshotFile } from "@/lib/fantrax/snapshot-fetch";
 import { buildTradeContext, remainingShares, type TradeRecord } from "@/lib/trade/context";
 import { baseStates, bestOffers, counterOffers, evaluateTrade, type AcceptMode, type Proposal, type SideEval, type Trade, type TradeContext } from "@/lib/trade/evaluate";
+import { TRADE_BENCH } from "@/lib/trade/params";
 import { HORIZONS, lineupPoints, seatNeeds, type Horizon } from "@/lib/trade/team-value";
 import { PlayerCardLink } from "@/components/player-card/PlayerCardLink";
 import { useFantraxLeague } from "@/components/fantrax/fantrax-league-context";
@@ -424,12 +425,23 @@ export function TradeTab() {
             {config.features.captainSlot ? ", capitaine" : ""}). Un joueur qui comble un trou vaut plus qu’un joueur qui resterait sur le banc : c’est la ligne
             « ajustement » (le besoin par position).
           </p>
-          <p>
-            <strong className="text-white">Validation.</strong> Sur trois saisons LNH rejouées jour par jour (9 000 échanges simulés, ligue à la Slapshot), ce calcul
-            classe mieux les échanges que la simple addition des points projetés (corrélation de rang 0,33 contre 0,25; bon sens du gain 60,6 % contre 57,9 %;
-            écart moyen aux points réels 89,8 contre 92,6), pour chaque type d’échange et surtout pour les 1 pour 2. Ce test valide les points de la saison; la
-            valeur dynastie elle-même vient du modèle de la ligue.
-          </p>
+          {config.features.gamesCaps ? (
+            <p>
+              <strong className="text-white">Validation.</strong> Le calcul de la saison a été testé dans une ligue à la Slapshot, sans plafonds de matchs ni
+              capitaine (9 000 échanges simulés, corrélation de rang 0,33 contre 0,29 pour l’addition des points moins le joueur à libérer). Il n’est pas validé
+              pour cette ligue : la part des points d’un réserviste sous les plafonds ({Math.round(100 * TRADE_BENCH.cappedBenchShare)} % pour un patineur,{" "}
+              {Math.round(100 * TRADE_BENCH.cappedGoalieBenchShare)} % pour un gardien) est une estimation, pas un ajustement, et le capitaine n’a pas été testé. Le
+              gain affiché est surtout de la valeur dynastie, qui vient du modèle de la ligue et qu’aucun de ces tests ne valide.
+            </p>
+          ) : (
+            <p>
+              <strong className="text-white">Validation.</strong> Sur trois saisons LNH rejouées jour par jour (9 000 échanges simulés, ligue à la Slapshot), ce
+              calcul classe mieux les échanges que l’addition des points projetés moins ceux du joueur à libérer (corrélation de rang 0,33 contre 0,29; bon sens du
+              gain 60,6 % contre 59,4 %; écart moyen aux points réels 89,8 contre 91,2), avec une meilleure corrélation pour chaque type d’échange. La simple
+              addition, sans le joueur à libérer, fait pire encore (corrélation 0,25). Ce test ne valide que les points de la saison : le gain affiché est surtout de
+              la valeur dynastie, qui vient du modèle de la ligue et que ce test ne valide pas.
+            </p>
+          )}
           {ctx.cap ? (
             <p>
               <strong className="text-white">Plafond.</strong> La masse salariale engagée de chaque équipe, saison par saison, avant et après : les 23 joueurs comptés

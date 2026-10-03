@@ -52,13 +52,14 @@ export const MATCHUP_PARAMS: MatchupParams = {
   winSlope: -1.066,
   backToBackStart: 0.574,
   skaterPlays: 0.928,
-  // --calibrate on 1,320 matchups of 2022-23 and 2023-24 (1,000 draws each),
-  // category Brier by shape (∞ / 120 / 60 / 40 / 15 / 12 / 10 / 8 / 6 / 5):
-  // G A PPP flat at 0.2088-0.2091 (no evidence: none); SOG HIT BLK 0.1884 at
-  // ∞ down to 0.1869 at 10-12 (15: 0.1871, within the noise); W GAA SV% SHO
-  // 0.1389-0.1398, best near ∞ (none). The shots-hits-blocks rates of a
-  // skater's week vary by ~26 % around the projection (role, linemates,
-  // injuries the Monday-before projection cannot see).
+  // --calibrate on 1,320 matchups of 2022-23 and 2023-24 (1,000 draws each;
+  // a player's club known the Monday before only: his last game, never the
+  // week predicted), category Brier by shape (∞ / 120 / 60 / 40 / 15 / 12 /
+  // 10 / 8 / 6 / 5): G A PPP flat at 0.2104-0.2108 (no evidence: none); SOG
+  // HIT BLK 0.1961 at ∞ down to 0.1943 at 6-12 (15: 0.1945, within the
+  // noise); W GAA SV% SHO 0.1404-0.1412, best at ∞ (none). The shots-hits-
+  // blocks rates of a skater's week vary by ~26 % around the projection
+  // (role, linemates, injuries the Monday-before projection cannot see).
   kRateOffense: Infinity,
   kRatePeripheral: 15,
   kRateGoalie: Infinity,
