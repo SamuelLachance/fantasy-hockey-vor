@@ -43,6 +43,7 @@ interface Captured {
   weights: number[];
   slots: SlotCounts;
   order: readonly SlotId[];
+  solves: number;
 }
 
 function meanCi(xs: number[]) {
@@ -61,7 +62,7 @@ for (const team of league.teams) {
     ...PLAN_KIT,
     capFit: (input) => {
       const out = PLAN_KIT.capFit!(input);
-      cap = { players: out.players, rules: out.rules, days: out.days, weights: out.days.map(() => 1), slots: input.slots, order: input.order };
+      cap = { players: out.players, rules: out.rules, days: out.days, weights: out.days.map(() => 1), slots: input.slots, order: input.order, solves: out.result.solves };
       return out;
     },
   };
@@ -93,6 +94,7 @@ for (const team of league.teams) {
     human: { v: val(human), legal: legal(human), moves: moves(human) },
     days: c.days.length,
     ms,
+    solves: c.solves,
   };
   rows.push(row);
   console.log(
@@ -106,5 +108,6 @@ const both = rows.filter((r) => r.engine.legal && r.human.legal);
 console.log(`  engine - human (both legal): ${fmt(meanCi(both.map((r) => r.engine.v - r.human.v)))} points, engine ahead on ${both.filter((r) => r.engine.v > r.human.v + 1e-6).length}, behind on ${both.filter((r) => r.engine.v < r.human.v - 1e-6).length}`);
 const asIs = rows.filter((r) => r.before.legal && r.engine.legal);
 console.log(`  engine - roster as is (both legal): ${fmt(meanCi(asIs.map((r) => r.engine.v - r.before.v)))} points`);
+console.log(`  fit lineup solves: median ${[...rows.map((r) => r.solves)].sort((a, b) => a - b)[rows.length >> 1]}, max ${Math.max(...rows.map((r) => r.solves))}`);
 console.log(`  plan time with the fit: median ${[...rows.map((r) => r.ms)].sort((a, b) => a - b)[rows.length >> 1]} ms, max ${Math.max(...rows.map((r) => r.ms))} ms`);
 console.log(`  moves: engine ${meanCi(rows.map((r) => r.engine.moves)).mean.toFixed(1)}, human ${meanCi(rows.map((r) => r.human.moves)).mean.toFixed(1)} a team`);

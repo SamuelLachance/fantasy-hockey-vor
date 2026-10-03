@@ -135,6 +135,12 @@ export interface PlanInputs {
   waiverCapModel?: "planned" | "capped";
   /** Salary-cap fit: lineup days its search solves on (default `CAP_FIT_SEARCH_DAYS`, cap-fit.ts). */
   capFitSearchDays?: number;
+  /**
+   * Leave the salary-cap fit out (`capFit` undefined): the browser runs it
+   * apart (`planCapFit`), once per roster and lineup period, after the plan
+   * is on screen, not at every per-game lock re-plan.
+   */
+  deferCapFit?: boolean;
 }
 
 /** A league's own planner rules, kept out of this module (`plan-kit.ts`, `PLAN_KIT`). */
@@ -151,6 +157,8 @@ export interface PlanKit {
   }): { lockedIds: Set<string>; locks: NonNullable<DailyPlan["locks"]> };
   /** Salary-cap roster fit (cap-fit.ts); absent = no advice. */
   capFit?: typeof capFitAdvice;
+  /** `planCapFit`, for the browser's deferred fit: in the kit's chunk, not the shared planner's caller. */
+  planCapFit?: (input: PlanInputs, from: number) => DailyPlan["capFit"];
 }
 
 /** The league has a rule only `plan-kit.ts` knows: a salary cap, or a lock on each player's own game. */
@@ -325,7 +333,17 @@ export interface DailyPlan {
    * roster as it is breaks the cap or floor: no fair « before »). Null when
    * no move helps.
    */
-  capFit?: { moves: CapFitMove[]; usedBefore: number; usedAfter: number; gain: number | null; legal: boolean } | null;
+  capFit?: {
+    moves: CapFitMove[];
+    /** Counted payroll before (the `salary` line's: the best counted spots by season points) and after the moves, M$. */
+    usedBefore: number;
+    usedAfter: number;
+    /** Projected points the moves add (null: the roster was not legal before). */
+    gain: number | null;
+    legal: boolean;
+    /** What made the roster illegal before (null: it was legal; the moves only score more). */
+    fix: "cap" | "floor" | "spots" | null;
+  } | null;
   players: Record<string, PlanPlayer>;
 }
 
@@ -596,16 +614,53 @@ function waiverGroup(eligiblePos: string): string {
 
 // ------------------------------------------------------------ plan
 
+function planCtx(input: PlanInputs, config: FantraxLeagueConfig, index: ScheduleIndex): Ctx {
+  const teamGoalies = new Map<string, string[]>();
+  for (const [id, r] of Object.entries(input.values.players)) {
+    if (!isGoalieRecord(r, config)) continue;
+    teamGoalies.set(r.t, [...(teamGoalies.get(r.t) ?? []), id]);
+  }
+  return { league: input.league, state: input.state, values: input.values, index, teamGoalies, config };
+}
+
+/** The salary-cap fit from lineup period `from` (null: no cap, no contracts or nothing worth saying). */
+function runCapFit(ctx: Ctx, input: PlanInputs, from: number): DailyPlan["capFit"] {
+  const { config } = ctx;
+  const fit = config.salaryCap && input.contracts ? requireKit(input.kit, config).capFit : undefined;
+  if (!fit) return null;
+  return fit({
+    league: ctx.league,
+    from,
+    roster: ctx.state.rosters[input.teamId] ?? [],
+    contracts: input.contracts!,
+    config,
+    candidate: (id, period) => candidateFor(ctx, id, "RESERVE", undefined, period),
+    slots: ctx.league.slotCounts,
+    order: config.slots.order,
+    values: ctx.values.players,
+    icons: ctx.state.icons,
+    searchDays: input.capFitSearchDays,
+  }).advice;
+}
+
+/**
+ * The plan's salary-cap fit alone (`DailyPlan.capFit`) for lineup period
+ * `from`: what `buildDailyPlan` leaves out under `deferCapFit`. It reads the
+ * roster, the contracts and the snapshot, never the clock, so the browser
+ * runs it once per roster and period, not at every lock.
+ */
+export function planCapFit(input: PlanInputs, from: number): DailyPlan["capFit"] {
+  const config = input.config ?? CAPTAINS_DYNASTY;
+  if (!config.salaryCap || !input.contracts) return null;
+  const ctx = planCtx(input, config, indexSchedule(input.schedule, input.league.rosterPeriods));
+  return runCapFit(ctx, input, from);
+}
+
 export function buildDailyPlan(input: PlanInputs): DailyPlan {
   const { league, state, values, schedule, teamId, nowMs } = input;
   const config = input.config ?? CAPTAINS_DYNASTY;
   const index = indexSchedule(schedule, league.rosterPeriods);
-  const teamGoalies = new Map<string, string[]>();
-  for (const [id, r] of Object.entries(values.players)) {
-    if (!isGoalieRecord(r, config)) continue;
-    teamGoalies.set(r.t, [...(teamGoalies.get(r.t) ?? []), id]);
-  }
-  const ctx: Ctx = { league, state, values, index, teamGoalies, config };
+  const ctx = planCtx(input, config, index);
   const roster = state.rosters[teamId] ?? [];
   const onRoster = new Map(roster.map((r) => [r.id, r]));
   const slotCounts = league.slotCounts;
@@ -1120,23 +1175,8 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
         )
       : null;
   // ---- salary-cap fit: which players to stash / call up (Slapshot; cap-fit.ts).
-  const fitKit = config.salaryCap && input.contracts ? requireKit(input.kit, config).capFit : undefined;
   const capFitPart: DailyPlan["capFit"] =
-    fitKit && target
-      ? fitKit({
-          league,
-          from: target.number,
-          roster,
-          contracts: input.contracts!,
-          config,
-          candidate: (id, period) => candidateFor(ctx, id, "RESERVE", undefined, period),
-          slots: slotCounts,
-          order: slotOrder,
-          values: values.players,
-          icons: state.icons,
-          searchDays: input.capFitSearchDays,
-        }).advice
-      : null;
+    input.deferCapFit ? undefined : target ? runCapFit(ctx, input, target.number) : null;
   if (salaryPart?.over) {
     alerts.push({
       level: "warn",

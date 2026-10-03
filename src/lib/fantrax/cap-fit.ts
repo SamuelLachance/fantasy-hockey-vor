@@ -15,17 +15,20 @@
  * on `searchDays` evenly spaced days (a lineup solve per day per roster
  * tried); every roster it stepped through is then re-scored on all the days,
  * and the best of those is the advice — the sample alone overfit (it advised
- * moves that lost points on the full season: Montreal -54).
+ * moves that lost points on the full season: Montreal -54). Each day's
+ * lineup is remembered by who of the counted set plays that day, and the
+ * search skips a neighbor whose upper bound cannot beat the best found
+ * (`dayScorer`, `ownSample`): the same advice at a seventh of the solves.
  *
  * scripts/backtest-cap-fit.ts measures it on the 32 real Slapshot rosters
  * against the rule by hand (`capFitByHand`) and the roster as it is.
  */
 import type { FantraxLeagueConfig, FantraxPriors, SlotCounts, SlotId } from "./config";
 import type { DailyPlan } from "./daily-plan";
-import { bestFpg, isGoalieRecord } from "./draft-inputs";
+import { bestFpg, isGoalieRecord, seasonFp } from "./draft-inputs";
 import { optimizeLineup, type LineupCandidate } from "./lineup";
 import { dayToDayFactor, skaterPlayProbability } from "./points-model";
-import type { ContractsFile } from "./salary-cap";
+import { salaryUsage, type ContractsFile } from "./salary-cap";
 import type { LeagueSnapshot, ValuesSnapshot } from "./snapshot-types";
 
 export interface CapFitPlayer {
@@ -59,6 +62,8 @@ export interface CapFitResult {
   after: number;
   /** The counted roster is within the cap, the floor, the spots and the Minors limit after the moves. */
   legal: boolean;
+  /** Lineups the fit solved (its cost; test-cap-fit.ts bounds it). */
+  solves: number;
 }
 
 const PENALTY = 1000;
@@ -77,16 +82,36 @@ export function countedValue(
   slots: SlotCounts,
   order: readonly SlotId[],
 ): number {
+  const onDay = dayScorer(days, slots, order);
   let total = 0;
-  days.forEach((cands, i) => {
-    const res = optimizeLineup(
-      cands.filter((c) => counted.has(c.id)).map((c) => ({ ...c, status: "ACTIVE", currentSlot: undefined })),
-      slots,
-      order,
-    );
-    total += (weights[i] ?? 1) * res.total;
+  days.forEach((_, i) => {
+    total += (weights[i] ?? 1) * onDay(counted, i);
   });
   return total;
+}
+
+/**
+ * A day's best lineup total for a counted set, remembered by the counted
+ * players who play that day: a roster the search tries differs from the
+ * last by a player or two, and on every day neither plays the lineup is the
+ * one already solved (exact, and most of the fit's speed).
+ */
+function dayScorer(days: readonly LineupCandidate[][], slots: SlotCounts, order: readonly SlotId[]) {
+  const norm = days.map((cands) => cands.map((c) => ({ ...c, status: "ACTIVE", currentSlot: undefined })));
+  const memo = days.map(() => new Map<string, number>());
+  const onDay = (counted: ReadonlySet<string>, day: number): number => {
+    const cands = norm[day]!.filter((c) => counted.has(c.id));
+    const k = cands.map((c) => c.id).join();
+    let v = memo[day]!.get(k);
+    if (v === undefined) {
+      v = optimizeLineup(cands, slots, order).total;
+      memo[day]!.set(k, v);
+      onDay.solves++;
+    }
+    return v;
+  };
+  onDay.solves = 0;
+  return onDay;
 }
 
 export function capFit(
@@ -128,8 +153,8 @@ export function capFit(
   const n = Math.min(searchDays, days.length);
   const idx = Array.from({ length: n }, (_, k) => Math.min(days.length - 1, Math.floor(((k + 0.5) * days.length) / Math.max(1, n))));
   const total = weights.reduce((a, b) => a + b, 0) || days.length;
-  const sDays = idx.map((i) => days[i]!);
-  const sWeights = idx.map(() => total / Math.max(1, n));
+  const sWeight = total / Math.max(1, n);
+  const onDay = dayScorer(days, slots, order);
 
   const key = (s: ReadonlySet<string>) => [...s].sort().join();
   const sampled = new Map<string, number>();
@@ -137,46 +162,62 @@ export function capFit(
     const k = key(s);
     let v = sampled.get(k);
     if (v === undefined) {
-      v = countedValue(s, sDays, sWeights, slots, order);
+      v = 0;
+      for (const i of idx) v += sWeight * onDay(s, i);
       sampled.set(k, v);
     }
     return v - PENALTY * offBy(s);
   };
   // Every roster a search steps through: the finalists.
   const finalists = new Map<string, Set<string>>();
+  // A player's own value on the sample days (his best slot each day): what
+  // adding him can add to a lineup at most, the bound that skips a neighbor
+  // without solving it.
+  const ownSample = new Map<string, number>();
+  for (const i of idx)
+    for (const c of days[i]!) ownSample.set(c.id, (ownSample.get(c.id) ?? 0) + sWeight * Math.max(0, ...Object.values(c.values).map((v) => v ?? 0)));
   const search = (from: Set<string>) => {
     let cur = new Set(from);
     let curScore = score(cur);
     finalists.set(key(cur), cur);
     for (let it = 0; it < maxIter; it++) {
-      let best: Set<string> | null = null;
-      let bestScore = curScore + 1e-6;
+      // Every single move and swap, bounded above (a lineup without a player
+      // is worth at most what it was; with one more, at most his own value
+      // more), then solved best bound first until no bound can beat the best
+      // found: the same best-improvement step as solving them all.
+      const curValue = curScore + PENALTY * offBy(cur);
       const out = [...cur];
       const inn = movable.map((p) => p.id).filter((id) => !cur.has(id));
-      const tryMove = (next: Set<string>) => {
-        const sc = score(next);
-        if (sc > bestScore) {
-          bestScore = sc;
-          best = next;
-        }
-      };
+      const tries: Array<{ next: Set<string>; bound: number }> = [];
+      const add = (next: Set<string>, gainAtMost: number) => tries.push({ next, bound: curValue + gainAtMost - PENALTY * offBy(next) });
       for (const x of out) {
         const nx = new Set(cur);
         nx.delete(x);
-        tryMove(nx);
+        add(nx, 0);
       }
       for (const y of inn) {
         const nx = new Set(cur);
         nx.add(y);
-        tryMove(nx);
+        add(nx, ownSample.get(y) ?? 0);
       }
       for (const x of out)
         for (const y of inn) {
           const nx = new Set(cur);
           nx.delete(x);
           nx.add(y);
-          tryMove(nx);
+          add(nx, ownSample.get(y) ?? 0);
         }
+      tries.sort((p, q) => q.bound - p.bound);
+      let best: Set<string> | null = null;
+      let bestScore = curScore + 1e-6;
+      for (const t of tries) {
+        if (t.bound <= bestScore) break;
+        const sc = score(t.next);
+        if (sc > bestScore) {
+          bestScore = sc;
+          best = t.next;
+        }
+      }
       if (!best) break;
       cur = best;
       curScore = bestScore;
@@ -195,7 +236,8 @@ export function capFit(
     const k = key(s);
     let v = full.get(k);
     if (v === undefined) {
-      v = countedValue(s, days, weights, slots, order);
+      v = 0;
+      for (let i = 0; i < days.length; i++) v += (weights[i] ?? 1) * onDay(s, i);
       full.set(k, v);
     }
     return v;
@@ -224,6 +266,7 @@ export function capFit(
     before: fullValue(start),
     after: fullValue(cur),
     legal: u <= rules.cap + 1e-9 && u >= rules.floor - 1e-9 && cur.size <= rules.spots && minors <= rules.maxMinors,
+    solves: onDay.solves,
   };
 }
 
@@ -287,7 +330,7 @@ export interface CapFitAdviceInput {
   /** The roster (Active, Reserve and Minors players move; the rest stay). */
   roster: ReadonlyArray<{ id: string; status: string }>;
   contracts: ContractsFile;
-  config: Pick<FantraxLeagueConfig, "salaryCap" | "priors">;
+  config: FantraxLeagueConfig;
   /** A player's lineup candidate for a lineup period (nightly values), or null. */
   candidate: (id: string, period: number) => LineupCandidate | null;
   slots: SlotCounts;
@@ -328,16 +371,28 @@ export function capFitAdvice(a: CapFitAdviceInput): {
   );
   const result = capFit(players, rules, days, days.map(() => 1), a.slots, a.order, a.searchDays !== undefined ? { searchDays: a.searchDays } : {});
   const counted = players.filter((p) => p.status !== "MINORS").length;
-  const legalBefore = result.usedBefore <= rules.cap + 1e-9 && result.usedBefore >= rules.floor - 1e-9 && counted <= rules.spots;
+  // The payroll before is the salary line's (`salaryUsage`: past the counted
+  // spots, the best by season points), so one card never shows two payrolls.
+  const payroll = (roster: ReadonlyArray<{ id: string; status: string }>, fallback: number) =>
+    salaryUsage(roster, a.contracts, sc, 1, (id) => (a.values[id] ? seasonFp(a.values[id]!, a.config) : 0)).used[0] ?? fallback;
+  const shown = payroll(a.roster, result.usedBefore);
+  const to = new Map(result.moves.map((m) => [m.id, m.to]));
+  const shownAfter = payroll(
+    a.roster.map((r) => (to.has(r.id) ? { ...r, status: to.get(r.id)! } : r)),
+    result.usedAfter,
+  );
+  const fix: NonNullable<DailyPlan["capFit"]>["fix"] =
+    shown > rules.cap + 1e-9 ? "cap" : shown < rules.floor - 1e-9 ? "floor" : counted > rules.spots ? "spots" : null;
   const r2 = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
   const advice =
-    result.moves.length && (result.after - result.before >= CAP_FIT_MIN_GAIN || !legalBefore)
+    result.moves.length && (result.after - result.before >= CAP_FIT_MIN_GAIN || fix !== null)
       ? {
           moves: result.moves,
-          usedBefore: r2(result.usedBefore, 2),
-          usedAfter: r2(result.usedAfter, 2),
-          gain: legalBefore ? r2(result.after - result.before, 1) : null,
+          usedBefore: r2(shown, 2),
+          usedAfter: r2(shownAfter, 2),
+          gain: fix === null ? r2(result.after - result.before, 1) : null,
           legal: result.legal,
+          fix,
         }
       : null;
   return { advice, result, players, rules, days };

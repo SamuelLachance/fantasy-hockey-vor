@@ -32,22 +32,33 @@ export function salaryLine(u: SalaryUsage): string {
 const list = (names: string[]) => (names.length <= 1 ? (names[0] ?? "") : `${names.slice(0, -1).join(", ")} et ${names.at(-1)}`);
 
 /**
- * The salary-cap fit (`plan.capFit`, cap-fit.ts) in words: « Ajustement au
- * plafond : envoyer A et B aux mineures, rappeler C. Masse 108,1 M$ → 103,4
- * M$, +26 points projetés d’ici la fin de la saison. »
+ * The salary-cap fit (`plan.capFit`, cap-fit.ts) in words, titled by what it
+ * fixes: « Ajustement au plafond : envoyer A et B aux mineures, rappeler C à
+ * la réserve (masse 108,1 M$ → 103,4 M$, ce qui rend l’effectif conforme). »
+ * A legal roster's moves only score more (the cap need not bind): « Mineures
+ * et réserve : … (+26 points projetés …). »
  */
 export function capFitLine(fit: NonNullable<DailyPlan["capFit"]>, name: (id: string) => string): string {
   const down = fit.moves.filter((m) => m.to === "MINORS").map((m) => name(m.id));
   const up = fit.moves.filter((m) => m.to === "RESERVE").map((m) => name(m.id));
-  const acts = [down.length ? `envoyer ${list(down)} aux mineures` : "", up.length ? `rappeler ${list(up)} (Réserve)` : ""].filter(Boolean).join(", ");
+  const acts = [down.length ? `envoyer ${list(down)} aux mineures` : "", up.length ? `rappeler ${list(up)} à la réserve` : ""].filter(Boolean).join(", ");
   const money = `masse ${fmtMoney(fit.usedBefore)} → ${fmtMoney(fit.usedAfter)}`;
   const gain =
     fit.gain !== null
       ? `, +${Math.round(fit.gain)} point${Math.round(fit.gain) >= 2 ? "s" : ""} projeté${Math.round(fit.gain) >= 2 ? "s" : ""} d’ici la fin de la saison régulière de la ligue`
       : fit.legal
         ? ", ce qui rend l’effectif conforme"
-        : "; l’effectif reste non conforme (il faudra aussi libérer ou ajouter un joueur)";
-  return `Ajustement au plafond : ${acts} (${money}${gain}).`;
+        : "";
+  const still = fit.gain === null && !fit.legal ? " L’effectif reste non conforme : il faudra aussi libérer ou ajouter un joueur." : "";
+  const title =
+    fit.fix === "cap"
+      ? "Ajustement au plafond"
+      : fit.fix === "floor"
+        ? "Ajustement au plancher"
+        : fit.fix === "spots"
+          ? "Trop de joueurs comptés"
+          : "Mineures et réserve";
+  return `${title} : ${acts} (${money}${gain}).${still}`;
 }
 
 /** The growth assumption in words, for the method note. */

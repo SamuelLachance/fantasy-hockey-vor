@@ -11,6 +11,11 @@
  *            (not known out), drop the worst projected player of his
  *            position, when the gain passes 0.15 a game — « add the
  *            highest projected FA »;
+ *  - human-sched: the streamer who reads the schedule: drop the worst
+ *            projected player of a position, add the free agent with the
+ *            most projected points over the period's remaining games
+ *            (points a game x his club's games left), when that gains
+ *            0.5 points over the period;
  *  - engine: `waiverTargets` — the lineup-aware gain of each add / drop
  *            over the period under its games caps plus the rest of the
  *            season under each later period's caps (`--ros=capped` as
@@ -18,7 +23,7 @@
  *            the best target (ranked by delta + ros) when it gains the
  *            league's bar this period (`--gate`, as the plan ships).
  *
- * Run: npx tsx scripts/backtest-mgmt-waivers.ts --cache=<dir> [--seasons=...] [--managed=0,5,10,15] [--claims=2] [--policies=none,human,engine]
+ * Run: npx tsx scripts/backtest-mgmt-waivers.ts --cache=<dir> [--seasons=...] [--managed=0,5,10,15] [--claims=2] [--policies=none,human,human-sched,engine]
  *      [--ros=planned|capped] [--gate=period:x|total:x] [--period-days=N] [--return=on] [--matchup=on|ga|home] [--matchup-beta=x] [--out=rows.json]
  */
 import { writeFileSync } from "fs";
@@ -60,6 +65,20 @@ const MIN_DELTA = waiverMinDelta(CAPTAINS_DYNASTY, 7);
  * the lineup's points over the same horizon, FX-5) lost too: r = 0.5 % /
  * 1 % / 2.5 % / 5 % gave -4.9 / +6.1 / -7.9 / -27.8 on Captains (26-28
  * team-seasons each) and 1 % / 2.5 % -25.9 / -52.1 on 3-day periods (16).
+ *
+ * Re-run 2026-10-03 at 7a790ec+ (16 teams x 5 seasons, n=80 each):
+ *  - weeks: engine - human +28.5 [3.3, 53.7]; engine - bd259b2's model
+ *    (--ros=capped) +61.0 [37.2, 84.8]; bd259b2 - human -32.5 [-57.8, -7.2];
+ *    but engine - human-sched -29.7 [-51.8, -7.6] (human-sched - human
+ *    +58.2 [37.2, 79.2]);
+ *  - 3-day periods: engine - human +81.8 [57.3, 106.4] (2024-26 alone
+ *    +60.6 [18.9, 102.3], n=32), engine - human-sched -111.3 [-132.7, -89.9].
+ * The schedule streamer beats the engine. Ranking targets by this period's
+ * gain alone with rentals kept (tried as a waiverTargets option, not
+ * shipped): -23.3 [-43.8, -2.8] vs the engine on weeks, +14.6 [1.3, 27.9]
+ * on 3-day periods, still -53.0 / -96.8 behind human-sched. The other 15
+ * rosters stand still here (no free-agent competition), which favours a
+ * churning streamer: a dropped player is always there to take back.
  */
 const GATE = (arg("gate") ?? `period:${MIN_DELTA}`).split(":") as [string, string];
 const GATE_KIND = GATE[0] as "period" | "total";
@@ -110,6 +129,41 @@ function humanMoves(s: Season, k: Knowledge, roster: number[], taken: Set<number
         if (v.out || !v.team) continue;
         const gain = fpg(id) - fpg(worst);
         if (gain > 0.15 && (!best || gain > best.gain)) best = { add: id, drop: worst, gain };
+      }
+    }
+    if (!best) break;
+    moves.push({ add: best.add, drop: best.drop });
+    cur.splice(cur.indexOf(best.drop), 1, best.add);
+  }
+  return moves;
+}
+
+function humanSchedMoves(s: Season, k: Knowledge, roster: number[], taken: Set<number>, d: number, to: number): Array<{ add: number; drop: number }> {
+  const fpg = (id: number) => {
+    const v = k.view(id, d);
+    return s.pos.get(id) === "G" ? v.off * v.p : v.off + v.dx;
+  };
+  const games = (id: number) => {
+    const t = k.view(id, d).team;
+    let n = 0;
+    if (t) for (let x = d; x <= to; x++) if (s.teamPlays.get(t)?.has(x)) n++;
+    return n;
+  };
+  const pts = (id: number) => (k.view(id, d).out ? 0 : fpg(id) * games(id));
+  const moves: Array<{ add: number; drop: number }> = [];
+  const cur = [...roster];
+  for (let c = 0; c < CLAIMS; c++) {
+    let best: { add: number; drop: number; gain: number } | null = null;
+    for (const g of ["C", "W", "D", "G"] as Group[]) {
+      const mine = cur.filter((id) => s.pos.get(id) === g);
+      if (!mine.length) continue;
+      const worst = mine.reduce((a, b) => (fpg(a) <= fpg(b) ? a : b));
+      for (const [id, pos] of s.pos) {
+        if (pos !== g || taken.has(id) || cur.includes(id)) continue;
+        const v = k.view(id, d);
+        if (v.out || !v.team) continue;
+        const gain = pts(id) - pts(worst);
+        if (gain > 0.5 && (!best || gain > best.gain)) best = { add: id, drop: worst, gain };
       }
     }
     if (!best) break;
@@ -205,7 +259,11 @@ async function main() {
           // Monday morning, before the lock: claims (FA: play tonight).
           if (pol !== "none" && (PERIOD_DAYS !== null || w.to - w.from >= 2)) {
             const moves =
-              pol === "human" ? humanMoves(s, k, roster, taken, w.from) : engineMoves(s, k, roster, taken, w.from, w, periods.slice(wi + 1), wi);
+              pol === "human"
+                ? humanMoves(s, k, roster, taken, w.from)
+                : pol === "human-sched"
+                  ? humanSchedMoves(s, k, roster, taken, w.from, w.to)
+                  : engineMoves(s, k, roster, taken, w.from, w, periods.slice(wi + 1), wi);
             for (const mv of moves) {
               roster = roster.map((id) => (id === mv.drop ? mv.add : id));
               n++;

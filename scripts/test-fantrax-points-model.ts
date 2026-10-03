@@ -124,6 +124,43 @@ assert(shares.get("e") === 0, "clubless goalie 0");
 const b2b = backToBackShares(new Map([["a", 0.75], ["b", 0.25]]));
 assert(near(b2b.get("a")!, 0.75 * BACK_TO_BACK_STARTER_FACTOR, 1e-9), "b2b starter keeps 60%");
 assert(near(b2b.get("a")! + b2b.get("b")!, 1, 1e-9), "b2b share moves to the partner");
+// The factor is fit on data (scripts/backtest-goalie-starts.ts, every back-to-back
+// second night of 2021-22..2025-26): pinned, then re-scored on those nights
+// (scripts/fixtures/goalie-b2b-nights.json, `--dump`): the shipped
+// `backToBackShares` must stay at the best Brier of the grid and well ahead
+// of the old 0.35 (0.263) and of no adjustment (0.298).
+assert(BACK_TO_BACK_STARTER_FACTOR >= 0.55 && BACK_TO_BACK_STARTER_FACTOR <= 0.65, `b2b factor ${BACK_TO_BACK_STARTER_FACTOR} is the backtest's 0.6 (± 0.05)`);
+{
+  const fx = JSON.parse(readFileSync(join(process.cwd(), "scripts", "fixtures", "goalie-b2b-nights.json"), "utf8")) as { nights: number[][] };
+  const brier = (move: (shares: Map<string, number>) => Map<string, number>) => {
+    let sum = 0;
+    let n = 0;
+    for (const row of fx.nights) {
+      const t = row[row.length - 1]!;
+      const shares = new Map(row.slice(0, -1).map((p, i) => [String(i), p]));
+      for (const [id, p] of move(shares)) {
+        const q = Math.min(0.99, Math.max(0.01, p));
+        sum += (q - (Number(id) === t ? 1 : 0)) ** 2;
+        n++;
+      }
+    }
+    return sum / n;
+  };
+  const withFactor = (f: number) => (shares: Map<string, number>) => {
+    const ranked = [...shares.entries()].filter(([, p]) => p > 0).sort((a, b) => b[1] - a[1]);
+    const out = new Map(shares);
+    if (!ranked.length) return out;
+    const moved = ranked[0]![1] * (1 - f);
+    out.set(ranked[0]![0], ranked[0]![1] - moved);
+    if (ranked[1]) out.set(ranked[1][0], Math.min(MAX_START_SHARE, ranked[1][1] + moved));
+    return out;
+  };
+  const shipped = brier(backToBackShares);
+  const grid = [0.25, 0.35, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.8, 1].map((f) => brier(withFactor(f)));
+  assert(fx.nights.length > 1500, `b2b fixture: ${fx.nights.length} nights`);
+  assert(shipped <= Math.min(...grid) + 0.001, `b2b Brier ${shipped.toFixed(4)} is the grid's best (${Math.min(...grid).toFixed(4)})`);
+  assert(shipped < brier(withFactor(0.35)) - 0.01 && shipped < brier(withFactor(1)) - 0.03, `b2b Brier ${shipped.toFixed(4)} well ahead of 0.35 and of no adjustment`);
+}
 
 // ---- bestFpg: which slot a skater is really valued in.
 //

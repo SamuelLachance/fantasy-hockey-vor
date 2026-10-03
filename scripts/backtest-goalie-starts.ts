@@ -8,8 +8,14 @@
  * for factors 0.2..1 (1 = no back-to-back adjustment) and the season-long
  * share alone.
  *
- * Run: npx tsx scripts/backtest-goalie-starts.ts --cache=<dir> [--seasons=...]
+ * --dump=<file> writes every back-to-back second night (the club's goalie
+ * shares that morning, highest first, and which of them started; -1 = none
+ * of them) for the CI guard in test-fantrax-points-model.ts
+ * (scripts/fixtures/goalie-b2b-nights.json).
+ *
+ * Run: npx tsx scripts/backtest-goalie-starts.ts --cache=<dir> [--seasons=...] [--dump=<file>]
  */
+import { writeFileSync } from "fs";
 import { Knowledge, loadSeason, meanCi } from "./mgmt-sim";
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -42,6 +48,8 @@ const add = (key: string, p: number, y: number) => {
   r.ll.push(-(y * Math.log(q) + (1 - y) * Math.log(1 - q)));
 };
 let b2bNights = 0;
+const DUMP = arg("dump");
+const dumped: Array<{ s: number[]; t: number }> = [];
 for (const sid of SEASONS) {
   const s = loadSeason(CACHE!, sid);
   const k = new Knowledge(s);
@@ -61,7 +69,11 @@ for (const sid of SEASONS) {
       }
       if (!shares.size) continue;
       const isB2b = s.teamPlays.get(team)?.has(x - 1) ?? false;
-      if (isB2b) b2bNights++;
+      if (isB2b) {
+        b2bNights++;
+        const ranked = [...shares.entries()].sort((a, b) => b[1] - a[1]);
+        dumped.push({ s: ranked.map(([, p]) => Math.round(p * 1e4) / 1e4), t: ranked.findIndex(([id]) => id === truth) });
+      }
       for (const f of FACTORS) {
         const p = isB2b ? b2b(shares, f) : shares;
         for (const [id, q] of p) {
@@ -73,6 +85,10 @@ for (const sid of SEASONS) {
   }
 }
 console.log(`back-to-back second nights: ${b2bNights}`);
+if (DUMP) {
+  writeFileSync(DUMP, JSON.stringify({ seasons: SEASONS, nights: dumped.map((d) => [...d.s, d.t]) }));
+  console.log(`wrote ${dumped.length} nights to ${DUMP}`);
+}
 for (const [key, r] of Object.entries(res).sort()) {
   const b = meanCi(r.brier);
   console.log(`${key.padEnd(12)} Brier ${b.mean.toFixed(4)} [${b.lo.toFixed(4)}, ${b.hi.toFixed(4)}]  log loss ${meanCi(r.ll).mean.toFixed(4)}  n=${b.n}`);

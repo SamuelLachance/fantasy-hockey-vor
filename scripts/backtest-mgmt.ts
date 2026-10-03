@@ -9,6 +9,14 @@
  *  - human:  start the best projected lineup of whoever is not known out
  *            (the optimizer itself, captain included), every day, until the
  *            caps stop counting — « start best by projection »;
+ *  - human-cap: the same human who also minds the caps: each morning he
+ *            lists every game his best projected lineup would play from
+ *            today to the end of the period, keeps the most valuable until
+ *            the games left under each cap (GP for skaters, expected starts
+ *            for goalies; a later day's game counts `--human-cap-later`,
+ *            0.8) are used, and benches tonight whoever is not among them,
+ *            unless tonight crosses the cap (that day counts in full) —
+ *            « bench the weakest once the games exceed the cap »;
  *  - engine-raw: the plan's expected values (P(play), back-to-back goalie
  *            shares), no cap policy;
  *  - bd259b2: engine + per-game bench bars (`capBenchPolicy`) when the
@@ -20,7 +28,13 @@
  *            the skater values (`MATCHUP`, scripts/backtest-opponent.ts).
  * Paired per team-season differences, mean and 95% interval.
  *
+ * 2026-10-03, 16 teams x 2021-22..2025-26 (n=80): planner - bd259b2 +45.9
+ * [37.4, 54.4]; planner - human +56.4 [46.8, 66.0]; planner - human-cap
+ * +52.9 [45.0, 60.7] (74/80); human-cap - human +3.6 [-2.6, 9.7]. Lost to
+ * the caps: human 86.5, human-cap 27.7, bd259b2 72.6, planner 2.1.
+ *
  * Run: npx tsx scripts/backtest-mgmt.ts --cache=<dir> [--seasons=20212022,...] [--teams=16] [--fetch] [--out=file.json]
+ *      [--policies=human,human-cap,engine-raw,bd259b2,planner] [--human-cap-later=0.8]
  */
 import { writeFileSync } from "fs";
 import { optimizeLineup, type LineupCandidate } from "../src/lib/fantrax/lineup";
@@ -55,7 +69,7 @@ const TEAMS = Number(arg("teams") ?? 16);
 const NEEDS = arg("needs")
   ? (Object.fromEntries(arg("needs")!.split(",").map((x) => [x[0], Number(x.slice(1))])) as Record<Pos, number>)
   : ROSTER_NEEDS;
-const POLICIES = (arg("policies") ?? "human,engine-raw,bd259b2,planner").split(",");
+const POLICIES = (arg("policies") ?? "human,human-cap,engine-raw,bd259b2,planner").split(",");
 
 type Policy = (ctx: {
   k: Knowledge;
@@ -87,8 +101,56 @@ function shippedBinds(ds: LineupCandidate[][], cap: WaiverCap): { gp: boolean; g
   return { gp: cap.gpMax !== null && ds.length > 0 && gp >= cap.gpMax, gs: cap.gsMax !== null && ds.length > 0 && gs >= cap.gsMax };
 }
 
+/**
+ * The cap-aware human: the period's remaining lineup games by projected
+ * value, the best kept until each cap's games left are used (the game that
+ * crosses it counts in full, as Fantrax does); tonight's players outside
+ * them sit.
+ */
+/**
+ * The cap-aware human counts a later day's game as this much of one (some
+ * will not happen: scratches, injuries, goalie rotations). Tuned in the
+ * human's favour on 2021-22 + 2023-24 (6 teams each, human-cap - human):
+ * 1 → -65, 0.8 → +6.1 [-22.5, 34.8], 0.7 → -0.5, 0.6 → -16.9, 0.4 → -7.8.
+ */
+const HUMAN_CAP_LATER = Number(arg("human-cap-later") ?? 0.8);
+function humanCapLineup(k: Knowledge, roster: number[], d: number, days: number[], cap: WaiverCap): LineupCandidate[] {
+  const today = candidates(k, roster, d, d, "human");
+  const games: Array<{ x: number; id: string; v: number; g: number; goalie: boolean }> = [];
+  for (const x of days) {
+    const c = x === d ? today : candidates(k, roster, d, x, "human");
+    const byId = new Map(c.map((y) => [y.id, y]));
+    for (const a of optimizeLineup(c, slots, order).assignments) {
+      if (!a.playerId || a.value <= 0) continue;
+      const g = (a.slot === "G" ? (byId.get(a.playerId)!.games ?? 1) : 1) * (x === d ? 1 : HUMAN_CAP_LATER);
+      games.push({ x, id: a.playerId, v: a.value, g, goalie: a.slot === "G" });
+    }
+  }
+  // Under a binding cap only tonight's kept games dress (a sat player's seat
+  // stays empty rather than going to a weaker reserve who would use the game).
+  let out = today;
+  for (const goalie of [false, true]) {
+    const max = goalie ? cap.gsMax : cap.gpMax;
+    if (max === null) continue;
+    let left = max - (goalie ? cap.gsUsed : cap.gpUsed);
+    const mine = games.filter((g) => g.goalie === goalie).sort((a, b) => b.v - a.v);
+    if (mine.reduce((a, g) => a + g.g, 0) <= left) continue;
+    // Tonight crosses the cap: the crossing day counts in full, everyone plays.
+    if (mine.filter((g) => g.x === d).reduce((a, g) => a + g.g, 0) >= left) continue;
+    const kept = new Set<string>();
+    for (const g of mine) {
+      if (left <= 0) break;
+      left -= g.g;
+      if (g.x === d) kept.add(g.id);
+    }
+    out = out.filter((c) => (c.eligible.includes("G") !== goalie) || kept.has(c.id));
+  }
+  return out;
+}
+
 const POLICY: Record<string, Policy> = {
   human: ({ k, roster, d }) => candidates(k, roster, d, d, "human"),
+  "human-cap": ({ k, roster, d, days, cap }) => humanCapLineup(k, roster, d, days, cap),
   "engine-raw": ({ k, roster, d }) => candidates(k, roster, d, d, "engine"),
   bd259b2: ({ k, roster, d, days, cap }) => {
     const ds = engineDays(k, roster, d, days);
