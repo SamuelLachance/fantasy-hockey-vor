@@ -208,6 +208,14 @@ for (const slug of ["captains-dynasty", "slapshot"]) {
   // paired error bars: better ranking overall, and no kind of trade (1-for-1 … 2-for-2) where it ranks worse
   assert(s.overall.toolMinusNaiveCI.spearman[0] > 0 && s.overall.toolMinusNaiveCI.signAccuracy[0] > 0, "tool − naive: Spearman and sign accuracy above 0 (paired 95 % CI)");
   assert(s.overall.mae.tool < s.overall.mae.naive, "the evaluator's point gains are closer to the real ones");
+  // the tab's « Validation » paragraph quotes the committed backtest
+  const tab = readFileSync(join(process.cwd(), "src", "components", "trade", "TradeTab.tsx"), "utf8").replace(/\s+/g, " ");
+  const fr = (x: number, d: number) => x.toFixed(d).replace(".", ",");
+  for (const quote of [
+    `corrélation de rang ${fr(s.overall.spearman.tool, 2)} contre ${fr(s.overall.spearman.naive, 2)}`,
+    `bon sens du gain ${fr(100 * s.overall.signAccuracy.tool, 1)} % contre ${fr(100 * s.overall.signAccuracy.naive, 1)} %`,
+    `écart moyen aux points réels ${fr(s.overall.mae.tool, 1)} contre ${fr(s.overall.mae.naive, 1)}`,
+  ]) assert(tab.includes(quote), `TradeTab quotes the backtest: « ${quote} »`);
   for (const [kind, m] of Object.entries(s.byKind) as Array<[string, { spearman: { tool: number; naive: number } }]>) {
     assert(m.spearman.tool > m.spearman.naive, `${kind}: the evaluator ranks better`);
   }

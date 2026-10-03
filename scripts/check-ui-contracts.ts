@@ -187,7 +187,10 @@ const files: Record<string, string[]> = {
   "src/components/draft/CategoryTableFilters.tsx": ["FilterUiProps", "{actions}", "DRAFT_FILTERS", "<legend", "more.button"],
   "src/lib/draft/table.ts": ["displayRank", "matchesDraftFilter", "probAvailableAt", "DRAFT_DONE_AFTER_MS", "viewCtx", "oddsPickOf"],
   "src/components/player-table/fields.tsx": ["aria-expanded={open}", "aria-invalid", "<legend", "sr-only"],
-  "src/components/draft/CategoryDuelTab.tsx": ["Duel", "OAuth", "Mon équipe"],
+  // The duel is simulated (src/lib/matchup), from the draft helper's rosters; Yahoo stays unread and the page says so.
+  "src/components/matchup/DuelTab.tsx": ["simulateWeek", "goaliePlans", "scoreCandidate", "getDraftStore", "Yahoo ne peut pas être lu", "role=\"status\""],
+  // A trade is judged for both teams, with counter-offers and the best offers to every team.
+  "src/components/trade/TradeTab.tsx": ["evaluateTrade", "counterOffers", "bestOffers", "baseStates", "<caption"],
 
   // ---- the unified player table (every league's player lists)
   "src/components/player-table/PlayerTable.tsx": [

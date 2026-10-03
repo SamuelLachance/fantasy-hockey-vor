@@ -402,6 +402,13 @@ const BUDGETS: Budget[] = [
   // Plafond (league contracts) and Actifs (asset scores): their own chunks, data fetched on demand (cap-plan.json, dynasty-table.json, fxea getDraftPicks).
   { label: "Slapshot · Plafond / Actifs", match: isTab("slapshot", ["plafond", "actifs"]), js: 45, htmlRaw: 100, htmlGz: 20 },
   { label: "Captains · Actifs", match: isTab("captains-dynasty", ["actifs"]), js: 45, htmlRaw: 100, htmlGz: 20 },
+  // Échanges (the trade evaluator): the Actifs chunks (asset scores, fxea
+  // picks) plus its own 20.3 KB chunk (TradeTab and src/lib/trade: team value
+  // under the roster limits, the trade search, counter-offers, the cap by
+  // season) where Actifs has 12.9 KB: 48.6 KB on Captains, 50.9 on Slapshot
+  // (its cap-league pack). The data is fetched on demand. 53 / 55 keep ~4 KB.
+  { label: "Captains · Échanges", match: isTab("captains-dynasty", ["echanges"]), js: 53, htmlRaw: 100, htmlGz: 20 },
+  { label: "Slapshot · Échanges", match: isTab("slapshot", ["echanges"]), js: 55, htmlRaw: 100, htmlGz: 20 },
   {
     label: "Slapshot · autres onglets",
     match: isTab("slapshot", ["repechage", "joueurs", "mon-equipe"]),
@@ -420,10 +427,12 @@ const BUDGETS: Budget[] = [
   },
   { label: "LTL · Repêchage", match: isTab("light-the-lamp", ["repechage"]), js: 45, htmlRaw: 700, htmlGz: 75 },
   { label: "LTL · Joueurs / Mon équipe", match: isTab("light-the-lamp", ["joueurs", "mon-equipe"]), js: 55, htmlRaw: 700, htmlGz: 75 },
-  // Spec limit: the league route's own client chunk (tabs, switcher, the
-  // Snake disclaimer from its tiny module, the per-tab loaders) and nothing of
-  // Fantrax or the player table. Over it: fix the import graph, not the number.
-  { label: "LTL · Duel", match: isTab("light-the-lamp", ["duel"]), js: 5, htmlRaw: 60, htmlGz: 12 },
+  // The league route's own client chunk (tabs, switcher, the Snake disclaimer,
+  // the per-tab loaders: 3.8 KB) plus the duel's own chunk (DuelTab and
+  // src/lib/matchup: the week's Monte Carlo, the goalie plan, the streaming
+  // search; the draft store it reads the rosters from): 13.3 KB. Nothing of
+  // Fantrax or the player table: over 20, fix the import graph first.
+  { label: "LTL · Duel", match: isTab("light-the-lamp", ["duel"]), js: 20, htmlRaw: 60, htmlGz: 12 },
   { label: "Snake", match: (p) => p === "snake.html", js: 25, htmlRaw: 80, htmlGz: 15 },
   { label: "Fiche de joueur", match: (p) => p === "joueur.html", js: 25, htmlRaw: 60, htmlGz: 12 },
   { label: "/league (stub), 404", match: (p) => ["league.html", "404.html", "_not-found.html"].includes(p), js: 5, htmlRaw: 60, htmlGz: 12 },

@@ -116,7 +116,7 @@ const load = <T>(...parts: string[]) => JSON.parse(readFileSync(join(process.cwd
 
 // ---- static params
 eq(leagueParams(), LEAGUES.map((l) => ({ ligue: l.slug })), "league params");
-eq(tabParams("captains-dynasty").map((p) => p.onglet), ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe", "actifs"], "Captains tabs");
+eq(tabParams("captains-dynasty").map((p) => p.onglet), ["aujourdhui", "repechage", "joueurs", "ballottage", "mon-equipe", "actifs", "echanges"], "Captains tabs");
 eq(tabParams("light-the-lamp").map((p) => p.onglet), ["repechage", "joueurs", "mon-equipe", "duel"], "Light the Lamp tabs");
 eq(tabParams("nope"), [], "unknown league: no tabs");
 {

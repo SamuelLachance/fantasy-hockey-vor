@@ -192,6 +192,15 @@ const week: SimDay[] = Array.from({ length: 7 }, (_, d) => ({
   for (const b of summary.calibration.simulateur as Array<{ predicted: number; observed: number; n: number }>) {
     if (b.n >= 250) assert(Math.abs(b.predicted - b.observed) <= 0.06, `calibration: predicted ${b.predicted}, observed ${b.observed} (n ${b.n})`);
   }
+  // the tab quotes the committed backtest
+  const tab = readFileSync(join(process.cwd(), "src", "components", "matchup", "DuelTab.tsx"), "utf8").replace(/\s+/g, " ");
+  const fr2 = (x: number) => x.toFixed(2).replace(".", ",");
+  const nfr = (n: number) => n.toLocaleString("fr-CA").replace(/\s/g, " ");
+  assert(tab.includes(`${fr2(summary.streamingToolMinusBest.mean)} catégorie de plus par semaine`), "DuelTab quotes the streaming gain of the committed backtest");
+  assert(tab.includes(`sur ${nfr(summary.matchups)} duels rejoués`), "DuelTab quotes the number of backtested duels");
+  const near75 = (summary.calibration.simulateur as Array<{ predicted: number; observed: number }>).find((b) => b.predicted >= 0.7 && b.predicted < 0.8)!;
+  const near25 = (summary.calibration.simulateur as Array<{ predicted: number; observed: number }>).find((b) => b.predicted >= 0.2 && b.predicted < 0.3)!;
+  assert(tab.includes(`autour de 75 % ont été gagnées ${Math.round(near75.observed * 100)} %`) && tab.includes(`autour de 25 %, ${Math.round(near25.observed * 100)} %`), "DuelTab quotes the calibration of the committed backtest");
   assert(summary.streamingToolMinusBest.ci[0] > 0, "streaming: the simulator's pick beats the best-value free agent (95 % CI)");
   assert(summary.streaming.outil.mean > summary.streaming.plusDeMatchs.mean, "streaming: the simulator's pick beats « most games » on average");
 }
