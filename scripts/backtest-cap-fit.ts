@@ -55,19 +55,19 @@ const fmt = (c: ReturnType<typeof meanCi>) => `${c.mean.toFixed(1)} [${c.lo.toFi
 
 const rows: any[] = [];
 for (const team of league.teams) {
-  const t0 = Date.now();
-  const plan = buildDailyPlan({ league, state, values, schedule, teamId: team.id, nowMs, config: SLAPSHOT, kit: PLAN_KIT, contracts, ...(FIT_DAYS ? { capFitSearchDays: FIT_DAYS } : {}) });
-  const ms = Date.now() - t0;
-  // Every remaining day, captured from the plan's own candidates (no search on them).
+  // Every remaining day as the fit saw it (season odds), captured from the plan's own call.
   let cap: Captured | null = null;
   const capture: PlanKit = {
     ...PLAN_KIT,
-    capFit: (players, rules, days, weights, slots, order) => {
-      cap = { players: [...players], rules, days: days.map((d) => [...d]), weights: [...weights], slots, order };
-      return { moves: [], usedBefore: 0, usedAfter: 0, before: 0, after: 0, legal: true };
+    capFit: (input) => {
+      const out = PLAN_KIT.capFit!(input);
+      cap = { players: out.players, rules: input.rules, days: out.days, weights: out.days.map(() => 1), slots: input.slots, order: input.order };
+      return out;
     },
   };
-  buildDailyPlan({ league, state, values, schedule, teamId: team.id, nowMs, config: SLAPSHOT, kit: capture, contracts });
+  const t0 = Date.now();
+  const plan = buildDailyPlan({ league, state, values, schedule, teamId: team.id, nowMs, config: SLAPSHOT, kit: capture, contracts, ...(FIT_DAYS ? { capFitSearchDays: FIT_DAYS } : {}) });
+  const ms = Date.now() - t0;
   if (!cap) continue;
   const c: Captured = cap;
   const hit = new Map(c.players.map((p) => [p.id, p.hit]));

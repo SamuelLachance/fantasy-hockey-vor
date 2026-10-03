@@ -20,8 +20,13 @@
  * scripts/backtest-cap-fit.ts measures it on the 32 real Slapshot rosters
  * against the rule by hand (`capFitByHand`) and the roster as it is.
  */
-import type { SlotCounts, SlotId } from "./config";
+import type { FantraxPriors, SlotCounts, SlotId } from "./config";
+import type { DailyPlan } from "./daily-plan";
+import { bestFpg, isGoalieRecord } from "./draft-inputs";
 import { optimizeLineup, type LineupCandidate } from "./lineup";
+import { dayToDayFactor, skaterPlayProbability } from "./points-model";
+import type { ContractsFile } from "./salary-cap";
+import type { ValuesSnapshot } from "./snapshot-types";
 
 export interface CapFitPlayer {
   id: string;
@@ -241,4 +246,84 @@ export function capFitByHand(players: readonly CapFitPlayer[], rules: CapFitRule
     if (up) counted.add(up.id);
   }
   return counted;
+}
+
+const NHL_SEASON_GAMES = 82;
+/** Smallest gain (points over the rest of the season) worth a cap-fit move on a legal roster. */
+export const CAP_FIT_MIN_GAIN = 5;
+
+/**
+ * A lineup candidate's odds on a season-long choice: a skater who is not a
+ * regular dresses his projected share of the season (gp / 82), not the
+ * nightly floor the lineup uses when he is in it tonight (the league prior's
+ * 60 % for a prospect, 30 % for a fringe player). A prospect projected for
+ * no NHL game is worth nothing — without this the fit called 0-game
+ * prospects up for real NHL players. Goalies already play their projected
+ * start share.
+ */
+export function seasonCandidate(
+  c: LineupCandidate,
+  values: ValuesSnapshot["players"],
+  icons: Readonly<Record<string, string[]>>,
+  priors: FantraxPriors,
+): LineupCandidate {
+  const rec = values[c.id];
+  if (!rec || isGoalieRecord(rec)) return c;
+  const ic = icons[c.id] ?? [];
+  const nightly = skaterPlayProbability({ gp: rec.gp, fpg: bestFpg(rec), src: rec.src, team: rec.t, icons: ic }, true, priors);
+  const dtd = dayToDayFactor(ic);
+  if (nightly <= 0 || nightly >= dtd - 1e-9) return c;
+  const k = Math.min(1, ((Math.max(0, rec.gp) / NHL_SEASON_GAMES) * dtd) / nightly);
+  if (k >= 1) return c;
+  const scaled: Partial<Record<SlotId, number>> = {};
+  for (const [slot, v] of Object.entries(c.values) as Array<[SlotId, number | undefined]>) scaled[slot] = (v ?? 0) * k;
+  return { ...c, values: scaled, games: (c.games ?? 0) * k };
+}
+
+export interface CapFitAdviceInput {
+  /** Active, Reserve and Minors players (status as on the roster). */
+  roster: ReadonlyArray<{ id: string; status: string }>;
+  contracts: ContractsFile;
+  rules: CapFitRules;
+  /** Each lineup day left in the fantasy regular season: the roster's candidates (nightly values, any status). */
+  days: readonly LineupCandidate[][];
+  slots: SlotCounts;
+  order: readonly SlotId[];
+  values: ValuesSnapshot["players"];
+  icons: Readonly<Record<string, string[]>>;
+  priors: FantraxPriors;
+  searchDays?: number;
+}
+
+/**
+ * The plan's salary-cap advice (`DailyPlan.capFit`): the fit on season odds
+ * (`seasonCandidate`), shown when it gains `CAP_FIT_MIN_GAIN` or makes an
+ * illegal roster (over the cap, under the floor, more than the counted
+ * spots) legal. Also returns what the fit saw, for the backtest.
+ */
+export function capFitAdvice(a: CapFitAdviceInput): {
+  advice: DailyPlan["capFit"];
+  result: CapFitResult;
+  players: CapFitPlayer[];
+  days: LineupCandidate[][];
+} {
+  const players = a.roster.map((r) => ({ id: r.id, status: r.status, hit: a.contracts.players[r.id]?.c[0] ?? a.contracts.min[0] ?? 0 }));
+  const days = a.days.map((cands) =>
+    cands.map((c) => seasonCandidate(c, a.values, a.icons, a.priors)).filter((c) => Object.values(c.values).some((v) => (v ?? 0) > 0)),
+  );
+  const result = capFit(players, a.rules, days, days.map(() => 1), a.slots, a.order, a.searchDays !== undefined ? { searchDays: a.searchDays } : {});
+  const counted = players.filter((p) => p.status !== "MINORS").length;
+  const legalBefore = result.usedBefore <= a.rules.cap + 1e-9 && result.usedBefore >= a.rules.floor - 1e-9 && counted <= a.rules.spots;
+  const r2 = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
+  const advice =
+    result.moves.length && (result.after - result.before >= CAP_FIT_MIN_GAIN || !legalBefore)
+      ? {
+          moves: result.moves,
+          usedBefore: r2(result.usedBefore, 2),
+          usedAfter: r2(result.usedAfter, 2),
+          gain: legalBefore ? r2(result.after - result.before, 1) : null,
+          legal: result.legal,
+        }
+      : null;
+  return { advice, result, players, days };
 }

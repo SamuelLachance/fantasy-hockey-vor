@@ -94,20 +94,21 @@ const W2: SlotCounts = { C: 0, W: 2, F: 0, D: 0, Skt: 0, G: 0 };
   const nowMs = Date.parse(J("src/data/fantrax/slapshot/today.json").generatedAt);
   let advised = 0;
   for (const team of league.teams as Array<{ id: string; name: string }>) {
-    let captured: Parameters<NonNullable<PlanKit["capFit"]>> | null = null;
-    let result: ReturnType<NonNullable<PlanKit["capFit"]>> | null = null;
+    type Fit = ReturnType<NonNullable<PlanKit["capFit"]>> & { input: Parameters<NonNullable<PlanKit["capFit"]>>[0] };
+    let fit: Fit | null = null;
     const kit: PlanKit = {
       ...PLAN_KIT,
-      capFit: (...args) => {
-        captured = args;
-        result = PLAN_KIT.capFit!(...args);
-        return result;
+      capFit: (input) => {
+        const out = PLAN_KIT.capFit!(input);
+        fit = { ...out, input };
+        return out;
       },
     };
     const plan = buildDailyPlan({ league, state, values, schedule, teamId: team.id, nowMs, config: SLAPSHOT, kit, contracts });
-    if (!captured || !result) continue;
-    const [players, rules, days, weights, slots, order] = captured as Parameters<NonNullable<PlanKit["capFit"]>>;
-    const res = result as ReturnType<NonNullable<PlanKit["capFit"]>>;
+    if (!fit) continue;
+    const { players, days, result: res, input } = fit as Fit;
+    const { rules, slots, order } = input;
+    const weights = days.map(() => 1);
     const hand = capFitByHand(players, rules, (id) => (values.players[id] ? seasonFp(values.players[id], SLAPSHOT) : 0));
     const handUsed = [...hand].reduce((a, id) => a + (players.find((p) => p.id === id)?.hit ?? 0), 0);
     const minorsNow = players.filter((p) => p.status === "MINORS");
