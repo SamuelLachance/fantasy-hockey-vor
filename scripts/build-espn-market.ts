@@ -15,6 +15,13 @@
  * (statSourceId 1, split 0): pre-season numbers (Connor McDavid 2024-25: 80
  * GP projected, 67 played), so a fair market benchmark.
  *
+ * A stat ESPN did not publish for a season is stored as null, never 0: ESPN
+ * omits a zero stat from a player's line, so an absent key means 0 only when
+ * the season publishes that stat (at least half the projected players carry
+ * a non-zero value). Unpublished: hits and blocks in 2017-18 and 2018-19,
+ * blocks in 2019-20, goalie games in 2021-22 and 2022-23 (those goalies are
+ * left out: no per-game rates without games).
+ *
  * Players are matched to the ML dataset by folded name and F / D / G group
  * among the players of the season or the one before (the current season:
  * src/data/player-profiles.json). Ambiguous names are left out.
@@ -36,34 +43,59 @@ const UA =
 /** ESPN season year Y = NHL season (Y-1)-Y. 2017 and earlier: 404. */
 const ESPN_SEASONS = [2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027];
 
+/** A projected stat; null when ESPN did not publish it that season. */
+export type MarketStat = number | null;
 export interface MarketSkater {
   id: number;
   gp: number;
-  goals: number;
-  assists: number;
-  shots: number;
-  hits: number;
-  blocks: number;
-  powerplayPoints: number;
-  penaltyMinutes: number;
+  goals: MarketStat;
+  assists: MarketStat;
+  shots: MarketStat;
+  hits: MarketStat;
+  blocks: MarketStat;
+  powerplayPoints: MarketStat;
+  penaltyMinutes: MarketStat;
   adp: number | null;
 }
 export interface MarketGoalie {
   id: number;
   gp: number;
-  gs: number;
-  wins: number;
-  shotsAgainst: number;
-  goalsAgainst: number;
-  saves: number;
-  shutouts: number;
+  gs: MarketStat;
+  wins: MarketStat;
+  shotsAgainst: MarketStat;
+  goalsAgainst: MarketStat;
+  saves: MarketStat;
+  shutouts: MarketStat;
   adp: number | null;
 }
 export interface MarketFile {
   builtAt: string;
   source: string;
   /** NHL season id -> ESPN's pre-season projections. */
-  seasons: Record<string, { skaters: MarketSkater[]; goalies: MarketGoalie[]; unmatched: number }>;
+  seasons: Record<
+    string,
+    {
+      skaters: MarketSkater[];
+      goalies: MarketGoalie[];
+      unmatched: number;
+      /** Stat ids ESPN did not publish that season (stored as null). */
+      unpublished?: { skaters: number[]; goalies: number[] };
+    }
+  >;
+}
+
+const SKATER_STAT_IDS = [34, 13, 14, 29, 31, 32, 38, 17];
+const GOALIE_STAT_IDS = [30, 0, 1, 3, 4, 6, 7];
+
+/**
+ * Stat ids a season does not publish: fewer than half of the projected
+ * players carry a non-zero value (ESPN drops zero stats from a line, so a
+ * published stat is non-zero for nearly everyone; an unpublished one is
+ * absent or 0 for all but stray lines, 1 of 277 in 2018-19).
+ */
+export function unpublishedStats(lines: Array<Record<string, number>>, ids: number[]): number[] {
+  if (lines.length === 0) return [];
+  return ids.filter((k) => lines.filter((l) => Number(l[String(k)] ?? 0) > 0).length < 0.5 * lines.length);
 }
 
 interface EspnPlayer {
@@ -133,8 +165,19 @@ async function main() {
     const skaters: MarketSkater[] = [];
     const goalies: MarketGoalie[] = [];
     let unmatched = 0;
+    const projOf = (p: EspnPlayer) =>
+      p.player.stats?.find((s) => s.statSourceId === 1 && s.statSplitTypeId === 0 && s.seasonId === year)?.stats;
+    const linesOf = (goalie: boolean) =>
+      raw.players
+        .filter((p) => (p.player.defaultPositionId === 5) === goalie)
+        .map(projOf)
+        .filter((x): x is Record<string, number> => Boolean(x));
+    const missing = {
+      skaters: unpublishedStats(linesOf(false), SKATER_STAT_IDS),
+      goalies: unpublishedStats(linesOf(true), GOALIE_STAT_IDS),
+    };
     for (const p of raw.players) {
-      const proj = p.player.stats?.find((s) => s.statSourceId === 1 && s.statSplitTypeId === 0 && s.seasonId === year)?.stats;
+      const proj = projOf(p);
       if (!proj) continue;
       const g = groupOfEspn(p.player.defaultPositionId);
       const ids = cand.get(`${fold(p.player.fullName)}|${g}`);
@@ -145,15 +188,16 @@ async function main() {
       const id = [...ids][0];
       const adpRaw = p.player.ownership?.averageDraftPosition;
       const adp = adpRaw != null && adpRaw > 0 && adpRaw < 250 ? Math.round(adpRaw * 10) / 10 : null;
-      const v = (k: number) => Number(proj[String(k)] ?? 0);
+      const gone = g === "G" ? missing.goalies : missing.skaters;
+      const v = (k: number): MarketStat => (gone.includes(k) ? null : Number(proj[String(k)] ?? 0));
       if (g === "G") {
-        if (!(v(30) > 0)) continue;
-        goalies.push({ id, gp: v(30), gs: v(0), wins: v(1), shotsAgainst: v(3), goalsAgainst: v(4), saves: v(6), shutouts: v(7), adp });
+        if (!((v(30) ?? 0) > 0)) continue;
+        goalies.push({ id, gp: v(30)!, gs: v(0), wins: v(1), shotsAgainst: v(3), goalsAgainst: v(4), saves: v(6), shutouts: v(7), adp });
       } else {
-        if (!(v(34) > 0)) continue;
+        if (!((v(34) ?? 0) > 0)) continue;
         skaters.push({
           id,
-          gp: v(34),
+          gp: v(34)!,
           goals: v(13),
           assists: v(14),
           shots: v(29),
@@ -165,15 +209,20 @@ async function main() {
         });
       }
     }
-    out.seasons[String(seasonId)] = { skaters, goalies, unmatched };
-    console.log(`${seasonId}: ${skaters.length} skaters, ${goalies.length} goalies projected, ${unmatched} unmatched`);
+    out.seasons[String(seasonId)] = { skaters, goalies, unmatched, unpublished: missing };
+    console.log(
+      `${seasonId}: ${skaters.length} skaters, ${goalies.length} goalies projected, ${unmatched} unmatched; ` +
+        `unpublished skater stats [${missing.skaters.join(",")}] goalie stats [${missing.goalies.join(",")}]`,
+    );
   }
   const path = join(process.cwd(), "src", "data", "ml", "market-espn.json");
   writeFileSync(path, JSON.stringify(out));
   console.log(`wrote ${path}`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith("build-espn-market.ts")) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

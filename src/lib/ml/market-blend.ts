@@ -14,7 +14,9 @@
  *
  * one β per stat and one for games, each the least-squares weight of the
  * market's gap on the stack's out-of-sample error (clipped to [0, 1]), fitted
- * on past seasons only. Players the market does not project keep the stack.
+ * on past seasons only. Players the market does not project keep the stack,
+ * and so does a stat the market did not publish that season (ESPN: no hits
+ * or blocks before 2019-20, no blocks in 2019-20).
  */
 
 import { existsSync, readFileSync } from "fs";
@@ -52,16 +54,17 @@ export interface MarketBlend {
   gpBeta: number;
 }
 
+/** A market skater line; a stat is null when the market did not publish it that season. */
 interface MarketSkaterRow {
   id: number;
   gp: number;
-  goals: number;
-  assists: number;
-  shots: number;
-  hits: number;
-  blocks: number;
-  powerplayPoints: number;
-  penaltyMinutes: number;
+  goals: number | null;
+  assists: number | null;
+  shots: number | null;
+  hits: number | null;
+  blocks: number | null;
+  powerplayPoints: number | null;
+  penaltyMinutes: number | null;
 }
 
 export interface MarketFileShape {
@@ -78,30 +81,61 @@ export function loadMarketFile(path = MARKET_FILE_PATH): MarketFileShape | null 
 }
 
 /**
- * The market's skater lines of one season keyed by NHL id. A season the
- * market projected on a short schedule (2020-21: 56 games) is put on an
- * 82-game basis like the stack's games.
+ * Length of the schedule the market projected a season on. A short season
+ * (2020-21: 56 games) shows as a maximum projection under 70 games and takes
+ * the season's scheduled games; a longer one (2026-27: 84 games, ESPN projects
+ * 65 skaters at 84) shows as a maximum above 82.
+ */
+export function marketScheduleGames(seasonId: number, maxProjectedGp: number): number {
+  if (maxProjectedGp < 70) return scheduledGamesForSeason(seasonId);
+  return Math.max(82, Math.round(maxProjectedGp));
+}
+
+/**
+ * The market's skater lines of one season keyed by NHL id, on the stack's
+ * 82-game basis (games x 82 / the schedule the market projected). A stat the
+ * market did not publish that season (null) is NaN, which the blend fit and
+ * its application skip: the stack keeps its own rate.
  */
 export function marketLinesFor(file: MarketFileShape | null, seasonId: number): Map<number, MarketLine> {
   const out = new Map<number, MarketLine>();
   const rows = file?.seasons[String(seasonId)]?.skaters ?? [];
   if (rows.length === 0) return out;
   const maxGp = Math.max(...rows.map((r) => r.gp));
-  const scale = maxGp < 70 ? 82 / scheduledGamesForSeason(seasonId) : 1;
+  const scale = 82 / marketScheduleGames(seasonId, maxGp);
+  const per = (x: number | null, gp: number) => (x == null ? NaN : x / gp);
   for (const r of rows) {
     if (!(r.gp > 0)) continue;
     out.set(r.id, {
       rates: {
-        goals: r.goals / r.gp,
-        assists: r.assists / r.gp,
-        shots: r.shots / r.gp,
-        blocks: r.blocks / r.gp,
-        hits: r.hits / r.gp,
-        powerplayPoints: r.powerplayPoints / r.gp,
-        penaltyMinutes: r.penaltyMinutes / r.gp,
+        goals: per(r.goals, r.gp),
+        assists: per(r.assists, r.gp),
+        shots: per(r.shots, r.gp),
+        blocks: per(r.blocks, r.gp),
+        hits: per(r.hits, r.gp),
+        powerplayPoints: per(r.powerplayPoints, r.gp),
+        penaltyMinutes: per(r.penaltyMinutes, r.gp),
       },
       gp: Math.min(82, r.gp * scale),
     });
+  }
+  return out;
+}
+
+/**
+ * Stats the market gives as 0 for every projected player of a season: a
+ * stat it did not publish but that was stored as 0 instead of null. Empty
+ * for a sound file (scripts/check-v2-bundle.ts fails otherwise).
+ */
+export function zeroFilledMarketStats(file: MarketFileShape | null): Array<{ seasonId: number; stat: string }> {
+  const out: Array<{ seasonId: number; stat: string }> = [];
+  for (const [season, v] of Object.entries(file?.seasons ?? {})) {
+    const rows = (v.skaters ?? []).filter((r) => r.gp > 0);
+    if (rows.length < 20) continue;
+    for (const t of MARKET_BLEND_STATS) {
+      const nonZero = rows.filter((r) => r[t] == null || (r[t] as number) > 0).length;
+      if (nonZero < 0.05 * rows.length) out.push({ seasonId: Number(season), stat: t });
+    }
   }
   return out;
 }

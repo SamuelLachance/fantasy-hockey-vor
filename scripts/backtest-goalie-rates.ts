@@ -273,9 +273,16 @@ function main() {
           ga: (ga + K * prior.ga) / (g + K),
         };
         const e = espn.get(r.playerId);
+        // A stat ESPN did not publish that season is null: NaN, not scored.
+        const num = (x: number | null) => (x == null ? NaN : x);
         const espnLine: GoalieLine | null =
-          e && e.gp > 0 && e.shotsAgainst > 0
-            ? { sv: e.saves / e.shotsAgainst, w: e.wins / e.gp, so: e.shutouts / e.gp, ga: e.goalsAgainst / e.gp }
+          e && e.gp > 0
+            ? {
+                sv: num(e.shotsAgainst) > 0 ? num(e.saves) / num(e.shotsAgainst) : NaN,
+                w: num(e.wins) / e.gp,
+                so: num(e.shutouts) / e.gp,
+                ga: num(e.goalsAgainst) / e.gp,
+              }
             : null;
         recs.push({
           T,

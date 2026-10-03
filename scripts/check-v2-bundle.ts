@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { PROJECTION_SEASON_ID } from "../src/lib/nhl-api";
 import { NO_AFFINE_CALIBRATION, SHIPPED_META_WEIGHTING } from "../src/lib/ml/stack";
-import { loadMarketFile, marketLinesFor, MARKET_BLEND_STATS, type MarketBlend } from "../src/lib/ml/market-blend";
+import { loadMarketFile, marketLinesFor, MARKET_BLEND_STATS, zeroFilledMarketStats, type MarketBlend } from "../src/lib/ml/market-blend";
 
 const PATH = join(process.cwd(), "src", "data", "ml", "v2-bundle.json");
 
@@ -110,6 +110,13 @@ if (!blend) {
   if (bad.length > 0) errors.push(`marketBlend weight outside [0, 1]: ${bad.join(", ")}`);
   if ((blend.fittedSeasons?.length ?? 0) < 4 || blend.pairs < 1000) {
     errors.push(`marketBlend fitted on ${blend.fittedSeasons?.length ?? 0} seasons / ${blend.pairs} player-seasons (< 4 / 1000)`);
+  }
+  // A stat the market did not publish must be null (skipped), never 0 for
+  // everyone: zero-filled hits / blocks once pulled their weights to 0.
+  for (const z of zeroFilledMarketStats(loadMarketFile())) {
+    errors.push(
+      `market-espn.json ${z.seasonId}: ${z.stat} is 0 for every projected skater (unpublished stat stored as 0, not null: npm run market:espn)`,
+    );
   }
   const lines = marketLinesFor(loadMarketFile(), bundle.projectionSeasonId ?? PROJECTION_SEASON_ID);
   if (lines.size < 200) {

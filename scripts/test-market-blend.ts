@@ -1,7 +1,9 @@
 /**
  * Market blend (src/lib/ml/market-blend.ts): the fit recovers a known
  * weight, clips to [0, 1], ignores a market that adds nothing, and the
- * application leaves a player the market does not project untouched.
+ * application leaves a player the market does not project untouched; a stat
+ * the market did not publish (null) is skipped, not read as 0; a longer
+ * schedule is put on the 82-game basis.
  * Run: npx tsx scripts/test-market-blend.ts
  */
 import assert from "node:assert/strict";
@@ -9,11 +11,14 @@ import {
   applyMarketBlend,
   fitMarketBlend,
   marketLinesFor,
+  marketScheduleGames,
   MARKET_BLEND_STATS,
+  zeroFilledMarketStats,
   type BlendSample,
   type MarketFileShape,
   type MarketLine,
 } from "../src/lib/ml/market-blend";
+import { unpublishedStats } from "./build-espn-market";
 
 let seed = 11;
 const rnd = () => {
@@ -88,4 +93,65 @@ assert.equal(marketLinesFor(file, 20242025).get(2)!.gp, 82);
 assert.equal(marketLinesFor(file, 20232024).size, 0);
 assert.equal(marketLinesFor(null, 20242025).size, 0);
 
-console.log("PASS: market blend (fit, clip, apply, 82-game lines)");
+// An unpublished stat (null) is NaN: the stack keeps its own rate, and the fit skips it.
+const unpublished: MarketFileShape = {
+  builtAt: "",
+  source: "test",
+  seasons: {
+    "20182019": { skaters: [{ id: 3, gp: 80, goals: 20, assists: 40, shots: 200, hits: null, blocks: null, powerplayPoints: 16, penaltyMinutes: 20 }] },
+  },
+};
+const u = marketLinesFor(unpublished, 20182019).get(3)!;
+assert.ok(Number.isNaN(u.rates.hits) && Number.isNaN(u.rates.blocks));
+assert.equal(u.rates.goals, 0.25);
+const kept = applyMarketBlend({ ...blend, betas: { ...blend.betas, hits: 1, blocks: 1 } }, u, rates, 74);
+assert.equal(kept.rates.hits, rates.hits, "an unpublished market stat leaves the stack's rate");
+assert.equal(kept.rates.blocks, rates.blocks);
+const nanFit = fitMarketBlend(
+  samples.map((s) => ({ ...s, market: { ...s.market, rates: { ...s.market.rates, hits: NaN } } })),
+  "nan",
+  [],
+);
+assert.equal(nanFit.betas.hits, 0, "no published market hits: no weight");
+assert.ok(Math.abs(nanFit.betas.goals - blend.betas.goals) < 1e-12, "other stats fit as before");
+
+// A longer schedule (2026-27: 84 games) is put on the 82-game basis.
+assert.equal(marketScheduleGames(20262027, 84), 84);
+assert.equal(marketScheduleGames(20242025, 82), 82);
+assert.equal(marketScheduleGames(20202021, 56), 56);
+const long: MarketFileShape = {
+  builtAt: "",
+  source: "test",
+  seasons: {
+    "20262027": {
+      skaters: [
+        { id: 4, gp: 84, goals: 42, assists: 42, shots: 168, hits: 84, blocks: 42, powerplayPoints: 21, penaltyMinutes: 0 },
+        { id: 5, gp: 76, goals: 38, assists: 38, shots: 152, hits: 76, blocks: 38, powerplayPoints: 19, penaltyMinutes: 0 },
+      ],
+    },
+  },
+};
+assert.equal(marketLinesFor(long, 20262027).get(4)!.gp, 82);
+assert.ok(Math.abs(marketLinesFor(long, 20262027).get(5)!.gp - (76 * 82) / 84) < 1e-9);
+assert.equal(marketLinesFor(long, 20262027).get(5)!.rates.goals, 0.5, "rates stay per game");
+
+// Zero-filled stats (a stat stored as 0 for every player) are detected.
+const zeroed: MarketFileShape = {
+  builtAt: "",
+  source: "test",
+  seasons: {
+    "20172018": {
+      skaters: Array.from({ length: 30 }, (_, i) => ({
+        id: i, gp: 80, goals: 10, assists: 10, shots: 100, hits: 0, blocks: i === 0 ? 5 : 0, powerplayPoints: i % 2, penaltyMinutes: 10,
+      })),
+    },
+  },
+};
+assert.deepEqual(
+  zeroFilledMarketStats(zeroed).map((z) => z.stat),
+  ["blocks", "hits"],
+);
+assert.deepEqual(zeroFilledMarketStats(unpublished), []);
+assert.deepEqual(unpublishedStats([{ "31": 0, "13": 5 }, { "13": 4 }, { "13": 2, "31": 3 }], [13, 31]), [31]);
+
+console.log("PASS: market blend (fit, clip, apply, 82-game lines, unpublished stats, 84-game schedule)");
