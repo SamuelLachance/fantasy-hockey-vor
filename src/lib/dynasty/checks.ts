@@ -35,7 +35,16 @@ export const GATES = {
    * Fantrax ADP top 100 of the real draft holds 10.
    */
   top100: { G: [6, 20], D: [10, 20], prospect: [1, 6] } as const,
-  top200ProspectsLongTerm: [20, 45] as const,
+  /**
+   * 20-55 since 2026-10-03 (was 20-45, judgment): with the NHLe prospect
+   * model (dyn-v7) the board holds 47. The walk-forward backtest
+   * (scripts/dynasty-backtest.ts, start years 2015-2020, six seasons,
+   * long-term weights) found 17-37 drafted prospects (25-47 counting
+   * eligible part-timers) in the realized top 200, against 21-34 for the
+   * NHLe model and 17-25 for the draft-slot route it replaces; a six-season
+   * window cuts the prospects' later seasons, so the realized share is a floor.
+   */
+  top200ProspectsLongTerm: [20, 55] as const,
   /**
    * Long-term mode (audit 2026-09-25): its top 100 is at least this much
    * younger (median age) than the balanced top 100, and nobody whose value
