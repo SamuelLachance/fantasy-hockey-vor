@@ -27,6 +27,10 @@ import { join } from "path";
 import { A1_SHARE, backToBackShares, skaterPlayProbability } from "../src/lib/fantrax/points-model";
 import type { LineupCandidate } from "../src/lib/fantrax/lineup";
 import { CAPTAINS_DYNASTY, type SlotId } from "../src/lib/fantrax/config";
+import { returnOdds } from "./mgmt-absence";
+
+/** Absent players' later days: worth their odds of being back (on; lost 21 [13, 29] points a team-season in backtest-mgmt-waivers.ts, not shipped), or nothing (off, as shipped). */
+export const RETURN_MODEL = { on: false };
 
 export const CAPTAINS_SLOTS = { C: 3, W: 5, F: 1, D: 3, Skt: 1, G: 2 } as const;
 export const CAPTAINS_ORDER: readonly SlotId[] = ["C", "W", "F", "D", "Skt", "G"];
@@ -271,6 +275,8 @@ export interface View {
   dx: number;
   /** Known out (missed the club's last 3 games). */
   out: boolean;
+  /** Goalie: his start share were he healthy (p is 0 while out). */
+  share?: number;
   /** P(dresses | club plays), or the goalie's start share. */
   p: number;
   gamesSoFar: number;
@@ -372,7 +378,7 @@ export class Knowledge {
     const share = Math.min(0.85, (st + 5 * priorShare) / (recent.length + 5));
     const last10 = td.slice(Math.max(0, tn - 10), tn);
     const out = tn >= 5 && !last10.some((x) => appDays.has(x));
-    return { ...view, out, p: out ? 0 : share };
+    return { ...view, out, p: out ? 0 : share, share };
   }
 }
 
@@ -392,10 +398,23 @@ export function candidates(k: Knowledge, roster: readonly number[], d: number, x
   const out: LineupCandidate[] = [];
   for (const id of roster) {
     const v = k.view(id, d);
-    if (!v.team || v.out || !s.teamPlays.get(v.team)?.has(x)) continue;
+    if (!v.team || !s.teamPlays.get(v.team)?.has(x)) continue;
+    // Known out: nothing today; on a later day (engine + return model) his
+    // usual odds times the odds he is back by that club game.
+    let back = 1;
+    if (v.out) {
+      // Only a regular who got hurt (10+ games dressed, 5+ for a goalie), as
+      // in the absence study; a minor-leaguer is not « coming back ».
+      const regular = v.gamesSoFar >= (s.pos.get(id) === "G" ? 5 : 10);
+      if (mode !== "engine" || !RETURN_MODEL.on || x <= d || !regular) continue;
+      const td = s.teamDays.get(v.team) ?? [];
+      const ahead = td.filter((y) => y >= d && y <= x).length;
+      back = returnOdds(ahead);
+      if (!(back > 0)) continue;
+    }
     const pos = s.pos.get(id)!;
     if (pos === "G") {
-      let p = v.p;
+      let p = (v.out ? (v.share ?? 0) : v.p) * back;
       if (mode === "engine" && s.teamPlays.get(v.team)?.has(x - 1)) {
         // Back-to-back: the club's goalies' shares as of d, the starter's moved to the backup.
         const mates = new Map<string, number>();
@@ -404,7 +423,7 @@ export function candidates(k: Knowledge, roster: readonly number[], d: number, x
           const gv = k.view(gid, d);
           if (gv.team === v.team && !gv.out && gv.p > 0 && list.length) mates.set(String(gid), gv.p);
         }
-        mates.set(String(id), v.p);
+        mates.set(String(id), p);
         p = backToBackShares(mates).get(String(id)) ?? p;
       }
       out.push({ id: String(id), eligible: ELIGIBLE.G, status: "ACTIVE", values: { G: p * v.off }, games: p });
@@ -415,7 +434,7 @@ export function candidates(k: Knowledge, roster: readonly number[], d: number, x
     const pr = s.prior.get(id);
     const p =
       mode === "engine"
-        ? skaterPlayProbability({ gp: pr?.gp ?? 0, fpg: v.off + v.dx, src: pr ? "proj" : "prior", team: v.team, icons: [] }, true, CAPTAINS_DYNASTY.priors)
+        ? back * skaterPlayProbability({ gp: pr?.gp ?? 0, fpg: v.off + v.dx, src: pr ? "proj" : "prior", team: v.team, icons: [] }, true, CAPTAINS_DYNASTY.priors)
         : 1;
     const values: Partial<Record<SlotId, number>> = {};
     for (const slot of ELIGIBLE[pos]) values[slot] = p * (slot === "Skt" ? 1.5 * v.off : v.off + v.dx);
