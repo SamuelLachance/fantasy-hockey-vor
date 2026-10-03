@@ -1,5 +1,5 @@
 {
-  "builtAt": "2026-10-03T00:31:19.100Z",
+  "builtAt": "2026-10-03T02:39:23.448Z",
   "script": "scripts/backtest-trade.ts",
   "league": "Slapshot-shaped: 32 teams, C4 LW4 RW4 D6 G2 + 3 reserves, Slapshot scoring",
   "fitSeason": 20222023,
@@ -8,25 +8,135 @@
     20242025,
     20252026
   ],
-  "benchShareFitted": 0.7,
-  "benchShare": 0.7,
+  "fit": {
+    "grid": [
+      {
+        "bench": 0.5,
+        "goalieBench": 0.25,
+        "spearman": 0.303
+      },
+      {
+        "bench": 0.5,
+        "goalieBench": 0.5,
+        "spearman": 0.284
+      },
+      {
+        "bench": 0.5,
+        "goalieBench": 0.7,
+        "spearman": 0.252
+      },
+      {
+        "bench": 0.5,
+        "goalieBench": 0.9,
+        "spearman": 0.206
+      },
+      {
+        "bench": 0.6,
+        "goalieBench": 0.25,
+        "spearman": 0.323
+      },
+      {
+        "bench": 0.6,
+        "goalieBench": 0.5,
+        "spearman": 0.313
+      },
+      {
+        "bench": 0.6,
+        "goalieBench": 0.7,
+        "spearman": 0.284
+      },
+      {
+        "bench": 0.6,
+        "goalieBench": 0.9,
+        "spearman": 0.237
+      },
+      {
+        "bench": 0.7,
+        "goalieBench": 0.25,
+        "spearman": 0.339
+      },
+      {
+        "bench": 0.7,
+        "goalieBench": 0.5,
+        "spearman": 0.337
+      },
+      {
+        "bench": 0.7,
+        "goalieBench": 0.7,
+        "spearman": 0.316
+      },
+      {
+        "bench": 0.7,
+        "goalieBench": 0.9,
+        "spearman": 0.27
+      },
+      {
+        "bench": 0.85,
+        "goalieBench": 0.25,
+        "spearman": 0.352
+      },
+      {
+        "bench": 0.85,
+        "goalieBench": 0.5,
+        "spearman": 0.359
+      },
+      {
+        "bench": 0.85,
+        "goalieBench": 0.7,
+        "spearman": 0.351
+      },
+      {
+        "bench": 0.85,
+        "goalieBench": 0.9,
+        "spearman": 0.312
+      },
+      {
+        "bench": 1,
+        "goalieBench": 0.25,
+        "spearman": 0.348
+      },
+      {
+        "bench": 1,
+        "goalieBench": 0.5,
+        "spearman": 0.357
+      },
+      {
+        "bench": 1,
+        "goalieBench": 0.7,
+        "spearman": 0.357
+      },
+      {
+        "bench": 1,
+        "goalieBench": 0.9,
+        "spearman": 0.33
+      }
+    ],
+    "best": {
+      "bench": 0.85,
+      "goalieBench": 0.5
+    }
+  },
+  "benchShareFitted": 0.85,
+  "goalieBenchShareFitted": 0.5,
+  "benchShare": 0.85,
+  "goalieBenchShare": 0.5,
   "overall": {
     "n": 9000,
     "spearman": {
       "naive": 0.2454512757874643,
-      "tool": 0.30054813156232263
+      "tool": 0.32571635590596326
     },
     "signAccuracy": {
       "naive": 0.5785555555555556,
-      "tool": 0.5967777777777777
+      "tool": 0.6058888888888889
     },
     "mae": {
       "naive": 92.60136202785473,
-      "tool": 95.20646892720164
+      "tool": 89.77701294755249
     },
     "disagreements": {
-      "n": 2571,
-      "toolRight": 1352
+      "n": 1873,
+      "toolRight": 1049
     },
     "spearmanCI": {
       "naive": [
@@ -34,8 +144,8 @@
         0.267
       ],
       "tool": [
-        0.28,
-        0.32
+        0.307,
+        0.346
       ]
     },
     "signCI": {
@@ -44,8 +154,22 @@
         0.588
       ],
       "tool": [
-        0.586,
-        0.606
+        0.596,
+        0.616
+      ]
+    },
+    "toolMinusNaiveCI": {
+      "spearman": [
+        0.064,
+        0.096
+      ],
+      "signAccuracy": [
+        0.018,
+        0.036
+      ],
+      "mae": [
+        -3.5,
+        -2.2
       ]
     }
   },
@@ -54,57 +178,57 @@
       "n": 3000,
       "spearman": {
         "naive": 0.25328706192078465,
-        "tool": 0.30937199615244404
+        "tool": 0.33439045804338424
       },
       "signAccuracy": {
         "naive": 0.5843333333333334,
-        "tool": 0.6023333333333334
+        "tool": 0.6116666666666667
       },
       "mae": {
         "naive": 88.65076120663512,
-        "tool": 90.38351421552642
+        "tool": 85.80217064385415
       },
       "disagreements": {
-        "n": 822,
-        "toolRight": 432
+        "n": 598,
+        "toolRight": 335
       }
     },
     "20242025": {
       "n": 3000,
       "spearman": {
         "naive": 0.23196098666233186,
-        "tool": 0.27973464797051645
+        "tool": 0.31454912472768054
       },
       "signAccuracy": {
         "naive": 0.5773333333333334,
-        "tool": 0.5863333333333334
+        "tool": 0.6
       },
       "mae": {
         "naive": 96.44689176936149,
-        "tool": 99.80161288584577
+        "tool": 93.87404052188137
       },
       "disagreements": {
-        "n": 872,
-        "toolRight": 446
+        "n": 634,
+        "toolRight": 349
       }
     },
     "20252026": {
       "n": 3000,
       "spearman": {
         "naive": 0.25191207510134167,
-        "tool": 0.31394405710489526
+        "tool": 0.3295579797286644
       },
       "signAccuracy": {
         "naive": 0.574,
-        "tool": 0.6016666666666667
+        "tool": 0.606
       },
       "mae": {
         "naive": 92.70643310756878,
-        "tool": 95.43427968023289
+        "tool": 89.65482767692245
       },
       "disagreements": {
-        "n": 877,
-        "toolRight": 474
+        "n": 641,
+        "toolRight": 365
       }
     }
   },
@@ -113,76 +237,132 @@
       "n": 4000,
       "spearman": {
         "naive": 0.23130179833136238,
-        "tool": 0.2622422736401421
+        "tool": 0.27681518817594924
       },
       "signAccuracy": {
         "naive": 0.564,
-        "tool": 0.57775
+        "tool": 0.58275
       },
       "mae": {
         "naive": 74.9065560333794,
-        "tool": 77.2295336864111
+        "tool": 73.43080159167853
       },
       "disagreements": {
-        "n": 997,
-        "toolRight": 513
+        "n": 686,
+        "toolRight": 372
+      },
+      "toolMinusNaiveCI": {
+        "spearman": [
+          0.022,
+          0.067
+        ],
+        "signAccuracy": [
+          0.005,
+          0.031
+        ],
+        "mae": [
+          -2.1,
+          -0.9
+        ]
       }
     },
     "2x1": {
       "n": 1123,
       "spearman": {
         "naive": 0.2993015827191197,
-        "tool": 0.31215580891743255
+        "tool": 0.3429657282940239
       },
       "signAccuracy": {
         "naive": 0.5957257346393589,
-        "tool": 0.591273374888691
+        "tool": 0.5966162065894924
       },
       "mae": {
         "naive": 93.76064361859139,
-        "tool": 96.56260824427314
+        "tool": 92.69776078694089
       },
       "disagreements": {
-        "n": 208,
-        "toolRight": 101
+        "n": 152,
+        "toolRight": 76
+      },
+      "toolMinusNaiveCI": {
+        "spearman": [
+          0.006,
+          0.08
+        ],
+        "signAccuracy": [
+          -0.02,
+          0.023
+        ],
+        "mae": [
+          -2.8,
+          0.5
+        ]
       }
     },
     "1x2": {
       "n": 1142,
       "spearman": {
         "naive": 0.21207881741781515,
-        "tool": 0.2520849423277464
+        "tool": 0.2843757095231533
       },
       "signAccuracy": {
         "naive": 0.5148861646234676,
-        "tool": 0.6628721541155866
+        "tool": 0.648861646234676
       },
       "mae": {
         "naive": 114.87455609910124,
-        "tool": 109.63639649288723
+        "tool": 102.05665440192182
       },
       "disagreements": {
-        "n": 663,
-        "toolRight": 414
+        "n": 596,
+        "toolRight": 373
+      },
+      "toolMinusNaiveCI": {
+        "spearman": [
+          0.032,
+          0.112
+        ],
+        "signAccuracy": [
+          0.089,
+          0.171
+        ],
+        "mae": [
+          -16.4,
+          -9.6
+        ]
       }
     },
     "2x2": {
       "n": 2735,
       "spearman": {
         "naive": 0.31773677901532443,
-        "tool": 0.3111148464937796
+        "tool": 0.34685914986999694
       },
       "signAccuracy": {
         "naive": 0.6193784277879342,
-        "tool": 0.5992687385740402
+        "tool": 0.6255941499085923
       },
       "mae": {
         "naive": 108.70423702681052,
-        "tool": 114.91609204606046
+        "tool": 107.35708426710447
       },
       "disagreements": {
-        "n": 703,
-        "toolRight": 324
+        "n": 439,
+        "toolRight": 228
+      },
+      "toolMinusNaiveCI": {
+        "spearman": [
+          0.008,
+          0.05
+        ],
+        "signAccuracy": [
+          -0.009,
+          0.021
+        ],
+        "mae": [
+          -2.6,
+          -0.3
+        ]
       }
     }
   }

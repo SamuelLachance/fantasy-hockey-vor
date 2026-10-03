@@ -8,9 +8,10 @@
  *   for one gains an open spot, filled by the best free agent. Minors-
  *   eligible players may sit in the minors (their own limit).
  * - `lineupPoints`: the season points of the team's best lineup — starters
- *   seated by eligibility (exact matroid fill, `fillSlots`), the bench worth
- *   a share of its points (it plays when a starter's club is idle, under the
- *   games caps where the league has them), an empty seat filled by the best
+ *   seated by eligibility (exact matroid fill, `fillSlots`), every other
+ *   player of the active roster worth a share of his points (he plays when a
+ *   starter's club is idle, under the games caps where the league has them;
+ *   a fourth center on the bench still plays), an empty seat filled by the best
  *   free agent for it, the captain's ×1.5 on the best skater where the league
  *   has one.
  *
@@ -49,8 +50,12 @@ export interface LineupRules {
   /** Share of a bench skater's / goalie's points that still count. */
   benchShare: number;
   goalieBenchShare: number;
-  /** Bench players that can contribute (the rest never play). */
-  benchSize: number;
+  /**
+   * Players who can play: the best `rosterSize` by projected points (the
+   * active roster: seats + reserve); the rest (minors, beyond the limit)
+   * never do.
+   */
+  rosterSize: number;
   /** Extra multiplier of the best skater (Captains' captain: 0.5), 0 if none. */
   captainBonus: number;
 }
@@ -117,7 +122,10 @@ export function lineupPoints(
   rules: LineupRules,
   faBySlot: Readonly<Record<string, number>> = {},
 ): LineupResult {
-  const live = [...players].filter((p) => p.fp > 0).sort((a, b) => b.fp - a.fp || a.id.localeCompare(b.id));
+  const live = [...players]
+    .filter((p) => p.fp > 0)
+    .sort((a, b) => b.fp - a.fp || a.id.localeCompare(b.id))
+    .slice(0, Math.max(0, rules.rosterSize));
   const fill = fillSlots<string, { id: string; positions: readonly string[]; p: TeamPlayer }, string>(
     live.map((p) => ({ id: p.id, positions: p.pos, p })),
     rules.seats,
@@ -141,17 +149,7 @@ export function lineupPoints(
     bySlot[seat.slot] = s;
     points += s;
   }
-  let benchSk = 0;
-  let benchG = 0;
-  for (const x of fill.unassigned) {
-    if (x.p.goalie) {
-      if (benchG < 1) points += rules.goalieBenchShare * x.p.fp;
-      benchG++;
-    } else {
-      if (benchSk < rules.benchSize) points += rules.benchShare * x.p.fp;
-      benchSk++;
-    }
-  }
+  for (const x of fill.unassigned) points += (x.p.goalie ? rules.goalieBenchShare : rules.benchShare) * x.p.fp;
   points += rules.captainBonus * bestSkater;
   return { points, bySlot, empty, starters: [...fill.slotOf.keys()] };
 }

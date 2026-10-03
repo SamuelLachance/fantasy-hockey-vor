@@ -13,15 +13,18 @@
  *
  *   naive   Σ projected points received − Σ sent (what a human adds up);
  *   tool    the change in the best lineup's projected points (`lineupPoints`:
- *           seats, bench share, the roster limit);
+ *           seats, every other active player at the bench share, the roster
+ *           limit);
  *
  * and scored against the TRUTH: the team's real season, replayed day by day
  * from the box scores — every day the players who dressed, seated by
  * projected points per game (the manager's daily lineup), the seated ones'
  * real fantasy points — after the trade minus before.
  *
- * The bench share is fitted on the FIRST test season only (the others never
- * see it). Error bars: 95 % bootstrap over trades.
+ * The bench shares (skaters, goalies) are fitted on the trades of the FIRST
+ * season only (the grid point whose predictions rank the real outcomes best;
+ * the scored seasons never see it). Error bars: 95 % bootstrap over trades,
+ * paired for tool - naive.
  *
  * Writes src/data/trade/backtest-summary.json (committed; checked by
  * scripts/test-trade.ts).
@@ -212,11 +215,11 @@ function draft(proj: Map<number, Proj>, seed: string): number[][] {
   return teams;
 }
 
-const rules = (bench: number): LineupRules => ({
+const rules = (bench: number, goalieBench: number): LineupRules => ({
   seats: SEATS,
   benchShare: bench,
-  goalieBenchShare: bench,
-  benchSize: 3,
+  goalieBenchShare: goalieBench,
+  rosterSize: ROSTER,
   captainBonus: 0,
 });
 const toTP = (p: Proj): TeamPlayer => ({
@@ -228,10 +231,69 @@ const toTP = (p: Proj): TeamPlayer => ({
   fp: p.fp,
   minorsOk: false,
 });
-/** The tool's prediction of a roster's season: its best projected lineup, the roster limit applied (lowest projected let go). */
-function toolSeason(ids: readonly number[], proj: Map<number, Proj>, bench: number): number {
-  const ps = ids.map((id) => proj.get(id)!).sort((a, b) => b.fp - a.fp).slice(0, ROSTER);
-  return lineupPoints(ps.map(toTP), rules(bench)).points;
+/** The tool's prediction of a roster's season: its best projected lineup (the roster limit applied inside `lineupPoints`). */
+function toolSeason(ids: readonly number[], proj: Map<number, Proj>, bench: number, goalieBench: number): number {
+  return lineupPoints(ids.map((id) => toTP(proj.get(id)!)), rules(bench, goalieBench)).points;
+}
+
+/** The bench shares tried by the fit (skaters x goalies). */
+const GRID: Array<[number, number]> = [];
+for (const b of [0.5, 0.6, 0.7, 0.85, 1]) for (const g of [0.25, 0.5, 0.7, 0.9]) GRID.push([b, g]);
+const key = ([b, g]: readonly [number, number]) => `${b}|${g}`;
+
+interface TradeRow {
+  naive: number;
+  tool: Record<string, number>;
+  truth: number;
+  kind: string;
+}
+
+/**
+ * Random trades of one season: leagues drafted from Marcel, random 1-for-1,
+ * 2-for-1, 1-for-2 and 2-for-2 trades kept when balanced on paper; for each,
+ * the naive sum, the tool under every bench rule of `grid`, and the truth.
+ */
+function seasonTrades(season: number, nLeagues: number, nTrades: number, grid: ReadonlyArray<readonly [number, number]>): TradeRow[] {
+  const proj = marcel(season);
+  const days = seasonDays(season);
+  const out: TradeRow[] = [];
+  for (let li = 0; li < nLeagues; li++) {
+    const teams = draft(proj, `trade|${season}|${li}`);
+    const truthBase = teams.map((t) => realSeason(t, proj, days));
+    const toolBase = new Map(grid.map((r) => [key(r), teams.map((t) => toolSeason(t, proj, r[0], r[1]))]));
+    const rng = mulberry32(hashStr(`trades|${season}|${li}`));
+    let made = 0;
+    let tries = 0;
+    while (made < nTrades && tries < nTrades * 50) {
+      tries++;
+      const ai = Math.floor(rng.u() * 32);
+      let bi = Math.floor(rng.u() * 31);
+      if (bi >= ai) bi++;
+      const u = rng.u();
+      const [na, nb] = u < 0.4 ? [1, 1] : u < 0.6 ? [2, 1] : u < 0.8 ? [1, 2] : [2, 2];
+      const pickN = (t: number[], n: number) => {
+        const s = new Set<number>();
+        while (s.size < n) s.add(t[Math.floor(rng.u() * t.length)]!);
+        return [...s];
+      };
+      const A = teams[ai]!;
+      const B = teams[bi]!;
+      const give = pickN(A, na); // a sends
+      const get = pickN(B, nb); // a receives
+      const fp = (ids: number[]) => sum(ids.map((id) => proj.get(id)!.fp));
+      const g = fp(give);
+      const r = fp(get);
+      if (g <= 0 || r <= 0 || Math.abs(g - r) / Math.max(g, r) > 0.25) continue;
+      const after = [...A.filter((id) => !give.includes(id)), ...get];
+      // the roster limit: a team over it lets its lowest projected go, in the truth as in the tool
+      const kept = [...after].sort((x, y) => proj.get(y)!.fp - proj.get(x)!.fp).slice(0, ROSTER);
+      const tool: Record<string, number> = {};
+      for (const rr of grid) tool[key(rr)] = toolSeason(after, proj, rr[0], rr[1]) - toolBase.get(key(rr))![ai]!;
+      out.push({ naive: r - g, tool, truth: realSeason(kept, proj, days) - truthBase[ai]!, kind: `${na}x${nb}` });
+      made++;
+    }
+  }
+  return out;
 }
 
 function spearman(x: number[], y: number[]): number {
@@ -262,14 +324,12 @@ interface Row {
 }
 
 function metrics(rows: Row[]) {
-  const sign = (k: "naive" | "tool") => rows.filter((r) => Math.sign(r[k]) === Math.sign(r.truth)).length / rows.length;
-  const mae = (k: "naive" | "tool") => sum(rows.map((r) => Math.abs(r[k] - r.truth))) / rows.length;
   const disagree = rows.filter((r) => Math.sign(r.naive) !== Math.sign(r.tool));
   return {
     n: rows.length,
-    spearman: { naive: spearman(rows.map((r) => r.naive), rows.map((r) => r.truth)), tool: spearman(rows.map((r) => r.tool), rows.map((r) => r.truth)) },
-    signAccuracy: { naive: sign("naive"), tool: sign("tool") },
-    mae: { naive: mae("naive"), tool: mae("tool") },
+    spearman: { naive: rho(rows, "naive"), tool: rho(rows, "tool") },
+    signAccuracy: { naive: hit(rows, "naive"), tool: hit(rows, "tool") },
+    mae: { naive: absErr(rows, "naive"), tool: absErr(rows, "tool") },
     disagreements: { n: disagree.length, toolRight: disagree.filter((r) => Math.sign(r.tool) === Math.sign(r.truth)).length },
   };
 }
@@ -285,100 +345,79 @@ function bootstrapCI(rows: Row[], f: (r: Row[]) => number, B = 500): [number, nu
   return [xs[Math.floor(0.025 * (B - 1))]!, xs[Math.floor(0.975 * (B - 1))]!];
 }
 const r3 = (x: number) => Math.round(x * 1000) / 1000;
+function rho(rows: Row[], k: "naive" | "tool"): number {
+  return spearman(rows.map((x) => x[k]), rows.map((x) => x.truth));
+}
+function hit(rows: Row[], k: "naive" | "tool"): number {
+  return rows.filter((x) => Math.sign(x[k]) === Math.sign(x.truth)).length / rows.length;
+}
+function absErr(rows: Row[], k: "naive" | "tool"): number {
+  return sum(rows.map((x) => Math.abs(x[k] - x.truth))) / rows.length;
+}
+/** Paired 95 % bootstrap CIs of tool - naive (the same resampled trades for both). */
+function pairedCIs(rows: Row[]) {
+  return {
+    spearman: bootstrapCI(rows, (r) => rho(r, "tool") - rho(r, "naive")).map(r3),
+    signAccuracy: bootstrapCI(rows, (r) => hit(r, "tool") - hit(r, "naive")).map(r3),
+    mae: bootstrapCI(rows, (r) => absErr(r, "tool") - absErr(r, "naive")).map((x) => Math.round(x * 10) / 10),
+  };
+}
 
 function main() {
   const nLeagues = Number(args.leagues);
   const nTrades = Number(args.trades);
-  // ---- fit the bench share on the first season: the tool's lineup on REAL season totals vs the day-by-day truth
-  const fitProj = marcel(FIT_SEASON);
-  const fitDays = seasonDays(FIT_SEASON);
-  const realTot = new Map<number, number>();
-  for (const m of fitDays.sk.values()) for (const [id, fp] of m) realTot.set(id, (realTot.get(id) ?? 0) + fp);
-  for (const m of fitDays.gk.values()) for (const [id, fp] of m) realTot.set(id, (realTot.get(id) ?? 0) + fp);
-  const fitTeams = draft(fitProj, `fit|${FIT_SEASON}`);
-  let best = { bench: TRADE_BENCH.benchShare, err: Infinity };
-  for (let b = 0; b <= 0.8001; b += 0.05) {
-    let err = 0;
-    for (const t of fitTeams) {
-      const real = t.map((id) => ({ ...fitProj.get(id)!, fp: realTot.get(id) ?? 0 }));
-      const pred = lineupPoints(real.map(toTP), rules(b)).points;
-      err += (pred - realSeason(t, fitProj, fitDays)) ** 2;
-    }
-    if (err < best.err) best = { bench: Math.round(b * 100) / 100, err };
-  }
-  console.log(`bench share fitted on ${FIT_SEASON}: ${best.bench} (committed: ${TRADE_BENCH.benchShare})`);
-  const bench = TRADE_BENCH.benchShare;
+  // ---- fit the bench shares on the first season's trades: the grid point whose predictions rank the real outcomes best
+  const fitRows = seasonTrades(FIT_SEASON, nLeagues, nTrades, GRID);
+  const fitScores = GRID.map((g) => ({
+    bench: g[0],
+    goalieBench: g[1],
+    spearman: r3(spearman(fitRows.map((r) => r.tool[key(g)]!), fitRows.map((r) => r.truth))),
+  }));
+  const best = [...fitScores].sort((x, y) => y.spearman - x.spearman)[0]!;
+  console.log(`bench shares fitted on ${FIT_SEASON}: ${best.bench} / ${best.goalieBench} (committed: ${TRADE_BENCH.benchShare} / ${TRADE_BENCH.goalieBenchShare})`);
+  const committed = [TRADE_BENCH.benchShare, TRADE_BENCH.goalieBenchShare] as const;
 
   const all: Row[] = [];
   const bySeason: Record<string, ReturnType<typeof metrics>> = {};
   for (const season of SEASONS.slice(1)) {
-    const proj = marcel(season);
-    const days = seasonDays(season);
-    const rows: Row[] = [];
-    for (let li = 0; li < nLeagues; li++) {
-      const teams = draft(proj, `trade|${season}|${li}`);
-      const truthBase = teams.map((t) => realSeason(t, proj, days));
-      const toolBase = teams.map((t) => toolSeason(t, proj, bench));
-      const rng = mulberry32(hashStr(`trades|${season}|${li}`));
-      let made = 0;
-      let tries = 0;
-      while (made < nTrades && tries < nTrades * 50) {
-        tries++;
-        const ai = Math.floor(rng.u() * 32);
-        let bi = Math.floor(rng.u() * 31);
-        if (bi >= ai) bi++;
-        const u = rng.u();
-        const [na, nb] = u < 0.4 ? [1, 1] : u < 0.6 ? [2, 1] : u < 0.8 ? [1, 2] : [2, 2];
-        const pickN = (t: number[], n: number) => {
-          const s = new Set<number>();
-          while (s.size < n) s.add(t[Math.floor(rng.u() * t.length)]!);
-          return [...s];
-        };
-        const A = teams[ai]!;
-        const B = teams[bi]!;
-        const give = pickN(A, na); // a sends
-        const get = pickN(B, nb); // a receives
-        const fp = (ids: number[]) => sum(ids.map((id) => proj.get(id)!.fp));
-        const g = fp(give);
-        const r = fp(get);
-        if (g <= 0 || r <= 0 || Math.abs(g - r) / Math.max(g, r) > 0.25) continue;
-        const after = [...A.filter((id) => !give.includes(id)), ...get];
-        // the roster limit: a team over it lets its lowest projected go, in the truth as in the tool
-        const kept = [...after].sort((x, y) => proj.get(y)!.fp - proj.get(x)!.fp).slice(0, ROSTER);
-        rows.push({
-          naive: r - g,
-          tool: toolSeason(after, proj, bench) - toolBase[ai]!,
-          truth: realSeason(kept, proj, days) - truthBase[ai]!,
-          kind: `${na}x${nb}`,
-        });
-        made++;
-      }
-    }
+    const rows: Row[] = seasonTrades(season, nLeagues, nTrades, [committed]).map((r) => ({
+      naive: r.naive,
+      tool: r.tool[key(committed)]!,
+      truth: r.truth,
+      kind: r.kind,
+    }));
     bySeason[String(season)] = metrics(rows);
     console.log(season, JSON.stringify(bySeason[String(season)]));
     all.push(...rows);
   }
   const m = metrics(all);
-  const byKind: Record<string, ReturnType<typeof metrics>> = {};
-  for (const k of ["1x1", "2x1", "1x2", "2x2"]) byKind[k] = metrics(all.filter((r) => r.kind === k));
+  const byKind: Record<string, ReturnType<typeof metrics> & { toolMinusNaiveCI: ReturnType<typeof pairedCIs> }> = {};
+  for (const k of ["1x1", "2x1", "1x2", "2x2"]) {
+    const rk = all.filter((r) => r.kind === k);
+    byKind[k] = { ...metrics(rk), toolMinusNaiveCI: pairedCIs(rk) };
+  }
   const summary = {
     builtAt: new Date().toISOString(),
     script: "scripts/backtest-trade.ts",
     league: "Slapshot-shaped: 32 teams, C4 LW4 RW4 D6 G2 + 3 reserves, Slapshot scoring",
     fitSeason: FIT_SEASON,
     testSeasons: SEASONS.slice(1),
+    fit: { grid: fitScores, best: { bench: best.bench, goalieBench: best.goalieBench } },
     benchShareFitted: best.bench,
-    benchShare: bench,
+    goalieBenchShareFitted: best.goalieBench,
+    benchShare: TRADE_BENCH.benchShare,
+    goalieBenchShare: TRADE_BENCH.goalieBenchShare,
     overall: {
       ...m,
       spearmanCI: {
-        naive: bootstrapCI(all, (r) => spearman(r.map((x) => x.naive), r.map((x) => x.truth))).map(r3),
-        tool: bootstrapCI(all, (r) => spearman(r.map((x) => x.tool), r.map((x) => x.truth))).map(r3),
+        naive: bootstrapCI(all, (r) => rho(r, "naive")).map(r3),
+        tool: bootstrapCI(all, (r) => rho(r, "tool")).map(r3),
       },
       signCI: {
-        naive: bootstrapCI(all, (r) => r.filter((x) => Math.sign(x.naive) === Math.sign(x.truth)).length / r.length).map(r3),
-        tool: bootstrapCI(all, (r) => r.filter((x) => Math.sign(x.tool) === Math.sign(x.truth)).length / r.length).map(r3),
+        naive: bootstrapCI(all, (r) => hit(r, "naive")).map(r3),
+        tool: bootstrapCI(all, (r) => hit(r, "tool")).map(r3),
       },
+      toolMinusNaiveCI: pairedCIs(all),
     },
     bySeason,
     byKind,

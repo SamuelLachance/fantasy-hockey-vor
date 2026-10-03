@@ -152,8 +152,9 @@ export function buildTradeContext(inp: TradeBuildInput): TradeContext {
     lineup: {
       seats,
       benchShare: config.features.gamesCaps ? TRADE_BENCH.cappedBenchShare : TRADE_BENCH.benchShare,
-      goalieBenchShare: TRADE_BENCH.goalieBenchShare,
-      benchSize: config.limits.maxReserve,
+      goalieBenchShare: config.features.gamesCaps ? TRADE_BENCH.cappedGoalieBenchShare : TRADE_BENCH.goalieBenchShare,
+      // the active roster (Active + Reserve): who can be seated on a given day
+      rosterSize: config.limits.maxActive + config.limits.maxReserve,
       captainBonus: config.features.captainSlot ? 0.5 : 0,
     },
     faValues,

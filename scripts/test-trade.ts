@@ -60,15 +60,18 @@ const rules: LineupRules = {
     { slot: "D", capacity: 2, accepts: ["D"] },
     { slot: "G", capacity: 1, accepts: ["G"] },
   ],
-  benchShare: 0.5,
+  benchShare: 0.3,
   goalieBenchShare: 0.25,
-  benchSize: 1,
+  rosterSize: 6,
   captainBonus: 0,
 };
 {
   const team = [P("c1", 0, "C", 200), P("c2", 0, "C", 150), P("c3", 0, "C", 100), P("d1", 0, "D", 120), P("g1", 0, "G", 300)];
   const l = lineupPoints(team, rules, { D: 40 });
-  near(l.points, 200 + 150 + 120 + 40 + 300 + 0.5 * 100, 1e-9, "lineup: seats, the hole filled by a free agent, the bench at its share");
+  near(l.points, 200 + 150 + 120 + 40 + 300 + 0.3 * 100, 1e-9, "lineup: seats, the hole filled by a free agent, the bench at its share");
+  // beyond the active roster (6 here), a player never plays: the 7th and 8th add nothing
+  const deep = lineupPoints([...team, P("c4", 0, "C", 90), P("c5", 0, "C", 80), P("c6", 0, "C", 70)], rules, { D: 40 }).points;
+  near(deep, 200 + 150 + 120 + 40 + 300 + 0.3 * (100 + 90), 1e-9, "lineup: only the active roster plays");
   assert(l.empty.D === 1, "lineup: one empty D seat");
   // a D who fills the hole is worth more to this team than a better C who would sit
   const withD = lineupPoints([...team, P("d2", 0, "D", 90)], rules, { D: 40 }).points;
@@ -192,12 +195,21 @@ for (const slug of ["captains-dynasty", "slapshot"]) {
 // ---- the backtest guard
 {
   const s = JSON.parse(readFileSync(join(process.cwd(), "src", "data", "trade", "backtest-summary.json"), "utf8"));
-  assert(s.benchShare === TRADE_BENCH.benchShare && s.benchShareFitted === TRADE_BENCH.benchShare, "params.ts bench share = the backtest's fitted and scored one (re-run scripts/backtest-trade.ts)");
+  assert(
+    s.benchShare === TRADE_BENCH.benchShare && s.benchShareFitted === TRADE_BENCH.benchShare && s.goalieBenchShare === TRADE_BENCH.goalieBenchShare && s.goalieBenchShareFitted === TRADE_BENCH.goalieBenchShare,
+    "params.ts bench shares = the backtest's fitted and scored ones (re-run scripts/backtest-trade.ts)",
+  );
   assert(s.overall.n >= 6000, "a full backtest is committed");
   assert(s.overall.spearmanCI.tool[0] > s.overall.spearman.naive, "the evaluator ranks trades better than adding up points (95 % CI)");
   assert(s.overall.signAccuracy.tool > s.overall.signAccuracy.naive, "the evaluator calls the winner more often");
   for (const [season, m] of Object.entries(s.bySeason) as Array<[string, { spearman: { tool: number; naive: number } }]>) {
     assert(m.spearman.tool > m.spearman.naive, `${season}: the evaluator ranks better`);
+  }
+  // paired error bars: better ranking overall, and no kind of trade (1-for-1 … 2-for-2) where it ranks worse
+  assert(s.overall.toolMinusNaiveCI.spearman[0] > 0 && s.overall.toolMinusNaiveCI.signAccuracy[0] > 0, "tool − naive: Spearman and sign accuracy above 0 (paired 95 % CI)");
+  assert(s.overall.mae.tool < s.overall.mae.naive, "the evaluator's point gains are closer to the real ones");
+  for (const [kind, m] of Object.entries(s.byKind) as Array<[string, { spearman: { tool: number; naive: number } }]>) {
+    assert(m.spearman.tool > m.spearman.naive, `${kind}: the evaluator ranks better`);
   }
 }
 
