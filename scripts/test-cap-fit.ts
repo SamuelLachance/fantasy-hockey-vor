@@ -15,6 +15,7 @@ import { SLAPSHOT, type SlotCounts, type SlotId } from "../src/lib/fantrax/confi
 import { seasonFp } from "../src/lib/fantrax/draft-inputs";
 import type { LineupCandidate } from "../src/lib/fantrax/lineup";
 import { capFitLine } from "../src/lib/fantrax/salary-copy";
+import { slapshotContracts } from "../src/lib/dynasty/slapshot-client";
 
 /** Lineup solves the fit may run on a committed Slapshot team (median / worst): see the snapshot block. */
 const MAX_MEDIAN_SOLVES = 1200;
@@ -99,7 +100,9 @@ const W2: SlotCounts = { C: 0, W: 2, F: 0, D: 0, Skt: 0, G: 0 };
   const state = J("public/fantrax/slapshot/state.json");
   const values = J("public/fantrax/slapshot/values.json");
   const schedule = J("public/fantrax/slapshot/schedule-20262027.json");
-  const contracts = J("public/fantrax/slapshot/contracts.json");
+  // contracts.json is a build copy (not committed): derive it from the committed dynasty.json
+  const dyn = J("public/fantrax/slapshot/dynasty.json");
+  const contracts = slapshotContracts(dyn, Number(String(dyn.season).slice(0, 4)), dyn.params.cap.announced ?? []);
   const nowMs = Date.parse(J("src/data/fantrax/slapshot/today.json").generatedAt);
   let advised = 0;
   const cost: Array<{ team: string; solves: number; ms: number }> = [];
