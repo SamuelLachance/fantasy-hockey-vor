@@ -5,7 +5,8 @@
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
 import { PROJECTION_SEASON_ID } from "../src/lib/nhl-api";
-import { NO_AFFINE_CALIBRATION } from "../src/lib/ml/stack";
+import { NO_AFFINE_CALIBRATION, SHIPPED_META_WEIGHTING } from "../src/lib/ml/stack";
+import { loadMarketFile, marketLinesFor, MARKET_BLEND_STATS, type MarketBlend } from "../src/lib/ml/market-blend";
 
 const PATH = join(process.cwd(), "src", "data", "ml", "v2-bundle.json");
 
@@ -26,6 +27,8 @@ const bundle = JSON.parse(readFileSync(PATH, "utf8")) as {
     gpMeta?: unknown;
     rateMetas?: unknown;
     rateCalibrators?: Record<string, unknown>;
+    metaWeighting?: { weighting?: string; recencyDecay?: number };
+    marketBlend?: MarketBlend;
     gbdtGp?: unknown;
     ridgeGp?: unknown;
   };
@@ -83,6 +86,39 @@ const affine = Object.keys(bundle.skater?.rateCalibrators ?? {}).filter((t) => N
 if (affine.length > 0) {
   errors.push(`affine rate calibrator shipped on ${affine.join(", ")} (it doubles the stars' under-projection)`);
 }
+// Skater metas: the weighting the projection backtest validated
+// (src/data/ml/projection-scorecard.json, scripts/check-projection-scorecard.ts).
+const mw = bundle.skater?.metaWeighting;
+if (
+  !mw ||
+  mw.weighting !== SHIPPED_META_WEIGHTING.weighting ||
+  mw.recencyDecay !== SHIPPED_META_WEIGHTING.recencyDecay
+) {
+  errors.push(
+    `skater metaWeighting ${JSON.stringify(mw ?? null)} != shipped ${JSON.stringify(SHIPPED_META_WEIGHTING)} (retrain: npm run ml:train-v2)`,
+  );
+}
+// Market blend: weights in [0, 1], fitted on several seasons, and market
+// lines for the projection season to apply them to.
+const blend = bundle.skater?.marketBlend;
+if (!blend) {
+  errors.push("skater marketBlend missing (src/data/ml/market-espn.json, then npm run ml:train-v2)");
+} else {
+  const bad = [...MARKET_BLEND_STATS.map((t) => blend.betas?.[t]), blend.gpBeta].filter(
+    (b) => !(typeof b === "number" && b >= 0 && b <= 1),
+  );
+  if (bad.length > 0) errors.push(`marketBlend weight outside [0, 1]: ${bad.join(", ")}`);
+  if ((blend.fittedSeasons?.length ?? 0) < 4 || blend.pairs < 1000) {
+    errors.push(`marketBlend fitted on ${blend.fittedSeasons?.length ?? 0} seasons / ${blend.pairs} player-seasons (< 4 / 1000)`);
+  }
+  const lines = marketLinesFor(loadMarketFile(), bundle.projectionSeasonId ?? PROJECTION_SEASON_ID);
+  if (lines.size < 200) {
+    errors.push(
+      `market projections for ${bundle.projectionSeasonId}: ${lines.size} skaters (< 200): refresh src/data/ml/market-espn.json (npm run market:espn)`,
+    );
+  }
+}
+
 if (!bundle.datasetSha1) {
   errors.push("datasetSha1 missing (retrain with npm run ml:train-v2: generate needs the training dataset's identity)");
 }

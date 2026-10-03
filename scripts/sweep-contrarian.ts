@@ -19,6 +19,7 @@ import {
 import { marketGp, sampleStd } from "../src/lib/ml/market-training";
 import {
   fitStackedMetas,
+  LEGACY_META_WEIGHTING,
   metaGpPrediction,
   metaRatePrediction,
   runWalkForward,
@@ -135,7 +136,7 @@ async function main() {
       const season = skaterWf.seasons.find((row) => row.seasonId === seasonId);
       if (!season) continue;
       const pool = skaterWf.seasons.filter((row) => row.seasonId < seasonId);
-      const metas = fitStackedMetas(pool, seasonId, sigma);
+      const metas = fitStackedMetas(pool, seasonId, sigma, LEGACY_META_WEIGHTING);
 
       for (const target of V2_SKATER_TARGETS) {
         const series: Series = { actual: [], pred: [], market: [], weight: [] };

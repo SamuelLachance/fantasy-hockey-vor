@@ -2,7 +2,8 @@
 
 import type { GbdtModel } from "./gbdt";
 import type { MlpModel } from "./mlp";
-import type { GpMeta, RateCalibrator, RidgeV2, StackedMeta } from "./stack";
+import type { GpMeta, MetaWeighting, RateCalibrator, RidgeV2, StackedMeta } from "./stack";
+import type { MarketBlend } from "./market-blend";
 import type { GoalieStackedMetas, GoalieStructuralParams } from "./goalie-v2";
 import type { MarcelParams } from "./marcel";
 import type { MarketTrainingConfig } from "./market-training";
@@ -27,6 +28,12 @@ export interface V2Bundle {
     gpMeta: GpMeta;
     /** Per-target post-hoc affine calibration (Principle 2). Absent → no-op. */
     rateCalibrators?: Record<string, RateCalibrator>;
+    /** How the rate metas weighed their examples (absent: the Kelly weights of bd259b2). */
+    metaWeighting?: MetaWeighting;
+    /** Seasons whose walk-forward predictions fitted the skater metas. */
+    metaPoolSeasons?: number[];
+    /** Market consensus stacked after the metas (src/lib/ml/market-blend.ts). Absent → no-op. */
+    marketBlend?: MarketBlend;
   };
   goalie: {
     gbdt: Record<string, GbdtModel>;
