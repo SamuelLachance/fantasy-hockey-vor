@@ -19,7 +19,7 @@
  *            league's bar this period (`--gate`, as the plan ships).
  *
  * Run: npx tsx scripts/backtest-mgmt-waivers.ts --cache=<dir> [--seasons=...] [--managed=0,5,10,15] [--claims=2] [--policies=none,human,engine]
- *      [--ros=planned|capped] [--gate=period:x|total:x] [--period-days=N] [--return=on] [--out=rows.json]
+ *      [--ros=planned|capped] [--gate=period:x|total:x] [--period-days=N] [--return=on] [--matchup=on|ga|home] [--matchup-beta=x] [--out=rows.json]
  */
 import { writeFileSync } from "fs";
 import { optimizeLineup, type LineupCandidate } from "../src/lib/fantrax/lineup";
@@ -27,7 +27,7 @@ import { withCapBench } from "../src/lib/fantrax/daily-plan";
 import { capDayPlan } from "../src/lib/fantrax/cap-planner";
 import { CAPTAINS_DYNASTY, waiverMinDelta } from "../src/lib/fantrax/config";
 import { waiverTargets, type WaiverDay } from "../src/lib/fantrax/waivers";
-import { CAPTAINS_ORDER, CAPTAINS_SLOTS, candidates, draftLeague, Knowledge, loadSeason, meanCi, realize, RETURN_MODEL, weeks, type Season } from "./mgmt-sim";
+import { CAPTAINS_ORDER, CAPTAINS_SLOTS, candidates, draftLeague, Knowledge, loadSeason, MATCHUP, meanCi, realize, RETURN_MODEL, weeks, type Season } from "./mgmt-sim";
 
 const arg = (name: string) => process.argv.find((a) => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const CACHE = arg("cache") ?? process.env.MGMT_CACHE;
@@ -42,6 +42,11 @@ const POLICIES = (arg("policies") ?? "none,human,engine").split(",");
 const ROS = (arg("ros") ?? "planned") as "capped" | "planned";
 // --return=on: an absent regular's later days are worth his odds of being back (mgmt-absence.ts); off by default, as shipped.
 RETURN_MODEL.on = arg("return") === "on";
+// --matchup=on|ga|home: the opponent index from the points it allowed, from its goals against, or home ice only.
+MATCHUP.on = !!arg("matchup") && arg("matchup") !== "off";
+if (arg("matchup") === "ga" || arg("matchup") === "home") MATCHUP.source = arg("matchup") as "ga" | "home";
+// The opponent index's exponent (backtest-opponent.ts fits 0.9 on the points allowed, 0.4 on goals against).
+MATCHUP.beta = Number(arg("matchup-beta") ?? (MATCHUP.source === "ga" ? 0.4 : MATCHUP.beta));
 const slots = { ...CAPTAINS_SLOTS };
 const order = CAPTAINS_ORDER;
 const MIN_DELTA = waiverMinDelta(CAPTAINS_DYNASTY, 7);

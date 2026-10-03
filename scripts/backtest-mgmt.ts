@@ -15,7 +15,9 @@
  *            projected games reach a cap, exactly as shipped at bd259b2
  *            (`mgmt-legacy.ts`: a benched player still took a free seat);
  *  - bars-fixed: the same bars, benched players really out of the lineup;
- *  - planner: engine + `capDayPlan` (stochastic DP over the period's days).
+ *  - planner: engine + `capDayPlan` (stochastic DP over the period's days);
+ *  - planner-matchup: the planner with tonight's opponent and home ice in
+ *            the skater values (`MATCHUP`, scripts/backtest-opponent.ts).
  * Paired per team-season differences, mean and 95% interval.
  *
  * Run: npx tsx scripts/backtest-mgmt.ts --cache=<dir> [--seasons=20212022,...] [--teams=16] [--fetch] [--out=file.json]
@@ -33,6 +35,7 @@ import {
   draftLeague,
   ensureSeason,
   Knowledge,
+  MATCHUP,
   loadSeason,
   meanCi,
   realize,
@@ -114,6 +117,15 @@ const POLICY: Record<string, Policy> = {
     const ds = engineDays(k, roster, d, days);
     const plan = capDayPlan(ds, slots, order, cap);
     return plan ? withCapBench(ds[0]!, plan) : ds[0]!;
+  },
+  // The planner with tonight's opponent and home ice in the skater values (mgmt-sim MATCHUP).
+  "planner-matchup": (ctx) => {
+    MATCHUP.on = true;
+    try {
+      return POLICY.planner!(ctx);
+    } finally {
+      MATCHUP.on = false;
+    }
   },
 };
 

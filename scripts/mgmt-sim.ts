@@ -32,6 +32,69 @@ import { returnOdds } from "./mgmt-absence";
 /** Absent players' later days: worth their odds of being back (on; lost 21 [13, 29] points a team-season in backtest-mgmt-waivers.ts, not shipped), or nothing (off, as shipped). */
 export const RETURN_MODEL = { on: false };
 
+/**
+ * Tonight's opponent and home ice in the engine's skater values (off by
+ * default): his rate x (opponent index) ^ beta x (1 ± home), the index being
+ * the Captains points the opponent's opponents scored per game to date,
+ * shrunk to the league with k games, over the league mean
+ * (scripts/backtest-opponent.ts: beta 0.9, home 3 %, fit on 2021-24).
+ * source "ga": the opponent's goals against per game instead (what the
+ * standings give live); "home": home ice only.
+ */
+export const MATCHUP = { on: false, beta: 0.9, home: 0.03, k: 10, source: "fp" as "fp" | "ga" | "home" };
+const allowedCache = new WeakMap<Season, { sum: Map<string, number[]>; n: Map<string, number[]>; lSum: number[]; lN: number[] }>();
+function allowedToDate(s: Season) {
+  let c = allowedCache.get(s);
+  if (c) return c;
+  const per = new Map<string, number>();
+  if (MATCHUP.source === "ga") for (const [key, v] of s.goalsAgainst) per.set(key, v);
+  else
+    for (const games of s.sk.values())
+      for (const g of games) {
+        const m = s.matchup.get(`${g.team}|${g.day}`);
+        if (m) per.set(`${m.opp}|${g.day}`, (per.get(`${m.opp}|${g.day}`) ?? 0) + g.off + g.dx);
+      }
+  const sum = new Map<string, number[]>();
+  const n = new Map<string, number[]>();
+  const lSum = new Array<number>(s.dates.length).fill(0);
+  const lN = new Array<number>(s.dates.length).fill(0);
+  for (const t of s.teamDays.keys()) {
+    const a: number[] = [];
+    const b: number[] = [];
+    let x = 0;
+    let k = 0;
+    for (let d = 0; d < s.dates.length; d++) {
+      a.push(x);
+      b.push(k);
+      lSum[d]! += x;
+      lN[d]! += k;
+      const v = per.get(`${t}|${d}`);
+      if (v !== undefined) {
+        x += v;
+        k++;
+      }
+    }
+    sum.set(t, a);
+    n.set(t, b);
+  }
+  c = { sum, n, lSum, lN };
+  allowedCache.set(s, c);
+  return c;
+}
+/** The skater multiplier for club `team` on day x, as known on the morning of day d. */
+export function matchupFactor(s: Season, team: string, x: number, d: number): number {
+  const m = s.matchup.get(`${team}|${x}`);
+  if (!m) return 1;
+  const c = allowedToDate(s);
+  let idx = 1;
+  const ln = c.lN[d] ?? 0;
+  if (MATCHUP.source !== "home" && ln >= s.teamDays.size * 3) {
+    const avg = c.lSum[d]! / ln;
+    idx = ((c.sum.get(m.opp)?.[d] ?? 0) + MATCHUP.k * avg) / ((c.n.get(m.opp)?.[d] ?? 0) + MATCHUP.k) / avg;
+  }
+  return Math.pow(idx, MATCHUP.beta) * (m.home ? 1 + MATCHUP.home : 1 - MATCHUP.home);
+}
+
 export const CAPTAINS_SLOTS = { C: 3, W: 5, F: 1, D: 3, Skt: 1, G: 2 } as const;
 export const CAPTAINS_ORDER: readonly SlotId[] = ["C", "W", "F", "D", "Skt", "G"];
 export const ELIGIBLE: Record<Pos, SlotId[]> = { C: ["C", "F", "Skt"], W: ["W", "F", "Skt"], D: ["D", "Skt"], G: ["G"] };
@@ -72,6 +135,10 @@ export interface Season {
   pos: Map<number, Pos>;
   name: Map<number, string>;
   prior: Map<number, Prior>;
+  /** `${club}|${day}` -> that night's opponent and home ice (skater game lines). */
+  matchup: Map<string, { opp: string; home: boolean }>;
+  /** `${club}|${day}` -> goals against that night (goalie lines). */
+  goalsAgainst: Map<string, number>;
 }
 
 const AW = { F: 2.4 * A1_SHARE.F + 1.6 * (1 - A1_SHARE.F), D: 2.4 * A1_SHARE.D + 1.6 * (1 - A1_SHARE.D) };
@@ -158,9 +225,11 @@ export function loadSeason(dir: string, season: string): Season {
   const sk = new Map<number, SkGame[]>();
   const pos = new Map<number, Pos>();
   const name = new Map<number, string>();
+  const matchup = new Map<string, { opp: string; home: boolean }>();
   for (const r of sum) {
     const day = dayOf.get(r.gameDate)!;
     const team = r.teamAbbrev as string;
+    if (r.opponentTeamAbbrev) matchup.set(`${team}|${day}`, { opp: r.opponentTeamAbbrev, home: r.homeRoad === "H" });
     (teamPlays.get(team) ?? teamPlays.set(team, new Set()).get(team)!).add(day);
     const x = rtBy.get(`${r.gameId}|${r.playerId}`) ?? {};
     const isD = r.positionCode === "D";
@@ -173,9 +242,11 @@ export function loadSeason(dir: string, season: string): Season {
     name.set(r.playerId, r.skaterFullName);
   }
   const glMap = new Map<number, GlGame[]>();
+  const goalsAgainst = new Map<string, number>();
   for (const r of gl) {
     const day = dayOf.get(r.gameDate)!;
     const team = r.teamAbbrev as string;
+    goalsAgainst.set(`${team}|${day}`, (goalsAgainst.get(`${team}|${day}`) ?? 0) + (r.goalsAgainst ?? 0));
     (teamPlays.get(team) ?? teamPlays.set(team, new Set()).get(team)!).add(day);
     const list = glMap.get(r.playerId) ?? [];
     list.push({ day, team, gs: r.gamesStarted ?? 0, fp: goalieFp(r) });
@@ -243,7 +314,7 @@ export function loadSeason(dir: string, season: string): Season {
       share: Math.min(0.85, a.gs / teamGamesPrev),
     });
   }
-  return { id: season, dates, teamDays, teamPlays, sk, gl: glMap, pos, name, prior };
+  return { id: season, dates, teamDays, teamPlays, sk, gl: glMap, pos, name, prior, matchup, goalsAgainst };
 }
 
 /** Scoring periods: Monday-to-Sunday weeks; a first week under 4 days joins the next (97 GP / 15 GS, as Captains' period 1). */
@@ -436,8 +507,9 @@ export function candidates(k: Knowledge, roster: readonly number[], d: number, x
       mode === "engine"
         ? back * skaterPlayProbability({ gp: pr?.gp ?? 0, fpg: v.off + v.dx, src: pr ? "proj" : "prior", team: v.team, icons: [] }, true, CAPTAINS_DYNASTY.priors)
         : 1;
+    const f = mode === "engine" && MATCHUP.on ? matchupFactor(s, v.team, x, d) : 1;
     const values: Partial<Record<SlotId, number>> = {};
-    for (const slot of ELIGIBLE[pos]) values[slot] = p * (slot === "Skt" ? 1.5 * v.off : v.off + v.dx);
+    for (const slot of ELIGIBLE[pos]) values[slot] = f * p * (slot === "Skt" ? 1.5 * v.off : v.off + v.dx);
     out.push({ id: String(id), eligible: ELIGIBLE[pos], status: "ACTIVE", values, games: p });
   }
   return out;
