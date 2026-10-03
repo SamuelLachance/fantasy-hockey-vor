@@ -9,9 +9,19 @@
  * - this season's NHL stats to date (api.nhle.com stats REST, public):
  *   each per-game rate is updated by shrinkage — (prior × K + actual) /
  *   (K + games played), K per stat (how many games before a stat speaks for
- *   itself) — so a hot or cold week moves it a little, a season a lot; his
- *   share of his team's games is updated the same way (src/lib/in-season.ts
- *   holds every constant and how it was chosen);
+ *   itself) — so a hot or cold week moves it a little, a season a lot;
+ * - his ROLE this season, game by game (ice time and power-play time, stats
+ *   REST time-on-ice report, isGame): ice time speaks within 3 games where
+ *   goals need 100, so the pre-season rate first moves with his ice time and
+ *   PP time against the last two seasons' (a winger promoted to the first
+ *   line and the first PP unit gets more of every stat from the next game),
+ *   and his goals are his shots × his shooting % regressed toward his
+ *   pre-season one (src/lib/inseason/skater.ts, scripts/backtest-in-season.ts);
+ * - his share of his team's games: the pre-season share updated by the team
+ *   games he dressed for, recent ones weighing more, completed long
+ *   absences left out (he came back), × (ice-time ratio)^0.25 (a role cut
+ *   foretells scratches); goalies keep src/lib/in-season.ts (no goalie
+ *   variant beat it, scripts/backtest-in-season-goalies.ts);
  * - the remaining schedule (public/fantrax/schedule-20262027.json): his
  *   team's games beyond those it has played according to the same stats
  *   REST, so a game under way, or not in the stats yet, still counts as left;
@@ -22,7 +32,9 @@
  *   starts go to his healthy teammates, the n° 2 first;
  * - a player with NHL games this season but no pre-season projection (a
  *   call-up, a rookie the pre-season pool missed) gets a first-season prior
- *   instead of being left out.
+ *   from the role his club gives him (rates and games share as lines in his
+ *   ice time and PP time, src/lib/inseason/newcomer.ts) instead of being
+ *   left out.
  *
  * Writes src/data/players.json (same shape; `gamesPlayed` and `projection`
  * are the full-season totals, actual + rest of season; `inSeason` holds the
@@ -46,6 +58,9 @@ import {
   SKATER_SHARE_K,
   updatedGameShare,
 } from "../src/lib/in-season";
+import { NEWCOMER_USAGE_K, newcomerRates, newcomerShare } from "../src/lib/inseason/newcomer";
+import { gamesShareNow, restOfSeasonRates, USAGE_STATS, usageNow, type Usage, type UsageStat } from "../src/lib/inseason/skater";
+import { gamesFromRows, priorUsageOf, playedFlags, trimCurrentAbsence } from "../src/lib/inseason/live";
 
 const UA = "fantasy-hockey-vor (personal read-only helper; github.com/SamuelLachance/fantasy-hockey-vor)";
 const SEASON_ID = "20262027";
@@ -55,8 +70,10 @@ const BASELINE = join(root, "src", "data", "players-preseason.json");
 const SCHEDULE = join(root, "public", "fantrax", "schedule-20262027.json");
 /** Pre-season games are on an 82-game basis: gamesPlayed / 82 is a share of the team's games. */
 const SEASON_GAMES = 82;
-/** Newcomers whose debut date is looked up (one public game-log request each). */
+/** Newcomers whose debut date is looked up when the game-by-game report is unavailable (one public game-log request each). */
 const MAX_NEWCOMER_LOOKUPS = 40;
+/** The two seasons before, for each skater's ice time and PP time before this one. */
+const PRIOR_SEASON_IDS = ["20252026", "20242025"];
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function getJson<T>(url: string): Promise<T> {
@@ -95,6 +112,8 @@ interface InSeason {
   injury: { status: string; returnDate: string | null; gamesOut: number; note: string | null; since: string | null } | null;
   /** No pre-season projection: first-season prior (call-up, rookie). */
   newcomer?: true;
+  /** His role: ice time and PP time per game expected from now on (min), against before the season. */
+  usage?: { toi: number; pp: number; toiRatio: number; ppRatio: number };
 }
 interface Live {
   gp: number;
@@ -168,6 +187,62 @@ async function main() {
     });
   }
 
+  // ---- his role, game by game: ice time and PP time of every skater game
+  // this season (time-on-ice report, isGame, month windows halved while one
+  // holds 10,000 rows), and of the two seasons before (aggregates). Without
+  // them (report down) every role ratio is 1 and the games share falls back
+  // to the season totals: the update then matches the box-stat one.
+  const schedIso = (JSON.parse(readFileSync(SCHEDULE, "utf8")) as { games: Array<[string, string, string]> }).games.map((g) => g[0]).sort();
+  const isoDay = (d: Date) => d.toISOString().slice(0, 10);
+  async function gameRows(from: Date, to: Date): Promise<Row[]> {
+    const exp = encodeURIComponent(`seasonId=${SEASON_ID} and gameTypeId=2 and gameDate>="${isoDay(from)}" and gameDate<"${isoDay(to)}"`);
+    const j = await getJson<{ data: Row[]; total: number }>(
+      `https://api.nhle.com/stats/rest/en/skater/timeonice?isAggregate=false&isGame=true&start=0&limit=-1&cayenneExp=${exp}`,
+    );
+    if ((j.total >= 10000 || j.data.length < j.total) && to.getTime() - from.getTime() > 86400000) {
+      const mid = new Date((from.getTime() + to.getTime()) / 2);
+      mid.setUTCHours(0, 0, 0, 0);
+      return [...(await gameRows(from, mid)), ...(await gameRows(mid, to))];
+    }
+    return j.data;
+  }
+  let usageRows: Row[] | null = null;
+  try {
+    const first = new Date(`${(schedIso[0] ?? now.toISOString()).slice(0, 10)}T00:00:00Z`);
+    first.setUTCDate(first.getUTCDate() - 1);
+    const end = new Date(now.getTime() + 2 * 86400000);
+    usageRows = [];
+    for (let from = first; from < end; ) {
+      const to = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth() + 1, 1));
+      usageRows.push(...(await gameRows(from, to < end ? to : end)));
+      from = to;
+    }
+  } catch (err) {
+    usageRows = null;
+    console.warn(`WARN: game-by-game ice time unavailable (${(err as Error).message}); box stats only today`);
+  }
+  const { byPlayer: usageByPlayer, teamGames: statsTeamGames } = gamesFromRows(usageRows ?? []);
+  const priorAgg = new Map<number, Array<{ gp: number; toi: number; pp: number } | undefined>>();
+  for (const [i, season] of PRIOR_SEASON_IDS.entries()) {
+    try {
+      const rows = (await getJson<{ data: Row[] }>(`https://api.nhle.com/stats/rest/en/skater/timeonice?limit=-1&cayenneExp=seasonId=${season}%20and%20gameTypeId=2`)).data;
+      for (const r of rows) {
+        const id = Number(r.playerId);
+        if (!priorAgg.has(id)) priorAgg.set(id, []);
+        priorAgg.get(id)![i] = { gp: Number(r.gamesPlayed) || 0, toi: (Number(r.timeOnIce) || 0) / 60, pp: (Number(r.ppTimeOnIce) || 0) / 60 };
+      }
+    } catch (err) {
+      console.warn(`WARN: ${season} ice time unavailable (${(err as Error).message})`);
+    }
+  }
+  const hasUsage = usageRows != null && usageRows.length > 0;
+  /** His role now against before the season (ratios 1 without the report). */
+  const usageOf = (id: number, withPrior: boolean): Usage => {
+    const mine = usageByPlayer.get(id) ?? [];
+    const prior = withPrior ? priorUsageOf(priorAgg.get(id) ?? []) : { toi: null, pp: null };
+    return usageNow({ toiPrior: prior.toi, ppPrior: prior.pp, toi: mine.map((g) => g.toi), pp: mine.map((g) => g.pp) });
+  };
+
   // ---- the schedule, and the games each team has played per the same REST
   // stats (the most games any one-club player of the team has): a game
   // started, or over but not in the stats yet, is still left, so nobody
@@ -236,7 +311,11 @@ async function main() {
   const baseIds = new Set(base.players.map((p) => p.id));
   const newcomerIds = [...sk.keys(), ...gk.keys()].filter((id) => !baseIds.has(id) && ((sk.get(id) ?? gk.get(id))!.gp > 0));
   const debutOf = new Map<number, number>();
-  for (const id of newcomerIds.slice(0, MAX_NEWCOMER_LOOKUPS)) {
+  for (const id of newcomerIds) {
+    const first = usageByPlayer.get(id)?.[0];
+    if (first) debutOf.set(id, Date.parse(`${first.date}T00:00:00Z`));
+  }
+  for (const id of newcomerIds.filter((x) => !debutOf.has(x)).slice(0, MAX_NEWCOMER_LOOKUPS)) {
     try {
       const log = await getJson<{ gameLog?: Array<{ gameDate: string }> }>(
         `https://api-web.nhle.com/v1/player/${id}/game-log/${SEASON_ID}/2`,
@@ -258,6 +337,13 @@ async function main() {
       projection.shutouts = NEWCOMER_GOALIE.shutouts * gamesPlayed;
       projection.saves = NEWCOMER_GOALIE.shotsAgainstPerGame * NEWCOMER_GOALIE.savePct * gamesPlayed;
       projection.savePct = NEWCOMER_GOALIE.savePct;
+    } else if (usageByPlayer.has(id)) {
+      // The role his club gives him: rates and share from his ice time.
+      const pos = live.position === "D" ? "D" : "F";
+      const u = usageOf(id, false);
+      gamesPlayed = newcomerShare(pos, u.toi ?? 0) * SEASON_GAMES;
+      const rates = newcomerRates(pos, u.toi ?? 0, u.pp ?? 0);
+      for (const stat of USAGE_STATS) projection[stat] = rates[stat] * gamesPlayed;
     } else {
       gamesPlayed = NEWCOMER_SHARE_PRIOR * SEASON_GAMES;
       const per82 = NEWCOMER_PER82[live.position === "D" ? "D" : "F"];
@@ -312,11 +398,22 @@ async function main() {
           return debut != null ? Math.max(gp, playedSince(team, debut)) : Math.max(gp, played(team));
         })()
       : Math.max(gp, played(team) - (gamesOut > 0 ? (missedSoFar ?? 0) : 0));
+    // A skater's share: the team games he dressed for (recent ones weigh
+    // more, completed long absences left out, the current reported one
+    // too), × his ice-time ratio^η. Goalies, and everyone when the
+    // game-by-game report is missing: the season totals.
+    const teamIds = statsTeamGames.get(team);
     const share = isNew
       ? b.isGoalie
         ? updatedGameShare(NEWCOMER_GOALIE.share, gp, teamGames, NEWCOMER_SHARE_K)
-        : updatedGameShare(NEWCOMER_SHARE_PRIOR, gp, teamGames, NEWCOMER_SHARE_K)
-      : updatedGameShare(b.gamesPlayed / SEASON_GAMES, gp, teamGames, b.isGoalie ? GOALIE_SHARE_K : SKATER_SHARE_K);
+        : updatedGameShare(usageByPlayer.has(b.id) ? b.gamesPlayed / SEASON_GAMES : NEWCOMER_SHARE_PRIOR, gp, teamGames, NEWCOMER_SHARE_K)
+      : !b.isGoalie && hasUsage && teamIds?.length
+        ? gamesShareNow(
+            b.gamesPlayed / SEASON_GAMES,
+            trimCurrentAbsence(playedFlags(teamIds, usageByPlayer.get(b.id) ?? [], team), gamesOut > 0 ? (missedSoFar ?? 0) : 0),
+            usageOf(b.id, true),
+          )
+        : updatedGameShare(b.gamesPlayed / SEASON_GAMES, gp, teamGames, b.isGoalie ? GOALIE_SHARE_K : SKATER_SHARE_K);
     plan.set(b.id, { team, left, inj, gamesOut, share, ros: Math.max(0, left - gamesOut) * share });
   }
   // A team still dresses a goalie every game: the starts a hurt goalie
@@ -346,13 +443,26 @@ async function main() {
     const isNew = b.newcomer === true;
     const proj: Record<string, number> = { ...b.projection };
     const gp0 = Math.max(1, b.gamesPlayed);
-    if (!b.isGoalie) {
-      for (const [stat, k] of Object.entries(SKATER_RATE_K)) {
-        const prior = (b.projection[stat] ?? 0) / gp0;
+    let usage: Usage | null = null;
+    if (!b.isGoalie && isNew) {
+      // Newcomer: his role-based prior (or the flat one), his own games K 10.
+      const k = usageByPlayer.has(b.id) ? NEWCOMER_USAGE_K : NEWCOMER_RATE_K;
+      for (const stat of Object.keys(SKATER_RATE_K)) {
         const actual = live?.stats[stat] ?? 0;
-        const rate = shrinkRate(prior, isNew ? NEWCOMER_RATE_K : k, actual, gp);
-        proj[stat] = r1(actual + rate * rosGames);
+        proj[stat] = r1(actual + shrinkRate((b.projection[stat] ?? 0) / gp0, k, actual, gp) * rosGames);
       }
+      if (usageByPlayer.has(b.id)) usage = usageOf(b.id, false);
+    } else if (!b.isGoalie) {
+      // Role-adjusted prior, shrunk toward his season; goals = shots × regressed shooting %.
+      usage = usageOf(b.id, true);
+      const prior = {} as Record<UsageStat, number>;
+      const totals = {} as Record<UsageStat, number>;
+      for (const stat of USAGE_STATS) {
+        prior[stat] = (b.projection[stat] ?? 0) / gp0;
+        totals[stat] = live?.stats[stat] ?? 0;
+      }
+      const rates = restOfSeasonRates({ prior, totals, gp, usage });
+      for (const stat of USAGE_STATS) proj[stat] = r1(totals[stat] + rates[stat] * rosGames);
     } else {
       const s = live?.stats ?? { wins: 0, shutouts: 0, saves: 0, shotsAgainst: 0 };
       const sv0 = b.projection.savePct ?? 0.9;
@@ -383,6 +493,9 @@ async function main() {
         rosGames: r1(rosGames),
         injury: inj ? { status: inj.status, returnDate: inj.returnDate, gamesOut, note: inj.note, since: inj.since } : null,
         ...(isNew ? { newcomer: true as const } : {}),
+        ...(usage && usage.toi != null && usageByPlayer.has(b.id)
+          ? { usage: { toi: r1(usage.toi), pp: r1(usage.pp ?? 0), toiRatio: Math.round(usage.toiRatio * 100) / 100, ppRatio: Math.round(usage.ppRatio * 100) / 100 } }
+          : {}),
       },
     };
   });
@@ -390,7 +503,7 @@ async function main() {
   const file = { ...current, players: out, inSeasonAt: now.toISOString() };
   writeFileSync(PLAYERS, `${JSON.stringify(file)}\n`);
   console.log(
-    `OK: in-season projections for ${out.length} players (${updated} with ${SEASON_ID} stats, ${newcomers.length} newcomers${newcomers.length ? `: ${newcomers.slice(0, 8).map((p) => p.name).join(", ")}${newcomers.length > 8 ? "…" : ""}` : ""}, ${injured} injured, ${games.length} scheduled games, ${teamSchedule.size} teams) → src/data/players.json`,
+    `OK: in-season projections for ${out.length} players (${updated} with ${SEASON_ID} stats, ${newcomers.length} newcomers${newcomers.length ? `: ${newcomers.slice(0, 8).map((p) => p.name).join(", ")}${newcomers.length > 8 ? "…" : ""}` : ""}, ${injured} injured, ${games.length} scheduled games, ${teamSchedule.size} teams, ${usageByPlayer.size} skaters with game-by-game ice time) → src/data/players.json`,
   );
 }
 
