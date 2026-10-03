@@ -52,6 +52,7 @@ import {
   type LineupMove,
   type LineupResult,
 } from "./lineup";
+import { capDayPlan, perGameValue } from "./cap-planner";
 import { backToBackShares, dayToDayFactor, isRuledOut, skaterPlayProbability } from "./points-model";
 import {
   deadReason,
@@ -278,10 +279,11 @@ export interface DailyPlan {
     gsBinds: boolean;
     known: boolean;
     /**
-     * When a cap binds: bench the starters below these per-game values for
-     * the rest of the period (null = no bench for that group), so the games
-     * left under the cap go to the better players; `gain` = points the
-     * policy adds to the period's counted total. Absent when nothing gains.
+     * Games-cap plan (`capDayPlan`): bench tonight's starters below these
+     * per-game values (null = no bench for that group), so the games left
+     * under the cap go to the better players and nights; `gain` = expected
+     * points the plan adds to the period's counted total over starting
+     * everyone. Re-planned every day; absent when tonight benches nobody.
      */
     bench?: { skater: number | null; goalie: number | null; gain: number };
   } | null;
@@ -481,7 +483,11 @@ const WAIVER_TARGETS_PER_GROUP = 3;
  */
 export const WAIVER_ROS_SAMPLE_DAYS = Number.POSITIVE_INFINITY;
 
-/** Smallest gain (points over the period) worth a bench policy. */
+/**
+ * Smallest gain (points over the period) worth a bench policy. The plan
+ * itself uses `capDayPlan` (cap-planner.ts); `capBenchPolicy` (one bar per
+ * group for the whole period, bd259b2) stays as the backtest's reference.
+ */
 export const CAP_BENCH_MIN_GAIN = 0.5;
 
 interface CapBench {
@@ -492,24 +498,15 @@ interface CapBench {
 
 const isGoalieCand = (c: LineupCandidate) => c.values.G !== undefined;
 
-/** Per-game value of a candidate (his best seat's value ÷ his expected games that day). */
-function perGameValue(c: LineupCandidate): number {
-  const g = c.games ?? 0;
-  if (!(g > 0)) return 0;
-  const goalie = isGoalieCand(c);
-  let best = 0;
-  for (const [slot, v] of Object.entries(c.values)) if ((slot === "G") === goalie) best = Math.max(best, v ?? 0);
-  return best / g;
-}
-
 /** The day's candidates with everyone below the policy's per-game bar benched (locked players stay). */
 export function withCapBench(cands: LineupCandidate[], policy: Pick<CapBench, "skater" | "goalie">): LineupCandidate[] {
   return cands.map((c) => {
     if (c.locked) return c;
     const bar = isGoalieCand(c) ? policy.goalie : policy.skater;
-    // Benched: no points and no games toward the caps, even if the optimizer
-    // seats him at 0.
-    return bar !== null && perGameValue(c) < bar ? { ...c, values: {}, games: 0 } : c;
+    // Benched: no points, no games toward the caps, and out of every seat (to Reserve): with zeroed values alone the optimizer
+    // still seated him at 0 on a free seat (bd259b2), where he plays and
+    // spends a game.
+    return bar !== null && perGameValue(c) < bar ? { ...c, eligible: [], values: {}, games: 0 } : c;
   });
 }
 
@@ -937,17 +934,24 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     cap && (gpMax !== null || gsMax !== null)
       ? { gpMax, gsMax, gpUsed: usedGp + before(gpByDay), gsUsed: usedGs + before(gsByDay) }
       : null;
-  // ---- games-cap bench policy (FX-8): the optimizer fills every seat every
-  // day, so a binding cap is reached early and the last days count nothing.
-  // Benching the weakest per-game starters keeps the games for the best ones.
-  if (cap && waiverCap && target && (cap.gpBinds || cap.gsBinds)) {
+  // ---- games-cap plan (FX-8): the optimizer fills every seat every day, so
+  // a binding cap is reached early and the last days count nothing. Tonight's
+  // bench bars come from a dynamic program over the period's days left
+  // (`capDayPlan`): which games to spend, and on which night to cross the
+  // cap (that day counts in full). Replayed game by game over five NHL
+  // seasons (scripts/backtest-mgmt.ts, 80 simulated team-seasons), points a
+  // team-season, mean [95% CI]: +45.9 [37.4, 54.4] over bd259b2 (whose
+  // benched players still took free seats), +11.8 [7.7, 15.9] over its
+  // single per-period bar once fixed, +56.4 [46.6, 66.1] over starting the
+  // best projected lineup every day.
+  if (cap && waiverCap && target) {
     // On the counted roster only (Active + Reserve): Minors / IR players the
     // per-day lineups may borrow cannot all come up at once (the counted
     // maximum), and bars read off that deeper roster bench players the
     // real one needs (-284 points over the season's binding periods).
     const counted = dayCands.map((cands) => cands.filter((c) => c.status === "ACTIVE" || c.status === "RESERVE"));
-    const policy = capBenchPolicy(counted, slotCounts, slotOrder, waiverCap, { gp: cap.gpBinds, gs: cap.gsBinds });
-    if (policy) {
+    const policy = capDayPlan(counted, slotCounts, slotOrder, waiverCap);
+    if (policy && (policy.skater !== null || policy.goalie !== null)) {
       cap.bench = { skater: policy.skater, goalie: policy.goalie, gain: round(policy.gain, 1) };
       const benched = withCapBench(tonightCands, policy);
       const res = optimizeLineup(benched, slotCounts, slotOrder);
