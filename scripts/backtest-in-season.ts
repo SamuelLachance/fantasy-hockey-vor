@@ -8,6 +8,18 @@
  * so far: box stats, ice time, power-play time, the team games he dressed
  * for), and scored against what he did after.
  *
+ * Population: every skater with a pre-season prior who played in the
+ * season, AND every pre-season pool player who played little or not at all
+ * that season (at least POOL_PREV_GP games the season before, fewer than 10
+ * that season, 0 included: sent down, unsigned, hurt all season, scratched
+ * for good). The v2 walk-forward priors only exist for player-seasons of 10
+ * games or more (the engine's training targets), so those pool players get
+ * the Marcel prior. Scoring only the players who ended the season with 10
+ * games would select on the outcome: a games-share rule that never lets a
+ * player's share fall would look fine on them and keep giving games to the
+ * ones who stopped playing. Cells by games that season: `:gp0`, `:gp1-9`,
+ * `:gp10+`.
+ *
  * Methods:
  * - `pre`: the pre-season projection alone (rate × pre-season games share);
  * - `pace`: the season pace alone (rates and games share to date);
@@ -15,7 +27,7 @@
  *   shrinkage of the box stats, games share K 30);
  * - `new`: the usage-aware update (src/lib/inseason/skater.ts: role-adjusted
  *   prior, goals from shots × regressed shooting %, recency-weighted games
- *   share).
+ *   share × a decay over the games missed in a row).
  *
  * Metrics: rest-of-season RMSE of Slapshot points (G 3.5, A 2.5, PPP 0.5,
  * SOG 0.25, HIT 0.15, BLK 0.3), Captains points (G 3, A 2, SOG 0.4, HIT 0.3,
@@ -25,9 +37,14 @@
  * Slapshot points (top 150 / 151-400 / beyond). Error bars: 95 % interval of
  * the new / current RMSE ratio, bootstrap over player-seasons (all
  * checkpoints of a player-season resampled together), and the season by
- * season count of wins. `--tune` re-chooses the constants (grid per stat)
- * and scores each season with constants chosen on the other four
- * (leave-one-season-out).
+ * season count of wins. `--tune` re-chooses every constant of
+ * src/lib/inseason/skater.ts (the usage constants by coordinate search on the
+ * Slapshot points at the games played, the per-stat rules on a grid, the
+ * shooting K, the games-share constants on the games of the whole
+ * population, minimizing the worst ratio to the current update among the
+ * groups by games played and the checkpoints) and scores each season with
+ * constants chosen on the other four (leave-one-season-out, Slapshot points
+ * and games). `--fixed-usage` skips the usage search (faster).
  *
  * Priors: `--priors=<file>` reads the walk-forward v2 pre-season priors
  * (scripts/dump-walk-forward-priors.ts: per player-season `r[stat].cal`
@@ -51,8 +68,10 @@ import { shrinkRate, SKATER_RATE_K, SKATER_SHARE_K, updatedGameShare } from "../
 import {
   gamesShareNow,
   restOfSeasonRates,
+  trailingMissed,
   SHARE_HALF_LIFE,
   SHARE_K,
+  SHARE_MISS_HALF_LIFE,
   SHARE_SKIP_ABSENCE,
   SHARE_TOI_ELASTICITY,
   SHOOTING_K,
@@ -60,8 +79,10 @@ import {
   USAGE_PARAMS,
   USAGE_STATS,
   usageNow,
+  withoutCompletedAbsences,
   type StatRule,
   type Usage,
+  type UsageParams,
   type UsageStat,
 } from "../src/lib/inseason/skater";
 import { priorUsageOf } from "../src/lib/inseason/live";
@@ -77,6 +98,8 @@ const WRITE = process.argv.includes("--write");
 export const BT_SEASONS = ["20212022", "20222023", "20232024", "20242025", "20252026"];
 export const BT_CHECKPOINTS = [1, 2, 3, 5, 10, 15, 20, 30, 40, 50, 60, 70];
 const BOOT = Number(arg("boot") ?? 400);
+/** Pool players without a v2 prior: at least this many games the season before. */
+export const POOL_PREV_GP = 10;
 
 type Stats = Record<UsageStat, number>;
 const zero = (): Stats => Object.fromEntries(USAGE_STATS.map((s) => [s, 0])) as Stats;
@@ -87,17 +110,17 @@ export const LTL_CATS: UsageStat[] = ["goals", "assists", "powerplayPoints", "sh
 const pts = (w: Partial<Stats>, x: Stats) => Object.entries(w).reduce((t, [k, v]) => t + (v as number) * x[k as UsageStat], 0);
 
 // ---------------------------------------------------------------- priors
-interface Prior {
+export interface Prior {
   rates: Stats;
   share: number;
 }
-function v2Priors(path: string): Map<string, Prior> {
+export function v2Priors(path: string): Map<string, Prior> {
   const recs = JSON.parse(readFileSync(path, "utf8")) as Array<{ T: number; id: number; gpModel: number; r: Record<string, { cal: number }> }>;
   return new Map(recs.map((r) => [`${r.T}:${r.id}`, { rates: Object.fromEntries(USAGE_STATS.map((s) => [s, Math.max(0, r.r[s]?.cal ?? 0)])) as Stats, share: Math.min(1, Math.max(0, r.gpModel / 82)) }]));
 }
 /** Marcel 5/4/3 per-game rates regressed to the F / D mean of the previous season (R games per stat), games share 5/4/3. */
 const MARCEL_R: Stats = { goals: 60, assists: 60, powerplayPoints: 60, shots: 40, hits: 40, blocks: 40, penaltyMinutes: 80, faceoffWins: 30 };
-function marcelPriors(seasons: string[]): Map<string, Prior> {
+export function marcelPriors(seasons: string[]): Map<string, Prior> {
   const out = new Map<string, Prior>();
   for (const s of seasons) {
     const aggs = [1, 2, 3].map((k) => ({ a: loadSeasonAggregates(DIR, prevSeason(s, k)), sched: seasonTeamGames(prevSeason(s, k)), w: [5, 4, 3][k - 1]! }));
@@ -133,7 +156,7 @@ function marcelPriors(seasons: string[]): Map<string, Prior> {
 }
 
 // ---------------------------------------------------------------- checkpoints
-interface Ck {
+export interface Ck {
   season: string;
   key: string;
   pos: "F" | "D";
@@ -150,26 +173,41 @@ interface Ck {
   ppPrior: number | null;
   rest: Stats;
   restGp: number;
+  /** Games he played that whole season: "0", "1-9", "10+". */
+  grp: "0" | "1-9" | "10+";
+  /** Pool player without a v2 prior (Marcel prior). */
+  ext: boolean;
 }
-function buildCheckpoints(priors: Map<string, Prior>): Ck[] {
+export function buildCheckpoints(priors: Map<string, Prior>, poolPriors: Map<string, Prior>): Ck[] {
   const out: Ck[] = [];
   for (const s of BT_SEASONS) {
     const h = loadSeasonGames(DIR, s);
     const a1 = loadSeasonAggregates(DIR, prevSeason(s, 1));
     const a2 = loadSeasonAggregates(DIR, prevSeason(s, 2));
     // tiers: pre-season Slapshot points rank within the season
-    const fp: Array<[number, number]> = [];
+    // The population: skaters with a prior who played, and pool players
+    // (POOL_PREV_GP games the season before) without one, whatever they
+    // played (Marcel prior).
+    const pop = new Map<number, { prior: Prior; ext: boolean }>();
     for (const id of h.skaters.keys()) {
       const p = priors.get(`${s}:${id}`);
-      if (p) fp.push([id, pts(SLAPSHOT, p.rates) * p.share * 82]);
+      if (p) pop.set(id, { prior: p, ext: false });
     }
+    for (const [id, x] of a1) {
+      if (pop.has(id) || x.gp < POOL_PREV_GP) continue;
+      const p = poolPriors.get(`${s}:${id}`);
+      if (p) pop.set(id, { prior: p, ext: true });
+    }
+    const fp: Array<[number, number]> = [...pop].map(([id, { prior: p }]) => [id, pts(SLAPSHOT, p.rates) * p.share * 82]);
     fp.sort((a, b) => b[1] - a[1]);
     const rank = new Map(fp.map(([id], i) => [id, i]));
-    for (const [id, pl] of h.skaters) {
-      const prior = priors.get(`${s}:${id}`);
-      if (!prior) continue;
-      const team = pl.lines[0]!.team;
+    // A player with no game that season: any club's schedule (he dresses for none of its games).
+    const anyTeam = [...h.teamGames.keys()].sort()[0]!;
+    for (const [id, { prior, ext }] of pop) {
+      const pl = h.skaters.get(id) ?? { pos: a1.get(id)!.pos, name: "", lines: [] };
+      const team = pl.lines[0]?.team ?? anyTeam;
       const tg = h.teamGames.get(team)!;
+      const grp = pl.lines.length === 0 ? "0" : pl.lines.length < 10 ? "1-9" : "10+";
       const u = priorUsageOf([a1.get(id), a2.get(id)]);
       const r = rank.get(id)!;
       for (const T of BT_CHECKPOINTS) {
@@ -192,7 +230,7 @@ function buildCheckpoints(priors: Map<string, Prior>): Ck[] {
         void d0;
         out.push({
           season: s, key: `${s}:${id}`, pos: pl.pos, T, left: tg.length - T, prior, tier: r < 150 ? 0 : r < 400 ? 1 : 2,
-          gp: to.length, totals, played, toi: to.map((l) => l.toi), pp: to.map((l) => l.pp), toiPrior: u.toi, ppPrior: u.pp, rest, restGp: after.length,
+          gp: to.length, totals, played, toi: to.map((l) => l.toi), pp: to.map((l) => l.pp), toiPrior: u.toi, ppPrior: u.pp, rest, restGp: after.length, grp, ext,
         });
       }
     }
@@ -207,12 +245,14 @@ interface Pred {
 }
 type Method = (c: Ck, usage: Usage) => Pred;
 interface NewParams {
+  usage: UsageParams;
   rules: Record<UsageStat, StatRule>;
   shootingK: number;
   shareK: number;
   shareHalfLife: number;
   shareToi: number;
   shareSkipAbsence: number;
+  shareMissHalfLife: number;
 }
 const methods = (p: NewParams): Record<string, Method> => ({
   pre: (c) => ({ rates: c.prior.rates, games: c.prior.share * c.left }),
@@ -226,10 +266,10 @@ const methods = (p: NewParams): Record<string, Method> => ({
   }),
   new: (c, usage) => ({
     rates: restOfSeasonRates({ prior: c.prior.rates, totals: c.totals, gp: c.gp, usage }, p.rules, p.shootingK),
-    games: gamesShareNow(c.prior.share, c.played, usage, p.shareK, p.shareHalfLife, p.shareToi, p.shareSkipAbsence) * c.left,
+    games: gamesShareNow(c.prior.share, c.played, usage, p.shareK, p.shareHalfLife, p.shareToi, p.shareSkipAbsence, p.shareMissHalfLife) * c.left,
   }),
 });
-const SHIPPED: NewParams = { rules: { ...STAT_RULES }, shootingK: SHOOTING_K, shareK: SHARE_K, shareHalfLife: SHARE_HALF_LIFE, shareToi: SHARE_TOI_ELASTICITY, shareSkipAbsence: SHARE_SKIP_ABSENCE };
+const SHIPPED: NewParams = { usage: { ...USAGE_PARAMS }, rules: { ...STAT_RULES }, shootingK: SHOOTING_K, shareK: SHARE_K, shareHalfLife: SHARE_HALF_LIFE, shareToi: SHARE_TOI_ELASTICITY, shareSkipAbsence: SHARE_SKIP_ABSENCE, shareMissHalfLife: SHARE_MISS_HALF_LIFE };
 
 // ---------------------------------------------------------------- scoring
 interface Err {
@@ -327,22 +367,47 @@ const BETA = [0, 0.25, 0.5, 0.75, 1, 1.25];
 const GAMMA = [0, 0.25, 0.5, 0.75, 1];
 const SHOOT = [0, 150, 250, 350, 500, 800];
 const SHARE_KS = [5, 8, 10, 12, 15, 20, 30];
-const SHARE_HLS = [0, 2, 3, 5, 8, 10, 15];
+const SHARE_HLS = [0, 2, 3, 5, 8, 10];
 const SHARE_ETAS = [0, 0.25, 0.5, 0.75];
 const SHARE_ABSENCES = [0, 3, 6, 10];
-function tune(cks: Ck[], usages: Usage[], seasons: Set<string>): NewParams {
-  const idx = cks.map((_, i) => i).filter((i) => seasons.has(cks[i]!.season) && cks[i]!.restGp > 0);
+const SHARE_MISS = [0, 10, 20, 30, 40, 60, 80];
+/** Coordinate search of the usage constants (two passes from the published ones). */
+const USAGE_GRID: { [K in keyof UsageParams]: number[] } = {
+  toiK: [1, 3, 6, 10],
+  toiHalfLife: [0, 5, 10, 20],
+  ppK: [2, 5, 10],
+  ppHalfLife: [0, 5, 10, 20],
+  ppCushion: [0.25, 0.5, 1],
+  ratioMin: [0.5, 0.7],
+  ratioMax: [1.5, 2],
+};
+const usageCache = new WeakMap<Ck[], Map<string, Usage[]>>();
+function usagesFor(cks: Ck[], p: UsageParams): Usage[] {
+  const key = JSON.stringify(p);
+  if (!usageCache.has(cks)) usageCache.set(cks, new Map());
+  const byKey = usageCache.get(cks)!;
+  let u = byKey.get(key);
+  if (!u) {
+    u = cks.map((c) => usageNow({ toiPrior: c.toiPrior, ppPrior: c.ppPrior, toi: c.toi, pp: c.pp }, p));
+    byKey.set(key, u);
+  }
+  return u;
+}
+/** Per-stat rules on a grid and the shooting K, at the games he played (pool players with a v2 prior only: the rates are those of the engine). */
+function tuneRates(cks: Ck[], usages: Usage[], idx: number[]): { rules: Record<UsageStat, StatRule>; shootingK: number; sse: number } {
   const rules = { ...STAT_RULES } as Record<UsageStat, StatRule>;
-  // each stat on its own: its rate at the games he played
+  const powT = new Map(BETA.map((b) => [b, idx.map((i) => Math.pow(usages[i]!.toiRatio, b))]));
+  const powP = new Map(GAMMA.map((g) => [g, idx.map((i) => Math.pow(usages[i]!.ppRatio, g))]));
   for (const st of USAGE_STATS) {
     let best: [number, StatRule] = [Infinity, rules[st]];
     for (const kf of KF) for (const b of BETA) for (const g of GAMMA) {
       const k = SKATER_RATE_K[st]! * kf;
+      const pt = powT.get(b)!;
+      const pp = powP.get(g)!;
       let sse = 0;
-      for (const i of idx) {
-        const c = cks[i]!;
-        const u = usages[i]!;
-        const prior = c.prior.rates[st] * Math.pow(u.toiRatio, b) * Math.pow(u.ppRatio, g);
+      for (let j = 0; j < idx.length; j++) {
+        const c = cks[idx[j]!]!;
+        const prior = c.prior.rates[st] * pt[j]! * pp[j]!;
         sse += (((prior * k + c.totals[st]) / (k + c.gp)) * c.restGp - c.rest[st]) ** 2;
       }
       if (sse < best[0]) best = [sse, { k, toi: b, pp: g }];
@@ -359,20 +424,107 @@ function tune(cks: Ck[], usages: Usage[], seasons: Set<string>): NewParams {
     }
     if (sse < bestS[0]) bestS = [sse, sk];
   }
-  // Games share: tuned on the players who dressed for their team's last game
-  // (a player out today is on the injury report in the live update, whose
-  // return date takes out his games; the share is what remains).
-  const all = cks.map((_, i) => i).filter((i) => seasons.has(cks[i]!.season) && dressedLast(cks[i]!));
-  let bestG: [number, number, number, number, number] = [Infinity, 0, 0, 0, 0];
-  for (const k of SHARE_KS) for (const hl of SHARE_HLS) for (const eta of SHARE_ETAS) for (const ab of SHARE_ABSENCES) {
-    let sse = 0;
-    for (const i of all) {
-      const c = cks[i]!;
-      sse += (gamesShareNow(c.prior.share, c.played, usages[i]!, k, hl, eta, ab) * c.left - c.restGp) ** 2;
-    }
-    if (sse < bestG[0]) bestG = [sse, k, hl, eta, ab];
+  let sse = 0;
+  for (const i of idx) {
+    const c = cks[i]!;
+    const r = restOfSeasonRates({ prior: c.prior.rates, totals: c.totals, gp: c.gp, usage: usages[i]! }, rules, bestS[1]);
+    sse += (pts(SLAPSHOT, r) * c.restGp - pts(SLAPSHOT, c.rest)) ** 2;
   }
-  return { rules, shootingK: bestS[1], shareK: bestG[1], shareHalfLife: bestG[2], shareToi: bestG[3], shareSkipAbsence: bestG[4] };
+  return { rules, shootingK: bestS[1], sse };
+}
+/**
+ * Games-share constants on the games of every checkpoint of the population
+ * (those who stopped playing included), under each prior given (the v2
+ * walk-forward one and Marcel 5/4/3: the constants must not hold for one
+ * prior only). Objective: the WORST ratio of RMSE to the current update
+ * (src/lib/in-season.ts, K 30) among the cells of each prior: the groups by
+ * games that season (0, 1-9, 10+), the checkpoints, and dressed or not for
+ * his team's last game; so neither the regulars nor the players who stopped
+ * dressing pay for the other. Ties by the total squared error.
+ */
+interface ShareSet {
+  label: string;
+  cks: Ck[];
+  usages: Usage[];
+  idx: number[];
+}
+function tuneShare(sets: ShareSet[]) {
+  const rows = sets.flatMap((st) => st.idx.map((i) => ({ c: st.cks[i]!, u: st.usages[i]!, label: st.label })));
+  const cellsOf = (r: (typeof rows)[number]) => [`${r.label}:g${r.c.grp}`, `${r.label}:T${r.c.T}`, `${r.label}:dl${dressedLast(r.c) ? 1 : 0}`];
+  const cells = [...new Set(rows.flatMap(cellsOf))];
+  const cellIx = new Map(cells.map((c, j) => [c, j]));
+  const ci = rows.map((r) => cellsOf(r).map((c) => cellIx.get(c)!));
+  const curSse = new Float64Array(cells.length);
+  rows.forEach(({ c }, j) => {
+    const e = (updatedGameShare(c.prior.share, c.gp, c.T, SKATER_SHARE_K) * c.left - c.restGp) ** 2;
+    for (const x of ci[j]!) curSse[x] += e;
+  });
+  const clamp1 = (x: number) => Math.min(1, Math.max(0, x));
+  let best: { obj: number; tot: number; p: [number, number, number, number, number] } = { obj: Infinity, tot: Infinity, p: [0, 0, 0, 0, 0] };
+  const powE = new Map(SHARE_ETAS.map((e) => [e, rows.map((r) => Math.pow(r.u.toiRatio, e))]));
+  const sse = new Float64Array(cells.length);
+  for (const ab of SHARE_ABSENCES) {
+    const kept = rows.map((r) => withoutCompletedAbsences(r.c.played, ab));
+    const decay = new Map(SHARE_MISS.map((m) => [m, kept.map((v) => (m > 0 ? Math.pow(0.5, trailingMissed(v) / m) : 1))]));
+    for (const hl of SHARE_HLS) {
+      // recencyMean(p, v, K, hl) = (p K + Σ w v) / (K + Σ w)
+      const sw = new Float64Array(rows.length);
+      const swv = new Float64Array(rows.length);
+      kept.forEach((v, j) => {
+        const n = v.length;
+        for (let t = 0; t < n; t++) {
+          const w = hl > 0 ? Math.pow(0.5, (n - 1 - t) / hl) : 1;
+          sw[j] += w;
+          if (v[t]) swv[j] += w;
+        }
+      });
+      for (const k of SHARE_KS) for (const eta of SHARE_ETAS) for (const miss of SHARE_MISS) {
+        const pe = powE.get(eta)!;
+        const dc = decay.get(miss)!;
+        sse.fill(0);
+        let tot = 0;
+        for (let j = 0; j < rows.length; j++) {
+          const c = rows[j]!.c;
+          const p0 = clamp1(c.prior.share);
+          const share = clamp1(clamp1((p0 * k + swv[j]!) / (k + sw[j]!)) * pe[j]! * dc[j]!);
+          const e = (share * c.left - c.restGp) ** 2;
+          tot += e;
+          for (const x of ci[j]!) sse[x] += e;
+        }
+        let obj = 0;
+        for (let x = 0; x < cells.length; x++) obj = Math.max(obj, curSse[x]! > 0 ? sse[x]! / curSse[x]! : 0);
+        if (obj < best.obj - 1e-12 || (Math.abs(obj - best.obj) <= 1e-12 && tot < best.tot)) best = { obj, tot, p: [k, hl, eta, ab, miss] };
+      }
+    }
+  }
+  const [shareK, shareHalfLife, shareToi, shareSkipAbsence, shareMissHalfLife] = best.p;
+  return { shareK, shareHalfLife, shareToi, shareSkipAbsence, shareMissHalfLife };
+}
+/** `extra`: other checkpoint sets (the same seasons under another prior) the games-share constants must also hold on. */
+function tune(cks: Ck[], seasons: Set<string>, extra: Array<{ label: string; cks: Ck[] }> = []): NewParams {
+  const rateIdx = cks.map((_, i) => i).filter((i) => seasons.has(cks[i]!.season) && cks[i]!.restGp > 0 && !cks[i]!.ext);
+  let usage: UsageParams = { ...USAGE_PARAMS };
+  let fit = tuneRates(cks, usagesFor(cks, usage), rateIdx);
+  // --fixed-usage: keep the published usage constants (faster, for exploring the rest).
+  for (let pass = 0; pass < (process.argv.includes("--fixed-usage") ? 0 : 2); pass++) {
+    let moved = false;
+    for (const key of Object.keys(USAGE_GRID) as Array<keyof UsageParams>) {
+      for (const v of USAGE_GRID[key]) {
+        if (v === usage[key]) continue;
+        const cand = { ...usage, [key]: v };
+        if (cand.ratioMin >= 1 || cand.ratioMax <= 1) continue;
+        const f = tuneRates(cks, usagesFor(cks, cand), rateIdx);
+        if (f.sse < fit.sse * (1 - 1e-6)) {
+          usage = cand;
+          fit = f;
+          moved = true;
+        }
+      }
+    }
+    if (!moved) break;
+  }
+  const set = (label: string, x: Ck[]): ShareSet => ({ label, cks: x, usages: usagesFor(x, usage), idx: x.map((_, i) => i).filter((i) => seasons.has(x[i]!.season)) });
+  return { usage, rules: fit.rules, shootingK: fit.shootingK, ...tuneShare([set(PRIORS ? "v2" : "marcel", cks), ...extra.map((e) => set(e.label, e.cks))]) };
 }
 
 // ---------------------------------------------------------------- CI fixture
@@ -399,38 +551,57 @@ function writeFixture(cks: Ck[]) {
     });
   }
   const sc = scoreFixture(players);
-  const fixture: Fixture = { stats: USAGE_STATS, players, expected: { cur: Math.round(sc.cur * 1e4) / 1e4, new: Math.round(sc.new * 1e4) / 1e4 } };
+  const r4e = (x: number) => Math.round(x * 1e4) / 1e4;
+  const fixture: Fixture = {
+    stats: USAGE_STATS,
+    players,
+    expected: { cur: r4e(sc.cur), new: r4e(sc.new), gpCur: r4e(sc.gpCur), gpNew: r4e(sc.gpNew), absentGpCur: r4e(sc.absentGpCur), absentGpNew: r4e(sc.absentGpNew) },
+  };
   const path = join(process.cwd(), "src", "data", "ml", "in-season-fixture.json");
   writeFileAtomic(path, `${JSON.stringify(fixture)}\n`);
-  console.log(`wrote ${path}: ${players.length} player-seasons, ${sc.n} checkpoints, Slapshot ROS RMSE cur ${sc.cur.toFixed(2)} → new ${sc.new.toFixed(2)}`);
+  console.log(`wrote ${path}: ${players.length} player-seasons, ${sc.n} checkpoints, Slapshot ROS RMSE cur ${sc.cur.toFixed(2)} → new ${sc.new.toFixed(2)}, games ${sc.gpCur.toFixed(2)} → ${sc.gpNew.toFixed(2)}, under-10-game player-seasons (${sc.absentN} checkpoints) ${sc.absentGpCur.toFixed(2)} → ${sc.absentGpNew.toFixed(2)}`);
 }
 
 // ---------------------------------------------------------------- main
 function main() {
   const t0 = Date.now();
-  const priors = PRIORS ? v2Priors(PRIORS) : marcelPriors(BT_SEASONS);
-  const cks = buildCheckpoints(priors);
-  const usages = cks.map((c) => usageNow({ toiPrior: c.toiPrior, ppPrior: c.ppPrior, toi: c.toi, pp: c.pp }, USAGE_PARAMS));
-  console.log(`${cks.length} checkpoints (${new Set(cks.map((c) => c.key)).size} player-seasons), priors ${PRIORS ? "v2 walk-forward" : "Marcel"}, ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+  const marcel = marcelPriors(BT_SEASONS);
+  const priors = PRIORS ? v2Priors(PRIORS) : marcel;
+  const cks = buildCheckpoints(priors, marcel);
+  const byGrp = (g: Ck["grp"]) => new Set(cks.filter((c) => c.grp === g).map((c) => c.key)).size;
+  console.log(
+    `${cks.length} checkpoints (${new Set(cks.map((c) => c.key)).size} player-seasons: ${byGrp("10+")} with 10+ games, ${byGrp("1-9")} with 1-9, ${byGrp("0")} with none; ${new Set(cks.filter((c) => c.ext).map((c) => c.key)).size} pool players on the Marcel prior), priors ${PRIORS ? "v2 walk-forward" : "Marcel"}, ${((Date.now() - t0) / 1000).toFixed(0)} s`,
+  );
 
   let params = SHIPPED;
-  const loso: Record<string, { cur: number; new: number; params: NewParams }> = {};
+  const loso: Record<string, { cur: number; new: number; gpCur: number; gpNew: number; params: NewParams }> = {};
   if (TUNE) {
-    params = tune(cks, usages, new Set(BT_SEASONS));
-    console.log("tuned on all seasons:", JSON.stringify(params));
+    // The games-share constants must also hold under the Marcel prior.
+    const extra = PRIORS ? [{ label: "marcel", cks: buildCheckpoints(marcel, marcel) }] : [];
+    params = tune(cks, new Set(BT_SEASONS), extra);
+    console.log("tuned on all seasons:", JSON.stringify(params), `${((Date.now() - t0) / 1000).toFixed(0)} s`);
     for (const h of BT_SEASONS) {
-      const p = tune(cks, usages, new Set(BT_SEASONS.filter((s) => s !== h)));
+      const p = tune(cks, new Set(BT_SEASONS.filter((s) => s !== h)), extra);
+      const u = usagesFor(cks, p.usage);
       const m = methods(p);
       const idx = cks.map((_, i) => i).filter((i) => cks[i]!.season === h);
-      let sc = 0, sn = 0;
+      let sc = 0, sn = 0, gc = 0, gn = 0;
       for (const i of idx) {
-        sc += errors(cks[i]!, m.cur!(cks[i]!, usages[i]!)).slap;
-        sn += errors(cks[i]!, m.new!(cks[i]!, usages[i]!)).slap;
+        const ec = errors(cks[i]!, m.cur!(cks[i]!, u[i]!));
+        const en = errors(cks[i]!, m.new!(cks[i]!, u[i]!));
+        sc += ec.slap;
+        sn += en.slap;
+        gc += ec.gp;
+        gn += en.gp;
       }
-      loso[h] = { cur: Math.sqrt(sc / idx.length), new: Math.sqrt(sn / idx.length), params: p };
-      console.log(`LOSO ${h}: Slapshot ROS RMSE cur ${loso[h]!.cur.toFixed(2)} → new ${loso[h]!.new.toFixed(2)} (${(100 * (loso[h]!.new / loso[h]!.cur - 1)).toFixed(2)} %) with ${JSON.stringify(p)}`);
+      const r = (x: number) => Math.sqrt(x / idx.length);
+      loso[h] = { cur: r(sc), new: r(sn), gpCur: r(gc), gpNew: r(gn), params: p };
+      console.log(
+        `LOSO ${h}: Slapshot ROS RMSE cur ${r(sc).toFixed(2)} → new ${r(sn).toFixed(2)} (${(100 * (r(sn) / r(sc) - 1)).toFixed(2)} %), games ${r(gc).toFixed(2)} → ${r(gn).toFixed(2)} (${(100 * (r(gn) / r(gc) - 1)).toFixed(2)} %) with ${JSON.stringify(p)}`,
+      );
     }
   }
+  const usages = usagesFor(cks, params.usage);
 
   const M = methods(params);
   const names = ["pre", "pace", "cur", "new"] as const;
@@ -469,6 +640,16 @@ function main() {
     summary[metric] = { all: cell(metric, all) };
     for (const T of BT_CHECKPOINTS) summary[metric]![`T${T}`] = cell(metric, byT(T));
   }
+  // By games played that whole season (the population includes the pool
+  // players who barely or never played).
+  for (const g of ["0", "1-9", "10+"] as const) {
+    for (const metric of ["gp", "slapshot", "captains"] as const) {
+      const key = `${metric}:gp${g}`;
+      const sel = all.filter((i) => cks[i]!.grp === g);
+      summary[key] = { all: cell(metric, sel) };
+      for (const T of BT_CHECKPOINTS) summary[key]![`T${T}`] = cell(metric, sel.filter((i) => cks[i]!.T === T));
+    }
+  }
   // Dressed for his team's last game (the share alone drives his games in the
   // live update) or not (live: the injury report, or the share if unlisted).
   for (const [name, f] of [["dressedLast", true], ["outLast", false]] as const) {
@@ -500,7 +681,8 @@ function main() {
       seasons: BT_SEASONS,
       checkpoints: BT_CHECKPOINTS,
       playerSeasons: new Set(cks.map((c) => c.key)).size,
-      params: { usage: USAGE_PARAMS, rules: params.rules, shootingK: params.shootingK, shareK: params.shareK, shareHalfLife: params.shareHalfLife, shareToi: params.shareToi, shareSkipAbsence: params.shareSkipAbsence },
+      population: { poolPrevGp: POOL_PREV_GP, checkpoints: cks.length, playerSeasons: { "0": byGrp("0"), "1-9": byGrp("1-9"), "10+": byGrp("10+") }, marcelPool: new Set(cks.filter((c) => c.ext).map((c) => c.key)).size },
+      params: { usage: params.usage, rules: params.rules, shootingK: params.shootingK, shareK: params.shareK, shareHalfLife: params.shareHalfLife, shareToi: params.shareToi, shareSkipAbsence: params.shareSkipAbsence, shareMissHalfLife: params.shareMissHalfLife },
       current: { rateK: SKATER_RATE_K, shareK: SKATER_SHARE_K },
       summary,
       tiers,
@@ -514,4 +696,5 @@ function main() {
   console.log(`done in ${((Date.now() - t0) / 1000).toFixed(0)} s`);
 }
 
-main();
+// Run as a script (the explorers in scratch import its checkpoints).
+if (/backtest-in-season\.ts$/.test(process.argv[1] ?? "")) main();

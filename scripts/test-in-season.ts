@@ -20,10 +20,12 @@ import {
   restOfSeasonRates,
   SHARE_HALF_LIFE,
   SHARE_K,
+  SHARE_MISS_HALF_LIFE,
   SHARE_SKIP_ABSENCE,
   SHARE_TOI_ELASTICITY,
   SHOOTING_K,
   STAT_RULES,
+  trailingMissed,
   USAGE_PARAMS,
   usageNow,
   withoutCompletedAbsences,
@@ -158,6 +160,16 @@ check("games before his first one kept", JSON.stringify(withoutCompletedAbsences
   const cut = usageNow({ toiPrior: 15, ppPrior: 1, toi: [9, 9, 9, 9, 9], pp: [0, 0, 0, 0, 0] });
   check("a role cut lowers the share", gamesShareNow(0.8, all, cut) < gamesShareNow(0.8, all, u1));
   check("share within [0, 1]", gamesShareNow(1, all, usageNow({ toiPrior: 10, ppPrior: 0, toi: [25, 25, 25, 25], pp: [5, 5, 5, 5] })) <= 1);
+  // A pool player who stops dressing without an injury report (sent down,
+  // unsigned, scratched for good): no floor, his share keeps falling.
+  check("games missed in a row", trailingMissed([true, false, true, false, false]) === 2 && trailingMissed([]) === 0 && trailingMissed([true]) === 0);
+  const none = (n: number) => Array.from({ length: n }, () => false);
+  const s20 = gamesShareNow(0.8, none(20), u1);
+  const s60 = gamesShareNow(0.8, none(60), u1);
+  const s120 = gamesShareNow(0.8, none(120), u1);
+  check("unreported absence: the share keeps falling", SHARE_MISS_HALF_LIFE > 0 && s60 < s20 && s120 < s60 && s120 < 0.15, `${s20} ${s60} ${s120}`);
+  check("unreported absence: no higher than the K-30 update after 60 games", s60 <= updatedGameShare(0.8, 0, 60, SKATER_SHARE_K) + 0.01, `${s60}`);
+  check("reported absence trimmed: no decay", near(gamesShareNow(0.8, trimCurrentAbsence([...all, ...none(15)], 15), u1), gamesShareNow(0.8, all, u1)));
 }
 
 // ---- live plumbing (src/lib/inseason/live.ts)
@@ -203,11 +215,25 @@ const readJson = <T,>(...p: string[]) => JSON.parse(readFileSync(join(process.cw
 {
   const bt = readJson<{
     priors: string;
-    params: { usage: unknown; rules: unknown; shootingK: number; shareK: number; shareHalfLife: number; shareToi: number; shareSkipAbsence: number };
+    params: { usage: unknown; rules: unknown; shootingK: number; shareK: number; shareHalfLife: number; shareToi: number; shareSkipAbsence: number; shareMissHalfLife: number };
+    population: { poolPrevGp: number; playerSeasons: Record<string, number> };
     current: { rateK: unknown; shareK: number };
     summary: Record<string, Record<string, Cell>>;
-    loso: Record<string, { cur: number; new: number }>;
+    loso: Record<string, { cur: number; new: number; gpCur: number; gpNew: number }>;
   }>("src", "data", "ml", "in-season-backtest.json");
+  // The population is not selected on the outcome: pool players who played
+  // under 10 games that season, or none, are scored too.
+  check(
+    "skater backtest scores the pool players who barely or never played",
+    (bt.population?.playerSeasons?.["0"] ?? 0) >= 200 && (bt.population?.playerSeasons?.["1-9"] ?? 0) >= 100,
+    JSON.stringify(bt.population),
+  );
+  for (const g of ["0", "1-9", "10+"]) {
+    for (const metric of ["gp", "slapshot", "captains"]) {
+      const c = bt.summary[`${metric}:gp${g}`]?.all;
+      check(`skater ${metric}, players with ${g} games that season: new < current, every season`, !!c && c.new < c.cur && c.seasonsWon === 5, JSON.stringify(c));
+    }
+  }
   check("skater backtest on the walk-forward v2 priors", bt.priors === "v2-walk-forward", bt.priors);
   check(
     "skater backtest ran with the published usage constants (npm run inseason:backtest)",
@@ -217,7 +243,8 @@ const readJson = <T,>(...p: string[]) => JSON.parse(readFileSync(join(process.cw
       bt.params.shareK === SHARE_K &&
       bt.params.shareHalfLife === SHARE_HALF_LIFE &&
       bt.params.shareToi === SHARE_TOI_ELASTICITY &&
-      bt.params.shareSkipAbsence === SHARE_SKIP_ABSENCE,
+      bt.params.shareSkipAbsence === SHARE_SKIP_ABSENCE &&
+      bt.params.shareMissHalfLife === SHARE_MISS_HALF_LIFE,
     JSON.stringify(bt.params),
   );
   check(
@@ -232,7 +259,10 @@ const readJson = <T,>(...p: string[]) => JSON.parse(readFileSync(join(process.cw
   }
   const loso = Object.entries(bt.loso ?? {});
   check("skater leave-one-season-out scores present", loso.length === 5, String(loso.length));
-  for (const [s, x] of loso) check(`skater LOSO ${s}: new < current`, x.new < x.cur, `${x.new} vs ${x.cur}`);
+  for (const [s, x] of loso) {
+    check(`skater LOSO ${s}: new < current`, x.new < x.cur, `${x.new} vs ${x.cur}`);
+    check(`skater LOSO ${s}: games new < current`, x.gpNew < x.gpCur, `${x.gpNew} vs ${x.gpCur}`);
+  }
 }
 {
   const bt = readJson<{ k: number; lines: { rates: unknown; share: unknown }; summary: Record<string, Record<string, Cell>> }>(
@@ -246,6 +276,10 @@ const readJson = <T,>(...p: string[]) => JSON.parse(readFileSync(join(process.cw
     const c = bt.summary[metric]?.all;
     check(`newcomer ${metric}: new < current, every season`, !!c && c.new < c.cur && c.seasonsWon === 5, JSON.stringify(c));
   }
+  // Weak by design (2/5 seasons, interval across 0): the newcomer gain comes
+  // from his games and volume, not his per-game rates. Only kept from getting worse overall.
+  const ro = bt.summary.slapshotRateOnly?.all;
+  check("newcomer Slapshot at the games played: no worse than current overall", !!ro && ro.new <= ro.cur, JSON.stringify(ro));
 }
 {
   const bt = readJson<{ published: unknown; loso: Record<string, { cur: number; new: number }> }>("src", "data", "ml", "in-season-goalie-backtest.json");
@@ -272,6 +306,9 @@ const readJson = <T,>(...p: string[]) => JSON.parse(readFileSync(join(process.cw
   check("fixture: the box-stat update scores as when written", Math.abs(sc.cur - fx.expected.cur) < 1e-3, `${sc.cur} vs ${fx.expected.cur}`);
   check("fixture: the usage-aware update no worse than when written", sc.new <= fx.expected.new + 1e-3, `${sc.new} vs ${fx.expected.new}`);
   check("fixture: the usage-aware update beats the box-stat one by ≥ 1 %", sc.new <= 0.99 * sc.cur, `${sc.new} vs ${sc.cur}`);
+  check("fixture: games no worse than when written", sc.gpNew <= fx.expected.gpNew + 1e-3, `${sc.gpNew} vs ${fx.expected.gpNew}`);
+  check("fixture: pool players who played under 10 games sampled", sc.absentN >= 50, String(sc.absentN));
+  check("fixture: their games beat the K-30 update by ≥ 5 %", sc.absentGpNew <= 0.95 * sc.absentGpCur, `${sc.absentGpNew} vs ${sc.absentGpCur}`);
 }
 
 if (failed > 0) {

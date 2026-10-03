@@ -43,7 +43,12 @@ export interface StatRule {
   pp: number;
 }
 
-/** Chosen on 2021-22 → 2025-26 (scripts/backtest-in-season.ts --tune). */
+/**
+ * Chosen on 2021-22 → 2025-26 by scripts/backtest-in-season.ts --tune:
+ * coordinate search (from these values) on the Slapshot points at the games
+ * played, the per-stat rules re-fit for each candidate; the
+ * leave-one-season-out scores re-run that search without the season scored.
+ */
 export const USAGE_PARAMS: Readonly<UsageParams> = { toiK: 3, toiHalfLife: 10, ppK: 5, ppHalfLife: 5, ppCushion: 0.5, ratioMin: 0.5, ratioMax: 2 };
 export const STAT_RULES: Readonly<Record<UsageStat, StatRule>> = {
   goals: { k: 100, toi: 1.25, pp: 0 },
@@ -57,13 +62,23 @@ export const STAT_RULES: Readonly<Record<UsageStat, StatRule>> = {
 };
 /** Shots before a season's shooting percentage weighs as much as the pre-season one. */
 export const SHOOTING_K = 350;
-/** Games share: prior weight (team games) and half-life (team games) of the games he dressed for. */
-export const SHARE_K = 12;
-export const SHARE_HALF_LIFE = 5;
+/**
+ * Games share: prior weight (team games) and half-life (team games) of the
+ * games he dressed for. Chosen with the elasticity, the absence rule and the
+ * miss half-life below by scripts/backtest-in-season.ts --tune on every pool
+ * player (those who played under 10 games that season, or none, included),
+ * under the v2 walk-forward prior and under Marcel 5/4/3, minimizing the
+ * worst ratio to the K-30 update among the groups by games played, the
+ * checkpoints and dressed-or-not for the last game.
+ */
+export const SHARE_K = 15;
+export const SHARE_HALF_LIFE = 8;
 /** A cut in ice time foretells scratches and demotions: share × (role ratio)^η. */
 export const SHARE_TOI_ELASTICITY = 0.25;
 /** Completed absences of at least this many team games are left out of the share (0: none). */
 export const SHARE_SKIP_ABSENCE = 10;
+/** Half-life (team games) of the share over a run of games missed without an injury report (0: no decay). */
+export const SHARE_MISS_HALF_LIFE = 30;
 
 /**
  * Recency-weighted mean of per-game values (oldest first), shrunk toward
@@ -158,10 +173,22 @@ export function restOfSeasonRates(
  * (half-life in team games). `played` lists his team's games so far, oldest
  * first (true: he dressed); leave out the games of a CURRENT reported
  * absence (the injury takes out his games until his return).
+ *
+ * With a half-life the evidence is capped (about 1 / (1 − 0.5^(1/halfLife))
+ * games: 7.7 for 5, 12 for 8), so on its own this share never falls much
+ * below K / (K + that cap) of the pre-season one, however long he has been
+ * out: see `gamesShareNow`, which lets an unreported absence take it to 0.
  */
 export function recentGameShare(priorShare: number, played: readonly boolean[], k: number, halfLife: number): number {
   const v = played.map((x) => (x ? 1 : 0));
   return clamp(recencyMean(clamp(priorShare, 0, 1), v, k, halfLife), 0, 1);
+}
+
+/** Team games he has missed in a row up to now (the trailing run of `played`). */
+export function trailingMissed(played: readonly boolean[]): number {
+  let m = 0;
+  for (let i = played.length - 1; i >= 0 && !played[i]; i--) m++;
+  return m;
 }
 
 /**
@@ -188,7 +215,13 @@ export function withoutCompletedAbsences(played: readonly boolean[], minLength: 
   return out;
 }
 
-/** Games share from now on: recency-weighted share × (ice-time ratio)^η, within [0, 1]. */
+/**
+ * Games share from now on: recency-weighted share × (ice-time ratio)^η ×
+ * 0.5^(games missed in a row / missHalfLife), within [0, 1]. The last factor
+ * is for an absence nobody reports (sent down, unsigned, scratched for
+ * good): the live update leaves the games of a reported injury out of
+ * `played`, so it only bites on the others (missHalfLife 0: none).
+ */
 export function gamesShareNow(
   priorShare: number,
   played: readonly boolean[],
@@ -197,6 +230,9 @@ export function gamesShareNow(
   halfLife: number = SHARE_HALF_LIFE,
   eta: number = SHARE_TOI_ELASTICITY,
   absenceMin: number = SHARE_SKIP_ABSENCE,
+  missHalfLife: number = SHARE_MISS_HALF_LIFE,
 ): number {
-  return clamp(recentGameShare(priorShare, withoutCompletedAbsences(played, absenceMin), k, halfLife) * Math.pow(usage.toiRatio, eta), 0, 1);
+  const kept = withoutCompletedAbsences(played, absenceMin);
+  const decay = missHalfLife > 0 ? Math.pow(0.5, trailingMissed(kept) / missHalfLife) : 1;
+  return clamp(recentGameShare(priorShare, kept, k, halfLife) * Math.pow(usage.toiRatio, eta) * decay, 0, 1);
 }
