@@ -8,7 +8,17 @@
  * The same fit, run at each past start year with only the data known then,
  * is what scripts/dynasty-backtest.ts scores (variant nhle): the model is
  * shipped only because it beat the draft-slot route there (see
- * prospect-model.json `backtest`).
+ * prospect-model.json `backtest`). The recorded backtest is kept only while
+ * the fitting procedure is the one it scored (`backtest.procedureHash`,
+ * scripts/dynasty-model-hash.ts); after a change of procedure it is dropped,
+ * and scripts/test-dynasty-nhle.ts fails until the backtest is re-run and
+ * re-recorded (scripts/dynasty-scorecard.ts --record).
+ *
+ * Records replaced (2026-10-02): the earlier research records of the
+ * drafted skaters (« nhle(k=…) », an NHLe model fitted on every class, and
+ * « nhl-gp-so-far »), which carried a capped scouting-tier logit shift from
+ * 2026 opinions. That shift is dropped: it cannot be rebuilt at a past date,
+ * so it was never backtested; the v2 record has no scouting input.
  *
  * Records refreshed: skaters with an NHL id, a draft slot, a cached landing,
  * fewer than 100 NHL GP and under 25 on Oct 1, 2026. Undrafted players,
@@ -23,6 +33,7 @@ import { predictProspect, prospectFeatures, seasonRows, type ProspectModelV2 } f
 import type { ProspectsFile } from "../src/lib/dynasty/types";
 import { ageOn, loadHist, loadProspectHistory } from "./dynasty-backtest-lib";
 import { fitProspectModel } from "./dynasty-prospect-fit";
+import { procedureHash } from "./dynasty-model-hash";
 
 const args = process.argv.slice(2);
 const arg = (k: string) => {
@@ -51,11 +62,13 @@ const factors = Object.fromEntries(
 );
 const prev = (() => {
   try {
-    return JSON.parse(readFileSync(join(DATA, "prospect-model.json"), "utf8")) as { backtest?: unknown };
+    return JSON.parse(readFileSync(join(DATA, "prospect-model.json"), "utf8")) as { backtest?: { procedureHash?: string } };
   } catch {
     return {};
   }
 })();
+const keepBacktest = prev.backtest != null && prev.backtest.procedureHash === procedureHash();
+if (prev.backtest && !keepBacktest) console.warn("dynasty-fit-prospects: the fitting procedure changed since the recorded backtest; it is dropped (re-run scripts/dynasty-backtest.ts and scripts/dynasty-scorecard.ts --record)");
 const model: ProspectModelV2 & Record<string, unknown> = {
   version: `nhle-v2-${Y0}`,
   source:
@@ -66,7 +79,7 @@ const model: ProspectModelV2 & Record<string, unknown> = {
   oddsCal: fitted.oddsCal ?? 1,
   factors,
   fit: fitted.n ?? null,
-  ...(prev.backtest ? { backtest: prev.backtest } : {}),
+  ...(keepBacktest ? { backtest: prev.backtest } : {}),
 };
 writeFileSync(join(DATA, "prospect-model.json"), JSON.stringify(model, null, 1) + "\n");
 console.log(`OK: prospect-model.json (${JSON.stringify(fitted.n)})`);
@@ -154,7 +167,7 @@ if (APPLY) {
   }
   file.players = Object.fromEntries(Object.entries(file.players).sort((a, b) => a[0].localeCompare(b[0])));
   file.builtAt = new Date().toISOString();
-  file.source = `${file.source.replace(/ \| nhle-v2:.*$/, "")} | nhle-v2: drafted skaters under 100 NHL GP and 25 refreshed or added by scripts/dynasty-fit-prospects.ts (src/data/dynasty/prospect-model.json).`;
+  file.source = `${file.source.replace(/ \| nhle-v2:.*$/, "")} | nhle-v2: drafted skaters under 100 NHL GP and 25 refreshed or added by scripts/dynasty-fit-prospects.ts (src/data/dynasty/prospect-model.json). Their pMake carries no scouting-tier shift (dropped 2026-10-02: it cannot be rebuilt at a past date, so it was never backtested); comp keeps the earlier research's components, which the engine does not read.`;
   writeFileSync(path, JSON.stringify(file) + "\n");
   console.log(`OK: prospects.json — ${changed} records refreshed, ${added} added (nhle-v2), ${kept} kept`);
 }

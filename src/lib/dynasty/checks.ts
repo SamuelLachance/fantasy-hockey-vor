@@ -36,13 +36,15 @@ export const GATES = {
    */
   top100: { G: [6, 20], D: [10, 20], prospect: [1, 6] } as const,
   /**
-   * 20-55 since 2026-10-03 (was 20-45, judgment): with the NHLe prospect
-   * model (dyn-v7) the board holds 47. The walk-forward backtest
-   * (scripts/dynasty-backtest.ts, start years 2015-2020, six seasons,
-   * long-term weights) found 17-37 drafted prospects (25-47 counting
-   * eligible part-timers) in the realized top 200, against 21-34 for the
-   * NHLe model and 17-25 for the draft-slot route it replaces; a six-season
-   * window cuts the prospects' later seasons, so the realized share is a floor.
+   * 20-55 since 2026-10-02 (was 20-45, judgment), the realized range of the
+   * walk-forward backtest with a little slack: players on the prospect route
+   * at Oct 1 among the Captains top 200 by long-term weights over six
+   * realized seasons, start years 2015-2020 (scripts/dynasty-backtest.ts +
+   * scripts/dynasty-scorecard.ts, recorded in prospect-model.json
+   * backtest.top200): 26-52 realized, 39-50 for the NHLe model (the live
+   * board holds 47). A six-season window cuts the prospects' later seasons,
+   * so the realized count is a floor. scripts/test-dynasty-nhle.ts fails if
+   * this range stops covering the recorded counts or drifts away from them.
    */
   top200ProspectsLongTerm: [20, 55] as const,
   /**

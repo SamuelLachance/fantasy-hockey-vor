@@ -380,8 +380,10 @@
  },
  "backtest": {
   "script": "scripts/dynasty-backtest.ts + scripts/dynasty-scorecard.ts --record",
-  "recordedAt": "2026-10-03",
+  "recordedAt": "2026-10-02",
+  "procedureHash": "4ddfba57a723adf2",
   "ref": "base.eG",
+  "refLabel": "route rang de repêchage (fallback) : le moteur de bd259b2 avec ses espoirs sur la route du rang de repêchage. Les fiches de recherche du tableau en ligne à bd259b2 (NHLe ajusté sur toutes les cohortes, décalage par palier de dépisteur selon des opinions de 2026) ne se reconstruisent pas à une date passée et n'ont jamais été évaluées walk-forward.",
   "new": "nhle.eG",
   "years": [
    2015,
@@ -394,20 +396,98 @@
    2022,
    2023
   ],
-  "note": "Walk-forward: at each start year the NHLe model is refitted on classes whose 7-season outcome was complete before it; Σ E[G_t] vs realized season gains in each league's scoring over 3 and 5 seasons. d = new − ref (mean over start years), ci = 90 % paired bootstrap.",
+  "horizons": [
+   3,
+   5
+  ],
+  "note": "Walk-forward: at each start year the NHLe model is refitted on classes whose 7-season outcome was complete before it; Σ E[G_t] vs realized season gains in each league's scoring. d = new − ref (mean over start years), ci = 90 % paired bootstrap of players within each year. head = union of the top 300 by realized value and by every predictor scored (symmetric); headReal = top 300 by realized value. The gate keeps the Spearman gains whose interval excludes 0.",
   "gate": {
    "captains.H3.prospects.spearman": 0.048,
    "captains.H3.young.spearman": 0.027,
-   "captains.H3.head.spearman": 0.061,
+   "captains.H3.head.spearman": 0.019,
    "captains.H5.prospects.spearman": 0.064,
    "captains.H5.young.spearman": 0.035,
-   "captains.H5.head.spearman": 0.089,
+   "captains.H5.head.spearman": 0.04,
    "slapshot.H3.prospects.spearman": 0.08,
    "slapshot.H3.young.spearman": 0.034,
-   "slapshot.H3.head.spearman": 0.016,
+   "slapshot.H3.head.spearman": 0.01,
    "slapshot.H5.prospects.spearman": 0.08,
    "slapshot.H5.young.spearman": 0.036,
-   "slapshot.H5.head.spearman": 0.035
+   "slapshot.H5.head.spearman": 0.018
+  },
+  "top200": {
+   "captains": {
+    "years": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020
+    ],
+    "realized": [
+     47,
+     52,
+     41,
+     31,
+     26,
+     32
+    ],
+    "by": {
+     "base": [
+      23,
+      25,
+      17,
+      17,
+      18,
+      22
+     ],
+     "nhle": [
+      39,
+      42,
+      41,
+      49,
+      43,
+      50
+     ]
+    }
+   },
+   "slapshot": {
+    "years": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020
+    ],
+    "realized": [
+     49,
+     53,
+     46,
+     35,
+     25,
+     27
+    ],
+    "by": {
+     "base": [
+      22,
+      26,
+      20,
+      16,
+      17,
+      20
+     ],
+     "nhle": [
+      28,
+      29,
+      22,
+      29,
+      25,
+      31
+     ]
+    }
+   }
   },
   "cells": {
    "captains.H3.all.spearman": {
@@ -528,34 +608,64 @@
     "bAge": 0.521
    },
    "captains.H3.head.spearman": {
-    "ref": 0.551,
-    "new": 0.612,
-    "d": 0.061,
+    "ref": 0.597,
+    "new": 0.616,
+    "d": 0.019,
     "ci": [
-     0.053,
-     0.068
+     0.011,
+     0.027
     ],
-    "bAge": 0.563
+    "bAge": 0.615
    },
    "captains.H3.head.top50": {
     "ref": 0.649,
     "new": 0.647,
     "d": -0.002,
     "ci": [
-     -0.002,
+     0,
      0
     ],
     "bAge": 0.622
    },
    "captains.H3.head.top160": {
     "ref": 0.73,
-    "new": 0.731,
-    "d": 0.001,
+    "new": 0.729,
+    "d": -0.001,
     "ci": [
-     -0.006,
-     0.006
+     -0.007,
+     0.005
     ],
     "bAge": 0.72
+   },
+   "captains.H3.headReal.spearman": {
+    "ref": 0.662,
+    "new": 0.665,
+    "d": 0.003,
+    "ci": [
+     -0.002,
+     0.008
+    ],
+    "bAge": 0.625
+   },
+   "captains.H3.headReal.top50": {
+    "ref": 0.651,
+    "new": 0.649,
+    "d": -0.002,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.627
+   },
+   "captains.H3.headReal.top160": {
+    "ref": 0.766,
+    "new": 0.764,
+    "d": -0.002,
+    "ci": [
+     -0.008,
+     0.004
+    ],
+    "bAge": 0.747
    },
    "captains.H5.all.spearman": {
     "ref": 0.56,
@@ -675,14 +785,14 @@
     "bAge": 0.522
    },
    "captains.H5.head.spearman": {
-    "ref": 0.489,
-    "new": 0.578,
-    "d": 0.089,
+    "ref": 0.55,
+    "new": 0.589,
+    "d": 0.04,
     "ci": [
-     0.078,
-     0.101
+     0.028,
+     0.05
     ],
-    "bAge": 0.493
+    "bAge": 0.546
    },
    "captains.H5.head.top50": {
     "ref": 0.64,
@@ -696,13 +806,43 @@
    },
    "captains.H5.head.top160": {
     "ref": 0.688,
-    "new": 0.704,
-    "d": 0.015,
+    "new": 0.7,
+    "d": 0.012,
     "ci": [
-     0.008,
-     0.027
+     0.005,
+     0.024
     ],
     "bAge": 0.682
+   },
+   "captains.H5.headReal.spearman": {
+    "ref": 0.609,
+    "new": 0.626,
+    "d": 0.017,
+    "ci": [
+     0.009,
+     0.025
+    ],
+    "bAge": 0.549
+   },
+   "captains.H5.headReal.top50": {
+    "ref": 0.643,
+    "new": 0.637,
+    "d": -0.006,
+    "ci": [
+     -0.009,
+     0.003
+    ],
+    "bAge": 0.626
+   },
+   "captains.H5.headReal.top160": {
+    "ref": 0.738,
+    "new": 0.744,
+    "d": 0.005,
+    "ci": [
+     0.001,
+     0.017
+    ],
+    "bAge": 0.718
    },
    "slapshot.H3.all.spearman": {
     "ref": 0.689,
@@ -822,14 +962,14 @@
     "bAge": 0.665
    },
    "slapshot.H3.head.spearman": {
-    "ref": 0.589,
-    "new": 0.605,
-    "d": 0.016,
+    "ref": 0.632,
+    "new": 0.642,
+    "d": 0.01,
     "ci": [
-     0.01,
-     0.02
+     0.004,
+     0.016
     ],
-    "bAge": 0.553
+    "bAge": 0.612
    },
    "slapshot.H3.head.top50": {
     "ref": 0.627,
@@ -847,9 +987,39 @@
     "d": 0,
     "ci": [
      -0.003,
-     0.005
+     0.006
     ],
     "bAge": 0.709
+   },
+   "slapshot.H3.headReal.spearman": {
+    "ref": 0.68,
+    "new": 0.68,
+    "d": 0.001,
+    "ci": [
+     -0.003,
+     0.004
+    ],
+    "bAge": 0.624
+   },
+   "slapshot.H3.headReal.top50": {
+    "ref": 0.629,
+    "new": 0.629,
+    "d": 0,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.607
+   },
+   "slapshot.H3.headReal.top160": {
+    "ref": 0.764,
+    "new": 0.763,
+    "d": -0.001,
+    "ci": [
+     -0.004,
+     0.003
+    ],
+    "bAge": 0.75
    },
    "slapshot.H5.all.spearman": {
     "ref": 0.679,
@@ -969,14 +1139,14 @@
     "bAge": 0.638
    },
    "slapshot.H5.head.spearman": {
-    "ref": 0.538,
-    "new": 0.573,
-    "d": 0.035,
+    "ref": 0.591,
+    "new": 0.609,
+    "d": 0.018,
     "ci": [
-     0.028,
-     0.045
+     0.011,
+     0.026
     ],
-    "bAge": 0.495
+    "bAge": 0.535
    },
    "slapshot.H5.head.top50": {
     "ref": 0.637,
@@ -990,13 +1160,43 @@
    },
    "slapshot.H5.head.top160": {
     "ref": 0.697,
-    "new": 0.701,
-    "d": 0.004,
+    "new": 0.7,
+    "d": 0.003,
     "ci": [
-     -0.001,
+     -0.002,
      0.013
     ],
     "bAge": 0.678
+   },
+   "slapshot.H5.headReal.spearman": {
+    "ref": 0.622,
+    "new": 0.634,
+    "d": 0.011,
+    "ci": [
+     0.005,
+     0.018
+    ],
+    "bAge": 0.552
+   },
+   "slapshot.H5.headReal.top50": {
+    "ref": 0.637,
+    "new": 0.634,
+    "d": -0.003,
+    "ci": [
+     -0.009,
+     0.003
+    ],
+    "bAge": 0.594
+   },
+   "slapshot.H5.headReal.top160": {
+    "ref": 0.742,
+    "new": 0.746,
+    "d": 0.004,
+    "ci": [
+     -0.003,
+     0.011
+    ],
+    "bAge": 0.724
    }
   }
  }

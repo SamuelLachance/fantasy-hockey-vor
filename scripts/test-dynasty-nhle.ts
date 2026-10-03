@@ -1,13 +1,23 @@
 /**
  * NHLe prospect model (src/lib/dynasty/nhle.ts, src/data/dynasty/prospect-model.json):
  * league rows and aliases, the season-pair factors on a synthetic league,
- * monotonicity of the predictions, the committed model's shape, and a
- * regression guard on a frozen evaluation set (scripts/fixtures/
- * dynasty-prospect-holdout.json, classes 2013-2019 at Oct 1, 2019): the
- * committed model must keep beating the draft-slot route on P(200 NHL GP)
- * (AUC) and on the realized Captains value of the next five seasons
- * (Spearman), by the margins below. The honest out-of-sample numbers are the
- * walk-forward backtest's (prospect-model.json `backtest`).
+ * monotonicity of the predictions, the committed model's shape, and the
+ * guards of its walk-forward evidence:
+ *  - scripts/fixtures/dynasty-prospect-wf2019.json (classes 2013-2019 at
+ *    Oct 1, 2019, and the model fitted as of 2019, so out of sample): that
+ *    model must beat the draft-slot route on P(200 NHL GP) (AUC) and on the
+ *    realized Captains value of the next five seasons (Spearman) by the
+ *    margins below; the shipped model on the same rows is only an in-sample
+ *    sanity check (it trains on these classes);
+ *  - the fixture and the recorded backtest (prospect-model.json `backtest`)
+ *    must carry the fingerprint of the current fitting procedure
+ *    (scripts/dynasty-model-hash.ts): a change to nhle.ts or
+ *    scripts/dynasty-prospect-fit.ts fails here until the backtest is re-run
+ *    and re-recorded and the fixture refrozen;
+ *  - the recorded backtest's gate cells (Spearman gains over the draft-slot
+ *    route whose 90 % interval excluded 0) stay positive;
+ *  - the long-term top-200 prospect gate (src/lib/dynasty/checks.ts) covers
+ *    the realized counts the backtest recorded, with at most a few of slack.
  * Run: npx tsx scripts/test-dynasty-nhle.ts
  */
 import { readFileSync } from "fs";
@@ -26,6 +36,8 @@ import {
 import { parseParams } from "../src/lib/dynasty/params";
 import { slotProspect } from "../src/lib/dynasty/prospect";
 import { replacement } from "../src/lib/dynasty/scale";
+import { GATES } from "../src/lib/dynasty/checks";
+import { procedureHash } from "./dynasty-model-hash";
 
 let failed = 0;
 function assert(cond: boolean, msg: string) {
@@ -90,40 +102,77 @@ const S = (y: number, league: string, gp: number, p: number, gt = 2): LandingSea
   assert(design(prospectFeatures(base, 2026, model.factors)).length === DESIGN_NAMES.length, "design length");
 }
 
-// ---- regression guard on the frozen evaluation set
+// ---- walk-forward guard on the frozen 2019 fixture
+const HASH = procedureHash(root);
 {
-  const fx = JSON.parse(readFileSync(join(root, "scripts", "fixtures", "dynasty-prospect-holdout.json"), "utf8")) as {
+  const fx = JSON.parse(readFileSync(join(root, "scripts", "fixtures", "dynasty-prospect-wf2019.json"), "utf8")) as {
+    procedureHash: string;
+    model: ProspectModelV2;
     rows: Array<{ y0: number; pos: "F" | "D"; pick: number; draftYear: number; age: number; height: number | null; rows: Array<[number, string, number, number]>; made: 0 | 1; real5: number }>;
   };
+  assert(fx.procedureHash === HASH, `the walk-forward fixture was frozen with procedure ${fx.procedureHash}, the code is ${HASH}: refreeze it (scripts/dynasty-prospect-fixture.ts)`);
   const repl = replacement(params);
-  const pNew: number[] = [];
+  const score = (m: ProspectModelV2) => {
+    const p: number[] = [];
+    const v: number[] = [];
+    for (const r of fx.rows) {
+      const seasons = r.rows.map(([y, league, gp, pts]) => S(y, league, gp, pts));
+      const n = predictProspect(m, prospectFeatures({ pos: r.pos, pick: r.pick, draftYear: r.draftYear, age: r.age, heightIn: r.height, seasons }, r.y0, m.factors), r.y0, params.prospect.primeFloor[r.pos]);
+      const R = r.pos === "D" ? repl.D : repl.F;
+      p.push(n.pMake);
+      v.push(n.pMake * Math.max(0.05, n.pi.mu - R));
+    }
+    return { p, v };
+  };
   const pSlot: number[] = [];
-  const vNew: number[] = [];
   const vSlot: number[] = [];
-  const made: number[] = [];
-  const real: number[] = [];
   for (const r of fx.rows) {
-    const seasons = r.rows.map(([y, league, gp, pts]) => S(y, league, gp, pts));
-    const n = predictProspect(model, prospectFeatures({ pos: r.pos, pick: r.pick, draftYear: r.draftYear, age: r.age, heightIn: r.height, seasons }, r.y0, model.factors), r.y0, params.prospect.primeFloor[r.pos]);
     const s = slotProspect(params, r.pos, { year: r.draftYear, pick: r.pick }, r.y0);
     const R = r.pos === "D" ? repl.D : repl.F;
-    pNew.push(n.pMake);
     pSlot.push(s.pMake);
-    vNew.push(n.pMake * Math.max(0.05, n.pi.mu - R));
     vSlot.push(s.pMake * Math.max(0.05, s.pi.mu - R));
-    made.push(r.made);
-    real.push(r.real5);
   }
-  const aucN = auc(pNew, made);
+  const made = fx.rows.map((r) => r.made);
+  const real = fx.rows.map((r) => r.real5);
+  const wf = score(fx.model);
+  const shipped = score(model);
   const aucS = auc(pSlot, made);
-  const spN = spearman(vNew, real);
   const spS = spearman(vSlot, real);
-  console.log(`guard: AUC ${aucN.toFixed(3)} vs slot ${aucS.toFixed(3)}; Spearman (5-season Captains value) ${spN.toFixed(3)} vs slot ${spS.toFixed(3)} (${fx.rows.length} prospects)`);
-  assert(aucN >= aucS + 0.05 && aucN >= 0.8, `P(200 GP) AUC ${aucN.toFixed(3)} must beat the slot ${aucS.toFixed(3)} by 0.05 and reach 0.80`);
-  assert(spN >= spS + 0.04, `value Spearman ${spN.toFixed(3)} must beat the slot ${spS.toFixed(3)} by 0.04`);
-  const bt = model.backtest as { gate?: Record<string, number> } | undefined;
+  const aucW = auc(wf.p, made);
+  const spW = spearman(wf.v, real);
+  console.log(
+    `guard (${fx.rows.length} prospects, 2019): walk-forward model AUC ${aucW.toFixed(3)} / Spearman ${spW.toFixed(3)}; slot ${aucS.toFixed(3)} / ${spS.toFixed(3)}; shipped (in sample) ${auc(shipped.p, made).toFixed(3)} / ${spearman(shipped.v, real).toFixed(3)}`,
+  );
+  // out of sample (model fitted as of 2019); frozen 2026-10-02: AUC 0.850 vs slot 0.732, Spearman 0.384 vs slot 0.256
+  assert(aucW >= aucS + 0.08, `walk-forward P(200 GP) AUC ${aucW.toFixed(3)} must beat the slot ${aucS.toFixed(3)} by 0.08`);
+  assert(spW >= spS + 0.07, `walk-forward value Spearman ${spW.toFixed(3)} must beat the slot ${spS.toFixed(3)} by 0.07`);
+  // in sample: a sanity check of the shipped coefficients, not evidence
+  assert(auc(shipped.p, made) >= aucS + 0.05, "shipped model (in sample) beats the slot on AUC");
+}
+
+// ---- the recorded walk-forward backtest
+{
+  const bt = model.backtest as
+    | { procedureHash?: string; gate?: Record<string, number>; top200?: Record<string, { years: number[]; realized: number[]; by: Record<string, number[]> }> }
+    | undefined;
   assert(!!bt?.gate, "prospect-model.json records the walk-forward backtest that justified it (backtest.gate)");
-  if (bt?.gate) for (const [k, v] of Object.entries(bt.gate)) assert(v > 0, `walk-forward gain ${k} = ${v} must stay positive`);
+  assert(bt?.procedureHash === HASH, `the recorded backtest scored procedure ${bt?.procedureHash}, the code is ${HASH}: re-run scripts/dynasty-backtest.ts and scripts/dynasty-scorecard.ts --record`);
+  if (bt?.gate) {
+    assert(Object.keys(bt.gate).length >= 6, `at least 6 gate cells (${Object.keys(bt.gate).length})`);
+    for (const [k, v] of Object.entries(bt.gate)) assert(v > 0, `walk-forward gain ${k} = ${v} must stay positive`);
+  }
+  // the long-term top-200 prospect gate is the realized range of the backtest, with a little slack
+  const t = bt?.top200;
+  assert(!!t && Object.keys(t).length > 0, "the backtest records the prospects in the realized long-term top 200 (backtest.top200)");
+  if (t) {
+    // the gate runs on the Captains board (scripts/check-fantrax-data.ts)
+    const realized = (t.captains ?? Object.values(t)[0]!).realized;
+    const lo = Math.min(...realized);
+    const hi = Math.max(...realized);
+    const [glo, ghi] = GATES.top200ProspectsLongTerm;
+    assert(glo <= lo && ghi >= hi, `gate ${glo}-${ghi} covers the realized counts ${lo}-${hi}`);
+    assert(lo - glo <= 8 && ghi - hi <= 5, `gate ${glo}-${ghi} stays near the realized counts ${lo}-${hi} (slack ≤ 8 below, ≤ 5 above)`);
+  }
 }
 
 function ranks(x: readonly number[]): number[] {

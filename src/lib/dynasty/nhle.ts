@@ -1,5 +1,5 @@
 /**
- * NHL-equivalency (NHLe) prospect model (dynasty v7, 2026-10-03).
+ * NHL-equivalency (NHLe) prospect model (dynasty v7, 2026-10-02).
  *
  * The draft slot alone ranks a class (Spearman ~0.3 with what the players
  * later produced); the scoring a prospect posts in junior, college, Europe
@@ -285,7 +285,8 @@ export interface ProspectFeatures {
 /** Shrinkage of a season's NHLe: toward `prior` PPG with `k` pseudo-games. */
 export const NHLE_SHRINK = { k: 20, prior: { F: 0.12, D: 0.07 } } as const;
 
-export function prospectFeatures(x: ProspectFeatureInput, y0: number, fs: LeagueFactors): ProspectFeatures {
+/** `shrinkK`: pseudo-games of the NHLe shrinkage (NHLE_SHRINK.k; other values only in the sensitivity runs of scripts/dynasty-prospect-eval.ts). */
+export function prospectFeatures(x: ProspectFeatureInput, y0: number, fs: LeagueFactors, shrinkK: number = NHLE_SHRINK.k): ProspectFeatures {
   const rows = seasonRows(x.seasons, y0);
   const by = nhleBySeason(rows, fs);
   const prior = NHLE_SHRINK.prior[x.pos];
@@ -293,7 +294,7 @@ export function prospectFeatures(x: ProspectFeatureInput, y0: number, fs: League
     const s = by.find((r) => r.year === y);
     const gp = s ? s.gp + s.nhlGp : 0;
     const ppg = s ? s.ppg : prior;
-    return { ln: Math.log(Math.max(0.01, (ppg * gp + prior * NHLE_SHRINK.k) / (gp + NHLE_SHRINK.k))), gp, pro: s?.pro ? 1 : 0 };
+    return { ln: Math.log(Math.max(0.01, (ppg * gp + prior * shrinkK) / (gp + shrinkK))), gp, pro: s?.pro ? 1 : 0 };
   };
   const s1 = at(y0 - 1);
   const s2 = at(y0 - 2);

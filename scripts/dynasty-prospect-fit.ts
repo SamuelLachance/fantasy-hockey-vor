@@ -27,7 +27,7 @@ export interface TrainRow {
   prime: number | null;
 }
 
-export function trainingRows(H: Hist, PH: ProspectHistory, p: DynastyParams, y0: number, factors: ProspectModelV2["factors"]): TrainRow[] {
+export function trainingRows(H: Hist, PH: ProspectHistory, p: DynastyParams, y0: number, factors: ProspectModelV2["factors"], shrinkK?: number): TrainRow[] {
   // scoring level per season and group (40+ GP skaters)
   const lvl = new Map<string, number>();
   for (let y = 2008; y < y0; y++) {
@@ -86,17 +86,22 @@ export function trainingRows(H: Hist, PH: ProspectHistory, p: DynastyParams, y0:
         }
         if (den >= 40) prime = num / den;
       }
-      const f = prospectFeatures({ pos: g, pick: d.pick, draftYear: d.year, age, heightIn: d.height ?? land.heightInInches ?? null, seasons: land.seasonTotals }, s, factors);
+      const f = prospectFeatures({ pos: g, pick: d.pick, draftYear: d.year, age, heightIn: d.height ?? land.heightInInches ?? null, seasons: land.seasonTotals }, s, factors, shrinkK);
       out.push({ id: d.id, s, x: design(f), make, lag, prime });
     }
   }
   return out;
 }
 
-export function fitProspectModel(H: Hist, PH: ProspectHistory, p: DynastyParams, y0: number, opts: { l2?: number } = {}): ProspectModelV2 {
+/**
+ * `opts` (defaults: the shipped choices, tuned on the 2015-2023 backtest): l2 ridge of the
+ * make-it logistic (prime and lag: 5 × l2), pseudo pairs of the league-factor shrinkage, NHLe
+ * shrinkage pseudo-games. Other values only for the sensitivity runs (scripts/dynasty-prospect-eval.ts).
+ */
+export function fitProspectModel(H: Hist, PH: ProspectHistory, p: DynastyParams, y0: number, opts: { l2?: number; pseudo?: number; shrinkK?: number } = {}): ProspectModelV2 {
   const players = [...PH.landing.values()].map((l) => l.seasonTotals);
-  const factors = fitLeagueFactors(players, y0);
-  const rows = trainingRows(H, PH, p, y0, factors);
+  const factors = fitLeagueFactors(players, y0, 20, opts.pseudo ?? 30);
+  const rows = trainingRows(H, PH, p, y0, factors, opts.shrinkK);
   const l2 = opts.l2 ?? 2;
   const make = fitLogistic(rows.map((r) => r.x), rows.map((r) => r.make), l2);
   const pr = rows.filter((r) => r.prime != null);
