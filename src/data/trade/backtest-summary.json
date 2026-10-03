@@ -1,0 +1,189 @@
+{
+  "builtAt": "2026-10-03T00:31:19.100Z",
+  "script": "scripts/backtest-trade.ts",
+  "league": "Slapshot-shaped: 32 teams, C4 LW4 RW4 D6 G2 + 3 reserves, Slapshot scoring",
+  "fitSeason": 20222023,
+  "testSeasons": [
+    20232024,
+    20242025,
+    20252026
+  ],
+  "benchShareFitted": 0.7,
+  "benchShare": 0.7,
+  "overall": {
+    "n": 9000,
+    "spearman": {
+      "naive": 0.2454512757874643,
+      "tool": 0.30054813156232263
+    },
+    "signAccuracy": {
+      "naive": 0.5785555555555556,
+      "tool": 0.5967777777777777
+    },
+    "mae": {
+      "naive": 92.60136202785473,
+      "tool": 95.20646892720164
+    },
+    "disagreements": {
+      "n": 2571,
+      "toolRight": 1352
+    },
+    "spearmanCI": {
+      "naive": [
+        0.223,
+        0.267
+      ],
+      "tool": [
+        0.28,
+        0.32
+      ]
+    },
+    "signCI": {
+      "naive": [
+        0.568,
+        0.588
+      ],
+      "tool": [
+        0.586,
+        0.606
+      ]
+    }
+  },
+  "bySeason": {
+    "20232024": {
+      "n": 3000,
+      "spearman": {
+        "naive": 0.25328706192078465,
+        "tool": 0.30937199615244404
+      },
+      "signAccuracy": {
+        "naive": 0.5843333333333334,
+        "tool": 0.6023333333333334
+      },
+      "mae": {
+        "naive": 88.65076120663512,
+        "tool": 90.38351421552642
+      },
+      "disagreements": {
+        "n": 822,
+        "toolRight": 432
+      }
+    },
+    "20242025": {
+      "n": 3000,
+      "spearman": {
+        "naive": 0.23196098666233186,
+        "tool": 0.27973464797051645
+      },
+      "signAccuracy": {
+        "naive": 0.5773333333333334,
+        "tool": 0.5863333333333334
+      },
+      "mae": {
+        "naive": 96.44689176936149,
+        "tool": 99.80161288584577
+      },
+      "disagreements": {
+        "n": 872,
+        "toolRight": 446
+      }
+    },
+    "20252026": {
+      "n": 3000,
+      "spearman": {
+        "naive": 0.25191207510134167,
+        "tool": 0.31394405710489526
+      },
+      "signAccuracy": {
+        "naive": 0.574,
+        "tool": 0.6016666666666667
+      },
+      "mae": {
+        "naive": 92.70643310756878,
+        "tool": 95.43427968023289
+      },
+      "disagreements": {
+        "n": 877,
+        "toolRight": 474
+      }
+    }
+  },
+  "byKind": {
+    "1x1": {
+      "n": 4000,
+      "spearman": {
+        "naive": 0.23130179833136238,
+        "tool": 0.2622422736401421
+      },
+      "signAccuracy": {
+        "naive": 0.564,
+        "tool": 0.57775
+      },
+      "mae": {
+        "naive": 74.9065560333794,
+        "tool": 77.2295336864111
+      },
+      "disagreements": {
+        "n": 997,
+        "toolRight": 513
+      }
+    },
+    "2x1": {
+      "n": 1123,
+      "spearman": {
+        "naive": 0.2993015827191197,
+        "tool": 0.31215580891743255
+      },
+      "signAccuracy": {
+        "naive": 0.5957257346393589,
+        "tool": 0.591273374888691
+      },
+      "mae": {
+        "naive": 93.76064361859139,
+        "tool": 96.56260824427314
+      },
+      "disagreements": {
+        "n": 208,
+        "toolRight": 101
+      }
+    },
+    "1x2": {
+      "n": 1142,
+      "spearman": {
+        "naive": 0.21207881741781515,
+        "tool": 0.2520849423277464
+      },
+      "signAccuracy": {
+        "naive": 0.5148861646234676,
+        "tool": 0.6628721541155866
+      },
+      "mae": {
+        "naive": 114.87455609910124,
+        "tool": 109.63639649288723
+      },
+      "disagreements": {
+        "n": 663,
+        "toolRight": 414
+      }
+    },
+    "2x2": {
+      "n": 2735,
+      "spearman": {
+        "naive": 0.31773677901532443,
+        "tool": 0.3111148464937796
+      },
+      "signAccuracy": {
+        "naive": 0.6193784277879342,
+        "tool": 0.5992687385740402
+      },
+      "mae": {
+        "naive": 108.70423702681052,
+        "tool": 114.91609204606046
+      },
+      "disagreements": {
+        "n": 703,
+        "toolRight": 324
+      }
+    }
+  }
+}
