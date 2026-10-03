@@ -66,6 +66,8 @@
     "yahoo:gaps": "tsx scripts/report-yahoo-gaps.ts",
     "generate": "tsx scripts/generate-projections.ts",
     "season:update": "tsx scripts/update-in-season.ts && tsx scripts/reapply-vor.ts",
+    "inseason:fetch": "tsx scripts/fetch-in-season-history.ts",
+    "inseason:backtest": "tsx scripts/dump-walk-forward-priors.ts --out=src/data/ml/gamelog-cache/in-season-priors.json && tsx scripts/backtest-in-season.ts --priors=src/data/ml/gamelog-cache/in-season-priors.json --tune --write && tsx scripts/backtest-in-season-goalies.ts --tune --variants --write && tsx scripts/backtest-in-season-newcomers.ts --write",
     "league:sync": "tsx scripts/fantrax-sync.ts",
     "league:revalue": "tsx scripts/fantrax-revalue.ts && tsx scripts/build-dynasty.ts",
     "league:report": "tsx scripts/fantrax-report.ts",
