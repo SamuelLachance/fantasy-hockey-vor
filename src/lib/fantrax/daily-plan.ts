@@ -1119,29 +1119,24 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
           values.players[id] ? seasonFp(values.players[id]!, config) : 0,
         )
       : null;
-  // ---- salary-cap fit: which players to stash / call up (Slapshot).
-  let capFitPart: DailyPlan["capFit"] = null;
+  // ---- salary-cap fit: which players to stash / call up (Slapshot; cap-fit.ts).
   const fitKit = config.salaryCap && input.contracts ? requireKit(input.kit, config).capFit : undefined;
-  if (fitKit && config.salaryCap && input.contracts && target) {
-    const firstPlayoff = league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
-    const lastRegular = league.scoringPeriods.filter((p) => p.number < firstPlayoff).at(-1);
-    const regularEnd = lastRegular ? Date.parse(lastRegular.end) : Number.POSITIVE_INFINITY;
-    const ahead = league.rosterPeriods.filter((p) => p.number >= target.number && Date.parse(p.start) <= regularEnd);
-    const movable = roster.filter((r) => r.status === "ACTIVE" || r.status === "RESERVE" || r.status === "MINORS");
-    // Every lineup day left (cap-fit.ts searches on a sample, then re-scores on all of them).
-    capFitPart = fitKit({
-      roster: movable,
-      contracts: input.contracts,
-      rules: { cap: input.contracts.cap[0] ?? config.salaryCap.base, floor: config.salaryCap.floor ?? 0, spots: config.salaryCap.countedSpots, maxMinors: league.limits.maxMinors },
-      days: ahead.map((p) => movable.map((r) => candidateFor(ctx, r.id, "RESERVE", undefined, p.number)).filter((c): c is LineupCandidate => !!c)),
-      slots: slotCounts,
-      order: slotOrder,
-      values: values.players,
-      icons: state.icons,
-      priors: config.priors,
-      ...(input.capFitSearchDays !== undefined ? { searchDays: input.capFitSearchDays } : {}),
-    }).advice;
-  }
+  const capFitPart: DailyPlan["capFit"] =
+    fitKit && target
+      ? fitKit({
+          league,
+          from: target.number,
+          roster,
+          contracts: input.contracts!,
+          config,
+          candidate: (id, period) => candidateFor(ctx, id, "RESERVE", undefined, period),
+          slots: slotCounts,
+          order: slotOrder,
+          values: values.players,
+          icons: state.icons,
+          searchDays: input.capFitSearchDays,
+        }).advice
+      : null;
   if (salaryPart?.over) {
     alerts.push({
       level: "warn",

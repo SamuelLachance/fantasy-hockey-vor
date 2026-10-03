@@ -61,7 +61,7 @@ for (const team of league.teams) {
     ...PLAN_KIT,
     capFit: (input) => {
       const out = PLAN_KIT.capFit!(input);
-      cap = { players: out.players, rules: input.rules, days: out.days, weights: out.days.map(() => 1), slots: input.slots, order: input.order };
+      cap = { players: out.players, rules: out.rules, days: out.days, weights: out.days.map(() => 1), slots: input.slots, order: input.order };
       return out;
     },
   };

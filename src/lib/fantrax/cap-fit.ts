@@ -20,13 +20,13 @@
  * scripts/backtest-cap-fit.ts measures it on the 32 real Slapshot rosters
  * against the rule by hand (`capFitByHand`) and the roster as it is.
  */
-import type { FantraxPriors, SlotCounts, SlotId } from "./config";
+import type { FantraxLeagueConfig, FantraxPriors, SlotCounts, SlotId } from "./config";
 import type { DailyPlan } from "./daily-plan";
 import { bestFpg, isGoalieRecord } from "./draft-inputs";
 import { optimizeLineup, type LineupCandidate } from "./lineup";
 import { dayToDayFactor, skaterPlayProbability } from "./points-model";
 import type { ContractsFile } from "./salary-cap";
-import type { ValuesSnapshot } from "./snapshot-types";
+import type { LeagueSnapshot, ValuesSnapshot } from "./snapshot-types";
 
 export interface CapFitPlayer {
   id: string;
@@ -281,17 +281,19 @@ export function seasonCandidate(
 }
 
 export interface CapFitAdviceInput {
-  /** Active, Reserve and Minors players (status as on the roster). */
+  league: Pick<LeagueSnapshot, "playoffs" | "scoringPeriods" | "rosterPeriods" | "limits">;
+  /** First lineup period the advice is for (the plan's target). */
+  from: number;
+  /** The roster (Active, Reserve and Minors players move; the rest stay). */
   roster: ReadonlyArray<{ id: string; status: string }>;
   contracts: ContractsFile;
-  rules: CapFitRules;
-  /** Each lineup day left in the fantasy regular season: the roster's candidates (nightly values, any status). */
-  days: readonly LineupCandidate[][];
+  config: Pick<FantraxLeagueConfig, "salaryCap" | "priors">;
+  /** A player's lineup candidate for a lineup period (nightly values), or null. */
+  candidate: (id: string, period: number) => LineupCandidate | null;
   slots: SlotCounts;
   order: readonly SlotId[];
   values: ValuesSnapshot["players"];
   icons: Readonly<Record<string, string[]>>;
-  priors: FantraxPriors;
   searchDays?: number;
 }
 
@@ -305,15 +307,28 @@ export function capFitAdvice(a: CapFitAdviceInput): {
   advice: DailyPlan["capFit"];
   result: CapFitResult;
   players: CapFitPlayer[];
+  rules: CapFitRules;
   days: LineupCandidate[][];
 } {
-  const players = a.roster.map((r) => ({ id: r.id, status: r.status, hit: a.contracts.players[r.id]?.c[0] ?? a.contracts.min[0] ?? 0 }));
-  const days = a.days.map((cands) =>
-    cands.map((c) => seasonCandidate(c, a.values, a.icons, a.priors)).filter((c) => Object.values(c.values).some((v) => (v ?? 0) > 0)),
+  const sc = a.config.salaryCap!;
+  const rules: CapFitRules = { cap: a.contracts.cap[0] ?? sc.base, floor: sc.floor ?? 0, spots: sc.countedSpots, maxMinors: a.league.limits.maxMinors };
+  // Every lineup day left in the fantasy regular season.
+  const firstPlayoff = a.league.playoffs?.firstPeriod ?? Number.POSITIVE_INFINITY;
+  const lastRegular = a.league.scoringPeriods.filter((p) => p.number < firstPlayoff).at(-1);
+  const regularEnd = lastRegular ? Date.parse(lastRegular.end) : Number.POSITIVE_INFINITY;
+  const ahead = a.league.rosterPeriods.filter((p) => p.number >= a.from && Date.parse(p.start) <= regularEnd);
+  const movable = a.roster.filter((r) => r.status === "ACTIVE" || r.status === "RESERVE" || r.status === "MINORS");
+  const players = movable.map((r) => ({ id: r.id, status: r.status, hit: a.contracts.players[r.id]?.c[0] ?? a.contracts.min[0] ?? 0 }));
+  const days = ahead.map((p) =>
+    movable
+      .map((r) => a.candidate(r.id, p.number))
+      .filter((c): c is LineupCandidate => !!c)
+      .map((c) => seasonCandidate(c, a.values, a.icons, a.config.priors))
+      .filter((c) => Object.values(c.values).some((v) => (v ?? 0) > 0)),
   );
-  const result = capFit(players, a.rules, days, days.map(() => 1), a.slots, a.order, a.searchDays !== undefined ? { searchDays: a.searchDays } : {});
+  const result = capFit(players, rules, days, days.map(() => 1), a.slots, a.order, a.searchDays !== undefined ? { searchDays: a.searchDays } : {});
   const counted = players.filter((p) => p.status !== "MINORS").length;
-  const legalBefore = result.usedBefore <= a.rules.cap + 1e-9 && result.usedBefore >= a.rules.floor - 1e-9 && counted <= a.rules.spots;
+  const legalBefore = result.usedBefore <= rules.cap + 1e-9 && result.usedBefore >= rules.floor - 1e-9 && counted <= rules.spots;
   const r2 = (x: number, d: number) => Math.round(x * 10 ** d) / 10 ** d;
   const advice =
     result.moves.length && (result.after - result.before >= CAP_FIT_MIN_GAIN || !legalBefore)
@@ -325,5 +340,5 @@ export function capFitAdvice(a: CapFitAdviceInput): {
           legal: result.legal,
         }
       : null;
-  return { advice, result, players, days };
+  return { advice, result, players, rules, days };
 }
