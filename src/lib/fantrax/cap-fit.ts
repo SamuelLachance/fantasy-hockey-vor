@@ -121,7 +121,19 @@ export function capFit(
   weights: readonly number[],
   slots: SlotCounts,
   order: readonly SlotId[],
-  opts: { searchDays?: number; maxIter?: number; maxCallUps?: number } = {},
+  opts: {
+    searchDays?: number;
+    maxIter?: number;
+    maxCallUps?: number;
+    /**
+     * Season points the rule by hand ranks by (the salary line's: `seasonFp`).
+     * Its roster is one of the search's starts and finalists, with every
+     * Minors player it calls up movable, so the advice is never below the
+     * rule by hand when both are legal. Default: each player's own value
+     * over the days.
+     */
+    seasonPoints?: (id: string) => number;
+  } = {},
 ): CapFitResult {
   const searchDays = opts.searchDays ?? CAP_FIT_SEARCH_DAYS;
   const maxIter = opts.maxIter ?? 40;
@@ -131,13 +143,15 @@ export function capFit(
   days.forEach((cands, i) => {
     for (const c of cands) own.set(c.id, (own.get(c.id) ?? 0) + (weights[i] ?? 1) * Math.max(0, ...Object.values(c.values).map((v) => v ?? 0)));
   });
-  const callUps = new Set(
-    players
+  const byHand = capFitByHand(players, rules, opts.seasonPoints ?? ((id) => own.get(id) ?? 0));
+  const callUps = new Set([
+    ...players
       .filter((p) => p.status === "MINORS")
       .sort((a, b) => (own.get(b.id) ?? 0) - (own.get(a.id) ?? 0))
       .slice(0, maxCallUps)
       .map((p) => p.id),
-  );
+    ...players.filter((p) => p.status === "MINORS" && byHand.has(p.id)).map((p) => p.id),
+  ]);
   const movable = players.filter((p) => p.status === "ACTIVE" || p.status === "RESERVE" || callUps.has(p.id));
   const hit = new Map(movable.map((p) => [p.id, p.hit]));
   const start = new Set(movable.filter((p) => p.status !== "MINORS").map((p) => p.id));
@@ -225,7 +239,6 @@ export function capFit(
     }
   };
   search(start);
-  const byHand = capFitByHand(movable, rules, (id) => own.get(id) ?? 0);
   finalists.set(key(byHand), byHand);
   search(byHand);
 
@@ -369,12 +382,16 @@ export function capFitAdvice(a: CapFitAdviceInput): {
       .map((c) => seasonCandidate(c, a.values, a.icons, a.config.priors))
       .filter((c) => Object.values(c.values).some((v) => (v ?? 0) > 0)),
   );
-  const result = capFit(players, rules, days, days.map(() => 1), a.slots, a.order, a.searchDays !== undefined ? { searchDays: a.searchDays } : {});
+  const seasonPoints = (id: string) => (a.values[id] ? seasonFp(a.values[id]!, a.config) : 0);
+  const result = capFit(players, rules, days, days.map(() => 1), a.slots, a.order, {
+    seasonPoints,
+    ...(a.searchDays !== undefined ? { searchDays: a.searchDays } : {}),
+  });
   const counted = players.filter((p) => p.status !== "MINORS").length;
   // The payroll before is the salary line's (`salaryUsage`: past the counted
   // spots, the best by season points), so one card never shows two payrolls.
   const payroll = (roster: ReadonlyArray<{ id: string; status: string }>, fallback: number) =>
-    salaryUsage(roster, a.contracts, sc, 1, (id) => (a.values[id] ? seasonFp(a.values[id]!, a.config) : 0)).used[0] ?? fallback;
+    salaryUsage(roster, a.contracts, sc, 1, seasonPoints).used[0] ?? fallback;
   const shown = payroll(a.roster, result.usedBefore);
   const to = new Map(result.moves.map((m) => [m.id, m.to]));
   const shownAfter = payroll(
