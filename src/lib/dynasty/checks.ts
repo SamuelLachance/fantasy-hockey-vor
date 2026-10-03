@@ -35,7 +35,18 @@ export const GATES = {
    * Fantrax ADP top 100 of the real draft holds 10.
    */
   top100: { G: [6, 20], D: [10, 20], prospect: [1, 6] } as const,
-  top200ProspectsLongTerm: [20, 45] as const,
+  /**
+   * 20-55 since 2026-10-02 (was 20-45, judgment), the realized range of the
+   * walk-forward backtest with a little slack: players on the prospect route
+   * at Oct 1 among the Captains top 200 by long-term weights over six
+   * realized seasons, start years 2015-2020 (scripts/dynasty-backtest.ts +
+   * scripts/dynasty-scorecard.ts, recorded in prospect-model.json
+   * backtest.top200): 26-52 realized, 39-50 for the NHLe model (the live
+   * board holds 47). A six-season window cuts the prospects' later seasons,
+   * so the realized count is a floor. scripts/test-dynasty-nhle.ts fails if
+   * this range stops covering the recorded counts or drifts away from them.
+   */
+  top200ProspectsLongTerm: [20, 55] as const,
   /**
    * Long-term mode (audit 2026-09-25): its top 100 is at least this much
    * younger (median age) than the balanced top 100, and nobody whose value

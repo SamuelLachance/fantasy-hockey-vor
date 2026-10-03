@@ -1,0 +1,1203 @@
+{
+ "version": "nhle-v2-2026",
+ "source": "scripts/dynasty-fit-prospects.ts: NHL draft picks 2005-2026 (api-web draft picks) and their public NHL player landings (seasonTotals), NHL history 2008-09..2025-26 (MoneyPuck season totals). Training rows: every drafted skater at each snapshot from his draft year to draft year + 6 with < 100 NHL GP and age < 25, outcome window of 7 seasons complete before 2026-27. make = 200+ NHL GP by the end of the window (logistic, ridge 2); prime = GP-weighted league-1 FP/G at ages 24-26 rescaled to the 2025-26 scoring level (OLS, ridge 10); lag = first season with 10+ NHL GP minus the snapshot, less the arrival jitter mean (OLS). League factors: season pairs (20+ GP both), direct and through one league, shrunk to a prior with 30 pairs.",
+ "make": [
+  6.8142,
+  -0.7719,
+  0.4144,
+  -0.2318,
+  1.8984,
+  0.7279,
+  -0.0492,
+  0.0664,
+  -0.2342,
+  0.7113,
+  0.0449,
+  -0.1712,
+  -0.3093
+ ],
+ "prime": {
+  "coef": [
+   4.1369,
+   -0.1041,
+   -0.1291,
+   -0.1705,
+   0.5404,
+   0.1998,
+   -0.026,
+   -0.0126,
+   -0.0349,
+   0.0589,
+   -0.0065,
+   -0.0343,
+   -0.1877
+  ],
+  "sd": 0.6495
+ },
+ "lag": {
+  "coef": [
+   -0.794,
+   0.2768,
+   -0.1723,
+   0.0444,
+   -0.4503,
+   -0.2001,
+   0.081,
+   -0.1966,
+   0.051,
+   -0.14,
+   0.0372,
+   -0.1586,
+   0.0002
+  ],
+  "min": 0,
+  "max": 6
+ },
+ "oddsCal": 1,
+ "factors": {
+  "NHL": {
+   "f": 1,
+   "n": 1000000
+  },
+  "AHL": {
+   "f": 0.4799,
+   "n": 1678
+  },
+  "OHL": {
+   "f": 0.1989,
+   "n": 668
+  },
+  "NCAA": {
+   "f": 0.2902,
+   "n": 653
+  },
+  "WHL": {
+   "f": 0.1908,
+   "n": 542
+  },
+  "SHL": {
+   "f": 0.5526,
+   "n": 389
+  },
+  "ECHL": {
+   "f": 0.2149,
+   "n": 383
+  },
+  "QMJHL": {
+   "f": 0.176,
+   "n": 281
+  },
+  "Liiga": {
+   "f": 0.465,
+   "n": 268
+  },
+  "KHL": {
+   "f": 0.6923,
+   "n": 266
+  },
+  "USHL": {
+   "f": 0.2948,
+   "n": 247
+  },
+  "J20 Nationell": {
+   "f": 0.1819,
+   "n": 133
+  },
+  "USDP": {
+   "f": 0.2784,
+   "n": 130
+  },
+  "HockeyAllsvenskan": {
+   "f": 0.3653,
+   "n": 120
+  },
+  "BCHL": {
+   "f": 0.1573,
+   "n": 117
+  },
+  "Minor-ON": {
+   "f": 0.07,
+   "n": 115
+  },
+  "MHL": {
+   "f": 0.2141,
+   "n": 103
+  },
+  "NL": {
+   "f": 0.4984,
+   "n": 99
+  },
+  "AMHL": {
+   "f": 0.0868,
+   "n": 95
+  },
+  "GTHL": {
+   "f": 0.0802,
+   "n": 90
+  },
+  "Czechia": {
+   "f": 0.6014,
+   "n": 77
+  },
+  "Czechia U20": {
+   "f": 0.1859,
+   "n": 66
+  },
+  "VHL": {
+   "f": 0.2992,
+   "n": 66
+  },
+  "U20 SM-sarja": {
+   "f": 0.1881,
+   "n": 64
+  },
+  "GTHL U16": {
+   "f": 0.0863,
+   "n": 63
+  },
+  "DEL": {
+   "f": 0.4322,
+   "n": 62
+  },
+  "CSSHL U18": {
+   "f": 0.0673,
+   "n": 59
+  },
+  "SMHL": {
+   "f": 0.107,
+   "n": 53
+  },
+  "AJHL": {
+   "f": 0.1342,
+   "n": 52
+  },
+  "QMAAA": {
+   "f": 0.0835,
+   "n": 44
+  },
+  "QAAA": {
+   "f": 0.0836,
+   "n": 44
+  },
+  "MMHL": {
+   "f": 0.0637,
+   "n": 43
+  },
+  "OPJHL": {
+   "f": 0.13,
+   "n": 43
+  },
+  "Slovakia": {
+   "f": 0.2976,
+   "n": 36
+  },
+  "BCMML": {
+   "f": 0.1039,
+   "n": 36
+  },
+  "Rus-KHL": {
+   "f": 0.281,
+   "n": 32
+  },
+  "SMAAAHL": {
+   "f": 0.0641,
+   "n": 32
+  },
+  "U16 AAA": {
+   "f": 0.0646,
+   "n": 29
+  },
+  "QM18AAA": {
+   "f": 0.081,
+   "n": 29
+  },
+  "OJHL": {
+   "f": 0.1047,
+   "n": 28
+  },
+  "Mestis": {
+   "f": 0.2255,
+   "n": 27
+  },
+  "ON-Jr.A": {
+   "f": 0.147,
+   "n": 27
+  },
+  "USHS-Prep": {
+   "f": 0.0726,
+   "n": 23
+  },
+  "ICEHL": {
+   "f": 0.314,
+   "n": 22
+  },
+  "GOJHL": {
+   "f": 0.1288,
+   "n": 22
+  },
+  "ETAHL U16": {
+   "f": 0.0492,
+   "n": 21
+  },
+  "High-MA": {
+   "f": 0.056,
+   "n": 20
+  },
+  "Minor-BC": {
+   "f": 0.0526,
+   "n": 20
+  },
+  "CJHL": {
+   "f": 0.1429,
+   "n": 17
+  },
+  "GTMMHL": {
+   "f": 0.0495,
+   "n": 17
+  },
+  "OJHL-B": {
+   "f": 0.1396,
+   "n": 17
+  },
+  "BCEHL U18": {
+   "f": 0.0493,
+   "n": 17
+  },
+  "EJHL": {
+   "f": 0.1324,
+   "n": 15
+  },
+  "High-CT": {
+   "f": 0.0579,
+   "n": 15
+  },
+  "ON-Jr.B": {
+   "f": 0.1333,
+   "n": 15
+  },
+  "USHS-MN": {
+   "f": 0.0564,
+   "n": 14
+  },
+  "Russia-2": {
+   "f": 0.1537,
+   "n": 13
+  },
+  "ALLIANCE U16": {
+   "f": 0.047,
+   "n": 13
+  },
+  "T1EHL": {
+   "f": 0.0569,
+   "n": 13
+  },
+  "HEO U18": {
+   "f": 0.048,
+   "n": 13
+  },
+  "Russia-3": {
+   "f": 0.1343,
+   "n": 12
+  },
+  "HockeyEttan": {
+   "f": 0.1358,
+   "n": 12
+  },
+  "NSMHL": {
+   "f": 0.1031,
+   "n": 12
+  },
+  "Sweden-3": {
+   "f": 0.1624,
+   "n": 11
+  },
+  "PIJHL": {
+   "f": 0.1103,
+   "n": 11
+  },
+  "CCHL": {
+   "f": 0.1292,
+   "n": 11
+  },
+  "USports": {
+   "f": 0.1327,
+   "n": 10
+  },
+  "High-MN": {
+   "f": 0.0471,
+   "n": 10
+  },
+  "NAHL": {
+   "f": 0.1046,
+   "n": 10
+  },
+  "Czechia2": {
+   "f": 0.1448,
+   "n": 10
+  },
+  "MU18HL": {
+   "f": 0.0483,
+   "n": 10
+  },
+  "AEHL U18": {
+   "f": 0.0475,
+   "n": 9
+  },
+  "NSMMHL": {
+   "f": 0.0496,
+   "n": 9
+  },
+  "AHMMPL": {
+   "f": 0.1089,
+   "n": 9
+  },
+  "Swiss-Jr.": {
+   "f": 0.1139,
+   "n": 9
+  },
+  "Swe-U18": {
+   "f": 0.0474,
+   "n": 9
+  },
+  "GNML": {
+   "f": 0.1106,
+   "n": 8
+  },
+  "Exhib.": {
+   "f": 0.1124,
+   "n": 8
+  },
+  "U18 SM-sarja": {
+   "f": 0.052,
+   "n": 8
+  }
+ },
+ "fit": {
+  "rows": 14426,
+  "makers": 2640,
+  "prime": 2600,
+  "lag": 2640
+ },
+ "backtest": {
+  "script": "scripts/dynasty-backtest.ts + scripts/dynasty-scorecard.ts --record",
+  "recordedAt": "2026-10-02",
+  "procedureHash": "4ddfba57a723adf2",
+  "ref": "base.eG",
+  "refLabel": "route rang de repêchage (fallback) : le moteur de bd259b2 avec ses espoirs sur la route du rang de repêchage. Les fiches de recherche du tableau en ligne à bd259b2 (NHLe ajusté sur toutes les cohortes, décalage par palier de dépisteur selon des opinions de 2026) ne se reconstruisent pas à une date passée et n'ont jamais été évaluées walk-forward.",
+  "new": "nhle.eG",
+  "years": [
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023
+  ],
+  "horizons": [
+   3,
+   5
+  ],
+  "note": "Walk-forward: at each start year the NHLe model is refitted on classes whose 7-season outcome was complete before it; Σ E[G_t] vs realized season gains in each league's scoring. d = new − ref (mean over start years), ci = 90 % paired bootstrap of players within each year. head = union of the top 300 by realized value and by every predictor scored (symmetric); headReal = top 300 by realized value. The gate keeps the Spearman gains whose interval excludes 0.",
+  "gate": {
+   "captains.H3.prospects.spearman": 0.048,
+   "captains.H3.young.spearman": 0.027,
+   "captains.H3.head.spearman": 0.019,
+   "captains.H5.prospects.spearman": 0.064,
+   "captains.H5.young.spearman": 0.035,
+   "captains.H5.head.spearman": 0.04,
+   "slapshot.H3.prospects.spearman": 0.08,
+   "slapshot.H3.young.spearman": 0.034,
+   "slapshot.H3.head.spearman": 0.01,
+   "slapshot.H5.prospects.spearman": 0.08,
+   "slapshot.H5.young.spearman": 0.036,
+   "slapshot.H5.head.spearman": 0.018
+  },
+  "top200": {
+   "captains": {
+    "years": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020
+    ],
+    "realized": [
+     47,
+     52,
+     41,
+     31,
+     26,
+     32
+    ],
+    "by": {
+     "base": [
+      23,
+      25,
+      17,
+      17,
+      18,
+      22
+     ],
+     "nhle": [
+      39,
+      42,
+      41,
+      49,
+      43,
+      50
+     ]
+    }
+   },
+   "slapshot": {
+    "years": [
+     2015,
+     2016,
+     2017,
+     2018,
+     2019,
+     2020
+    ],
+    "realized": [
+     49,
+     53,
+     46,
+     35,
+     25,
+     27
+    ],
+    "by": {
+     "base": [
+      22,
+      26,
+      20,
+      16,
+      17,
+      20
+     ],
+     "nhle": [
+      28,
+      29,
+      22,
+      29,
+      25,
+      31
+     ]
+    }
+   }
+  },
+  "cells": {
+   "captains.H3.all.spearman": {
+    "ref": 0.569,
+    "new": 0.587,
+    "d": 0.017,
+    "ci": [
+     0.014,
+     0.021
+    ],
+    "bAge": 0.674
+   },
+   "captains.H3.all.top50": {
+    "ref": 0.649,
+    "new": 0.647,
+    "d": -0.002,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.622
+   },
+   "captains.H3.all.top160": {
+    "ref": 0.73,
+    "new": 0.729,
+    "d": -0.001,
+    "ci": [
+     -0.008,
+     0.004
+    ],
+    "bAge": 0.72
+   },
+   "captains.H3.nhl.spearman": {
+    "ref": 0.686,
+    "new": 0.695,
+    "d": 0.009,
+    "ci": [
+     0.007,
+     0.012
+    ],
+    "bAge": 0.719
+   },
+   "captains.H3.nhl.top50": {
+    "ref": 0.658,
+    "new": 0.656,
+    "d": -0.002,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.631
+   },
+   "captains.H3.nhl.top160": {
+    "ref": 0.746,
+    "new": 0.747,
+    "d": 0.001,
+    "ci": [
+     -0.005,
+     0.006
+    ],
+    "bAge": 0.74
+   },
+   "captains.H3.prospects.spearman": {
+    "ref": 0.24,
+    "new": 0.288,
+    "d": 0.048,
+    "ci": [
+     0.037,
+     0.059
+    ]
+   },
+   "captains.H3.prospects.top25": {
+    "ref": 0.329,
+    "new": 0.404,
+    "d": 0.076,
+    "ci": [
+     0.027,
+     0.133
+    ]
+   },
+   "captains.H3.prospects.capture25": {
+    "ref": 0.475,
+    "new": 0.53,
+    "d": 0.055,
+    "ci": [
+     -0.009,
+     0.132
+    ]
+   },
+   "captains.H3.young.spearman": {
+    "ref": 0.471,
+    "new": 0.498,
+    "d": 0.027,
+    "ci": [
+     0.021,
+     0.033
+    ],
+    "bAge": 0.542
+   },
+   "captains.H3.young.top50": {
+    "ref": 0.711,
+    "new": 0.709,
+    "d": -0.002,
+    "ci": [
+     -0.02,
+     0.016
+    ],
+    "bAge": 0.711
+   },
+   "captains.H3.young.top160": {
+    "ref": 0.608,
+    "new": 0.641,
+    "d": 0.033,
+    "ci": [
+     0.021,
+     0.049
+    ],
+    "bAge": 0.521
+   },
+   "captains.H3.head.spearman": {
+    "ref": 0.597,
+    "new": 0.616,
+    "d": 0.019,
+    "ci": [
+     0.011,
+     0.027
+    ],
+    "bAge": 0.615
+   },
+   "captains.H3.head.top50": {
+    "ref": 0.649,
+    "new": 0.647,
+    "d": -0.002,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.622
+   },
+   "captains.H3.head.top160": {
+    "ref": 0.73,
+    "new": 0.729,
+    "d": -0.001,
+    "ci": [
+     -0.007,
+     0.005
+    ],
+    "bAge": 0.72
+   },
+   "captains.H3.headReal.spearman": {
+    "ref": 0.662,
+    "new": 0.665,
+    "d": 0.003,
+    "ci": [
+     -0.002,
+     0.008
+    ],
+    "bAge": 0.625
+   },
+   "captains.H3.headReal.top50": {
+    "ref": 0.651,
+    "new": 0.649,
+    "d": -0.002,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.627
+   },
+   "captains.H3.headReal.top160": {
+    "ref": 0.766,
+    "new": 0.764,
+    "d": -0.002,
+    "ci": [
+     -0.008,
+     0.004
+    ],
+    "bAge": 0.747
+   },
+   "captains.H5.all.spearman": {
+    "ref": 0.56,
+    "new": 0.589,
+    "d": 0.029,
+    "ci": [
+     0.025,
+     0.033
+    ],
+    "bAge": 0.64
+   },
+   "captains.H5.all.top50": {
+    "ref": 0.64,
+    "new": 0.634,
+    "d": -0.006,
+    "ci": [
+     -0.009,
+     0.006
+    ],
+    "bAge": 0.626
+   },
+   "captains.H5.all.top160": {
+    "ref": 0.688,
+    "new": 0.7,
+    "d": 0.012,
+    "ci": [
+     0.004,
+     0.025
+    ],
+    "bAge": 0.682
+   },
+   "captains.H5.nhl.spearman": {
+    "ref": 0.687,
+    "new": 0.698,
+    "d": 0.01,
+    "ci": [
+     0.007,
+     0.014
+    ],
+    "bAge": 0.709
+   },
+   "captains.H5.nhl.top50": {
+    "ref": 0.651,
+    "new": 0.651,
+    "d": 0,
+    "ci": [
+     -0.003,
+     0.006
+    ],
+    "bAge": 0.649
+   },
+   "captains.H5.nhl.top160": {
+    "ref": 0.724,
+    "new": 0.736,
+    "d": 0.012,
+    "ci": [
+     0.006,
+     0.021
+    ],
+    "bAge": 0.725
+   },
+   "captains.H5.prospects.spearman": {
+    "ref": 0.288,
+    "new": 0.353,
+    "d": 0.064,
+    "ci": [
+     0.051,
+     0.079
+    ]
+   },
+   "captains.H5.prospects.top25": {
+    "ref": 0.349,
+    "new": 0.406,
+    "d": 0.057,
+    "ci": [
+     0.006,
+     0.126
+    ]
+   },
+   "captains.H5.prospects.capture25": {
+    "ref": 0.477,
+    "new": 0.526,
+    "d": 0.049,
+    "ci": [
+     0.011,
+     0.132
+    ]
+   },
+   "captains.H5.young.spearman": {
+    "ref": 0.494,
+    "new": 0.529,
+    "d": 0.035,
+    "ci": [
+     0.028,
+     0.042
+    ],
+    "bAge": 0.516
+   },
+   "captains.H5.young.top50": {
+    "ref": 0.651,
+    "new": 0.666,
+    "d": 0.014,
+    "ci": [
+     0,
+     0.034
+    ],
+    "bAge": 0.669
+   },
+   "captains.H5.young.top160": {
+    "ref": 0.622,
+    "new": 0.657,
+    "d": 0.035,
+    "ci": [
+     0.021,
+     0.053
+    ],
+    "bAge": 0.522
+   },
+   "captains.H5.head.spearman": {
+    "ref": 0.55,
+    "new": 0.589,
+    "d": 0.04,
+    "ci": [
+     0.028,
+     0.05
+    ],
+    "bAge": 0.546
+   },
+   "captains.H5.head.top50": {
+    "ref": 0.64,
+    "new": 0.634,
+    "d": -0.006,
+    "ci": [
+     -0.009,
+     0.006
+    ],
+    "bAge": 0.626
+   },
+   "captains.H5.head.top160": {
+    "ref": 0.688,
+    "new": 0.7,
+    "d": 0.012,
+    "ci": [
+     0.005,
+     0.024
+    ],
+    "bAge": 0.682
+   },
+   "captains.H5.headReal.spearman": {
+    "ref": 0.609,
+    "new": 0.626,
+    "d": 0.017,
+    "ci": [
+     0.009,
+     0.025
+    ],
+    "bAge": 0.549
+   },
+   "captains.H5.headReal.top50": {
+    "ref": 0.643,
+    "new": 0.637,
+    "d": -0.006,
+    "ci": [
+     -0.009,
+     0.003
+    ],
+    "bAge": 0.626
+   },
+   "captains.H5.headReal.top160": {
+    "ref": 0.738,
+    "new": 0.744,
+    "d": 0.005,
+    "ci": [
+     0.001,
+     0.017
+    ],
+    "bAge": 0.718
+   },
+   "slapshot.H3.all.spearman": {
+    "ref": 0.689,
+    "new": 0.707,
+    "d": 0.018,
+    "ci": [
+     0.015,
+     0.022
+    ],
+    "bAge": 0.664
+   },
+   "slapshot.H3.all.top50": {
+    "ref": 0.627,
+    "new": 0.627,
+    "d": 0,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.602
+   },
+   "slapshot.H3.all.top160": {
+    "ref": 0.733,
+    "new": 0.733,
+    "d": 0,
+    "ci": [
+     -0.004,
+     0.005
+    ],
+    "bAge": 0.709
+   },
+   "slapshot.H3.nhl.spearman": {
+    "ref": 0.755,
+    "new": 0.761,
+    "d": 0.006,
+    "ci": [
+     0.003,
+     0.01
+    ],
+    "bAge": 0.739
+   },
+   "slapshot.H3.nhl.top50": {
+    "ref": 0.633,
+    "new": 0.633,
+    "d": 0,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.609
+   },
+   "slapshot.H3.nhl.top160": {
+    "ref": 0.75,
+    "new": 0.75,
+    "d": 0,
+    "ci": [
+     -0.002,
+     0.001
+    ],
+    "bAge": 0.728
+   },
+   "slapshot.H3.prospects.spearman": {
+    "ref": 0.338,
+    "new": 0.419,
+    "d": 0.08,
+    "ci": [
+     0.069,
+     0.092
+    ]
+   },
+   "slapshot.H3.prospects.top25": {
+    "ref": 0.404,
+    "new": 0.427,
+    "d": 0.022,
+    "ci": [
+     -0.018,
+     0.08
+    ]
+   },
+   "slapshot.H3.prospects.capture25": {
+    "ref": 0.548,
+    "new": 0.604,
+    "d": 0.056,
+    "ci": [
+     0.005,
+     0.1
+    ]
+   },
+   "slapshot.H3.young.spearman": {
+    "ref": 0.596,
+    "new": 0.63,
+    "d": 0.034,
+    "ci": [
+     0.028,
+     0.04
+    ],
+    "bAge": 0.598
+   },
+   "slapshot.H3.young.top50": {
+    "ref": 0.709,
+    "new": 0.711,
+    "d": 0.002,
+    "ci": [
+     -0.016,
+     0.016
+    ],
+    "bAge": 0.696
+   },
+   "slapshot.H3.young.top160": {
+    "ref": 0.704,
+    "new": 0.728,
+    "d": 0.024,
+    "ci": [
+     0.01,
+     0.036
+    ],
+    "bAge": 0.665
+   },
+   "slapshot.H3.head.spearman": {
+    "ref": 0.632,
+    "new": 0.642,
+    "d": 0.01,
+    "ci": [
+     0.004,
+     0.016
+    ],
+    "bAge": 0.612
+   },
+   "slapshot.H3.head.top50": {
+    "ref": 0.627,
+    "new": 0.627,
+    "d": 0,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.602
+   },
+   "slapshot.H3.head.top160": {
+    "ref": 0.733,
+    "new": 0.733,
+    "d": 0,
+    "ci": [
+     -0.003,
+     0.006
+    ],
+    "bAge": 0.709
+   },
+   "slapshot.H3.headReal.spearman": {
+    "ref": 0.68,
+    "new": 0.68,
+    "d": 0.001,
+    "ci": [
+     -0.003,
+     0.004
+    ],
+    "bAge": 0.624
+   },
+   "slapshot.H3.headReal.top50": {
+    "ref": 0.629,
+    "new": 0.629,
+    "d": 0,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.607
+   },
+   "slapshot.H3.headReal.top160": {
+    "ref": 0.764,
+    "new": 0.763,
+    "d": -0.001,
+    "ci": [
+     -0.004,
+     0.003
+    ],
+    "bAge": 0.75
+   },
+   "slapshot.H5.all.spearman": {
+    "ref": 0.679,
+    "new": 0.702,
+    "d": 0.023,
+    "ci": [
+     0.018,
+     0.027
+    ],
+    "bAge": 0.618
+   },
+   "slapshot.H5.all.top50": {
+    "ref": 0.637,
+    "new": 0.634,
+    "d": -0.003,
+    "ci": [
+     -0.009,
+     0.003
+    ],
+    "bAge": 0.591
+   },
+   "slapshot.H5.all.top160": {
+    "ref": 0.697,
+    "new": 0.7,
+    "d": 0.003,
+    "ci": [
+     -0.004,
+     0.012
+    ],
+    "bAge": 0.678
+   },
+   "slapshot.H5.nhl.spearman": {
+    "ref": 0.754,
+    "new": 0.761,
+    "d": 0.007,
+    "ci": [
+     0.003,
+     0.012
+    ],
+    "bAge": 0.744
+   },
+   "slapshot.H5.nhl.top50": {
+    "ref": 0.654,
+    "new": 0.654,
+    "d": 0,
+    "ci": [
+     0,
+     0
+    ],
+    "bAge": 0.609
+   },
+   "slapshot.H5.nhl.top160": {
+    "ref": 0.732,
+    "new": 0.738,
+    "d": 0.006,
+    "ci": [
+     0,
+     0.009
+    ],
+    "bAge": 0.715
+   },
+   "slapshot.H5.prospects.spearman": {
+    "ref": 0.399,
+    "new": 0.48,
+    "d": 0.08,
+    "ci": [
+     0.068,
+     0.093
+    ]
+   },
+   "slapshot.H5.prospects.top25": {
+    "ref": 0.417,
+    "new": 0.451,
+    "d": 0.034,
+    "ci": [
+     -0.017,
+     0.08
+    ]
+   },
+   "slapshot.H5.prospects.capture25": {
+    "ref": 0.568,
+    "new": 0.621,
+    "d": 0.053,
+    "ci": [
+     0.004,
+     0.09
+    ]
+   },
+   "slapshot.H5.young.spearman": {
+    "ref": 0.613,
+    "new": 0.648,
+    "d": 0.036,
+    "ci": [
+     0.028,
+     0.043
+    ],
+    "bAge": 0.557
+   },
+   "slapshot.H5.young.top50": {
+    "ref": 0.671,
+    "new": 0.683,
+    "d": 0.011,
+    "ci": [
+     -0.009,
+     0.029
+    ],
+    "bAge": 0.663
+   },
+   "slapshot.H5.young.top160": {
+    "ref": 0.686,
+    "new": 0.704,
+    "d": 0.018,
+    "ci": [
+     0.006,
+     0.032
+    ],
+    "bAge": 0.638
+   },
+   "slapshot.H5.head.spearman": {
+    "ref": 0.591,
+    "new": 0.609,
+    "d": 0.018,
+    "ci": [
+     0.011,
+     0.026
+    ],
+    "bAge": 0.535
+   },
+   "slapshot.H5.head.top50": {
+    "ref": 0.637,
+    "new": 0.634,
+    "d": -0.003,
+    "ci": [
+     -0.009,
+     0.003
+    ],
+    "bAge": 0.591
+   },
+   "slapshot.H5.head.top160": {
+    "ref": 0.697,
+    "new": 0.7,
+    "d": 0.003,
+    "ci": [
+     -0.002,
+     0.013
+    ],
+    "bAge": 0.678
+   },
+   "slapshot.H5.headReal.spearman": {
+    "ref": 0.622,
+    "new": 0.634,
+    "d": 0.011,
+    "ci": [
+     0.005,
+     0.018
+    ],
+    "bAge": 0.552
+   },
+   "slapshot.H5.headReal.top50": {
+    "ref": 0.637,
+    "new": 0.634,
+    "d": -0.003,
+    "ci": [
+     -0.009,
+     0.003
+    ],
+    "bAge": 0.594
+   },
+   "slapshot.H5.headReal.top160": {
+    "ref": 0.742,
+    "new": 0.746,
+    "d": 0.004,
+    "ci": [
+     -0.003,
+     0.011
+    ],
+    "bAge": 0.724
+   }
+  }
+ }
+}
