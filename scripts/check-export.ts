@@ -390,7 +390,14 @@ const BUDGETS: Budget[] = [
     // picks) → 73.9 with both. Each branch stayed under 73; together they
     // add ~2.5 KB to the same shared chunks. 74.5 keeps ~0.6 KB of room:
     // measure again before adding anything here.
-    js: 74.5,
+    //
+    // Management workstream (local builds, Repêchage): 74.1 at bd259b2 →
+    // 74.4 the games-cap planner (capDayPlan: +45.9 points a team-season on
+    // box scores) → 74.8 the planned cap model in the waiver gains (false
+    // gains 9 → 5 of 110 in the replay) → 75.1 the salary-cap fit's call in
+    // the plan (its body, cap-fit.ts, is the cap league's lazy plan kit).
+    // 75.5 keeps ~0.4 KB.
+    js: 75.5,
     htmlRaw: 200,
     htmlGz: 35,
   },
@@ -413,8 +420,9 @@ const BUDGETS: Budget[] = [
     // chunks outside this count. 75.5 leaves about the room Captains has
     // (2.7 KB); over it, look for a shared import first. 2026-10-02: 74.9-75.0
     // on each audit-fix branch alone, 76.2 merged (the same ~2.5 KB as
-    // Captains above); 77 keeps ~0.8 KB.
-    js: 77,
+    // Captains above); 77 keeps ~0.8 KB. Management workstream: 76.4 →
+    // 77.5 (the same three as Captains above); 78 keeps ~0.5 KB.
+    js: 78,
     htmlRaw: 200,
     htmlGz: 35,
   },
