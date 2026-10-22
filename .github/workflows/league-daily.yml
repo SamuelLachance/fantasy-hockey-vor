@@ -42,6 +42,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Which non-fatal refreshes fell back to the committed data (empty: none).
+    outputs:
+      fallbacks: ${{ steps.inseason.outputs.fallback }}${{ steps.captains.outputs.fallback }}${{ steps.slapshot.outputs.fallback }}${{ steps.rosters.outputs.fallback }}
     permissions:
       contents: read
       pages: write
@@ -75,6 +78,7 @@ jobs:
       # is recursive (src/data/fantrax, public/fantrax), so there is no fresh
       # Slapshot data yet for it to discard.
       - name: In-season projections (non-fatal)
+        id: inseason
         # Today's NHL stats, remaining schedule, injuries and estimated
         # returns on top of the frozen pre-season projections, before every
         # league sync, board and dynasty build below reads them.
@@ -83,10 +87,12 @@ jobs:
             echo "In-season projections refreshed"
           else
             git checkout -- src/data/players.json public/player-details.json || true
+            echo "fallback=in-season-projections " >> "$GITHUB_OUTPUT"
             echo "::warning::in-season projection update failed, using the committed projections"
           fi
 
       - name: Refresh Captains Dynasty snapshot (non-fatal)
+        id: captains
         run: |
           # 10 min budget (a sync takes ~1 min): a hung read counts as a failure.
           if timeout 600 npm run league:sync -- --league captains-dynasty \
@@ -94,6 +100,7 @@ jobs:
             echo "Captains Dynasty snapshot refreshed"
           else
             git checkout -- src/data/fantrax public/fantrax || true
+            echo "fallback=captains-snapshot " >> "$GITHUB_OUTPUT"
             echo "::warning::captains-dynasty sync or check failed, using the committed snapshot"
           fi
 
@@ -103,12 +110,14 @@ jobs:
       # its own check (schema, cap, λ, coverage). Its restore names only its
       # own files, so it cannot undo the Captains refresh above.
       - name: Refresh Slapshot snapshot (non-fatal)
+        id: slapshot
         run: |
           if timeout 600 npm run league:sync -- --league slapshot \
             && npm run check:league:slapshot; then
             echo "Slapshot snapshot refreshed"
           else
             git checkout -- src/data/fantrax/slapshot public/fantrax/slapshot src/data/dynasty/slapshot/pool.json public/slapshot-draft.html || true
+            echo "fallback=slapshot-snapshot " >> "$GITHUB_OUTPUT"
             echo "::warning::slapshot sync or check failed, using the committed snapshot"
           fi
 
@@ -120,11 +129,13 @@ jobs:
       # the script never writes a partial file, and on any failure the
       # committed snapshot is restored and used.
       - name: Refresh NHL rosters (non-fatal)
+        id: rosters
         run: |
           if timeout 300 npm run nhl:rosters && npm run check:draft-board; then
             echo "NHL rosters refreshed"
           else
             git checkout -- src/data/nhl-rosters.json || true
+            echo "fallback=nhl-rosters " >> "$GITHUB_OUTPUT"
             echo "::warning::NHL roster refresh failed, using committed snapshot"
           fi
 
@@ -151,3 +162,20 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # The refreshes above are non-fatal so a flaky upstream never blocks a
+  # deploy, but a fallback used to be only a ::warning:: nobody reads: the
+  # site served the committed projections for weeks. The site is deployed
+  # either way; this job turns the run red (GitHub's failure notification)
+  # when it shipped committed data instead of fresh data.
+  alert:
+    needs: [build, deploy]
+    if: ${{ always() && needs.build.outputs.fallbacks != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail the run, stale data was deployed
+        env:
+          FALLBACKS: ${{ needs.build.outputs.fallbacks }}
+        run: |
+          echo "::error::Deployed with the committed data for: $FALLBACKS(the refresh failed, see the warnings of the build job)"
+          exit 1
