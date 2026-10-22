@@ -135,3 +135,17 @@ export function redistributeGoalieStarts(team: GoalieSlot[], left: number): Map<
   }
   return extra;
 }
+
+/**
+ * A team dresses one goalie per game: the rest-of-season starts of its
+ * goalies cannot add up to more than the games it has left. Each goalie's
+ * share is updated on its own, and a newcomer (a goalie the pre-season pool
+ * missed) comes on top of a pool that already sums to 1, so the starts can
+ * overshoot (Columbus, 2026-10-22: 112 goalie games over an 84-game
+ * season). Returns the factor to apply to every goalie's remaining starts
+ * of the team: 1 unless they overshoot `left`.
+ */
+export function goalieStartsScale(rosGames: number[], left: number): number {
+  const total = rosGames.reduce((s, x) => s + Math.max(0, x), 0);
+  return left > 0 && total > left ? left / total : 1;
+}

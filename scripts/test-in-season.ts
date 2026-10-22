@@ -36,6 +36,7 @@ import {
   GOALIE_K,
   GOALIE_MAX_SHARE,
   GOALIE_SHARE_K,
+  goalieStartsScale,
   NEWCOMER_PER82,
   redistributeGoalieStarts,
   shrinkRate,
@@ -117,6 +118,11 @@ check("unknown start counts as fresh", defaultGamesOut("Out", null) === 7);
 }
 check("no healthy goalie: nothing", redistributeGoalieStarts([{ id: 1, share: 0.6, gamesOut: 3 }], 50).size === 0);
 check("no games left: nothing", redistributeGoalieStarts([{ id: 1, share: 0.6, gamesOut: 3 }, { id: 2, share: 0.4, gamesOut: 0 }], 0).size === 0);
+
+// A team dresses one goalie a game: remaining starts never exceed its games left.
+check("goalie starts within the games left: untouched", goalieStartsScale([40, 30, 5], 76) === 1);
+check("goalie starts over the games left: scaled to them", near(goalieStartsScale([59.7, 34.1, 6.4, 2.1], 76) * 102.3, 76, 1e-9));
+check("no games left: untouched", goalieStartsScale([5, 3], 0) === 1);
 
 // Newcomer prior: first NHL season per 82, forwards / defensemen.
 check("newcomer forward goals 12.3 / 82", NEWCOMER_PER82.F.goals === 12.3 && NEWCOMER_PER82.F.shots === 113);

@@ -127,10 +127,25 @@ const players = data.players ?? [];
 const badVor = players.filter((p) => !Number.isFinite(p.vor)).length;
 if (badVor > 0) errors.push(`${badVor} players with non-finite VOR`);
 
+// A team's games in the season: the published schedule's (the 2026-27 one has
+// 84 per team, and a full-season player is actual + rest of season), 82 before.
+let seasonGames = 82;
+const SCHEDULE_PATH = join(process.cwd(), "public", "fantrax", "schedule-20262027.json");
+if (existsSync(SCHEDULE_PATH)) {
+  try {
+    const perTeam = new Map<string, number>();
+    for (const g of (JSON.parse(readFileSync(SCHEDULE_PATH, "utf8")) as { games: Array<[string, string, string]> }).games) {
+      for (const t of [g[1], g[2]]) perTeam.set(t, (perTeam.get(t) ?? 0) + 1);
+    }
+    seasonGames = Math.max(seasonGames, ...perTeam.values());
+  } catch {
+    /* unreadable schedule: 82 */
+  }
+}
 const badGp = players.filter(
-  (p) => !Number.isFinite(p.gamesPlayed) || p.gamesPlayed < 0 || p.gamesPlayed > 82,
+  (p) => !Number.isFinite(p.gamesPlayed) || p.gamesPlayed < 0 || p.gamesPlayed > seasonGames,
 ).length;
-if (badGp > 0) errors.push(`${badGp} players with GP outside 0-82`);
+if (badGp > 0) errors.push(`${badGp} players with GP outside 0-${seasonGames}`);
 
 const noPos = players.filter((p) => !Array.isArray(p.positions) || p.positions.length === 0)
   .length;

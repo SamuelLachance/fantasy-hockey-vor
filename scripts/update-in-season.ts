@@ -62,6 +62,7 @@ import {
   defaultGamesOut,
   GOALIE_K,
   GOALIE_SHARE_K,
+  goalieStartsScale,
   NEWCOMER_GOALIE,
   NEWCOMER_PER82,
   NEWCOMER_RATE_K,
@@ -459,6 +460,8 @@ async function main() {
       left,
     );
     for (const [id, n] of extra) plan.get(id)!.ros += n;
+    const scale = goalieStartsScale(list.map((g) => plan.get(g.id)!.ros), left);
+    if (scale < 1) for (const g of list) plan.get(g.id)!.ros *= scale;
   }
 
   // ---- pass 2: to date + rest of season
