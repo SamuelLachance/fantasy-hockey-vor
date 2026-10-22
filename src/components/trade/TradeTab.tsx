@@ -113,7 +113,7 @@ export function TradeTab() {
   const [modeChoice, setMode] = useState<AcceptMode>("modele");
   const mode: AcceptMode = config.salaryCap ? "modele" : modeChoice;
 
-  const others = teams.filter((t) => t.id !== teamId);
+  const others = useMemo(() => teams.filter((t) => t.id !== teamId), [teams, teamId]);
   const [partner, setPartner] = useState<string>("");
   const other = partner && partner !== teamId ? partner : (others[0]?.id ?? "");
   // the trade on the table belongs to one pair of teams: another pair starts empty
@@ -156,26 +156,35 @@ export function TradeTab() {
       window.clearTimeout(id);
     };
   }, [ctx, bases, teamId, other, offersKey, mode]);
+  // The best offer to every team, run as soon as the values are in (nobody's trade block is
+  // public: Fantrax serves it to logged-in users only), and again when the horizons or the
+  // acceptance mode change; the partner picked above does not matter to it.
+  const scanKey = ctx ? `${teamId}|${mode}|${JSON.stringify(override)}` : "";
   const [league, setLeague] = useState<{ key: string; rows: Array<{ team: string; best: Proposal | null }>; done: boolean } | null>(null);
-  const scanAll = () => {
+  const [rescan, setRescan] = useState(0);
+  useEffect(() => {
     if (!ctx || !bases) return;
-    const key = offersKey;
+    let cancelled = false;
     const rows: Array<{ team: string; best: Proposal | null }> = [];
-    setLeague({ key, rows: [], done: false });
     let i = 0;
     const step = () => {
+      if (cancelled) return;
       const t = others[i];
       if (!t) {
-        setLeague({ key, rows: [...rows].sort((a, b) => (b.best?.eval.a.gain ?? -1e9) - (a.best?.eval.a.gain ?? -1e9)), done: true });
+        setLeague({ key: scanKey, rows: [...rows].sort((x, y) => (y.best?.eval.a.gain ?? -1e9) - (x.best?.eval.a.gain ?? -1e9)), done: true });
         return;
       }
       rows.push({ team: t.id, best: bestOffers(ctx, teamId, t.id, { bases, limit: 1, depth: 12, mode })[0] ?? null });
       i++;
-      setLeague({ key, rows: [...rows], done: false });
+      setLeague({ key: scanKey, rows: [...rows], done: false });
       window.setTimeout(step, 0);
     };
-    window.setTimeout(step, 0);
-  };
+    const id = window.setTimeout(step, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [ctx, bases, others, teamId, mode, scanKey, rescan]);
 
   const needs = useMemo(() => {
     if (!ctx) return null;
@@ -335,11 +344,11 @@ export function TradeTab() {
         headerExtra={
           <button
             type="button"
-            onClick={scanAll}
-            disabled={league?.key === offersKey && !league.done}
+            onClick={() => setRescan((n) => n + 1)}
+            disabled={league?.key === scanKey && !league.done}
             className="min-h-11 rounded-md px-3 text-sm text-emerald-200 ring-1 ring-emerald-500/40 hover:bg-emerald-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 disabled:opacity-50"
           >
-            {league?.key === offersKey && !league.done ? `Analyse… ${league.rows.length}/${others.length}` : "Analyser toutes les équipes"}
+            {league?.key === scanKey && !league.done ? `Analyse… ${league.rows.length}/${others.length}` : "Relancer l’analyse"}
           </button>
         }
       >
@@ -368,8 +377,14 @@ export function TradeTab() {
         ) : (
           <p className="text-sm text-slate-400">Recherche des meilleures offres…</p>
         )}
-        {league?.key === offersKey && league.rows.length ? (
-          <div className="mt-4 overflow-x-auto">
+        {league?.key === scanKey && league.rows.length ? (
+          <div className="mt-4">
+            <p className="mb-2 text-xs text-slate-400">
+              {
+                "Meilleure offre à faire à chaque équipe, de la plus avantageuse pour vous à la moins avantageuse. Les trade blocks des autres équipes ne sont pas publics (Fantrax ne les montre qu’aux utilisateurs connectés) : une offre n’est donc proposée que si l’autre équipe y gagne sur son propre horizon (sa fenêtre et ses besoins d’alignement), ce qui la rend plus susceptible d’accepter."
+              }
+            </p>
+            <div className="overflow-x-auto">
             <table className="w-full min-w-[44rem] text-sm">
               <caption className="sr-only">Meilleure offre à faire à chaque équipe</caption>
               <thead>
@@ -407,6 +422,7 @@ export function TradeTab() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ) : null}
       </LeagueCard>

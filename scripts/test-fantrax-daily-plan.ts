@@ -10,6 +10,7 @@ import { join } from "path";
 import { CAPTAINS_DYNASTY, eligibleSlots, FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT, waiverMinDelta } from "../src/lib/fantrax/config";
 import { buildDailyPlan, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
 import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
+import { streamerWeek } from "../src/lib/fantrax/streamer-week";
 import { rosterPeriodsIn, torontoDateOfIso } from "../src/lib/fantrax/dates";
 import { isRuledOut } from "../src/lib/fantrax/points-model";
 import { skaterSlotValue } from "../src/lib/fantrax/scoring";
@@ -396,6 +397,23 @@ assert(degraded.cap?.known === false, "cap usage unknown");
   }
   const share = withTargets / (periods.length * 8);
   assert(share >= 0.6, `Slapshot's waiver panel is not empty by construction (${(share * 100).toFixed(0)} % of plans with a target)`);
+}
+
+// ---- the week's streaming plan (streamer-week.ts), from the plan's inputs
+{
+  assert(!!plan.streamInputs, "the plan carries the streaming plan's inputs");
+  const sw = streamerWeek(input, plan);
+  // Null is allowed (the data changes every sync): what comes back must be coherent.
+  if (sw) {
+    assert(sw.steps.length >= 1 && sw.days.length >= 1 && sw.days.length <= 7, "streaming plan: 1+ claims over 1-7 days");
+    assert(sw.gain > 0 && sw.gain <= sw.gainUncapped + 1e-9, `streaming plan: positive gain, never above the uncapped one (${sw.gain} / ${sw.gainUncapped})`);
+    assert(new Set(sw.steps.map((x) => x.id)).size === sw.steps.length, "streaming plan: no player twice");
+    assert(sw.steps.every((x, i) => x.from >= 0 && x.to >= x.from && x.to < sw.days.length && (i === 0 || x.from === sw.steps[i - 1]!.to + 1)), "streaming plan: stretches follow each other");
+    assert(sw.steps.every((x, i) => (i === 0 ? true : x.drop === null)), "streaming plan: only the first claim lets a player go");
+    assert(sw.claimsAvailable === null || sw.steps.length <= sw.claimsAvailable, "streaming plan: within the claims available");
+    const onRoster = new Set((input.state.rosters[input.teamId] ?? []).map((r) => r.id));
+    assert(sw.steps.every((x) => !onRoster.has(x.id)), "streaming plan: nobody already on the roster");
+  }
 }
 
 if (failed) process.exit(1);

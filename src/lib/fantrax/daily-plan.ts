@@ -318,6 +318,18 @@ export interface DailyPlan {
     /** The period's GP / GS cap binds: gains count only until it is reached. */
     capLimited: boolean;
   };
+  /**
+   * What the week's streaming plan (streamer-week.ts, computed by the
+   * Ballottage tab, which loads it on demand) takes from this plan: whether a
+   * claim needs a player let go, those who can go, the smallest gain worth a
+   * claim and the games cap of the period. Absent in an older baked plan.
+   */
+  streamInputs?: {
+    needsDrop: boolean;
+    drops: DropOption[];
+    minGain: number;
+    cap: WaiverCap | null;
+  };
   draft: (Omit<DraftOutlook, "remaining"> & { remaining: number[] }) | null;
   /**
    * Salary-cap leagues only (absent elsewhere): the team's cap use over its
@@ -410,7 +422,7 @@ export function lineupTarget<P extends IsoPeriod>(
 
 // ------------------------------------------------------------ values
 
-interface Ctx {
+export interface Ctx {
   league: LeagueSnapshot;
   state: StateSnapshot;
   values: ValuesSnapshot;
@@ -437,7 +449,7 @@ function goalieShareForPeriod(ctx: Ctx, id: string, period: number | null): { p:
  * Lineup candidate for one lineup period (`period` null = per-game value,
  * schedule ignored). Returns null for players who can't score that period.
  */
-function candidateFor(
+export function candidateFor(
   ctx: Ctx,
   id: string,
   status: string,
@@ -475,7 +487,7 @@ function candidateFor(
  * ACTIVE, RESERVE, and IR / Minors players who can dress (healthy, or
  * day-to-day); IR and Minors only when they score that period.
  */
-function rosterCandidates(ctx: Ctx, roster: RosterEntry[], period: number | null): LineupCandidate[] {
+export function rosterCandidates(ctx: Ctx, roster: RosterEntry[], period: number | null): LineupCandidate[] {
   const out: LineupCandidate[] = [];
   for (const r of roster) {
     const flags = { icons: ctx.state.icons[r.id], team: ctx.values.players[r.id]?.t };
@@ -614,7 +626,7 @@ function waiverGroup(eligiblePos: string): string {
 
 // ------------------------------------------------------------ plan
 
-function planCtx(input: PlanInputs, config: FantraxLeagueConfig, index: ScheduleIndex): Ctx {
+export function planCtx(input: PlanInputs, config: FantraxLeagueConfig, index: ScheduleIndex): Ctx {
   const teamGoalies = new Map<string, string[]>();
   for (const [id, r] of Object.entries(input.values.players)) {
     if (!isGoalieRecord(r, config)) continue;
@@ -1264,6 +1276,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
       minDelta,
       capLimited,
     },
+    streamInputs: { needsDrop: promotedCount >= maxCounted, drops, minGain: minDelta, cap: waiverCap },
     draft,
     players,
   };

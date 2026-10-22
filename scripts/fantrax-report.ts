@@ -29,6 +29,7 @@ import { SYNC_USER_AGENT } from "../src/lib/fantrax/config";
 import { fantraxLeagueArg, fantraxPaths } from "./fantrax-paths";
 import { buildDailyPlan, type DailyPlan, type PlanAlert, type PlanLineup, type TeamGame } from "../src/lib/fantrax/daily-plan";
 import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
+import { streamerWeek } from "../src/lib/fantrax/streamer-week";
 import { liveOverlay, withLiveOverlay } from "../src/lib/fantrax/live";
 import { dynastyBoard, dynastyDropProtection } from "../src/lib/dynasty/board";
 import { explainFr, KEEPER_FR, KEEPER_TEAM_FR, keeperView, MODE_FR, PHASE_FR, rosterHintFr } from "../src/lib/dynasty/explain";
@@ -220,7 +221,7 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
   const vorLeague = canRankByPoints(CFG);
   const P = plan.players;
   const name = (id: string | null | undefined) => (id ? (P[id]?.n ?? input.values.players[id]?.n ?? id) : "—");
-  const team = (id: string | null | undefined) => (id ? (P[id]?.t ?? "") : "");
+  const team = (id: string | null | undefined) => (id ? (P[id]?.t ?? input.values.players[id]?.t ?? "") : "");
   const teamName = (id: string) => input.league.teams.find((t) => t.id === id)?.name ?? id;
   const game = (g: TeamGame | null) => (g ? `${g.home ? "vs" : "@ "} ${g.opp} ${etTime(g.startUTC)}` : "no game");
   const out: string[] = [];
@@ -353,6 +354,21 @@ function print(plan: DailyPlan, input: ReturnType<typeof main>) {
       `  ${pad(name(t.id), 22)} ${pad(team(t.id), 4)} ${pad(P[t.id]?.e ?? "", 10)} ${t.status}  +${fx(t.delta, 1)} FP over ${t.days} games (${fx(t.fpg)} FP/G)${drop}`,
     );
   }
+
+  // ---- the week's streaming plan
+  const st = streamerWeek({ ...input, config: CFG }, plan);
+  if (st) {
+    h(`Streaming plan, ${st.days[0]} to ${st.days[st.days.length - 1]}`);
+    out.push(
+      `+${fx(st.gain, 1)} FP over the days with ${st.steps.length} claim${st.steps.length > 1 ? "s" : ""} (${st.claimsAvailable === null ? "no claims limit" : `${st.claimsAvailable} available`})${st.capLimited ? ` · games cap binds (${fx(st.gainUncapped, 1)} FP without it)` : ""}`,
+    );
+    for (const [i, x] of st.steps.entries()) {
+      const drop = x.drop ? ` · ${x.drop.action === "minors" ? "send to Minors" : "drop"} ${name(x.drop.id)}` : i === 0 ? " · no drop needed" : " · replaces the previous streamer";
+      out.push(
+        `  ${st.days[x.from]}${x.to > x.from ? ` -> ${st.days[x.to]}` : ""}  ${pad(name(x.id), 22)} ${pad(team(x.id), 4)} ${pad(P[x.id]?.e ?? input.values.players[x.id]?.e ?? "", 10)} ${x.status}  +${fx(x.gain, 1)} FP, ${fx(x.games, 1)} games${drop}`,
+      );
+    }
+  } else out.push("", "No streaming claim pays for itself this week.");
 
   // ---- draft
   if (plan.draft) {
