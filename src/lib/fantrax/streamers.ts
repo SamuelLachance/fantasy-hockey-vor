@@ -36,6 +36,12 @@ export interface StreamDay {
   candidates: LineupCandidate[];
   /** A pool player's candidate that day (null = no game / out). */
   poolCandidate: (id: string) => LineupCandidate | null;
+  /** A pickup of this player can take effect on this day (false after his game locks). */
+  canClaim?: (id: string) => boolean;
+  /** Claims available in this day's claim week (remaining now, full limit after a reset). */
+  claimsAvailable?: number;
+  /** Claim-week identity; changing it resets the chain's weekly claim counter. */
+  claimWeek?: string;
   /** A waiver claim made now has cleared by this day. */
   wwUsable: boolean;
   /** Scoring period of the day (its games cap applies to the days sharing it). */
@@ -88,7 +94,6 @@ export interface StreamPlan {
   capLimited: boolean;
 }
 
-const NEG = Number.NEGATIVE_INFINITY;
 
 const total = (cands: LineupCandidate[], slots: SlotCounts, order: readonly SlotId[] | undefined) =>
   optimizeLineup(cands, slots, order ?? SLOT_ORDER).total;
@@ -114,51 +119,47 @@ function bestChain(
   wwUsable: boolean[],
   k: number,
   banned: ReadonlySet<string>,
+  claimable: ReadonlyMap<string, readonly boolean[]>,
+  firstUsableDay: number,
+  claimBudget: readonly number[],
+  claimWeeks: readonly string[],
   depth = 0,
 ): Chain | null {
-  const allowed = (id: string, start: number) =>
-    !banned.has(id + "|" + start) && (poolStatus.get(id) === "FA" || wwUsable[start] === true);
-  // H[m][i]: best gain covering [i, n) with exactly m stretches (NEG when impossible)
-  const H: number[][] = Array.from({ length: k + 1 }, () => Array(n + 1).fill(NEG));
-  const pick: Array<Array<{ id: string; end: number } | null>> = Array.from({ length: k + 1 }, () => Array(n + 1).fill(null));
-  H[0]![n] = 0;
-  for (let m = 1; m <= k; m++) {
-    for (let i = n - 1; i >= 0; i--) {
-      let best = NEG;
-      let arg: { id: string; end: number } | null = null;
-      for (const id of poolIds) {
-        if (!allowed(id, i)) continue;
-        const p = prefix.get(id)!;
-        for (let e = i + 1; e <= n; e++) {
-          const rest = H[m - 1]![e]!;
-          if (rest === NEG) continue;
-          const g = p[e]! - p[i]! + rest;
-          if (g > best + 1e-9) {
-            best = g;
-            arg = { id, end: e };
-          }
+  const allowed = (id: string, start: number, used: number) =>
+    used <= claimBudget[start]! && !banned.has(id + "|" + start) && claimable.get(id)?.[start] !== false && (poolStatus.get(id) === "FA" || wwUsable[start] === true);
+  // Keep claims consumed in the current claim week in the state. Merely
+  // summing this week's remainder and next week's allowance lets the chain
+  // borrow future claims early, or carry unused claims across the reset.
+  const memo = new Map<string, Chain | null>();
+  const solve = (i: number, left: number, used: number): Chain | null => {
+    if (left === 0) return i === n ? { gain: 0, stretches: [] } : null;
+    if (i >= n || n - i < left) return null;
+    const key = `${i}|${left}|${used}`;
+    if (memo.has(key)) return memo.get(key)!;
+    let best: Chain | null = null;
+    for (const id of poolIds) {
+      if (!allowed(id, i, used + 1)) continue;
+      const p = prefix.get(id)!;
+      for (let e = i + 1; e <= n; e++) {
+        const nextUsed = e < n && claimWeeks[e] === claimWeeks[i] ? used + 1 : 0;
+        const rest = solve(e, left - 1, nextUsed);
+        if (!rest) continue;
+        const gain = p[e]! - p[i]!;
+        if (!best || gain + rest.gain > best.gain + 1e-9) {
+          best = { gain: gain + rest.gain, stretches: [{ id, from: i, to: e - 1, gain }, ...rest.stretches] };
         }
       }
-      H[m]![i] = best;
-      pick[m]![i] = arg;
     }
+    memo.set(key, best);
+    return best;
+  };
+  let best: Chain | null = null;
+  for (let j = firstUsableDay; j < n; j++) {
+    const c = solve(j, k, 0);
+    if (c && (!best || c.gain > best.gain + 1e-9)) best = c;
   }
-  let best = NEG;
-  let at = -1;
-  for (let j = 0; j < n; j++) {
-    if (H[k]![j]! > best + 1e-9) {
-      best = H[k]![j]!;
-      at = j;
-    }
-  }
-  if (at < 0) return null;
-  const stretches: Chain["stretches"] = [];
-  let i = at;
-  for (let left = k; left >= 1 && i < n; left--) {
-    const a = pick[left]![i]!;
-    stretches.push({ id: a.id, from: i, to: a.end - 1, gain: prefix.get(a.id)![a.end]! - prefix.get(a.id)![i]! });
-    i = a.end;
-  }
+  if (!best) return null;
+  const { stretches } = best;
   const seen = new Map<string, number>();
   for (const [idx, st] of stretches.entries()) {
     const first = seen.get(st.id);
@@ -167,11 +168,11 @@ function bestChain(
       continue;
     }
     if (depth >= 8) return null;
-    const x = bestChain(n, poolIds, poolStatus, prefix, wwUsable, k, new Set([...banned, st.id + "|" + stretches[first]!.from]), depth + 1);
-    const y = bestChain(n, poolIds, poolStatus, prefix, wwUsable, k, new Set([...banned, st.id + "|" + st.from]), depth + 1);
+    const x = bestChain(n, poolIds, poolStatus, prefix, wwUsable, k, new Set([...banned, st.id + "|" + stretches[first]!.from]), claimable, firstUsableDay, claimBudget, claimWeeks, depth + 1);
+    const y = bestChain(n, poolIds, poolStatus, prefix, wwUsable, k, new Set([...banned, st.id + "|" + st.from]), claimable, firstUsableDay, claimBudget, claimWeeks, depth + 1);
     return !x ? y : !y ? x : y.gain > x.gain + 1e-9 ? y : x;
   }
-  return { gain: best, stretches };
+  return best;
 }
 
 /** The best chain for each number of claims 1..maxClaims. */
@@ -182,6 +183,10 @@ function solveChains(
   v: Map<string, number[]>,
   wwUsable: boolean[],
   maxClaims: number,
+  claimable: ReadonlyMap<string, readonly boolean[]>,
+  firstUsableDay: number,
+  claimBudget: readonly number[],
+  claimWeeks: readonly string[],
 ): Chain[] {
   // prefix[c][i] = sum of v(c, t) for t < i
   const prefix = new Map<string, number[]>();
@@ -192,7 +197,7 @@ function solveChains(
   }
   const out: Chain[] = [];
   for (let k = 1; k <= maxClaims; k++) {
-    const c = bestChain(n, poolIds, poolStatus, prefix, wwUsable, k, new Set());
+    const c = bestChain(n, poolIds, poolStatus, prefix, wwUsable, k, new Set(), claimable, firstUsableDay, claimBudget, claimWeeks);
     if (c) out.push(c);
   }
   return out;
@@ -207,6 +212,12 @@ export function planStreamers(days: readonly StreamDay[], pool: readonly StreamP
   const baseDay = days.map((d) => total(d.candidates, slots, order));
   const poolStatus = new Map(pool.map((p) => [p.id, p.status] as const));
   const wwUsable = days.map((d) => d.wwUsable);
+  const claimable = new Map(pool.map((p) => [p.id, days.map((d) => d.canClaim?.(p.id) ?? true)]));
+  const claimBudget = days.map((d) => d.claimsAvailable ?? maxClaims);
+  const claimWeeks = days.map((d) => d.claimWeek ?? "current");
+  const withoutDrop = (d: StreamDay, id: string) => d.candidates.some((c) => c.id === id && c.locked)
+    ? d.candidates
+    : d.candidates.filter((c) => c.id !== id);
 
   // The drops tried: open roster = none; else the cheapest by lineup cost over the days.
   type DropTry = { drop: DropOption | null; cost: number[] };
@@ -216,7 +227,7 @@ export function planStreamers(days: readonly StreamDay[], pool: readonly StreamP
   } else {
     const costed = opts.drops.map((drop) => ({
       drop,
-      cost: days.map((d, i) => baseDay[i]! - total(d.candidates.filter((c) => c.id !== drop.id), slots, order)),
+      cost: days.map((d, i) => baseDay[i]! - total(withoutDrop(d, drop.id), slots, order)),
     }));
     costed.sort((a, b) => a.cost.reduce((s, x) => s + x, 0) - b.cost.reduce((s, x) => s + x, 0));
     dropTries.push(...costed.slice(0, opts.dropsTried ?? 3));
@@ -236,7 +247,9 @@ export function planStreamers(days: readonly StreamDay[], pool: readonly StreamP
 
   let best: { plan: StreamPlan; claims: number } | null = null;
   for (const { drop } of dropTries) {
-    const rosterWithout = days.map((d) => (drop ? d.candidates.filter((c) => c.id !== drop.id) : d.candidates));
+    const firstUsableDay = drop ? days.findIndex((d) => !d.candidates.some((c) => c.id === drop.id && c.locked)) : 0;
+    if (firstUsableDay < 0) continue;
+    const rosterWithout = days.map((d) => (drop ? withoutDrop(d, drop.id) : d.candidates));
     const baseWithout = rosterWithout.map((c) => total(c, slots, order));
     const v = new Map<string, number[]>();
     const cand = new Map<string, Array<LineupCandidate | null>>();
@@ -253,7 +266,7 @@ export function planStreamers(days: readonly StreamDay[], pool: readonly StreamP
         }),
       );
     }
-    const chains = solveChains(n, pool.map((p) => p.id), poolStatus, v, wwUsable, maxClaims);
+    const chains = solveChains(n, pool.map((p) => p.id), poolStatus, v, wwUsable, maxClaims, claimable, firstUsableDay, claimBudget, claimWeeks);
     // Fewer claims first: one more must add `minGain` on top.
     let kept: { chain: Chain; capGain: number } | null = null;
     for (const chain of chains) {
@@ -271,7 +284,12 @@ export function planStreamers(days: readonly StreamDay[], pool: readonly StreamP
     const steps: StreamStep[] = chain.stretches.map((s, idx) => {
       const cs = cand.get(s.id)!;
       let games = 0;
-      for (let i = s.from; i <= s.to; i++) if (cs[i] && Object.values(cs[i]!.values).some((x) => (x ?? 0) > 0)) games += cs[i]!.games ?? 1;
+      for (let i = s.from; i <= s.to; i++) {
+        const c = cs[i];
+        if (!c) continue;
+        const seated = optimizeLineup([...rosterWithout[i]!, c], slots, order ?? SLOT_ORDER).assignments.some((a) => a.playerId === s.id);
+        if (seated) games += c.games ?? 1;
+      }
       return { id: s.id, status: poolStatus.get(s.id)!, from: s.from, to: s.to, games, gain: s.gain, drop: idx === 0 ? drop : null };
     });
     const plan: StreamPlan = { steps, gain: capGain, gainUncapped: chain.gain, capLimited: hasCap && capGain < chain.gain - 0.5 };

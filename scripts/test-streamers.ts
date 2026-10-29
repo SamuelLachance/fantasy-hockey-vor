@@ -102,6 +102,66 @@ const base = { slotCounts: slots, slotOrder: order, needsDrop: true, drops: [{ i
   check("the best chain without a repeat: R, P, Q", ids.join() === "R,P,Q" && near(plan?.gain ?? 0, 9), JSON.stringify(plan?.steps));
 }
 
+{
+  const lockedDrop = { ...cand("locked", "C", 1), currentSlot: "C", locked: true };
+  const d: StreamDay[] = [0, 1].map((i) => ({
+    number: 300 + i,
+    date: `2026-10-${28 + i}`,
+    candidates: [{ ...lockedDrop, locked: i === 0 }],
+    poolCandidate: () => cand("pickup", "C", 10, "FA"),
+    wwUsable: true,
+    capKey: 1,
+  }));
+  const p = planStreamers(d, [{ id: "pickup", status: "FA" }], {
+    slotCounts: { C: 1 }, slotOrder: ["C"], needsDrop: true,
+    drops: [{ id: "locked", action: "drop", fpg: 1 }], minGain: 1, maxClaims: 1,
+  });
+  check("locked drop: chain waits until tomorrow", p?.steps[0]?.from === 1 && near(p?.gain ?? 0, 9), JSON.stringify(p));
+  const open = d.map((day, i) => ({ ...day, candidates: [], canClaim: () => i > 0 }));
+  const future = planStreamers(open, [{ id: "pickup", status: "FA" }], {
+    slotCounts: { C: 1 }, slotOrder: ["C"], needsDrop: false, drops: [], minGain: 1, maxClaims: 1,
+  });
+  check("locked pickup: no game credited tonight, future game preserved", future?.steps[0]?.from === 1 && near(future?.gain ?? 0, 10), JSON.stringify(future));
+  check("only a locked day: no streaming gain", planStreamers([open[0]!], [{ id: "pickup", status: "FA" }], {
+    slotCounts: { C: 1 }, slotOrder: ["C"], needsDrop: false, drops: [], minGain: 1, maxClaims: 1,
+  }) === null);
+}
+
+{
+  // One claim remains this week, then Monday provides two fresh claims.
+  // Taking A then B before Monday would spend a claim not available yet.
+  const rates: Record<string, number[]> = { A: [8, 0, 0, 0], B: [0, 9, 9, 0], C: [0, 0, 0, 10] };
+  const d: StreamDay[] = [0, 1, 2, 3].map((i) => ({
+    number: 400 + i, date: `2026-10-${23 + i}`, candidates: [],
+    poolCandidate: (id) => rates[id]![i]! > 0 ? cand(id, "C", rates[id]![i]!, "FA") : null,
+    wwUsable: true, capKey: 1,
+    claimWeek: i < 3 ? "2026-10-19" : "2026-10-26",
+    claimsAvailable: i < 3 ? 1 : 2,
+  }));
+  const opts = { slotCounts: { C: 1 }, slotOrder: ["C"] as const, needsDrop: false, drops: [], minGain: 1, maxClaims: 3 };
+  const p = planStreamers(d, Object.keys(rates).map((id) => ({ id, status: "FA" as const })), opts);
+  check("weekly reset: future claims cannot be spent early", near(p?.gain ?? 0, 28) && (p?.steps.filter((s) => s.from < 3).length ?? 0) <= 1, JSON.stringify(p));
+  // Unspent old claims expire at reset: two consecutive high-value pickups
+  // in the new week still cannot consume a one-claim weekly allowance.
+  const reset: StreamDay[] = d.slice(0, 3).map((day, i) => ({
+    ...day, claimWeek: i === 0 ? "old" : "new", claimsAvailable: 1,
+    canClaim: () => i > 0,
+    poolCandidate: (id) => id === "A" && i === 1 ? cand(id, "C", 10, "FA") : id === "B" && i === 2 ? cand(id, "C", 11, "FA") : null,
+  }));
+  const afterReset = planStreamers(reset, [{ id: "A", status: "FA" }, { id: "B", status: "FA" }], { ...opts, maxClaims: 2 });
+  check("weekly reset: unused claims do not carry into next week", near(afterReset?.gain ?? 0, 11) && (afterReset?.steps.filter((s) => s.from >= 1).length ?? 0) <= 1, JSON.stringify(afterReset));
+}
+{
+  const d: StreamDay[] = [5, 1].map((strength, i) => ({
+    number: 500 + i, date: `2026-10-${28 + i}`, candidates: [cand("regular", "C", strength)],
+    poolCandidate: () => cand("bench-one-night", "C", 3, "FA"), wwUsable: true, capKey: 1,
+  }));
+  const p = planStreamers(d, [{ id: "bench-one-night", status: "FA" }], {
+    slotCounts: { C: 1 }, slotOrder: ["C"], needsDrop: false, drops: [], minGain: 1, maxClaims: 1,
+  });
+  check("streamer appearances exclude his bench night", near(p?.gain ?? 0, 2) && p?.steps[0]?.games === 1, JSON.stringify(p));
+}
+
 if (failed > 0) {
   console.error(`${failed} streamer check(s) failed`);
   process.exit(1);

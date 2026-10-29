@@ -8,7 +8,7 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { CAPTAINS_DYNASTY, eligibleSlots, FANTRAX_DEFAULT_TEAM_ID, IR_ELIGIBLE_ICONS, NHL_SEASON_ID, SLAPSHOT, waiverMinDelta } from "../src/lib/fantrax/config";
-import { buildDailyPlan, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
+import { buildDailyPlan, indexSchedule, pickupAvailable, planCtx, type DailyPlan, type PlanInputs } from "../src/lib/fantrax/daily-plan";
 import { PLAN_KIT } from "../src/lib/fantrax/plan-kit";
 import { streamerWeek } from "../src/lib/fantrax/streamer-week";
 import { rosterPeriodsIn, torontoDateOfIso } from "../src/lib/fantrax/dates";
@@ -414,6 +414,96 @@ assert(degraded.cap?.known === false, "cap usage unknown");
     const onRoster = new Set((input.state.rosters[input.teamId] ?? []).map((r) => r.id));
     assert(sw.steps.every((x) => !onRoster.has(x.id)), "streaming plan: nobody already on the roster");
   }
+}
+
+// An early-game free agent can be acquired for later lineup periods, never
+// for points from the game whose five-minute lock has already passed.
+{
+  const periods = [0, 1, 2].map((i) => ({
+    number: i + 1,
+    start: `2026-10-${26 + i}T18:00:00.000Z`,
+    end: `2026-10-${27 + i}T17:59:59.000Z`,
+  }));
+  const config = {
+    ...SLAPSHOT,
+    salaryCap: null,
+    slots: { order: ["C"] as const, counts: { C: 1 } },
+    limits: { ...SLAPSHOT.limits, minTotal: 0, maxActive: 1, maxReserve: 0 },
+  };
+  const fixture: PlanInputs = {
+    ...input,
+    config,
+    kit: PLAN_KIT,
+    nowMs: Date.parse("2026-10-26T20:00:00.000Z"),
+    teamId: "me",
+    league: {
+      ...league, teams: [{ id: "me", name: "Lock regression" }],
+      slotCounts: { C: 1 }, limits: config.limits, sktMultiplier: 1,
+      rosterPeriods: periods, playoffs: null,
+      scoringPeriods: [
+        { number: 1, start: periods[0]!.start, end: periods[1]!.end, gpMax: null, gsMax: null },
+        { number: 2, start: periods[2]!.start, end: periods[2]!.end, gpMax: null, gsMax: null },
+      ],
+    },
+    state: { ...state, rosters: { me: [] }, icons: {}, ros: { early: 1, late: 1 }, waivers: [], caps: {}, claims: {}, draft: null },
+    values: {
+      ...values,
+      players: {
+        early: { n: "Early FA", t: "EARLY", e: "C", gp: 82, off: 9, src: "proj" },
+        late: { n: "Late FA", t: "LATE", e: "C", gp: 82, off: 5, src: "proj" },
+      },
+    },
+    schedule: {
+      ...input.schedule,
+      games: [0, 1, 2].flatMap((i) => [
+        [`2026-10-${26 + i}T19:00:00.000Z`, "EARLY", "OPP1"] as [string, string, string],
+        [`2026-10-${26 + i}T22:00:00.000Z`, "LATE", "OPP2"] as [string, string, string],
+      ]),
+    },
+  };
+  const ctx = planCtx(fixture, config, indexSchedule(fixture.schedule, periods));
+  assert(pickupAvailable(ctx, "early", 1, Date.parse("2026-10-26T18:54:59.999Z")), "pickup is available just before its lock");
+  assert(!pickupAvailable(ctx, "early", 1, Date.parse("2026-10-26T18:55:00.000Z")), "pickup locks exactly five minutes before its game");
+  assert(pickupAvailable(ctx, "early", 2, fixture.nowMs), "a locked pickup keeps its future eligibility");
+  const p = buildDailyPlan(fixture);
+  const early = p.waivers.targets.find((t) => t.id === "early");
+  const late = p.waivers.targets.find((t) => t.id === "late");
+  assert(!!early && near(early.delta, 9) && near(early.ros, 9), `early FA: only tomorrow counts this period, rest of season preserved (${JSON.stringify(early)}; target ${p.target?.rosterPeriod})`);
+  assert(!!late && near(late.delta, 10), `late FA: tonight remains available after another game's lock (${JSON.stringify(late)})`);
+  const sw = streamerWeek(fixture, p);
+  assert(!!sw && near(sw.gain, 23), `streaming: late FA tonight, early FA on the next two days (${JSON.stringify(sw)})`);
+  assert(sw?.steps.every((s) => s.id !== "early" || s.from > 0) === true, `streaming never starts an already-locked FA today (${JSON.stringify(sw)})`);
+  const unknown = buildDailyPlan({
+    ...fixture,
+    state: { ...fixture.state, rosters: { me: [{ id: "new-live-player", status: "ACTIVE", slot: "C" }] } },
+  });
+  assert(unknown.lineup?.slots[0]?.id === "new-live-player" && unknown.lineup.slots[0].value === 0, "unknown live Active player retains his occupied seat with no invented points");
+  assert(!unknown.lineup?.moves.some((m) => m.id === "new-live-player"), "unknown live player cannot be moved without knowing whether his game has locked");
+  const shift = (iso: string) => new Date(Date.parse(iso) - 86400000).toISOString();
+  const sunday: PlanInputs = {
+    ...fixture,
+    nowMs: Date.parse("2026-10-25T20:00:00.000Z"),
+    config: { ...config, features: { ...config.features, claimsPerWeek: 1 }, cadence: { ...config.cadence, claimWeekStartsOn: 1 } },
+    state: { ...fixture.state, claimsWeekStart: "2026-10-19", claims: { me: 1 } },
+    values: { ...fixture.values, players: { ...fixture.values.players, late: { ...fixture.values.players.late!, off: 10 } } },
+    league: {
+      ...fixture.league,
+      rosterPeriods: fixture.league.rosterPeriods.map((rp) => ({ ...rp, start: shift(rp.start), end: shift(rp.end) })),
+      scoringPeriods: fixture.league.scoringPeriods.map((sp) => ({ ...sp, start: shift(sp.start), end: shift(sp.end) })),
+    },
+    schedule: { ...fixture.schedule, games: fixture.schedule.games.map(([at, a, h]) => [shift(at), a, h]) },
+  };
+  const sundayPlan = buildDailyPlan(sunday);
+  const reset = streamerWeek(sunday, sundayPlan);
+  assert(sundayPlan.waivers.claimsLeft === 0, "Sunday fixture has exhausted this week's claims");
+  assert(reset?.steps[0]?.from === 1 && near(reset?.gain ?? 0, 20), `streaming integration: Monday's claim cannot earn Sunday's points (${JSON.stringify(reset)})`);
+  const beforeDst: PlanInputs = {
+    ...fixture,
+    nowMs: Date.parse("2026-10-26T04:30:00.000Z"),
+    config: sunday.config,
+    state: { ...fixture.state, claimsWeekStart: "2026-10-26", claims: { me: 1 } },
+  };
+  assert(streamerWeek(beforeDst, buildDailyPlan(beforeDst)) === null, "claim reset uses Eastern calendar dates across DST, without granting next Monday's credits this Monday");
 }
 
 if (failed) process.exit(1);

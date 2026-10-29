@@ -21,6 +21,9 @@ const DynastyTeamCard = dynamic(() => import("./DynastyTeamCard").then((m) => m.
   ),
 });
 
+const PortfolioOutlook = dynamic(() => import("./PortfolioOutlook").then((m) => m.PortfolioOutlook));
+const ManagerNotebook = dynamic(() => import("./ManagerNotebook").then((m) => m.ManagerNotebook));
+
 
 /**
  * Mon équipe: roster counts against the league limits, then — only in a league
@@ -48,6 +51,11 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
   const heading = teamId === defaultTeamId ? `Effectif de ${teamName(teamId)}` : `Équipe consultée : ${teamName(teamId)}`;
   return (
     <div className="space-y-6">
+      <nav aria-label="Gestion de votre équipe" className="flex flex-wrap gap-2 text-sm">
+        {[["effectif", "Effectif"], ...(hasDynasty ? [["portefeuille", "Vision à long terme"]] : []), ["carnet", "Carnet du DG"]].map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="inline-flex min-h-11 items-center rounded-full border border-white/10 bg-white/5 px-4 text-slate-300 hover:border-cyan-400/40 hover:text-white">{label}</a>
+        ))}
+      </nav>
       <FantraxPlanGate>
         {(plan) => {
           const c = plan.legality.counts;
@@ -104,6 +112,8 @@ export function FantraxTeamTab({ slug }: { slug: string }) {
         }}
       </FantraxPlanGate>
       {hasDynasty && config.features.keeperCutdown ? <DynastyTeamCard /> : null}
+      {hasDynasty ? <PortfolioOutlook /> : null}
+      <ManagerNotebook />
       {/* A salary-cap league's cap card and method note come with its league pack. */}
       {parts ? <parts.TeamCap /> : null}
       <FantraxPlayerTable

@@ -8,6 +8,10 @@ A personal, unofficial helper for my fantasy hockey leagues, in French (Québec)
 
 ## Site structure
 
+Fantrax management now includes a **Bureau du DG** on Aujourd’hui: ordered priorities, lineup metrics, projection coverage, and separate freshness indicators for live rosters, injuries, waivers, games caps, projections and schedule. A live roster read never updates the timestamps of the other sources, and expired lineup instructions are hidden in the briefing.
+
+**Mon équipe** includes a dynasty portfolio (season-by-season expected gains, league median, concentration and durable core) and a **Carnet du DG**. The notebook stores hypotheses, review dates and outcomes locally, separately for each league and team; JSON export/import merges backups without erasing newer edits. Portfolio gains use the existing league model and are not championship probabilities. Yahoo features are unchanged.
+
 | URL | Page |
 |---|---|
 | `/` | **Mes ligues**: one card per league (what needs attention today, draft dates, links to each tab) and the Snake database |

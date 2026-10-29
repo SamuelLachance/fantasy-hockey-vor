@@ -290,5 +290,29 @@ assert(full[0]?.drop?.id === "d1" && full[0].drop.action === "minors" && near(fu
   assert(withCapBench([locked], { skater: 2, goalie: null })[0] === locked, "a locked player is never benched");
 }
 
+// A locked starter cannot free a slot for a late-game pickup tonight. The
+// swap remains useful tomorrow and in the rest of season, when it can take effect.
+{
+  const old = { ...cand("locked-drop", "C", 1), currentSlot: "C", locked: true };
+  const replacement = cand("replacement", "C", 10, "FA");
+  const ds: WaiverDay[] = [true, false].map((locked) => ({
+    candidates: [{ ...old, locked }],
+    wwUsable: true,
+    poolCandidate: () => replacement,
+  }));
+  const opts = {
+    slotCounts: { C: 1 },
+    slotOrder: ["C"] as const,
+    needsDrop: true,
+    drops: [{ id: old.id, action: "drop" as const, fpg: 1 }],
+    minDelta: 0.1,
+    rosDays: [ds[1]!],
+  };
+  const targets = waiverTargets(ds, [{ id: replacement.id, status: "FA", fpg: 10 }], opts);
+  assert(targets.length === 1 && near(targets[0]!.delta, 9), "locked drop: no invented gain tonight, +9 tomorrow");
+  assert(near(targets[0]!.ros, 9), "locked drop: future value of the replacement is preserved");
+  assert(waiverTargets([ds[0]!], [{ id: replacement.id, status: "FA", fpg: 10 }], { ...opts, rosDays: [] }).length === 0, "locked drop: a gain only tonight cannot be claimed");
+}
+
 if (failed) process.exit(1);
 console.log("OK: fantrax draft + waivers");

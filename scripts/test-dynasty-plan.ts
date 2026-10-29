@@ -13,6 +13,7 @@ import {
   PROTECT_TOP_N,
 } from "../src/lib/dynasty/board";
 import { explainFr } from "../src/lib/dynasty/explain";
+import { dynastyGates } from "../src/lib/dynasty/checks";
 import type { DynastyRecord, DynastySnapshot } from "../src/lib/dynasty/types";
 
 let failed = 0;
@@ -141,6 +142,17 @@ const snap = (players: Record<string, DynastyRecord>): DynastySnapshot => ({
   const path = join(process.cwd(), "public", "fantrax", "dynasty.json");
   if (existsSync(path)) {
     const dyn = JSON.parse(readFileSync(path, "utf8")) as DynastySnapshot;
+    const ids = Object.keys(dyn.players).slice(0, 200);
+    const adp = Object.fromEntries(ids.map((id) => [id, 1]));
+    const gateInputs = { snapshot: dyn, values: {}, rostered: new Set<string>(), adp, ros: {}, minorsEligible: new Set<string>() };
+    const preseason = dynastyGates({ ...gateInputs, snapshot: { ...dyn, inputs: { ...dyn.inputs, ytdGames: 0 } } });
+    assert(preseason.errors.some(e => e.includes("Spearman DV vs ADP")), "preseason market gate remains strict when the reference is meaningful");
+    const inSeason = { ...dyn, inputs: { ...dyn.inputs, ytdGames: 100 } };
+    const live = dynastyGates({ ...gateInputs, snapshot: inSeason });
+    assert(!live.errors.some(e => e.includes("Spearman")) && live.warnings.some(e => e.includes("Spearman DV vs ADP")), "in-season market drift is diagnosed without discarding fresh snapshots");
+    const firstId = ids[0]!;
+    const malformed = dynastyGates({ ...gateInputs, snapshot: { ...inSeason, players: { ...dyn.players, [firstId]: { ...dyn.players[firstId]!, eG: [NaN] } } } });
+    assert(malformed.errors.some(e => e.includes("malformed dynasty")), "in-season snapshots still reject corrupted records");
     const recs = Object.entries(dyn.players);
     assert(recs.length > 800, `dynasty.json has ${recs.length} players`);
     const tooLong = recs.filter(([, r]) => explainFr(r).length > 220);

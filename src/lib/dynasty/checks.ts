@@ -209,24 +209,30 @@ export function dynastyGates(inp: GateInputs): GateResult {
     errors.push(`${shortLived.length} players whose value ends within two seasons rank in the long-term top ${GATES.longTerm.shortLivedMaxRank} (e.g. ${shortLived[0]!.r.n} #${shortLived[0]!.r.rank.longTerm})`);
   }
 
+  // The ADP and keeper benchmark describe the preseason market. Once NHL
+  // games have been added, changes in remaining-season value should diverge
+  // from that frozen reference. Keep reporting drift, without rejecting a
+  // valid live roster and republishing an older snapshot. Schema, coverage,
+  // aging and workload guards remain errors; preseason model gates stay hard.
+  const marketProblems = (s.inputs.ytdGames ?? 0) > 0 ? warnings : errors;
   // Spearman sanity against the league's own signals (zero-value players count at 0)
   const dvOf = (id: string, m: "balanced" | "longTerm") => s.players[id]?.dv[m] ?? 0;
   const universe = [...Object.keys(s.players), ...zero];
   const withAdp = universe.filter((id) => inp.adp[id] != null && inp.adp[id]! < 280);
   const rhoAdp = spearman(withAdp.map((id) => dvOf(id, "balanced")), withAdp.map((id) => -inp.adp[id]!));
   stats.spearmanAdp = rhoAdp;
-  if (!(rhoAdp >= GATES.spearmanAdp)) errors.push(`Spearman DV vs ADP ${rhoAdp.toFixed(3)} < ${GATES.spearmanAdp}`);
+  if (!(rhoAdp >= GATES.spearmanAdp)) marketProblems.push(`Spearman DV vs ADP ${rhoAdp.toFixed(3)} < ${GATES.spearmanAdp}`);
   if (inp.keepScore27) {
     const ks = inp.keepScore27;
     const withKeep = universe.filter((id) => ks[id] != null && !inp.minorsEligible.has(id) && !(s.players[id]?.elig.now ?? false));
     const rhoKeep = spearman(withKeep.map((id) => dvOf(id, "balanced")), withKeep.map((id) => ks[id]!));
     stats.spearmanKeep = rhoKeep;
-    if (!(rhoKeep >= GATES.spearmanKeep)) errors.push(`Spearman DV vs keepScore27 ${rhoKeep.toFixed(3)} < ${GATES.spearmanKeep}`);
+    if (!(rhoKeep >= GATES.spearmanKeep)) marketProblems.push(`Spearman DV vs keepScore27 ${rhoKeep.toFixed(3)} < ${GATES.spearmanKeep}`);
   }
   const rosElig = universe.filter((id) => inp.rostered.has(id) && inp.minorsEligible.has(id));
   const rhoRos = spearman(rosElig.map((id) => dvOf(id, "longTerm")), rosElig.map((id) => inp.ros[id] ?? 0));
   stats.spearmanRos = rhoRos;
-  if (!(rhoRos >= GATES.spearmanRos)) errors.push(`Spearman long-term DV vs Ros% ${rhoRos.toFixed(3)} < ${GATES.spearmanRos}`);
+  if (!(rhoRos >= GATES.spearmanRos)) marketProblems.push(`Spearman long-term DV vs Ros% ${rhoRos.toFixed(3)} < ${GATES.spearmanRos}`);
 
   // aging guard: established skaters must not gain value with age
   const rising = recs.filter(

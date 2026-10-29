@@ -7,9 +7,9 @@
  * (on demand), and the CLI report calls it.
  */
 import { CAPTAINS_DYNASTY, eligibleGroups } from "./config";
-import { claimWeekStart, scoringPeriodAt, torontoDate } from "./dates";
+import { addDays, claimWeekStart, scoringPeriodAt, torontoDate } from "./dates";
 import { availableProjected } from "./draft-inputs";
-import { bestFpg, candidateFor, indexSchedule, planCtx, rosterCandidates, type DailyPlan, type PlanInputs } from "./daily-plan";
+import { bestFpg, candidateFor, indexSchedule, pickupAvailable, planCtx, rosterCandidates, type DailyPlan, type PlanInputs } from "./daily-plan";
 import { isRuledOut } from "./points-model";
 import { planStreamers, type StreamDay } from "./streamers";
 import type { WaiverCap } from "./waivers";
@@ -60,22 +60,29 @@ export function streamerWeek(input: PlanInputs, plan: DailyPlan): StreamerWeek |
   const withLocks = (cands: ReturnType<typeof rosterCandidates>, period: number) =>
     locked.size && period === targetNumber ? cands.map((c) => (locked.has(c.id) ? { ...c, locked: true } : c)) : cands;
   const periods = league.rosterPeriods.filter((p) => p.number >= targetNumber).slice(0, STREAM_DAYS);
+  const perWeek = config.features.claimsPerWeek;
+  const resetDay = addDays(claimWeekStart(nowMs, config.cadence.claimWeekStartsOn ?? 1), 7);
+  const currentClaims = plan.waivers.claimsLeft ?? perWeek;
   const days: StreamDay[] = periods.map((p) => ({
     number: p.number,
     date: torontoDate(Date.parse(p.start)),
     candidates: withLocks(rosterCandidates(ctx, roster, p.number), p.number),
+    canClaim: (id) => pickupAvailable(ctx, id, p.number, nowMs),
     poolCandidate: (id) => {
+      if (!pickupAvailable(ctx, id, p.number, nowMs)) return null;
       const c = candidateFor(ctx, id, waiverSet.has(id) ? "WW" : "FA", undefined, p.number);
       return c && Object.values(c.values).some((v) => (v ?? 0) > 0) ? c : null;
     },
     wwUsable: torontoDate(Date.parse(p.start)) > todayEt,
     capKey: scoringPeriodAt(league.scoringPeriods, Date.parse(p.start))?.number ?? -1,
+    ...(currentClaims === null ? {} : {
+      claimsAvailable: config.cadence.claimWeekStartsOn != null && torontoDate(Date.parse(p.start)) >= resetDay ? perWeek! : currentClaims,
+      claimWeek: config.cadence.claimWeekStartsOn != null ? claimWeekStart(Date.parse(p.start), config.cadence.claimWeekStartsOn) : "current",
+    }),
   }));
   if (!days.length) return null;
 
   // Claims: those left this claim week, and a fresh week's once the days cross its reset.
-  const perWeek = config.features.claimsPerWeek;
-  const resetDay = claimWeekStart(nowMs + 7 * 86400000, config.cadence.claimWeekStartsOn ?? 1);
   const crossesReset = perWeek !== null && config.cadence.claimWeekStartsOn != null && days.some((d) => d.date >= resetDay);
   const claimsAvailable = perWeek === null ? null : (plan.waivers.claimsLeft ?? perWeek) + (crossesReset ? perWeek : 0);
 

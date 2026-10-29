@@ -12,6 +12,7 @@ import { GoalieStarts } from "./GoalieStarts";
 import { LineupCard } from "./LineupCard";
 import { RosterAlerts } from "./RosterAlerts";
 import { WeekGrid } from "./WeekGrid";
+import { DecisionBrief } from "./DecisionBrief";
 
 /**
  * The sections a league actually has. « Plafonds » only where per-period
@@ -20,6 +21,7 @@ import { WeekGrid } from "./WeekGrid";
  */
 function sectionsOf(hasCaps: boolean) {
   return [
+    { id: "bureau-du-dg", label: "Plan du jour" },
     { id: "alertes", label: "Légalité" },
     { id: "alignement", label: "Alignement" },
     { id: "gardiens", label: "Gardiens" },
@@ -65,6 +67,7 @@ export function FantraxTodayTab({ slug }: { slug: string }) {
           const myTurn = !!d?.current && !!d?.next && d.current.pick === d.next.pick;
           return (
             <>
+              <DecisionBrief plan={plan} />
               {d && d.state === "running" ? (
                 <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-violet-400/40 bg-violet-500/10 px-4 py-3 text-sm text-violet-50">
                   <Trophy className="h-4 w-4 shrink-0 text-violet-300" aria-hidden="true" />

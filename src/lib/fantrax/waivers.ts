@@ -306,7 +306,11 @@ export function waiverTargets(
   const total = (ds: WaiverDay[], f: (d: WaiverDay) => LineupCandidate[], cap?: WaiverCap | null) =>
     periodTotal(ds, f, slots, opts.slotOrder, cap, capModel);
   const base = total(days, (d) => d.candidates, opts.cap);
-  const without = (d: WaiverDay, id: string) => d.candidates.filter((c) => c.id !== id);
+  // A locked player remains on today's roster. The replacement takes effect
+  // on a later lineup day, where the player is no longer locked; retaining
+  // that option preserves its future gain without inventing a free slot now.
+  const dropLocked = (d: WaiverDay, id: string | undefined) => !!id && d.candidates.some((c) => c.id === id && c.locked);
+  const without = (d: WaiverDay, id: string) => dropLocked(d, id) ? d.candidates : d.candidates.filter((c) => c.id !== id);
   // Later days, solved once per day for the roster and for each drop: a
   // pickup only changes the days he plays, so only those are re-solved. Each
   // later period's games caps then apply to the day-by-day parts.
@@ -361,6 +365,7 @@ export function waiverTargets(
   for (const p of pool) {
     const usable = (d: WaiverDay) => p.status === "FA" || d.wwUsable;
     const withPlayer = (d: WaiverDay, dropId: string | undefined) => {
+      if (dropLocked(d, dropId)) return d.candidates;
       const kept = dropId ? without(d, dropId) : d.candidates;
       const pc = usable(d) ? d.poolCandidate(p.id) : null;
       return pc ? [...kept, pc] : kept;

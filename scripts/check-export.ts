@@ -289,7 +289,11 @@ const BUDGETS: Budget[] = [
   // leagues on a worst-case plan (12 alerts each, the longest wordings, on the
   // clock). 80 leaves 7 KB for the synced wording over that worst case.
   { label: "Mes ligues", match: (p) => p === "index.html", js: 20, htmlRaw: 80, htmlGz: 15 },
-  { label: "Captains · Aujourd’hui", match: isTab("captains-dynasty", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
+  // 2026-10-29 deploy build: the operational briefing (source freshness,
+  // coverage and ordered priorities) adds ~8 KB gzip to Aujourd’hui only:
+  // Captains 52.6, Slapshot 54.9. Portfolio and notebook remain lazy team-tab
+  // chunks, outside this initial payload. Keep ~2 KB room per daily page.
+  { label: "Captains · Aujourd’hui", match: isTab("captains-dynasty", ["aujourdhui"]), js: 55, htmlRaw: 300, htmlGz: 40 },
   {
     label: "Captains · autres onglets",
     match: isTab("captains-dynasty", ["repechage", "joueurs", "ballottage", "mon-equipe"]),
@@ -398,7 +402,9 @@ const BUDGETS: Budget[] = [
     // 8/104, median error 20.4 → 10.5) → 75.1 the salary-cap fit's call in
     // the plan (its body, cap-fit.ts, is the cap league's lazy plan kit).
     // 75.5 keeps ~0.4 KB.
-    js: 75.5,
+    // 2026-10-29: lock-safe pickups and held unknown slots in the shared
+    // planner bring Repêchage to 75.7 KB (measured deploy build).
+    js: 76.5,
     htmlRaw: 200,
     htmlGz: 35,
   },
@@ -406,7 +412,7 @@ const BUDGETS: Budget[] = [
   // chunks plus its own shell chunk (the league pack above: its words and
   // pieces, the contracts read). Its HTML is smaller: 20 lineup slots but a
   // 1-to-2-day matchup panel instead of a 7-to-14-day one.
-  { label: "Slapshot · Aujourd’hui", match: isTab("slapshot", ["aujourdhui"]), js: 50, htmlRaw: 300, htmlGz: 40 },
+  { label: "Slapshot · Aujourd’hui", match: isTab("slapshot", ["aujourdhui"]), js: 57, htmlRaw: 300, htmlGz: 40 },
   // Plafond (league contracts) and Actifs (asset scores): their own chunks, data fetched on demand (cap-plan.json, dynasty-table.json, fxea getDraftPicks).
   { label: "Slapshot · Plafond / Actifs", match: isTab("slapshot", ["plafond", "actifs"]), js: 45, htmlRaw: 100, htmlGz: 20 },
   { label: "Captains · Actifs", match: isTab("captains-dynasty", ["actifs"]), js: 45, htmlRaw: 100, htmlGz: 20 },

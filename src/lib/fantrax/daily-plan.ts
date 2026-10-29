@@ -484,6 +484,18 @@ export function candidateFor(
 }
 
 /**
+ * Whether a pickup can take effect in this lineup period. A player whose
+ * own game has locked may still be claimed for a later period; his points
+ * from the locked game must never be credited to the acquiring team.
+ */
+export function pickupAvailable(ctx: Ctx, id: string, period: number, nowMs: number): boolean {
+  const lock = ctx.config.cadence.lock;
+  if (lock?.kind !== "game") return true;
+  const game = ctx.index.byPeriod.get(period)?.get(ctx.values.players[id]?.t ?? "");
+  return !game || Date.parse(game.startUTC) - lock.minutesBefore * 60_000 > nowMs;
+}
+
+/**
  * ACTIVE, RESERVE, and IR / Minors players who can dress (healthy, or
  * day-to-day); IR and Minors only when they score that period.
  */
@@ -495,7 +507,17 @@ export function rosterCandidates(ctx: Ctx, roster: RosterEntry[], period: number
     // Without fxpa icons nobody in Minors / on IR is known to be playable.
     if (!ctx.state.fxpaOk && (r.status === "MINORS" || r.status === "INJURED_RESERVE")) continue;
     const c = candidateFor(ctx, r.id, r.status, r.status === "ACTIVE" ? r.slot : undefined, period);
-    if (!c) continue;
+    if (!c) {
+      // A new live-roster player may not have a synced value/team yet. His
+      // current Active seat is still occupied, and without his club we
+      // cannot know whether his game has locked. Hold that seat conservatively
+      // with no invented points or games until his data can be refreshed.
+      const slot = r.slot as SlotId;
+      if (r.status === "ACTIVE" && ctx.config.slots.order.includes(slot)) {
+        out.push({ id: r.id, eligible: [slot], status: r.status, currentSlot: slot, values: { [slot]: 0 }, games: 0, locked: true });
+      }
+      continue;
+    }
     const scores = Object.values(c.values).some((v) => (v ?? 0) > 0);
     if (r.status !== "ACTIVE" && r.status !== "RESERVE" && !scores) continue;
     out.push(c);
@@ -803,6 +825,10 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
   let surplus = evaluation.counts.counted + fixes.length + reserveFills.length - limits.minTotal;
   const deadMoves: Record<string, DeadMove> = {};
   for (const d of evaluation.dead) {
+    if (!values.players[d.id] || lockedIds.has(d.id)) {
+      deadMoves[d.id] = null;
+      continue;
+    }
     const f = flags[d.id];
     const out: DeadMove =
       irEligible(f) && irCount < limits.maxIr
@@ -942,6 +968,7 @@ export function buildDailyPlan(input: PlanInputs): DailyPlan {
     candidates: dayCands[i]!,
     wwUsable: torontoDate(Date.parse(p.start)) > todayEt,
     poolCandidate: (id) => {
+      if (!pickupAvailable(ctx, id, p.number, nowMs)) return null;
       const c = candidateFor(ctx, id, waiverSet.has(id) ? "WW" : "FA", undefined, p.number);
       return c && Object.values(c.values).some((v) => (v ?? 0) > 0) ? c : null;
     },
