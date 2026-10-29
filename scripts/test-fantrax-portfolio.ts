@@ -2,6 +2,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import type { AssetRecord } from "../src/lib/dynasty/asset-score";
+import { clientDynastySnapshot } from "../src/lib/dynasty/client-snapshot";
+import { slapshotClientSnapshot, type SlapshotSnapshotLike } from "../src/lib/dynasty/slapshot-client";
+import type { DynastySnapshot } from "../src/lib/dynasty/types";
 import { buildPortfolioOutlook, parsePortfolioSnapshot, type PortfolioSnapshot } from "../src/lib/fantrax/portfolio";
 
 const record = (n: string, eG: number[], dv: AssetRecord["dv"], g: AssetRecord["g"] = "F"): AssetRecord => ({ n, eG, dv, g, age: 25, phase: "prime" });
@@ -53,7 +56,11 @@ assert.equal(parsePortfolioSnapshot({ ...source, players: { ...source.players, a
 assert.equal(parsePortfolioSnapshot({ ...source, players: { ...source.players, a: { ...source.players.a!, dv: { balanced: 1 } } } }), null, "all selectable horizons must exist");
 
 for (const base of ["public/fantrax/", "public/fantrax/slapshot/"]) {
-  const snapshot = parsePortfolioSnapshot(JSON.parse(readFileSync(`${base}dynasty-table.json`, "utf8")));
+  // Client copies are generated at build time and intentionally gitignored.
+  // Derive them from committed inputs, so this also runs in a clean checkout.
+  const full = JSON.parse(readFileSync(`${base}dynasty.json`, "utf8")) as DynastySnapshot | SlapshotSnapshotLike;
+  const client = base.includes("slapshot") ? slapshotClientSnapshot(full as SlapshotSnapshotLike) : clientDynastySnapshot(full as DynastySnapshot);
+  const snapshot = parsePortfolioSnapshot(client);
   assert(snapshot, `${base}: published client snapshot is valid`);
   const state = JSON.parse(readFileSync(`${base}state.json`, "utf8")) as { rosters: Record<string, Array<{ id: string }>> };
   const rosters = Object.fromEntries(Object.entries(state.rosters).map(([id, roster]) => [id, roster.map((p) => p.id)]));
@@ -65,3 +72,4 @@ for (const base of ["public/fantrax/", "public/fantrax/slapshot/"]) {
   }
 }
 console.log("OK: Fantrax portfolio (signed gains, horizons, median, ties, coverage, validation, both published leagues)");
+
